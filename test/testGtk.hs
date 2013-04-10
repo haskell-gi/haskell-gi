@@ -3,29 +3,7 @@ import GLib
 import GObject
 import Gtk
 
-import Foreign
-import Foreign.C
-
-{-
-onActivateLink :: GObjectKlass a => a -> GtkLabelActivateLinkCallback -> IO Word32
-onActivateLink obj cb = connectSignal obj "activate-link" cb' where
-               cb' :: Ptr GtkLabel -> CString -> IO Bool
-               cb' _ uri' = do
-                   uri <- peekCString uri'
-                   cb uri
-
-onClicked :: GObjectKlass a => a -> GtkButtonClickedCallback -> IO Word32
-onClicked obj cb = connectSignal obj "clicked" cb' where
-          cb' :: Ptr GObject -> IO (Ptr ())
-          cb' _ = do
-              cb
-
-onDestroy :: GObjectKlass a => a -> GtkWidgetDestroyCallback -> IO Word32
-onDestroy obj cb = connectSignal obj "destroy" cb' where
-          cb' :: Ptr GtkWidget -> IO (Ptr ())
-          cb' _ = do
-              cb
--}
+import Foreign (nullPtr)
 
 -- A fancy notation for making signal connections easier to read.
 
