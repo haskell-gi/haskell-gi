@@ -8,4 +8,4 @@ https://gitorious.org/haskell-gi
 and some portions of gtk2hs.
 
 This version adds support for type conversions between different
-GObject derived instances and connecting callbacks to signals.
+GObject derived instances and for connecting callbacks to signals.
