@@ -1,0 +1,94 @@
+Name:                GObject-Introspection
+Version:             0.1
+Synopsis:            Generate Haskell bindings for GObject-Introspection-capable libraries
+Homepage:            http://lol
+License:             LGPL-2.1
+License-file:        LICENSE
+Author:              Will Thompson
+Maintainer:          will@willthompson.co.uk
+Stability:           Experimental
+Category:            Development
+Build-type:          Simple
+Cabal-version:       >=1.2
+Extra-source-files:
+
+Executable haskell-gi
+  main-is: haskell-gi.hs
+  pkgconfig-depends: gobject-introspection-1.0
+  build-depends:
+      base >= 4,
+      containers,
+      glib,
+      mtl,
+      pretty-show,
+      process,
+      bytestring
+  build-tools: hsc2hs
+  extensions: ForeignFunctionInterface
+  ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
+  other-modules:
+      System.Glib.Initialize,
+      GI.Internal.Types,
+      GI.Internal.ArgInfo,
+      GI.Internal.BaseInfo,
+      GI.Internal.CallableInfo,
+      GI.Internal.ConstantInfo,
+      GI.Internal.EnumInfo,
+      GI.Internal.FieldInfo,
+      GI.Internal.FunctionInfo,
+      GI.Internal.InterfaceInfo,
+      GI.Internal.ObjectInfo,
+      GI.Internal.ParamFlag,
+      GI.Internal.PropertyInfo,
+      GI.Internal.RegisteredTypeInfo,
+      GI.Internal.StructInfo,
+      GI.Internal.TypeInfo,
+      GI.Internal.Typelib,
+      GI.Internal.UnionInfo,
+      GI.API,
+      GI.Code,
+      GI.Type,
+      GI.Value,
+      GI.Util
+
+Executable test
+  main-is: test.hs
+  pkgconfig-depends: gobject-introspection-1.0
+  build-depends:
+    base >= 4,
+    containers,
+    Diff,
+    glib,
+    HUnit,
+    mtl,
+    bytestring,
+    pretty-show,
+    test-framework,
+    test-framework-hunit
+  build-tools: hsc2hs
+  extensions: ForeignFunctionInterface
+  ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
+  other-modules:
+      System.Glib.Initialize,
+      GI.Internal.Types,
+      GI.Internal.ArgInfo,
+      GI.Internal.BaseInfo,
+      GI.Internal.CallableInfo,
+      GI.Internal.ConstantInfo,
+      GI.Internal.EnumInfo,
+      GI.Internal.FieldInfo,
+      GI.Internal.FunctionInfo,
+      GI.Internal.InterfaceInfo,
+      GI.Internal.ObjectInfo,
+      GI.Internal.ParamFlag,
+      GI.Internal.PropertyInfo,
+      GI.Internal.RegisteredTypeInfo,
+      GI.Internal.StructInfo,
+      GI.Internal.TypeInfo,
+      GI.Internal.Typelib,
+      GI.Internal.UnionInfo,
+      GI.API,
+      GI.Code,
+      GI.Type,
+      GI.Value,
+      GI.Util
