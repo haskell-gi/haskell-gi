@@ -20,7 +20,9 @@ testConfig = Config {
   imports = [],
   prefixes = M.fromList [("test", "test")],
   names = M.empty,
-  input = M.empty }
+  input = M.empty,
+  modName = "test",
+  instances = M.empty }
 
 a @?== b = do
   when (a /= b) $ assertFailure diff
@@ -34,7 +36,7 @@ a @?== b = do
      diChar F = '-'
      diChar S = '+'
 
-testCodeGen name api code = (codeToList $ runCodeGen' testConfig $ genCode M.empty name api) @?== code
+testCodeGen name api code = (codeToList $ runCodeGen' testConfig $ genCode name api) @?== code
 
 testConstant = testCase "constant" $
   testCodeGen (Name "test" "foo") (APIConst (Constant (VInt8 42)))

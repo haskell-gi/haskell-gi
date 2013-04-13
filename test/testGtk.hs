@@ -1,38 +1,36 @@
 {-# CFILES hsgclosure.c #-}
-import GLib
-import GObject
-import Gtk
+import Gtk hiding (main)
+import qualified Gtk as Gtk
 
 import Foreign (nullPtr)
 
 -- A fancy notation for making signal connections easier to read.
-
 (<!>) obj cb = cb obj
 
 main = do
 	gtk_init nullPtr nullPtr
 
-	win <- gtkWindowNew GtkWindowTypeToplevel
-        win <!> onGtkWidgetDestroy $ do
+	win <- windowNew WindowTypeToplevel
+        win <!> onWidgetDestroy $ do
                   putStrLn "Closing the program"
-                  gtkMainQuit
+                  mainQuit
 
-        grid <- gtkGridNew
-        gtkOrientableSetOrientation (castToGtkGrid grid) GtkOrientationVertical
-        gtkContainerAdd (castToGtkContainer win) grid
+        grid <- gridNew
+        orientableSetOrientation (castToGrid grid) OrientationVertical
+        containerAdd (castToContainer win) grid
 
-        label <- gtkLabelNew "Test"
-        gtkWidgetShow label
-        label <!> onGtkLabelActivateLink $ \uri -> do
+        label <- labelNew "Test"
+        widgetShow label
+        label <!> onLabelActivateLink $ \uri -> do
                       putStrLn $ uri ++ " clicked."
                       return True -- Link processed, do not open with
                                   -- the browser
-        gtkContainerAdd (castToGtkContainer grid) label
+        containerAdd (castToContainer grid) label
 
-        button <- gtkButtonNewWithLabel "Click me!"
-        button <!> onGtkButtonClicked $
-                gtkLabelSetMarkup (castToGtkLabel label) "This is <a href=\"http://www.gnome.org\">a test</a>"
-        gtkContainerAdd (castToGtkContainer grid) button
+        button <- buttonNewWithLabel "Click me!"
+        button <!> onButtonClicked $
+                labelSetMarkup (castToLabel label) "This is <a href=\"http://www.gnome.org\">a test</a>"
+        containerAdd (castToContainer grid) button
 
-	gtkWidgetShowAll win
-	gtkMain
+	widgetShowAll win
+	Gtk.main

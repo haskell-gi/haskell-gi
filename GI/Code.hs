@@ -50,6 +50,8 @@ data Config = Config {
   imports :: [String],
   prefixes :: M.Map String String,
   names :: M.Map String String,
+  modName :: String,
+  instances :: M.Map Name Name,
   -- XXX: Blegh.
   input :: M.Map Name API }
 

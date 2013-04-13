@@ -47,6 +47,7 @@ Executable haskell-gi
       GI.Internal.UnionInfo,
       GI.API,
       GI.Code,
+      GI.GObject,
       GI.Type,
       GI.Value,
       GI.Util
@@ -89,6 +90,7 @@ Executable test
       GI.Internal.UnionInfo,
       GI.API,
       GI.Code,
+      GI.GObject,
       GI.Type,
       GI.Value,
       GI.Util

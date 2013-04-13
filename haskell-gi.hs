@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Applicative ((<$>))
+import Control.Exception (handle)
 import Data.Maybe (mapMaybe)
 import System.Console.GetOpt
 import System.Exit
@@ -17,6 +18,7 @@ import GI.API (loadAPI)
 import GI.Code (Config(..), codeToString, runCodeGen')
 import GI.CodeGen (genModule)
 import GI.Shlib (typelibSymbols, strip)
+import GI.GObject (parseObjectHierarchy)
 
 data Mode = GenerateCode | Dump | Help
   deriving Show
@@ -63,7 +65,7 @@ showHelp = concat $ map optAsLine optDescrs
           "  -" ++ flag ++ "|--" ++ long ++ "\t" ++ desc ++ "\n"
         optAsLine _ = error "showHelp"
 
-printGError = handleGError (\(GError _dom _code msg) -> putStrLn msg)
+printGError = handle (\(GError _dom _code msg) -> putStrLn msg)
 
 processAPI options name = do
     syms <- typelibSymbols name
@@ -73,11 +75,14 @@ processAPI options name = do
                     Just a' -> Just (n, a')) <$>
             loadAPI name
     imported <- mapM (\n -> M.fromList `fmap` loadAPI n) (optImports options)
+    let input' = foldl M.union (M.fromList apis) imported
     let cfg = Config {
           imports = optImports options,
           prefixes = M.fromList (optPrefixes options),
           names = M.fromList (optRenames options),
-          input = foldl M.union (M.fromList apis) imported }
+          input = input',
+          instances = parseObjectHierarchy input',
+          modName = name }
 
     case optMode options of
         GenerateCode ->

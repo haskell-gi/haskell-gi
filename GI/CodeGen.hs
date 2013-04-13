@@ -16,11 +16,11 @@ import Data.Maybe (catMaybes)
 import Data.Tuple (swap)
 import qualified Data.ByteString.Char8 as B
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon)
-import Data.Map (Map)
 import qualified Data.Map as M
 
 import GI.API
 import GI.Code
+import GI.GObject
 import GI.Type
 import GI.Util (split)
 import GI.Value
@@ -43,7 +43,7 @@ valueStr (VGType x)    = show x
 valueStr (VUTF8 x)     = show x
 valueStr (VFileName x) = show x
 
-interfaceClassName = ('I':)
+interfaceClassName = (++"Iface_")
 
 toPtr con = "(\\(" ++ con ++ " x) -> x)"
 
@@ -82,6 +82,32 @@ literalName (Name ns s) = specifiedName s lit
     where lit = do
               prefix <- getPrefix ns
               return $ lcFirst prefix ++ "_" ++ s
+
+lowerName (Name _ s) = specifiedName s lowered
+    where lowered = return $ concat . rename $ split '_' s
+
+          rename [w] = [lcFirst w]
+          rename (w:ws) = lcFirst w : map ucFirst' ws
+          rename [] = error "rename: empty list"
+
+          ucFirst' "" = "_"
+          ucFirst' x = ucFirst x
+
+upperName (Name ns s) = do
+          cfg <- config
+          name <- specifiedName s uppered
+          return $ if ns == modName cfg then
+                      name
+                   else
+                      (ucFirst ns) ++ "." ++ name
+    where uppered = return $ concatMap ucFirst' $ split '_' $ sanitize s
+          -- Move leading underscores to the end (for example in
+          -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
+          sanitize ('_':xs) = sanitize xs ++ "_"
+          sanitize xs = xs
+
+          ucFirst' "" = "_"
+          ucFirst' x = ucFirst x
 
 -- Given a CamelCase string "SpinButton" convert to lowercase with
 -- underscores: "spin_button".
@@ -136,26 +162,6 @@ cName (Name ns n) = do
       prefix <- map toLower <$> getPrefix ns
       return $ prefix ++ "_" ++ (camelToUnderscores n)
 
-lowerName (Name ns s) = specifiedName s lowered
-    where lowered = (concat . rename) <$> addPrefix (split '_' s)
-
-          addPrefix ss = (: ss) <$> getPrefix ns
-
-          rename [w] = [map toLower w]
-          rename (w:ws) = map toLower w : map ucFirst' ws
-          rename [] = error "rename: empty list"
-
-          ucFirst' "" = "_"
-          ucFirst' x = ucFirst x
-
-upperName (Name ns s) = specifiedName s uppered
-    where uppered = concatMap ucFirst' <$> addPrefix (split '_' s)
-
-          addPrefix ss = (: ss) <$> getPrefix ns
-
-          ucFirst' "" = "_"
-          ucFirst' x = ucFirst x
-
 mapPrefixes :: Type -> CodeGen Type
 mapPrefixes t@(TBasicType _) = return t
 mapPrefixes (TArray t) = TArray <$> mapPrefixes t
@@ -165,8 +171,8 @@ mapPrefixes (TGHash ta tb) =
   TGHash <$> mapPrefixes ta <*> mapPrefixes tb
 mapPrefixes t@TError = return t
 mapPrefixes (TInterface ns s) = do
-    prefix <- getPrefix ns
-    return $ TInterface undefined (ucFirst prefix ++ s)
+    -- We qualify symbols with their namespace.
+    return $ TInterface undefined $ (ucFirst ns) ++ "." ++ s
 
 haskellType' :: Type -> CodeGen TypeRep
 haskellType' t = haskellType <$> mapPrefixes t
@@ -282,10 +288,14 @@ hToF t = do
            -- When an argument is an instance of an interface, use
            -- that interface's class's conversion function.
            t' <- haskellType' t
-           return $ Just $ App $ toPtr (show t') ++ " $ to" ++ show t'
+           case t of
+             TInterface ns n ->
+               return $ Just $ App $
+                      toPtr (show t') ++ " $ " ++ ns ++ ".to" ++ n
+             _ -> error "Interface does not have interface type!?"
          _ -> return Nothing
     hToF' "[Char]" "CString" = M . App "newCString"
-    hToF' "Word"   "GType"   = App "fromIntegral"
+    hToF' "Word"   "GLib.Type"   = App "fromIntegral"
     hToF' "Bool"   "CInt"    = App "(fromIntegral . fromEnum)"
     hToF' "[Char]" "Ptr CString" = M . App "bullshit"
     hToF' hType fType = error $
@@ -318,7 +328,7 @@ fToH t = do
          -- specified by an interface type?
          _ -> return Nothing
     fToH' "CString" "[Char]" = M . App "peekCString"
-    fToH' "GType" "Word" = App "fromIntegral"
+    fToH' "GLib.Type" "Word" = App "fromIntegral"
     fToH' "CInt" "Bool" = App "(/= 0)"
     fToH' fType hType = error $
        "don't know how to convert " ++ fType ++ " to " ++ hType
@@ -548,16 +558,16 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
       line $ show ret
 
   -- Wrapper for connecting functions to the signal
-  let signature = (klass "GObject") ++ " a => a -> " ++ cbType ++ " -> IO Word32" 
+  let signature = (klass "GObject.Object") ++ " a => a -> " ++ cbType ++ " -> IO Word32" 
   -- XXX It would be better to walk through the whole tree and
   -- disambiguate only those that are ambiguous.
   let signalConnectorName = "on" ++ on' ++ ucFirst sn'
   group $ do
     line $ signalConnectorName ++ " :: " ++ signature
-    line $ signalConnectorName ++ " obj cb = connectSignal obj \"" ++
+    line $ signalConnectorName ++ " obj cb = GObject.connectSignal obj \"" ++
            (name sn) ++ "\" cb' where"
     indent $ do
-        line $ "cb' :: Ptr GObject ->"
+        line $ "cb' :: Ptr GObject.Object ->"
         indent $ do forM_ (args cb) $ \arg -> do
                        ft <- marshallFType $ argType arg
                        line $ show ft ++ " ->"
@@ -587,21 +597,11 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
                    retval <- convertHMarshall "ret" (returnType cb)
                    line $ "return " ++ retval
 
--- Compute the (ordered) list of parents of the current object.
-instanceTree :: Map Name Name -> Name -> [Name]
-instanceTree ih n = case M.lookup n ih of
-                         Just p -> do
-                              p : (instanceTree ih p)
-                         Nothing -> []
-
-klass n = n ++ "Klass"
-
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
 genGObjectDescendantConversions iT n = do
   name' <- upperName n
   let className = klass name'
-  topInstance <- upperName $ last iT
   parent <- upperName $ head iT
 
   -- Get the raw pointer
@@ -611,8 +611,7 @@ genGObjectDescendantConversions iT n = do
     line $ "class " ++ (klass parent) ++ " o => " ++ className ++ " o"
     line $ "to" ++ name' ++ " :: " ++ className ++
            " o => o -> " ++ name'
-    line $ "to" ++ name' ++ " = unsafeCast" ++ topInstance ++
-           " . to" ++ topInstance
+    line $ "to" ++ name' ++ " = GObject.unsafeCastObject . GObject.toObject"
 
   group $ do
     line $ "instance " ++ className ++ " " ++ name' ++ " where"
@@ -621,21 +620,20 @@ genGObjectDescendantConversions iT n = do
           line $ "instance " ++ (klass ancestor') ++ " " ++ name'
                ++ " where"
     indent $ do
-      line $ "to" ++ topInstance ++ " = " ++ topInstance ++
-             " . castPtr . un" ++ name'
-      line $ "unsafeCast" ++ topInstance ++ " = " ++ name' ++
-             " . castPtr . un" ++ topInstance
+      line $ "toObject = GObject.Object . castPtr . un" ++ name'
+      line $ "unsafeCastObject = " ++ name' ++
+             " . castPtr . GObject.unObject"
 
   -- Type casting with type checking
   cn_ <- (++ "_get_type") <$> cName n
   group $ do
     line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
-    indent $ line $ "c_" ++ cn_ ++ " :: GType"
+    indent $ line $ "c_" ++ cn_ ++ " :: GLib.Type"
 
   group $ do
-    line $ "castTo" ++ name' ++ " :: " ++ (klass topInstance) ++ " o"
+    line $ "castTo" ++ name' ++ " :: " ++ (klass "GObject.Object") ++ " o"
            ++ " => o -> " ++ name'
-    line $ "castTo" ++ name' ++ " = castTo " ++
+    line $ "castTo" ++ name' ++ " = GObject.castTo " ++
            "c_" ++ cn_ ++ " \"" ++ name' ++ "\""
 
 genGObjectConversions n = do
@@ -660,12 +658,14 @@ genGObjectConversions n = do
     line $ "castTo" ++ name' ++ " :: " ++ className ++ " o => o -> o"
     line $ "castTo" ++ name' ++ " = id"
 
-genObject ih n o = do
+genObject n o = do
   name' <- upperName n
   line $ "-- object " ++ name' ++ " "
   line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
 
-  let iT = instanceTree ih n
+  cfg <- config
+
+  let iT = instanceTree (instances cfg) n
   case iT of
        [] -> when (n == Name "GObject" "Object") $
                   genGObjectConversions n
@@ -676,12 +676,13 @@ genObject ih n o = do
   forM_ (objMethods o) $ \(mn, f) -> do
     genMethod n mn f
   forM_ (objInterfaces o) $ \(Name ns n) -> do
-    ifName' <- show <$> haskellType' (TInterface ns n)
-    let ifClass = interfaceClassName ifName'
+    let toIfName = "to" ++ n
+    let cast = (ucFirst ns) ++ "." ++ n
+    let ifClass = (ucFirst ns) ++ "." ++ interfaceClassName n
     group $ do
       line $ "instance " ++ ifClass ++ " " ++ name' ++ " where"
       indent $ do
-        line $ "to" ++ ifName' ++ " (" ++ name' ++ " p) = " ++ ifName' ++ " (castPtr p)"
+        line $ toIfName ++ " (" ++ name' ++ " p) = " ++ cast ++ " (castPtr p)"
   forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n o
 
 genInterface n iface = do
@@ -718,20 +719,20 @@ genInterface n iface = do
          hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2 })) = sym1 == sym2
          hasSymbol _ _ = False
 
-genCode :: Map Name Name -> Name -> API -> CodeGen ()
-genCode _ n (APIConst c) = genConstant n c
-genCode _ n (APIFunction f) = genFunction n f
-genCode _ n (APIEnum e) = genEnum n e
-genCode _ n (APIFlags f) = genFlags n f
-genCode _ n (APICallback c) = genCallback n c
-genCode _ n (APIStruct s) = genStruct n s
-genCode _ n (APIUnion u) = genUnion n u
-genCode ih n (APIObject o) = genObject ih n o
-genCode _ n (APIInterface i) = genInterface n i
-genCode _ _ (APIBoxed _) = return ()
+genCode :: Name -> API -> CodeGen ()
+genCode n (APIConst c) = genConstant n c
+genCode n (APIFunction f) = genFunction n f
+genCode n (APIEnum e) = genEnum n e
+genCode n (APIFlags f) = genFlags n f
+genCode n (APICallback c) = genCallback n c
+genCode n (APIStruct s) = genStruct n s
+genCode n (APIUnion u) = genUnion n u
+genCode n (APIObject o) = genObject n o
+genCode n (APIInterface i) = genInterface n i
+genCode _ (APIBoxed _) = return ()
 
 gLibBootstrap = do
-    line "type GType = Word"
+    line "type Type = Word"
     line "data GArray a = GArray (Ptr (GArray a))"
     line "data GHashTable a b = GHashTable (Ptr (GHashTable a b))"
     line "data GList a = GList (Ptr (GList a))"
@@ -741,59 +742,35 @@ gLibBootstrap = do
 gObjectBootstrap = do
     line "-- Safe casting machinery"
     line "foreign import ccall unsafe \"check_object_type\""
-    line "    c_check_object_type :: Ptr GObject -> GType -> CInt"
+    line "    c_check_object_type :: Ptr GObject.Object -> GLib.Type -> CInt"
     blank
-    line $ "castTo :: (" ++ (klass "GObject") ++ " o, "
-           ++ (klass "GObject") ++ " o') =>"
-    line "           GType -> String -> o -> o'"
+    line $ "castTo :: (" ++ (klass "GObject.Object") ++ " o, "
+           ++ (klass "GObject.Object") ++ " o') =>"
+    line "           GLib.Type -> [Char] -> o -> o'"
     line "castTo t typeName obj = "
-    line "           let ptrObj = unGObject (toGObject obj) in"
+    line "           let ptrObj = GObject.unObject (GObject.toObject obj) in"
     line "           if c_check_object_type ptrObj t == 1 then"
-    line "                      unsafeCastGObject (GObject ptrObj)"
+    line "                      unsafeCastObject (GObject.Object ptrObj)"
     line "             else"
     line "                      error $ \"Cannot cast object to \" ++ typeName"
     blank
     line "-- Connecting GObjects to signals"
     line "foreign import ccall unsafe \"gtk2hs_closure_new\""
-    line "  gtk2hs_closure_new :: StablePtr a -> IO (Ptr GClosure)"
+    line "  gtk2hs_closure_new :: StablePtr a -> IO (Ptr GObject.Closure)"
     blank
     line "foreign import ccall \"g_signal_connect_closure\" g_signal_connect_closure' ::"
-    line "    Ptr GObject ->                          -- instance"
+    line "    Ptr GObject.Object ->                   -- instance"
     line "    CString ->                              -- detailed_signal"
-    line "    Ptr GClosure ->                         -- closure"
+    line "    Ptr GObject.Closure ->                  -- closure"
     line "    CInt ->                                 -- after"
     line "    IO Word32"
     blank
-    line "connectSignal :: GObjectKlass o => o -> String -> a -> IO Word32"
+    line "connectSignal :: GObject.ObjectKlass o => o -> [Char] -> a -> IO Word32"
     line "connectSignal object signal fn = do"
     line "              closure <- newStablePtr fn >>= gtk2hs_closure_new"
     line "              signal' <- newCString signal"
-    line "              let object' = unGObject (toGObject object)"
+    line "              let object' = GObject.unObject (GObject.toObject object)"
     line "              g_signal_connect_closure' object' signal' closure 0"
-
-nameToString (Name ns n) = ns ++ "." ++ n
-
--- Construct maps from objects to parent instances.
-parseObjectHierarchy :: Map Name API -> Map Name Name
-parseObjectHierarchy input = M.mapMaybe readParent input
-                     where
-                     readParent :: API -> Maybe Name
-                     readParent (APIObject o) =
-                                case objFields o of
-                                     (Field _ (TInterface pns pn) _) : _ ->
-                                            let pn' = Name pns pn in
-                                            if isAnObject pn' then
-                                               Just pn'
-                                            else
-                                               Nothing
-                                     _ -> Nothing
-                     readParent _ = Nothing
-
-                     isAnObject n = case M.lookup n input of
-                                Just (APIObject _) -> True
-                                Just (_) -> False
-                                Nothing -> error $ "Did not find " ++
-                                           (nameToString n) ++ " in input."
 
 genModule :: String -> [(Name, API)] -> CodeGen ()
 genModule name apis = do
@@ -804,6 +781,9 @@ genModule name apis = do
     -- XXX: Generate export list.
     line $ "module " ++ ucFirst name ++ " where"
     blank
+    -- String and IOError also appear in GLib.
+    when (name == "GLib") $
+         line $ "import Prelude hiding (String, IOError)"
     line $ "import Data.Int"
     line $ "import Data.Word"
     line $ "import Foreign"
@@ -811,27 +791,17 @@ genModule name apis = do
     blank
     cfg <- config
 
-    -- Construct the hierarchy of object instances. Also transform
-    -- GObject.InitiallyUnowned to GObject.Object (the only difference
-    -- is in the treatment of the floating reference, but we do not
-    -- want to expose that in the API).
-    let instanceHierarchy = flip M.map (parseObjectHierarchy (input cfg)) $
-                \parent -> if parent == Name "GObject" "InitiallyUnowned" then
-                              Name "GObject" "Object"
-                           else
-                              parent
-
     let (foreignImports, rest_) =
           splitImports $ runCodeGen' cfg $
           forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
-          (uncurry (genCode instanceHierarchy))
+          (uncurry genCode)
     -- GLib bootstrapping hacks.
     let rest = case name of
           "GLib" -> (runCodeGen' cfg $ gLibBootstrap) : rest_
           "GObject" -> (runCodeGen' cfg $ gObjectBootstrap) : rest_
           _ -> rest_
     forM_ (imports cfg) $ \i -> do
-      line $ "import " ++ ucFirst i
+      line $ "import qualified " ++ ucFirst i ++ " as " ++ ucFirst i
     blank
     mapM_ (\c -> tell c >> blank) foreignImports
     mapM_ (\c -> tell c >> blank) rest

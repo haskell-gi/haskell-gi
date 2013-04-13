@@ -122,11 +122,11 @@ haskellBasicType TFileName = typeOf ""
 -- This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> TypeRep
 haskellType (TBasicType bt) = haskellBasicType bt
-haskellType (TArray a) = "GArray" `con` [haskellType a]
-haskellType (TGList a) = "GList" `con` [haskellType a]
-haskellType (TGSList a) = "GSList" `con` [haskellType a]
-haskellType (TGHash a b) = "GHashTable" `con` [haskellType a, haskellType b]
-haskellType TError = "GError" `con` []
+haskellType (TArray a) = "GLib.GArray" `con` [haskellType a]
+haskellType (TGList a) = "GLib.GList" `con` [haskellType a]
+haskellType (TGSList a) = "GLib.GSList" `con` [haskellType a]
+haskellType (TGHash a b) = "GLib.GHashTable" `con` [haskellType a, haskellType b]
+haskellType TError = "GLib.Error" `con` []
 -- We assume that any name qualification (e.g. "Checksum" ->
 -- "GChecksum") has been done already, and that the interface's name
 -- (i.e. ignoring the namespace) is the final name.
@@ -135,7 +135,7 @@ haskellType (TInterface _ns s) = s `con` []
 foreignBasicType TVoid     = ptr (typeOf ())
 foreignBasicType TBoolean  = "CInt" `con` []
 foreignBasicType TUTF8     = "CString" `con` []
-foreignBasicType TGType    = "GType" `con` []
+foreignBasicType TGType    = "GLib.Type" `con` []
 foreignBasicType TFileName = "CString" `con` []
 foreignBasicType t         = haskellBasicType t
 
