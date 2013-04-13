@@ -284,6 +284,16 @@ hToF t = do
            return $ Just $ App "(fromIntegral . fromEnum)"
          Just (APIFlags _) -> do
            return $ Just $ App "fromIntegral"
+         Just (APIObject _) -> do
+           t' <- haskellType' t
+           isGO <- isGObject t
+           let toType :: Type -> String
+               toType (TInterface ns n) = (ucFirst ns) ++ ".to" ++ n
+               toType _ = error "We expected a TInterface!"
+           return $ if isGO then
+                       Just $ App $ toPtr (show t') ++ " $ " ++ toType t
+                    else
+                       Nothing
          Just (APIInterface _) -> do
            -- When an argument is an instance of an interface, use
            -- that interface's class's conversion function.
@@ -379,7 +389,7 @@ genCallable n symbol callable = do
                 line $ "(" ++ (
                   intercalate ", " $
                   map (\(c, iface) ->
-                        interfaceClassName iface ++ " " ++ [c])
+                        iface ++ " " ++ [c])
                   jIfs) ++
                   ") =>"
             forM_ (zip ifs inArgs) $ \(mIface, a) ->
@@ -397,7 +407,17 @@ genCallable n symbol callable = do
                       Just (APIInterface _) -> do
                           s <- show <$> (haskellType' $ argType arg)
                           rest <- rec cs args
-                          return $ Just (c, s) : rest
+                          return $ Just (c, interfaceClassName s) : rest
+                      -- Instead of restricting to the actual class,
+                      -- we allow for any object descending from it.
+                      Just (APIObject _) -> do
+                        isGO <- isGObject $ argType arg
+                        case isGO of
+                           True -> do
+                             s <- show <$> (haskellType' $ argType arg)
+                             rest <- rec cs args
+                             return $ Just (c, klass s) : rest
+                           False -> (Nothing :) <$> rec (c:cs) args
                       _ -> (Nothing :) <$> rec (c:cs) args
     convertIn = forM (args callable) $ \arg -> do
         ft <- foreignType' $ argType arg

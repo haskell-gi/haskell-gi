@@ -11,6 +11,7 @@ import Data.Map (Map)
 import qualified Data.Map as M
 
 import GI.API
+import GI.Code
 import GI.Type
 
 klass n = n ++ "Klass"
@@ -24,11 +25,15 @@ instanceTree ih n = case M.lookup n ih of
 
 -- Returns whether the given object instance name is a descendant of
 -- GObject.
-isGObject :: Map Name Name -> Name -> Bool
-isGObject ih n = case M.lookup n ih of
-          Just (Name "GObject" "Object") -> True
-          Just p -> isGObject ih p
-          Nothing -> False
+isGObject (TInterface ns' n') = go ns' n'
+          where
+            go ns n = do
+             cfg <- config
+             case M.lookup (Name ns n) (instances cfg) of
+               Just (Name "GObject" "Object") -> return True
+               Just (Name pns pn) -> go pns pn
+               Nothing -> return False
+isGObject _ = error "Wrong type, cannot be a GObject."
 
 -- Construct the hierarchy of object instances. Also transform
 -- GObject.InitiallyUnowned to GObject.Object (the only difference
