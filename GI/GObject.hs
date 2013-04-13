@@ -33,7 +33,7 @@ isGObject (TInterface ns' n') = go ns' n'
                Just (Name "GObject" "Object") -> return True
                Just (Name pns pn) -> go pns pn
                Nothing -> return False
-isGObject _ = error "Wrong type, cannot be a GObject."
+isGObject _ = return False
 
 -- Construct the hierarchy of object instances. Also transform
 -- GObject.InitiallyUnowned to GObject.Object (the only difference

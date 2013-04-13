@@ -511,12 +511,13 @@ genMethod cn mn (Function {
                     fnCallable = c,
                     fnFlags = fs }) = do
     name' <- upperName cn
-    line $ "-- method " ++ name' ++ "::" ++ (name mn)
+    returnsGObject <- isGObject (returnType c)
+    line $ "-- method " ++ name' ++ "::" ++ (name mn) ++ " ( " ++ (show returnsGObject) ++ " )"
     let -- Mangle the name to namespace it to the class.
         mn' = mn { name = name cn ++ "_" ++ name mn }
         -- Mangle the callable to make the implicit object parameter
         -- explicit.
-        c' = c { args = args' }
+        c' = c {  args = args' }
         args' = objArg : (args c)
         objArg = Arg {
           argName = "_obj",
@@ -525,8 +526,15 @@ genMethod cn mn (Function {
           mayBeNull = False,
           scope = ScopeTypeInvalid,
           transfer = TransferNothing }
+    let -- Make GObject-derived constructors return the actual type of
+        -- the object.
+        c'' = c { returnType = returnType' }
+        returnType' = if returnsGObject then
+                        TInterface (namespace cn) (name cn)
+                      else
+                        returnType c        
     if FunctionIsConstructor `elem` fs
-      then genCallable mn' sym c
+      then genCallable mn' sym c''
       else genCallable mn' sym c'
 
 -- The marshaller C code has some built in support for basic types, so
