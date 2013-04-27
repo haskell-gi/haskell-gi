@@ -689,7 +689,7 @@ genGObjectConversions n = do
 genObject n o = do
   name' <- upperName n
   line $ "-- object " ++ name' ++ " "
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+  line $ "newtype " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
 
   cfg <- config
 
