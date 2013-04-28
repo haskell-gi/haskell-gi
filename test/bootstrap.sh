@@ -1,3 +1,4 @@
+#!/bin/bash
 
 prefixes="
  -pGLib=g
@@ -20,32 +21,34 @@ generate()
     haskell-gi $prefixes $renames "$@"
  }
 
+mkdir -p GI
+
 generate \
-    GLib > GI/GLib.chs
+    GLib > GI/GLib.hs
 generate \
     -i GLib \
-    GObject > GI/GObject.chs
-generate \
-    -i GLib \
-    -i GObject \
-    cairo > GI/Cairo.chs
+    GObject > GI/GObject.hs
 generate \
     -i GLib \
     -i GObject \
-    Gio > GI/Gio.chs
+    cairo > GI/Cairo.hs
 generate \
     -i GLib \
     -i GObject \
-    Pango > GI/Pango.chs
+    Gio > GI/Gio.hs
 generate \
     -i GLib \
     -i GObject \
-    Atk > GI/Atk.chs
+    Pango > GI/Pango.hs
+generate \
+    -i GLib \
+    -i GObject \
+    Atk > GI/Atk.hs
 generate \
     -i GLib \
     -i GObject \
     -i Gio \
-    GdkPixbuf > GI/GdkPixbuf.chs
+    GdkPixbuf > GI/GdkPixbuf.hs
 generate \
     -i GLib \
     -i GObject \
@@ -53,7 +56,7 @@ generate \
     -i cairo \
     -i GdkPixbuf \
     -i Pango \
-    Gdk > GI/Gdk.chs
+    Gdk > GI/Gdk.hs
 generate \
     -i GLib \
     -i GObject \
@@ -63,4 +66,7 @@ generate \
     -i Gdk \
     -i Pango \
     -i Atk \
-    Gtk > GI/Gtk.chs
+    Gtk > GI/Gtk.hs
+
+ghc -c hsgclosure.c $(pkg-config --cflags gobject-2.0)
+ghc --make testGtk.hs hsgclosure.o $(pkg-config --libs gtk+-3.0)
