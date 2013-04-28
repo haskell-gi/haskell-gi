@@ -7,5 +7,9 @@ and
 https://gitorious.org/haskell-gi
 and some portions of [gtk2hs](http://projects.haskell.org/gtk2hs/).
 
-This version adds support for type conversions between different
-GObject derived instances and for connecting callbacks to signals. See `test/testGtk.hs` for a working usage example.
+This version adds support for:
+* Type conversions.
+* Conecting callbacks to signals.
+* Reference counting for GObjects.
+
+See `test/testGtk.hs` for a working usage example.
