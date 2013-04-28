@@ -25,6 +25,8 @@ instanceTree ih n = case M.lookup n ih of
 
 -- Returns whether the given object instance name is a descendant of
 -- GObject.
+isGObject :: Type -> CodeGen Bool
+isGObject (TInterface "GObject" "Object") = return True
 isGObject (TInterface ns' n') = go ns' n'
           where
             go ns n = do

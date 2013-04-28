@@ -258,6 +258,16 @@ code e = case doExpr e of
     exprStr (EStr _ s) = s
     exprStr _ = error "exprStr"
 
+interfaceName :: Type -> CodeGen (Maybe Name)
+interfaceName t = do
+    a <- findAPI t
+    case a of
+         Just (APIInterface _) -> do
+              case t of
+                   TInterface ns n -> return $ Just $ Name ns n
+                   _ -> error "Interface without TInterface!"
+         _ -> return Nothing
+
 hToF :: Type -> CodeGen (Expr -> Expr)
 hToF t = do
     hType <- haskellType' t
@@ -285,13 +295,16 @@ hToF t = do
          Just (APIFlags _) -> do
            return $ Just $ App "fromIntegral"
          Just (APIObject _) -> do
-           t' <- haskellType' t
            isGO <- isGObject t
            let toType :: Type -> String
                toType (TInterface ns n) = (ucFirst ns) ++ ".to" ++ n
                toType _ = error "We expected a TInterface!"
+               unType :: Type -> String
+               unType (TInterface ns n) = (ucFirst ns) ++ ".un" ++ n
+               unType _ = error "We expected a TInterface!"
            return $ if isGO then
-                       Just $ App $ toPtr (show t') ++ " $ " ++ toType t
+                       Just $ App $ "unsafeForeignPtrToPtr $ " ++
+                                    unType t ++ " $ " ++ toType t
                     else
                        Nothing
          Just (APIInterface _) -> do
@@ -300,8 +313,9 @@ hToF t = do
            t' <- haskellType' t
            case t of
              TInterface ns n ->
-               return $ Just $ App $
-                      toPtr (show t') ++ " $ " ++ ns ++ ".to" ++ n
+               return $ Just $ M . App ( "unsafeForeignPtrToPtr <$> "
+                                         ++ toPtr (show t') ++ " <$> "
+                                         ++ ns ++ ".to" ++ n )
              _ -> error "Interface does not have interface type!?"
          _ -> return Nothing
     hToF' "[Char]" "CString" = M . App "newCString"
@@ -323,7 +337,20 @@ fToH t = do
           Just f -> return f
           Nothing ->
             if ptr hType == fType
-               then return $ App $ tyConName $ typeRepTyCon hType
+               then do
+                    let constructor = tyConName $ typeRepTyCon hType
+                    isGO <- isGObject t
+                    if isGO
+                       then return $ M . App ("GObject.makeNewObject " ++ constructor)
+                       else do
+                          --- These are for routines that return
+                          --- abstract interfaces. We create a managed
+                          --- pointer without actual refcounting.
+                          ifaceName <- interfaceName t
+                          case ifaceName of
+                               Just _ -> do
+                                    return $ M . App (constructor ++ " <$> newForeignPtr_")
+                               _ -> return $ App $ constructor
                else return $ fToH' (show fType) (show hType)
 
     where
@@ -378,6 +405,7 @@ genCallable n symbol callable = do
         indent $ do
             argNames <- convertIn
             line $ "result <- " ++ symbol ++ concatMap (" " ++) argNames
+            touchInArgs
             convertOut
     signature = do
         name <- lowerName n
@@ -440,6 +468,23 @@ genCallable n symbol callable = do
             (_ , []) -> line $ "return " ++ result
             (_ , _) -> line $
                 "return (" ++ intercalate ", " (result : pps) ++ ")"
+    -- Touch in arguments so we are sure that they exist when the C
+    -- function was called.
+    touchInArgs = forM_ (args callable) $ \arg -> do
+        when (direction arg == DirectionIn) $ do
+             let name = escapeReserved $ argName arg
+             isGO <- isGObject (argType arg)
+             when isGO $ do
+                  line $ "touchForeignPtr $ (GObject.unObject . GObject.toObject) $ " ++ name
+             iName <- interfaceName (argType arg)
+             case iName of
+                  Just (Name ns n) -> do
+                       let unInterface = "(\\(" ++ (ucFirst ns) ++ "." ++
+                                         n ++ " x) -> x)"
+                       let toInterface = (ucFirst ns) ++ ".to" ++ n
+                       line $ unInterface ++ " <$> " ++ toInterface ++ " " ++
+                              name ++ " >>= touchForeignPtr"
+                  _ -> return ()
     withComment a b = padTo 40 a ++ "-- " ++ b
     hArgStr arg = do
         ht <- haskellType' $ argType arg
@@ -648,9 +693,9 @@ genGObjectDescendantConversions iT n = do
           line $ "instance " ++ (klass ancestor') ++ " " ++ name'
                ++ " where"
     indent $ do
-      line $ "toObject = GObject.Object . castPtr . un" ++ name'
+      line $ "toObject = GObject.Object . castForeignPtr . un" ++ name'
       line $ "unsafeCastObject = " ++ name' ++
-             " . castPtr . GObject.unObject"
+             " . castForeignPtr . GObject.unObject"
 
   -- Type casting with type checking
   cn_ <- (++ "_get_type") <$> cName n
@@ -660,9 +705,9 @@ genGObjectDescendantConversions iT n = do
 
   group $ do
     line $ "castTo" ++ name' ++ " :: " ++ (klass "GObject.Object") ++ " o"
-           ++ " => o -> " ++ name'
-    line $ "castTo" ++ name' ++ " = GObject.castTo " ++
-           "c_" ++ cn_ ++ " \"" ++ name' ++ "\""
+           ++ " => o -> IO " ++ name'
+    line $ "castTo" ++ name' ++ " = GObject.castTo " ++ name' ++ 
+           " c_" ++ cn_ ++ " \"" ++ name' ++ "\""
 
 genGObjectConversions n = do
   name' <- upperName n
@@ -683,34 +728,48 @@ genGObjectConversions n = do
                line $ "unsafeCast" ++ name' ++ " = id"
 
   group $ do
-    line $ "castTo" ++ name' ++ " :: " ++ className ++ " o => o -> o"
-    line $ "castTo" ++ name' ++ " = id"
+    line $ "castTo" ++ name' ++ " :: " ++ className ++ " o => o -> IO o"
+    line $ "castTo" ++ name' ++ " = return"
 
 genObject n o = do
   name' <- upperName n
   line $ "-- object " ++ name' ++ " "
-  line $ "newtype " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
 
+  let t = (\(Name ns' n') -> TInterface ns' n') n
+  isGO <- isGObject t
+
+  line $ "newtype " ++ name' ++ " = " ++ name' ++
+       if isGO then
+          " (ForeignPtr " ++ name' ++ ")"
+       else
+          " (Ptr " ++ name' ++ ")"
   cfg <- config
 
-  let iT = instanceTree (instances cfg) n
-  case iT of
-       [] -> when (n == Name "GObject" "Object") $
-                  genGObjectConversions n
-       _  -> when (last iT == Name "GObject" "Object") $
-                  genGObjectDescendantConversions iT n
+  when isGO $ do
+       let iT = instanceTree (instances cfg) n
+       case iT of
+            [] -> genGObjectConversions n
+            _  -> genGObjectDescendantConversions iT n
 
-  -- Generate wrappers for methods.
-  forM_ (objMethods o) $ \(mn, f) -> do
-    genMethod n mn f
+  -- Implemented interfaces.
   forM_ (objInterfaces o) $ \(Name ns n) -> do
     let toIfName = "to" ++ n
-    let cast = (ucFirst ns) ++ "." ++ n
     let ifClass = (ucFirst ns) ++ "." ++ interfaceClassName n
+    let tyName = (ucFirst ns) ++ "." ++ n
+    let cast = if isGO then
+                  "withForeignPtr p $ \\p' -> GObject.makeNewObject " ++
+                  tyName ++ " p'"
+               else
+                  tyName ++ " <$> newForeignPtr_ (castPtr p)"
     group $ do
       line $ "instance " ++ ifClass ++ " " ++ name' ++ " where"
-      indent $ do
-        line $ toIfName ++ " (" ++ name' ++ " p) = " ++ cast ++ " (castPtr p)"
+      indent $ line $ toIfName ++ " (" ++ name' ++ " p) = " ++ cast
+
+  -- Methods.
+  forM_ (objMethods o) $ \(mn, f) -> do
+    genMethod n mn f
+
+  -- And finally signals.
   forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n o
 
 genInterface n iface = do
@@ -723,13 +782,13 @@ genInterface n iface = do
   let cls = interfaceClassName name'
   line $ "-- interface " ++ name' ++ " "
   -- XXX
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+  line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
   line $ "class " ++ cls ++ " a where"
   indent $ do
-    line $ "to" ++ name' ++ " :: a -> " ++ name'
+    line $ "to" ++ name' ++ " :: a -> IO " ++ name'
   line $ "instance " ++ cls ++ " " ++ name' ++ " where"
   indent $ do
-    line $ "to" ++ name' ++ " = id"
+    line $ "to" ++ name' ++ " = return"
   forM_ (ifMethods iface) $ \(mn, f) -> do
     -- Some type libraries seem to include spurious interface methods,
     -- where a method Mod.Foo::func is actually just a function
@@ -768,19 +827,31 @@ gLibBootstrap = do
     blank
 
 gObjectBootstrap = do
+    line "-- Reference counting for constructors"
+    line "foreign import ccall unsafe \"&g_object_unref\""
+    indent $ line "ptr_to_g_object_unref :: FunPtr (Ptr a -> IO ())"
+    blank
+    line "makeNewObject :: (ForeignPtr a -> a) -> Ptr b -> IO a"
+    line "makeNewObject constructor ptr = do"
+    indent $ do
+           line "_ <- g_object_ref_sink $ castPtr ptr"
+           line "fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr"
+           line "return $! constructor fPtr"
+    blank
     line "-- Safe casting machinery"
     line "foreign import ccall unsafe \"check_object_type\""
     line "    c_check_object_type :: Ptr GObject.Object -> GLib.Type -> CInt"
     blank
     line $ "castTo :: (" ++ (klass "GObject.Object") ++ " o, "
            ++ (klass "GObject.Object") ++ " o') =>"
-    line "           GLib.Type -> [Char] -> o -> o'"
-    line "castTo t typeName obj = "
-    line "           let ptrObj = GObject.unObject (GObject.toObject obj) in"
-    line "           if c_check_object_type ptrObj t == 1 then"
-    line "                      unsafeCastObject (GObject.Object ptrObj)"
-    line "             else"
-    line "                      error $ \"Cannot cast object to \" ++ typeName"
+    line "           (ForeignPtr o' -> o') -> GLib.Type -> [Char] -> o -> IO o'"
+    line "castTo constructor t typeName obj ="
+    line "    let ptrObj = (unsafeForeignPtrToPtr . unObject . toObject) obj in"
+    line "        if c_check_object_type ptrObj t == 1 then"
+    line "              withForeignPtr ((unObject . toObject) obj) $ \\ptr -> "
+    line "                makeNewObject constructor ptr"
+    line "          else"
+    line "              error $ \"Cannot cast object to \" ++ typeName"
     blank
     line "-- Connecting GObjects to signals"
     line "foreign import ccall unsafe \"gtk2hs_closure_new\""
@@ -795,10 +866,10 @@ gObjectBootstrap = do
     blank
     line "connectSignal :: GObject.ObjectKlass o => o -> [Char] -> a -> IO Word32"
     line "connectSignal object signal fn = do"
-    line "              closure <- newStablePtr fn >>= gtk2hs_closure_new"
-    line "              signal' <- newCString signal"
-    line "              let object' = GObject.unObject (GObject.toObject object)"
-    line "              g_signal_connect_closure' object' signal' closure 0"
+    line "      closure <- newStablePtr fn >>= gtk2hs_closure_new"
+    line "      signal' <- newCString signal"
+    line "      withForeignPtr (GObject.unObject (GObject.toObject object)) $ \\object' ->"
+    line "          g_signal_connect_closure' object' signal' closure 0"
 
 genModule :: String -> [(Name, API)] -> CodeGen ()
 genModule name apis = do
@@ -814,8 +885,10 @@ genModule name apis = do
          line $ "import Prelude hiding (String, IOError)"
     line $ "import Data.Int"
     line $ "import Data.Word"
-    line $ "import Foreign"
+    line $ "import Foreign.Safe"
+    line $ "import Foreign.ForeignPtr.Unsafe"
     line $ "import Foreign.C"
+    line $ "import Control.Applicative ((<$>))"
     blank
     cfg <- config
 
