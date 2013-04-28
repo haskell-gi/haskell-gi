@@ -11,7 +11,7 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
 import Data.Char (toLower, toUpper, isUpper)
-import Data.List (intercalate, partition)
+import Data.List (intercalate)
 import Data.Maybe (catMaybes)
 import Data.Tuple (swap)
 import qualified Data.ByteString.Char8 as B
@@ -892,26 +892,20 @@ genModule name apis = do
     blank
     cfg <- config
 
-    let (foreignImports, rest_) =
-          splitImports $ runCodeGen' cfg $
+    let code = codeToList $ runCodeGen' cfg $
           forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
           (uncurry genCode)
     -- GLib bootstrapping hacks.
-    let rest = case name of
-          "GLib" -> (runCodeGen' cfg $ gLibBootstrap) : rest_
-          "GObject" -> (runCodeGen' cfg $ gObjectBootstrap) : rest_
-          _ -> rest_
+    let code' = case name of
+          "GLib" -> (runCodeGen' cfg $ gLibBootstrap) : code
+          "GObject" -> (runCodeGen' cfg $ gObjectBootstrap) : code
+          _ -> code
     forM_ (imports cfg) $ \i -> do
       line $ "import qualified " ++ ucFirst i ++ " as " ++ ucFirst i
     blank
-    mapM_ (\c -> tell c >> blank) foreignImports
-    mapM_ (\c -> tell c >> blank) rest
+    mapM_ (\c -> tell c >> blank) code'
 
-    where splitImports = partition isImport . codeToList
-          isImport (ForeignImport _code) = True
-          isImport _ = False
-
-          ignore = [
+    where ignore = [
             "dummy_decl",
             -- These API elements refer to symbols which are
             -- dynamically loaded, which ghci has trouble with. Skip
