@@ -557,7 +557,7 @@ genMethod cn mn (Function {
                     fnFlags = fs }) = do
     name' <- upperName cn
     returnsGObject <- isGObject (returnType c)
-    line $ "-- method " ++ name' ++ "::" ++ (name mn) ++ " ( " ++ (show returnsGObject) ++ " )"
+    line $ "-- method " ++ name' ++ "::" ++ (name mn)
     let -- Mangle the name to namespace it to the class.
         mn' = mn { name = name cn ++ "_" ++ name mn }
         -- Mangle the callable to make the implicit object parameter
