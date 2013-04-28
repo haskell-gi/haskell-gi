@@ -71,6 +71,16 @@ getPrefix ns = do
         Just p -> return p
         Nothing -> return ns
 
+-- Return a qualified prefix for the given namespace. In case the
+-- namespace corresponds to the current module the empty string is returned.
+qualify :: String -> CodeGen String
+qualify ns = do
+     cfg <- config
+     return $ if modName cfg == ns then
+                ""
+              else
+                ucFirst ns ++ "."
+
 specifiedName s fallback = do
     cfg <- config
 
@@ -94,12 +104,9 @@ lowerName (Name _ s) = specifiedName s lowered
           ucFirst' x = ucFirst x
 
 upperName (Name ns s) = do
-          cfg <- config
           name <- specifiedName s uppered
-          return $ if ns == modName cfg then
-                      name
-                   else
-                      (ucFirst ns) ++ "." ++ name
+          prefix <- qualify ns
+          return $ prefix ++ name
     where uppered = return $ concatMap ucFirst' $ split '_' $ sanitize s
           -- Move leading underscores to the end (for example in
           -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
@@ -171,8 +178,10 @@ mapPrefixes (TGHash ta tb) =
   TGHash <$> mapPrefixes ta <*> mapPrefixes tb
 mapPrefixes t@TError = return t
 mapPrefixes (TInterface ns s) = do
-    -- We qualify symbols with their namespace.
-    return $ TInterface undefined $ (ucFirst ns) ++ "." ++ s
+    -- We qualify symbols with their namespace, unless they are in the
+    -- current module.
+    prefix <- qualify ns
+    return $ TInterface undefined $ prefix ++ s
 
 haskellType' :: Type -> CodeGen TypeRep
 haskellType' t = haskellType <$> mapPrefixes t
@@ -296,15 +305,17 @@ hToF t = do
            return $ Just $ App "fromIntegral"
          Just (APIObject _) -> do
            isGO <- isGObject t
-           let toType :: Type -> String
-               toType (TInterface ns n) = (ucFirst ns) ++ ".to" ++ n
+           let toType :: Type -> CodeGen String
+               toType (TInterface ns n) = (++ "to" ++ n) <$> qualify ns
                toType _ = error "We expected a TInterface!"
-               unType :: Type -> String
-               unType (TInterface ns n) = (ucFirst ns) ++ ".un" ++ n
+               unType :: Type -> CodeGen String
+               unType (TInterface ns n) = (++ "un" ++ n) <$> qualify ns
                unType _ = error "We expected a TInterface!"
+           to_ <- toType t
+           un_ <- unType t
            return $ if isGO then
                        Just $ App $ "unsafeForeignPtrToPtr $ " ++
-                                    unType t ++ " $ " ++ toType t
+                                    un_ ++ " $ " ++ to_
                     else
                        Nothing
          Just (APIInterface _) -> do
@@ -312,14 +323,15 @@ hToF t = do
            -- that interface's class's conversion function.
            t' <- haskellType' t
            case t of
-             TInterface ns n ->
+             TInterface ns n -> do
+               prefix <- qualify ns
                return $ Just $ M . App ( "unsafeForeignPtrToPtr <$> "
                                          ++ toPtr (show t') ++ " <$> "
-                                         ++ ns ++ ".to" ++ n )
+                                         ++ prefix ++ "to" ++ n )
              _ -> error "Interface does not have interface type!?"
          _ -> return Nothing
     hToF' "[Char]" "CString" = M . App "newCString"
-    hToF' "Word"   "GLib.Type"   = App "fromIntegral"
+    hToF' "Word"   "Type"   = App "fromIntegral"
     hToF' "Bool"   "CInt"    = App "(fromIntegral . fromEnum)"
     hToF' "[Char]" "Ptr CString" = M . App "bullshit"
     hToF' hType fType = error $
@@ -340,8 +352,10 @@ fToH t = do
                then do
                     let constructor = tyConName $ typeRepTyCon hType
                     isGO <- isGObject t
+                    prefixGO <- qualify "GObject"
                     if isGO
-                       then return $ M . App ("GObject.makeNewObject " ++ constructor)
+                       then return $ M . App (prefixGO ++ "makeNewObject "
+                                              ++ constructor)
                        else do
                           --- These are for routines that return
                           --- abstract interfaces. We create a managed
@@ -365,7 +379,7 @@ fToH t = do
          -- specified by an interface type?
          _ -> return Nothing
     fToH' "CString" "[Char]" = M . App "peekCString"
-    fToH' "GLib.Type" "Word" = App "fromIntegral"
+    fToH' "Type" "Word" = App "fromIntegral"
     fToH' "CInt" "Bool" = App "(/= 0)"
     fToH' fType hType = error $
        "don't know how to convert " ++ fType ++ " to " ++ hType
@@ -475,13 +489,16 @@ genCallable n symbol callable = do
              let name = escapeReserved $ argName arg
              isGO <- isGObject (argType arg)
              when isGO $ do
-                  line $ "touchForeignPtr $ (GObject.unObject . GObject.toObject) $ " ++ name
+                  unObject <- (++ "unObject") <$> qualify "GObject"
+                  toObject <- (++ "toObject") <$> qualify "GObject"
+                  line $ "touchForeignPtr $ (" ++ unObject ++ " . " ++
+                         toObject ++ ") $ " ++ name
              iName <- interfaceName (argType arg)
              case iName of
                   Just (Name ns n) -> do
-                       let unInterface = "(\\(" ++ (ucFirst ns) ++ "." ++
-                                         n ++ " x) -> x)"
-                       let toInterface = (ucFirst ns) ++ ".to" ++ n
+                       prefix <- qualify ns
+                       let unInterface = "(\\(" ++ prefix ++ n ++ " x) -> x)"
+                       let toInterface = prefix ++ "to" ++ n
                        line $ unInterface ++ " <$> " ++ toInterface ++ " " ++
                               name ++ " >>= touchForeignPtr"
                   _ -> return ()
@@ -631,16 +648,18 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
       line $ show ret
 
   -- Wrapper for connecting functions to the signal
-  let signature = (klass "GObject.Object") ++ " a => a -> " ++ cbType ++ " -> IO Word32" 
+  prefixGO <- qualify "GObject"
+  let signature = (klass (prefixGO ++ "Object")) ++ " a => a -> "
+                  ++ cbType ++ " -> IO Word32" 
   -- XXX It would be better to walk through the whole tree and
   -- disambiguate only those that are ambiguous.
   let signalConnectorName = "on" ++ on' ++ ucFirst sn'
   group $ do
     line $ signalConnectorName ++ " :: " ++ signature
-    line $ signalConnectorName ++ " obj cb = GObject.connectSignal obj \"" ++
-           (name sn) ++ "\" cb' where"
+    line $ signalConnectorName ++ " obj cb = " ++ prefixGO ++
+           "connectSignal obj \"" ++ (name sn) ++ "\" cb' where"
     indent $ do
-        line $ "cb' :: Ptr GObject.Object ->"
+        line $ "cb' :: Ptr " ++ prefixGO ++ "Object ->"
         indent $ do forM_ (args cb) $ \arg -> do
                        ft <- marshallFType $ argType arg
                        line $ show ft ++ " ->"
@@ -680,11 +699,14 @@ genGObjectDescendantConversions iT n = do
   -- Get the raw pointer
   line $ "un" ++ name' ++ " (" ++ name' ++ " o) = o"
 
+  prefixGO <- qualify "GObject"
+
   group $ do
     line $ "class " ++ (klass parent) ++ " o => " ++ className ++ " o"
     line $ "to" ++ name' ++ " :: " ++ className ++
            " o => o -> " ++ name'
-    line $ "to" ++ name' ++ " = GObject.unsafeCastObject . GObject.toObject"
+    line $ "to" ++ name' ++ " = " ++ prefixGO ++ "unsafeCastObject . " ++
+           prefixGO ++ "toObject"
 
   group $ do
     line $ "instance " ++ className ++ " " ++ name' ++ " where"
@@ -693,20 +715,21 @@ genGObjectDescendantConversions iT n = do
           line $ "instance " ++ (klass ancestor') ++ " " ++ name'
                ++ " where"
     indent $ do
-      line $ "toObject = GObject.Object . castForeignPtr . un" ++ name'
+      line $ "toObject = " ++ prefixGO ++ "Object . castForeignPtr . un"
+             ++ name'
       line $ "unsafeCastObject = " ++ name' ++
-             " . castForeignPtr . GObject.unObject"
+             " . castForeignPtr . " ++ prefixGO ++ "unObject"
 
   -- Type casting with type checking
   cn_ <- (++ "_get_type") <$> cName n
   group $ do
     line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
-    indent $ line $ "c_" ++ cn_ ++ " :: GLib.Type"
+    indent $ line $ "c_" ++ cn_ ++ " :: Type"
 
   group $ do
-    line $ "castTo" ++ name' ++ " :: " ++ (klass "GObject.Object") ++ " o"
+    line $ "castTo" ++ name' ++ " :: " ++ (klass (prefixGO ++ "Object")) ++ " o"
            ++ " => o -> IO " ++ name'
-    line $ "castTo" ++ name' ++ " = GObject.castTo " ++ name' ++ 
+    line $ "castTo" ++ name' ++ " = " ++ prefixGO ++ "castTo " ++ name' ++ 
            " c_" ++ cn_ ++ " \"" ++ name' ++ "\""
 
 genGObjectConversions n = do
@@ -754,11 +777,13 @@ genObject n o = do
   -- Implemented interfaces.
   forM_ (objInterfaces o) $ \(Name ns n) -> do
     let toIfName = "to" ++ n
-    let ifClass = (ucFirst ns) ++ "." ++ interfaceClassName n
-    let tyName = (ucFirst ns) ++ "." ++ n
+    prefix <- qualify ns
+    prefixGO <- qualify "GObject"
+    let ifClass = prefix ++ interfaceClassName n
+    let tyName = prefix ++ n
     let cast = if isGO then
-                  "withForeignPtr p $ \\p' -> GObject.makeNewObject " ++
-                  tyName ++ " p'"
+                  "withForeignPtr p $ \\p' -> " ++ prefixGO ++ "makeNewObject " 
+                  ++ tyName ++ " p'"
                else
                   tyName ++ " <$> newForeignPtr_ (castPtr p)"
     group $ do
@@ -840,11 +865,11 @@ gObjectBootstrap = do
     blank
     line "-- Safe casting machinery"
     line "foreign import ccall unsafe \"check_object_type\""
-    line "    c_check_object_type :: Ptr GObject.Object -> GLib.Type -> CInt"
+    line "    c_check_object_type :: Ptr Object -> Type -> CInt"
     blank
-    line $ "castTo :: (" ++ (klass "GObject.Object") ++ " o, "
-           ++ (klass "GObject.Object") ++ " o') =>"
-    line "           (ForeignPtr o' -> o') -> GLib.Type -> [Char] -> o -> IO o'"
+    line $ "castTo :: (" ++ (klass "Object") ++ " o, "
+           ++ (klass "Object") ++ " o') =>"
+    line "           (ForeignPtr o' -> o') -> Type -> [Char] -> o -> IO o'"
     line "castTo constructor t typeName obj ="
     line "    let ptrObj = (unsafeForeignPtrToPtr . unObject . toObject) obj in"
     line "        if c_check_object_type ptrObj t == 1 then"
@@ -855,20 +880,20 @@ gObjectBootstrap = do
     blank
     line "-- Connecting GObjects to signals"
     line "foreign import ccall unsafe \"gtk2hs_closure_new\""
-    line "  gtk2hs_closure_new :: StablePtr a -> IO (Ptr GObject.Closure)"
+    line "  gtk2hs_closure_new :: StablePtr a -> IO (Ptr Closure)"
     blank
     line "foreign import ccall \"g_signal_connect_closure\" g_signal_connect_closure' ::"
-    line "    Ptr GObject.Object ->                   -- instance"
+    line "    Ptr Object ->                           -- instance"
     line "    CString ->                              -- detailed_signal"
-    line "    Ptr GObject.Closure ->                  -- closure"
+    line "    Ptr Closure ->                          -- closure"
     line "    CInt ->                                 -- after"
     line "    IO Word32"
     blank
-    line "connectSignal :: GObject.ObjectKlass o => o -> [Char] -> a -> IO Word32"
+    line "connectSignal :: ObjectKlass o => o -> [Char] -> a -> IO Word32"
     line "connectSignal object signal fn = do"
     line "      closure <- newStablePtr fn >>= gtk2hs_closure_new"
     line "      signal' <- newCString signal"
-    line "      withForeignPtr (GObject.unObject (GObject.toObject object)) $ \\object' ->"
+    line "      withForeignPtr (unObject (toObject object)) $ \\object' ->"
     line "          g_signal_connect_closure' object' signal' closure 0"
 
 genModule :: String -> [(Name, API)] -> CodeGen ()
@@ -877,12 +902,18 @@ genModule name apis = do
     blank
     line $ "{-# LANGUAGE ForeignFunctionInterface #-}"
     blank
+    -- XXX: This should be a command line option.
+    let installationPrefix = "GI."
+        ip = (installationPrefix ++)
     -- XXX: Generate export list.
-    line $ "module " ++ ucFirst name ++ " where"
+    line $ "module " ++ ip (ucFirst name) ++ " where"
     blank
     -- String and IOError also appear in GLib.
-    when (name == "GLib") $
-         line $ "import Prelude hiding (String, IOError)"
+    line $ "import Prelude hiding (String, IOError)"
+    -- Basic data types for bindings.
+    when (name /= "GLib") $
+         line $ "import " ++ ip "GLib (GArray(..), GList(..), "
+                ++ "GSList(..), GHashTable(..), Error(..), Type(..))"
     line $ "import Data.Int"
     line $ "import Data.Word"
     line $ "import Foreign.Safe"
@@ -901,7 +932,7 @@ genModule name apis = do
           "GObject" -> (runCodeGen' cfg $ gObjectBootstrap) : code
           _ -> code
     forM_ (imports cfg) $ \i -> do
-      line $ "import qualified " ++ ucFirst i ++ " as " ++ ucFirst i
+      line $ "import qualified " ++ ip (ucFirst i) ++ " as " ++ ucFirst i
     blank
     mapM_ (\c -> tell c >> blank) code'
 

@@ -1,6 +1,6 @@
 {-# CFILES hsgclosure.c #-}
-import Gtk hiding (main)
-import qualified Gtk as Gtk
+import GI.Gtk hiding (main)
+import qualified GI.Gtk as Gtk
 
 import Foreign (nullPtr)
 
