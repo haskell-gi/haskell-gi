@@ -19,7 +19,7 @@ set -x
 generate()
 {
     haskell-gi $prefixes $renames "$@"
- }
+}
 
 mkdir -p GI
 
