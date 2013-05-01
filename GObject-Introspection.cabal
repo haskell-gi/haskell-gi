@@ -24,7 +24,7 @@ Executable haskell-gi
       process,
       bytestring
   build-tools: hsc2hs
-  extensions: ForeignFunctionInterface
+  extensions: ForeignFunctionInterface, DoAndIfThenElse
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
       System.Glib.Initialize,
@@ -67,7 +67,7 @@ Executable test
     test-framework,
     test-framework-hunit
   build-tools: hsc2hs
-  extensions: ForeignFunctionInterface
+  extensions: ForeignFunctionInterface, DoAndIfThenElse
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
       System.Glib.Initialize,
