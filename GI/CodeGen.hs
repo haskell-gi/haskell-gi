@@ -81,6 +81,15 @@ qualify ns = do
               else
                 ucFirst ns ++ "."
 
+-- Returns whether the given type corresponds to a ManagedPtr
+-- instance, currently we manage only APIObjects.
+isManaged   :: Type -> CodeGen Bool
+isManaged t = do
+  a <- findAPI t
+  case a of
+    Just (APIObject _) -> return True
+    _                  -> return False
+
 specifiedName s fallback = do
     cfg <- config
 
@@ -304,31 +313,9 @@ hToF t = do
          Just (APIFlags _) -> do
            return $ Just $ App "fromIntegral"
          Just (APIObject _) -> do
-           isGO <- isGObject t
-           let toType :: Type -> CodeGen String
-               toType (TInterface ns n) = (++ "to" ++ n) <$> qualify ns
-               toType _ = error "We expected a TInterface!"
-               unType :: Type -> CodeGen String
-               unType (TInterface ns n) = (++ "un" ++ n) <$> qualify ns
-               unType _ = error "We expected a TInterface!"
-           to_ <- toType t
-           un_ <- unType t
-           return $ if isGO then
-                       Just $ App $ "unsafeForeignPtrToPtr $ " ++
-                                    un_ ++ " $ " ++ to_
-                    else
-                       Nothing
+           return $ Just $ App "(castPtr . unsafeManagedPtrGetPtr)"
          Just (APIInterface _) -> do
-           -- When an argument is an instance of an interface, use
-           -- that interface's class's conversion function.
-           t' <- haskellType' t
-           case t of
-             TInterface ns n -> do
-               prefix <- qualify ns
-               return $ Just $ M . App ( "unsafeForeignPtrToPtr <$> "
-                                         ++ toPtr (show t') ++ " <$> "
-                                         ++ prefix ++ "to" ++ n )
-             _ -> error "Interface does not have interface type!?"
+           return $ Just $ App "(castPtr . unsafeManagedPtrGetPtr)"
          _ -> return Nothing
     hToF' "[Char]" "CString" = M . App "newCString"
     hToF' "Word"   "Type"   = App "fromIntegral"
@@ -428,18 +415,15 @@ genCallable n symbol callable = do
         let jIfs = catMaybes ifs
         indent $ do
             when (not $ null jIfs) $ do
-                line $ "(" ++ (
-                  intercalate ", " $
-                  map (\(c, iface) ->
-                        iface ++ " " ++ [c])
-                  jIfs) ++
-                  ") =>"
+                let ifaceList = map (\(c, ifaces) ->
+                                         map (++ (' ':[c])) ifaces) jIfs
+                line $ "(" ++ intercalate ", " (concat ifaceList) ++ ") =>"
             forM_ (zip ifs inArgs) $ \(mIface, a) ->
                 case mIface of
-                    Just (c, _iface) -> line $ withComment ([c] ++ " ->") $ argName a
+                    Just (c, _) -> line $ withComment ([c] ++ " ->") $ argName a
                     Nothing -> line =<< hArgStr a
             result >>= line
-    inArgInterfaces :: CodeGen [Maybe (Char, [Char])]
+    inArgInterfaces :: CodeGen [Maybe (Char, [[Char]])]
     inArgInterfaces = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
         where rec [] _ = error "out of letters"
               rec _ [] = return []
@@ -449,7 +433,8 @@ genCallable n symbol callable = do
                       Just (APIInterface _) -> do
                           s <- show <$> (haskellType' $ argType arg)
                           rest <- rec cs args
-                          return $ Just (c, interfaceClassName s) : rest
+                          return $ Just (c, [interfaceClassName s,
+                                             "ManagedPtr"]) : rest
                       -- Instead of restricting to the actual class,
                       -- we allow for any object descending from it.
                       Just (APIObject _) -> do
@@ -458,7 +443,7 @@ genCallable n symbol callable = do
                            True -> do
                              s <- show <$> (haskellType' $ argType arg)
                              rest <- rec cs args
-                             return $ Just (c, klass s) : rest
+                             return $ Just (c, [klass s, "ManagedPtr"]) : rest
                            False -> (Nothing :) <$> rec (c:cs) args
                       _ -> (Nothing :) <$> rec (c:cs) args
     convertIn = forM (args callable) $ \arg -> do
@@ -486,22 +471,10 @@ genCallable n symbol callable = do
     -- function was called.
     touchInArgs = forM_ (args callable) $ \arg -> do
         when (direction arg == DirectionIn) $ do
-             let name = escapeReserved $ argName arg
-             isGO <- isGObject (argType arg)
-             when isGO $ do
-                  unObject <- (++ "unObject") <$> qualify "GObject"
-                  toObject <- (++ "toObject") <$> qualify "GObject"
-                  line $ "touchForeignPtr $ (" ++ unObject ++ " . " ++
-                         toObject ++ ") $ " ++ name
-             iName <- interfaceName (argType arg)
-             case iName of
-                  Just (Name ns n) -> do
-                       prefix <- qualify ns
-                       let unInterface = "(\\(" ++ prefix ++ n ++ " x) -> x)"
-                       let toInterface = prefix ++ "to" ++ n
-                       line $ unInterface ++ " <$> " ++ toInterface ++ " " ++
-                              name ++ " >>= touchForeignPtr"
-                  _ -> return ()
+             managed <- isManaged (argType arg)
+             when managed $ do
+               let name = escapeReserved $ argName arg
+               line $ "touchManagedPtr " ++ name
     withComment a b = padTo 40 a ++ "-- " ++ b
     hArgStr arg = do
         ht <- haskellType' $ argType arg
@@ -649,8 +622,8 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
 
   -- Wrapper for connecting functions to the signal
   prefixGO <- qualify "GObject"
-  let signature = (klass (prefixGO ++ "Object")) ++ " a => a -> "
-                  ++ cbType ++ " -> IO Word32" 
+  let signature = "(ManagedPtr a, " ++ klass (prefixGO ++ "Object") ++ " a) =>"
+                  ++ " a -> " ++ cbType ++ " -> IO Word32" 
   -- XXX It would be better to walk through the whole tree and
   -- disambiguate only those that are ambiguous.
   let signalConnectorName = "on" ++ on' ++ ucFirst sn'
@@ -691,68 +664,56 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
 
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
-genGObjectDescendantConversions iT n = do
+genGObjectType iT n = do
   name' <- upperName n
   let className = klass name'
-  parent <- upperName $ head iT
 
-  -- Get the raw pointer
-  line $ "un" ++ name' ++ " (" ++ name' ++ " o) = o"
+  -- ManagedPtr implementation
+  group $ do
+    line $ "instance ManagedPtr " ++ name' ++ " where"
+    indent $ do
+            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
+                     " x) -> unsafeForeignPtrToPtr x)"
+            line $ "touchManagedPtr        = (\\(" ++ name' ++
+                     " x) -> touchForeignPtr x)"
 
-  prefixGO <- qualify "GObject"
+
+  group $ line $ "class " ++ className ++ " o"
 
   group $ do
-    line $ "class " ++ (klass parent) ++ " o => " ++ className ++ " o"
-    line $ "to" ++ name' ++ " :: " ++ className ++
-           " o => o -> " ++ name'
-    line $ "to" ++ name' ++ " = " ++ prefixGO ++ "unsafeCastObject . " ++
-           prefixGO ++ "toObject"
-
-  group $ do
-    line $ "instance " ++ className ++ " " ++ name' ++ " where"
+    line $ "instance " ++ className ++ " " ++ name'
     forM_ iT $ \ancestor -> do
           ancestor' <- upperName ancestor
           line $ "instance " ++ (klass ancestor') ++ " " ++ name'
-               ++ " where"
-    indent $ do
-      line $ "toObject = " ++ prefixGO ++ "Object . castForeignPtr . un"
-             ++ name'
-      line $ "unsafeCastObject = " ++ name' ++
-             " . castForeignPtr . " ++ prefixGO ++ "unObject"
 
-  -- Type casting with type checking
-  cn_ <- (++ "_get_type") <$> cName n
+-- Type casting with type checking
+genGObjectCasts n = do
+  name' <- upperName n
+  cn_   <- (++ "_get_type") <$> cName n
+
   group $ do
     line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
     indent $ line $ "c_" ++ cn_ ++ " :: Type"
 
+  prefixGO <- qualify "GObject"
+
   group $ do
-    line $ "castTo" ++ name' ++ " :: " ++ (klass (prefixGO ++ "Object")) ++ " o"
-           ++ " => o -> IO " ++ name'
+    line $ "castTo" ++ name' ++ " :: " ++
+           "(ManagedPtr o, " ++ klass (prefixGO ++ "Object") ++ " o) => " ++
+           "o -> IO " ++ name'
     line $ "castTo" ++ name' ++ " = " ++ prefixGO ++ "castTo " ++ name' ++ 
            " c_" ++ cn_ ++ " \"" ++ name' ++ "\""
 
-genGObjectConversions n = do
+-- We do not currently manage properly APIObjects not descending from
+-- GObjects, but we should do so eventually. For the moment we just
+-- implement no-ops here.
+manageUnManagedPtr n = do
   name' <- upperName n
-  let className = klass name'
-
-  -- Get the raw pointer
-  line $ "un" ++ name' ++ " (" ++ name' ++ " o) = o"
-
   group $ do
-        line $ "class " ++ className ++ " o where"
-        indent $ do
-               line $ "to" ++ name' ++ " :: o -> " ++ name'
-               line $ "unsafeCast" ++ name' ++ " :: " ++ name' ++ " -> o"
-  group $ do
-        line $ "instance " ++ className ++ " " ++ name' ++ " where"
-        indent $ do
-               line $ "to" ++ name' ++ " = id"
-               line $ "unsafeCast" ++ name' ++ " = id"
-
-  group $ do
-    line $ "castTo" ++ name' ++ " :: " ++ className ++ " o => o -> IO o"
-    line $ "castTo" ++ name' ++ " = return"
+    line $ "instance ManagedPtr " ++ name' ++ " where"
+    indent $ do
+            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++ " x) -> x)"
+            line $ "touchManagedPtr      _ = return ()"
 
 genObject n o = do
   name' <- upperName n
@@ -768,33 +729,26 @@ genObject n o = do
           " (Ptr " ++ name' ++ ")"
   cfg <- config
 
-  when isGO $ do
-       let iT = instanceTree (instances cfg) n
-       case iT of
-            [] -> genGObjectConversions n
-            _  -> genGObjectDescendantConversions iT n
+  -- Instances and type conversions
+  if isGO
+  then genGObjectType (instanceTree (instances cfg) n) n
+  else manageUnManagedPtr n
 
-  -- Implemented interfaces.
-  forM_ (objInterfaces o) $ \(Name ns n) -> do
-    let toIfName = "to" ++ n
+  -- Implemented interfaces
+  let oIfs = objInterfaces o
+  when ((not . null) oIfs) $ group $ forM_ oIfs $ \(Name ns n) -> do
     prefix <- qualify ns
-    prefixGO <- qualify "GObject"
     let ifClass = prefix ++ interfaceClassName n
-    let tyName = prefix ++ n
-    let cast = if isGO then
-                  "withForeignPtr p $ \\p' -> " ++ prefixGO ++ "makeNewObject " 
-                  ++ tyName ++ " p'"
-               else
-                  tyName ++ " <$> newForeignPtr_ (castPtr p)"
-    group $ do
-      line $ "instance " ++ ifClass ++ " " ++ name' ++ " where"
-      indent $ line $ toIfName ++ " (" ++ name' ++ " p) = " ++ cast
+    line $ "instance " ++ ifClass ++ " " ++ name'
 
-  -- Methods.
+  -- Type safe casting
+  when isGO $ genGObjectCasts n
+
+  -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
     genMethod n mn f
 
-  -- And finally signals.
+  -- And finally signals
   forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n o
 
 genInterface n iface = do
@@ -806,14 +760,9 @@ genInterface n iface = do
   name' <- upperName n
   let cls = interfaceClassName name'
   line $ "-- interface " ++ name' ++ " "
-  -- XXX
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
-  line $ "class " ++ cls ++ " a where"
-  indent $ do
-    line $ "to" ++ name' ++ " :: a -> IO " ++ name'
-  line $ "instance " ++ cls ++ " " ++ name' ++ " where"
-  indent $ do
-    line $ "to" ++ name' ++ " = return"
+  line $ "class " ++ cls ++ " a"
+  line $ "instance " ++ cls ++ " " ++ name'
   forM_ (ifMethods iface) $ \(mn, f) -> do
     -- Some type libraries seem to include spurious interface methods,
     -- where a method Mod.Foo::func is actually just a function
@@ -867,16 +816,16 @@ gObjectBootstrap = do
     line "foreign import ccall unsafe \"check_object_type\""
     line "    c_check_object_type :: Ptr Object -> Type -> CInt"
     blank
-    line $ "castTo :: (" ++ (klass "Object") ++ " o, "
+    line $ "castTo :: (ManagedPtr o, " ++ (klass "Object") ++ " o, "
            ++ (klass "Object") ++ " o') =>"
     line "           (ForeignPtr o' -> o') -> Type -> [Char] -> o -> IO o'"
-    line "castTo constructor t typeName obj ="
-    line "    let ptrObj = (unsafeForeignPtrToPtr . unObject . toObject) obj in"
-    line "        if c_check_object_type ptrObj t == 1 then"
-    line "              withForeignPtr ((unObject . toObject) obj) $ \\ptr -> "
-    line "                makeNewObject constructor ptr"
-    line "          else"
-    line "              error $ \"Cannot cast object to \" ++ typeName"
+    line "castTo constructor t typeName obj = do"
+    line "    let ptrObj = (castPtr . unsafeManagedPtrGetPtr) obj"
+    line "    when (c_check_object_type ptrObj t /= 1) $"
+    line "         error $ \"Cannot cast object to \" ++ typeName"
+    line "    result <- makeNewObject constructor ptrObj"
+    line "    touchManagedPtr obj"
+    line "    return result"
     blank
     line "-- Connecting GObjects to signals"
     line "foreign import ccall unsafe \"gtk2hs_closure_new\""
@@ -889,12 +838,15 @@ gObjectBootstrap = do
     line "    CInt ->                                 -- after"
     line "    IO Word32"
     blank
-    line "connectSignal :: ObjectKlass o => o -> [Char] -> a -> IO Word32"
+    line "connectSignal :: (ObjectKlass o, ManagedPtr o) => "
+    line "                  o -> [Char] -> a -> IO Word32"
     line "connectSignal object signal fn = do"
     line "      closure <- newStablePtr fn >>= gtk2hs_closure_new"
     line "      signal' <- newCString signal"
-    line "      withForeignPtr (unObject (toObject object)) $ \\object' ->"
-    line "          g_signal_connect_closure' object' signal' closure 0"
+    line "      let object' = (castPtr . unsafeManagedPtrGetPtr) object"
+    line "      result <- g_signal_connect_closure' object' signal' closure 0"
+    line "      touchManagedPtr object"
+    line "      return result"
 
 genModule :: String -> [(Name, API)] -> CodeGen ()
 genModule name apis = do
@@ -920,6 +872,9 @@ genModule name apis = do
     line $ "import Foreign.ForeignPtr.Unsafe"
     line $ "import Foreign.C"
     line $ "import Control.Applicative ((<$>))"
+    line $ "import Control.Monad (when)"
+    blank
+    line $ "import GI.Internal.ManagedPtr"
     blank
     cfg <- config
 
