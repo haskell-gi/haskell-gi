@@ -205,7 +205,9 @@ data Object = Object {
     objConstants :: [Constant],
     objParent :: Maybe Name,
     objTypeInit :: String,
-    objTypeName :: String}
+    objTypeName :: String,
+    objRefFunction :: Maybe String,
+    objUnrefFunction :: Maybe String }
     deriving Show
 
 toObject :: ObjectInfo -> Object
@@ -218,7 +220,9 @@ toObject oi = Object {
     objConstants = map toConstant $ objectInfoConstants oi,
     objParent = getName <$> objectInfoParent oi,
     objTypeInit = objectInfoTypeInit oi,
-    objTypeName = objectInfoTypeName oi }
+    objTypeName = objectInfoTypeName oi,
+    objRefFunction = objectInfoRefFunction oi,
+    objUnrefFunction = objectInfoUnrefFunction oi }
 
 -- XXX: Work out what to do with boxed types.
 data Boxed = Boxed

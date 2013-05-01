@@ -9,6 +9,8 @@ module GI.Internal.ObjectInfo
     , objectInfoParent
     , objectInfoTypeInit
     , objectInfoTypeName
+    , objectInfoRefFunction
+    , objectInfoUnrefFunction
     -- , objectInfoVFuncs
     -- XXX: lots more stuff missing
     ) where
@@ -77,3 +79,19 @@ objectInfoTypeName :: ObjectInfoClass oic => oic -> String
 objectInfoTypeName oi = unsafePerformIO $ do
     result <- {# call get_type_name #} (stupidCast oi)
     peekCString result
+
+objectInfoRefFunction :: ObjectInfoClass oic => oic -> Maybe String
+objectInfoRefFunction oi = unsafePerformIO $ do
+    result <- {# call get_ref_function #} (stupidCast oi)
+    if result == nullPtr then
+        return Nothing
+    else
+        Just <$> peekCString result
+
+objectInfoUnrefFunction :: ObjectInfoClass oic => oic -> Maybe String
+objectInfoUnrefFunction oi = unsafePerformIO $ do
+    result <- {# call get_unref_function #} (stupidCast oi)
+    if result == nullPtr then
+        return Nothing
+    else
+        Just <$> peekCString result
