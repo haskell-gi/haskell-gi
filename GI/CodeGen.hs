@@ -10,11 +10,10 @@ module GI.CodeGen
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
-import Data.Char (toLower, toUpper, isUpper)
+import Data.Char (toLower, toUpper)
 import Data.List (intercalate)
 import Data.Maybe (catMaybes)
 import Data.Tuple (swap)
-import qualified Data.ByteString.Char8 as B
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon)
 import qualified Data.Map as M
 
@@ -124,59 +123,6 @@ upperName (Name ns s) = do
 
           ucFirst' "" = "_"
           ucFirst' x = ucFirst x
-
--- Given a CamelCase string "SpinButton" convert to lowercase with
--- underscores: "spin_button".
--- Special cases are things like HBox, HSV, IMContext, i.e. a string
--- of uppercase letters and then an actual type, we take care of those
--- with groupSingles.
-camelToUnderscores c = B.unpack $ groupSingles $ B.pack $
-                        flip concatMap c $ \char ->
-                            if isUpper char then
-                                '_' : (toLower char) : []
-                            else
-                                char : []
-
--- Group 1-letter groups.
--- Example: a_b_c_def -> abc_def
-groupSingles :: B.ByteString -> B.ByteString
-groupSingles t = reconstruct $ joinOneLetterClusters $
-                             discardFirst $ B.split '_' t
-                where
-                -- Ignore the effect of the first empty underscore 
-                discardFirst ("":xs) = xs
-                discardFirst _ = error $ "Parse error 1 on " ++ (B.unpack t)
-
-                reconstruct [] = error $ "Parse error 2 on " ++ (B.unpack t)
-                reconstruct all@(x:xs) =
-                      -- Sometimes there is a single letter in the
-                      -- beginning, join with the first chunk in this
-                      -- case: "VBox" -> _v_box -> vbox
-                      if B.length x == 1 then
-                         B.append x (B.intercalate "_" xs)
-                      else
-                         case xs of
-                              -- HSV -> _h_s_v -> hsv
-                              [] -> x
-                              -- IMContext -> _i_m_context -> im_context
-                              -- or simply Label -> _label -> label
-                              _ -> B.intercalate "_" all
-
--- Join together neighboring 1-letter clusters, leaving the rest of
--- clusters untouched.
-joinOneLetterClusters :: [B.ByteString] -> [B.ByteString]
-joinOneLetterClusters chunks = filter (not . B.null) $ reverse $ go "" [] chunks
-        where go acc1 result [] = acc1 : result
-              go acc1 result (x:xs) =
-                 if B.length x < 2 then
-                    go (B.append acc1 x) result xs
-                 else
-                    go "" (x : acc1 : result) xs
-
--- Name in C conventions.
-cName (Name ns n) = do
-      prefix <- map toLower <$> getPrefix ns
-      return $ prefix ++ "_" ++ (camelToUnderscores n)
 
 mapPrefixes :: Type -> CodeGen Type
 mapPrefixes t@(TBasicType _) = return t
@@ -687,9 +633,10 @@ genGObjectType iT n = do
           line $ "instance " ++ (klass ancestor') ++ " " ++ name'
 
 -- Type casting with type checking
-genGObjectCasts n = do
+genGObjectCasts n o = do
   name' <- upperName n
-  cn_   <- (++ "_get_type") <$> cName n
+
+  let cn_ = objTypeInit o
 
   group $ do
     line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
@@ -717,10 +664,14 @@ manageUnManagedPtr n = do
 
 genObject n o = do
   name' <- upperName n
+
   line $ "-- object " ++ name' ++ " "
 
   let t = (\(Name ns' n') -> TInterface ns' n') n
   isGO <- isGObject t
+
+  when (not isGO) $ line $ "-- XXX APIObject \"" ++ name' ++
+           "\" does not descend from GObject."
 
   line $ "newtype " ++ name' ++ " = " ++ name' ++
        if isGO then
@@ -742,7 +693,7 @@ genObject n o = do
     line $ "instance " ++ ifClass ++ " " ++ name'
 
   -- Type safe casting
-  when isGO $ genGObjectCasts n
+  when isGO $ genGObjectCasts n o
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do

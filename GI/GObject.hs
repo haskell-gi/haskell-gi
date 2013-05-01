@@ -45,26 +45,10 @@ parseObjectHierarchy :: Map Name API -> Map Name Name
 parseObjectHierarchy input = M.mapMaybe (rename . readParent) input
                      where
                      readParent :: API -> Maybe Name
-                     readParent (APIObject o) =
-                                case objFields o of
-                                     (Field _ (TInterface pns pn) _) : _ ->
-                                            let pn' = Name pns pn in
-                                            if isAnObject pn' then
-                                               Just pn'
-                                            else
-                                               Nothing
-                                     _ -> Nothing
+                     readParent (APIObject o) = objParent o
                      readParent _ = Nothing
 
                      rename :: Maybe Name -> Maybe Name
                      rename (Just (Name "GObject" "InitiallyUnowned")) =
                               Just (Name "GObject" "Object")
                      rename x = x
-
-                     isAnObject n = case M.lookup n input of
-                                Just (APIObject _) -> True
-                                Just (_) -> False
-                                Nothing -> error $ "Did not find " ++
-                                           (nameToString n) ++ " in input."
-
-                     nameToString (Name ns n) = ns ++ "." ++ n

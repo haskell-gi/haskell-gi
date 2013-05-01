@@ -38,6 +38,8 @@ import GI.Internal.UnionInfo
 import GI.Type
 import GI.Value
 
+import Control.Applicative ((<$>))
+
 data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)
 
@@ -200,7 +202,10 @@ data Object = Object {
     objProperties :: [Property],
     objSignals :: [(Name, Signal)],
     objInterfaces :: [Name],
-    objConstants :: [Constant] }
+    objConstants :: [Constant],
+    objParent :: Maybe Name,
+    objTypeInit :: String,
+    objTypeName :: String}
     deriving Show
 
 toObject :: ObjectInfo -> Object
@@ -210,7 +215,10 @@ toObject oi = Object {
     objProperties = map toProperty $ objectInfoProperties oi,
     objSignals = map (withName toSignal) (objectInfoSignals oi),
     objInterfaces = map getName $ objectInfoInterfaces oi,
-    objConstants = map toConstant $ objectInfoConstants oi }
+    objConstants = map toConstant $ objectInfoConstants oi,
+    objParent = getName <$> objectInfoParent oi,
+    objTypeInit = objectInfoTypeInit oi,
+    objTypeName = objectInfoTypeName oi }
 
 -- XXX: Work out what to do with boxed types.
 data Boxed = Boxed

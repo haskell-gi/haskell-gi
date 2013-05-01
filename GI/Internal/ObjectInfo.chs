@@ -6,13 +6,17 @@ module GI.Internal.ObjectInfo
     , objectInfoSignals
     , objectInfoConstants
     , objectInfoInterfaces
+    , objectInfoParent
+    , objectInfoTypeInit
+    , objectInfoTypeName
     -- , objectInfoVFuncs
     -- XXX: lots more stuff missing
     ) where
 
 import Control.Applicative ((<$>))
-import Foreign
+import Foreign hiding (unsafePerformIO)
 import Foreign.C
+import System.IO.Unsafe (unsafePerformIO)
 
 import GI.Util (getList)
 
@@ -55,3 +59,21 @@ objectInfoConstants :: ObjectInfoClass oic => oic -> [ConstantInfo]
 objectInfoConstants oi = unsafePerformIO $
     map (ConstantInfo <$> castPtr) <$>
     getList {# call get_n_constants #} {# call get_constant #} (stupidCast oi)
+
+objectInfoParent :: ObjectInfoClass oic => oic -> Maybe ObjectInfo
+objectInfoParent oi = unsafePerformIO $ do
+    parent <- {# call get_parent #} (stupidCast oi)
+    if parent == nullPtr then
+        return Nothing
+    else
+        return $ Just $ (ObjectInfo . castPtr) parent
+
+objectInfoTypeInit :: ObjectInfoClass oic => oic -> String
+objectInfoTypeInit oi = unsafePerformIO $ do
+    result <- {# call get_type_init #} (stupidCast oi)
+    peekCString result
+
+objectInfoTypeName :: ObjectInfoClass oic => oic -> String
+objectInfoTypeName oi = unsafePerformIO $ do
+    result <- {# call get_type_name #} (stupidCast oi)
+    peekCString result
