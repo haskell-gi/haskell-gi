@@ -456,11 +456,12 @@ genFunction n (Function symbol callable _flags) = do
   genCallable n symbol callable
 
 genStruct :: Name -> Struct -> CodeGen ()
-genStruct n@(Name _ name) (Struct _fields) = do
-  line $ "-- struct " ++ name
-  name' <- upperName n
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
-  -- XXX: Generate code for fields.
+genStruct n@(Name _ name) (Struct _fields isGType) =
+    when (not isGType) $ do
+      line $ "-- struct " ++ name
+      name' <- upperName n
+      line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+      -- XXX: Generate code for fields.
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name ns name) (Enumeration fields) = do
