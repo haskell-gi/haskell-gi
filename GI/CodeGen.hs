@@ -736,6 +736,15 @@ genInterface n iface = do
   line $ "-- interface " ++ name' ++ " "
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
   line $ "class " ++ cls ++ " a"
+
+  group $ do
+    line $ "instance ManagedPtr " ++ name' ++ " where"
+    indent $ do
+      line $ "unsafeManagedPtrGetPtr = (\\(" ++ name'
+               ++ " x) -> unsafeForeignPtrToPtr x)"
+      line $ "touchManagedPtr = (\\(" ++ name'
+               ++ " x) -> touchForeignPtr x)"
+
   line $ "instance " ++ cls ++ " " ++ name'
   forM_ (ifMethods iface) $ \(mn, f) -> do
     -- Some type libraries seem to include spurious interface methods,
