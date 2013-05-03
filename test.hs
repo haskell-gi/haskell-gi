@@ -22,7 +22,8 @@ testConfig = Config {
   names = M.empty,
   input = M.empty,
   modName = "test",
-  instances = M.empty }
+  instances = M.empty,
+  ignoredMethods = []}
 
 a @?== b = do
   when (a /= b) $ assertFailure diff

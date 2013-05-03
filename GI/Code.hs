@@ -52,6 +52,7 @@ data Config = Config {
   names :: M.Map String String,
   modName :: String,
   instances :: M.Map Name Name,
+  ignoredMethods :: [String],
   -- XXX: Blegh.
   input :: M.Map Name API }
 

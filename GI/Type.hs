@@ -93,7 +93,11 @@ typeFromTypeInfo ti =
 
 
 con :: String -> [TypeRep] -> TypeRep
-con s xs = mkTyConApp (mkTyCon s) xs
+con "[]" xs = mkTyConApp listCon xs
+              where listCon = typeRepTyCon (typeOf [""])
+con "(,)" xs = mkTyConApp tupleCon xs
+               where tupleCon = typeRepTyCon (typeOf ("",""))
+con s xs = mkTyConApp (mkTyCon3 "GI" "GI" s) xs
 
 io :: TypeRep -> TypeRep
 io t = "IO" `con` [t]
@@ -123,8 +127,8 @@ haskellBasicType TFileName = typeOf ""
 haskellType :: Type -> TypeRep
 haskellType (TBasicType bt) = haskellBasicType bt
 haskellType (TArray a) = "GArray" `con` [haskellType a]
-haskellType (TGList a) = "GList" `con` [haskellType a]
-haskellType (TGSList a) = "GSList" `con` [haskellType a]
+haskellType (TGList a) = "[]" `con` [haskellType a]
+haskellType (TGSList a) = "[]" `con` [haskellType a]
 haskellType (TGHash a b) = "GHashTable" `con` [haskellType a, haskellType b]
 haskellType TError = "Error" `con` []
 -- We assume that any name qualification (e.g. "Checksum" ->
@@ -143,8 +147,8 @@ foreignBasicType t         = haskellBasicType t
 foreignType :: Type -> TypeRep
 foreignType (TBasicType t) = foreignBasicType t
 foreignType t@(TArray _) = ptr (haskellType t)
-foreignType t@(TGList _) = ptr (haskellType t)
-foreignType t@(TGSList _) = ptr (haskellType t)
+foreignType (TGList a) = ptr ("GList" `con` [foreignType a])
+foreignType (TGSList a) = ptr ("GSList" `con` [foreignType a])
 foreignType t@(TGHash _ _) = ptr (haskellType t)
 foreignType t@TError = ptr (haskellType t)
 foreignType t@(TInterface _ _) = ptr (haskellType t)

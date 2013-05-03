@@ -11,5 +11,6 @@ This version adds support for:
 * Type conversions.
 * Conecting callbacks to signals.
 * Reference counting for GObjects.
+* Automatic conversion between G(S)List arguments and Haskell lists.
 
 See `test/testGtk.hs` for a working usage example.

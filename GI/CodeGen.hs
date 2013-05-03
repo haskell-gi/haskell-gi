@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, OverloadedStrings #-}
+{-# LANGUAGE PatternGuards #-}
 
 module GI.CodeGen
     ( genConstant
@@ -12,7 +12,6 @@ import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
 import Data.Char (toLower, toUpper)
 import Data.List (intercalate)
-import Data.Maybe (catMaybes)
 import Data.Tuple (swap)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon)
 import qualified Data.Map as M
@@ -81,13 +80,14 @@ qualify ns = do
                 ucFirst ns ++ "."
 
 -- Returns whether the given type corresponds to a ManagedPtr
--- instance, currently we manage only APIObjects.
+-- instance, currently we manage APIObjects and Interfaces.
 isManaged   :: Type -> CodeGen Bool
 isManaged t = do
   a <- findAPI t
   case a of
-    Just (APIObject _) -> return True
-    _                  -> return False
+    Just (APIObject _)    -> return True
+    Just (APIInterface _) -> return True
+    _                     -> return False
 
 specifiedName s fallback = do
     cfg <- config
@@ -158,6 +158,7 @@ foreignType' t = do
             _ -> return False
 
 prime = (++ "'")
+parenthesize s = "(" ++ s ++ ")"
 
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant n@(Name _ name) (Constant value) = do
@@ -166,6 +167,197 @@ genConstant n@(Name _ name) (Constant value) = do
     line $ "-- constant " ++ name
     line $ name' ++ " :: " ++ show ht
     line $ name' ++ " = " ++ valueStr value
+
+data Expr = Var String
+          | App String Expr
+          | M Expr
+          | EMap Expr
+          | EStr String String
+          deriving Show
+
+data Do = Bind String Expr | Let String Expr
+
+-- This is somewhat ugly.
+code :: Expr -> (String, [String])
+code e = case doExpr e of
+             ds@((Bind s _) : _) -> (s, map doStr $ reverse ds)
+             ds@((Let s _) : _) -> (s, map doStr $ reverse ds)
+             [] -> (name e, [])
+  where
+    name :: Expr -> String
+    name (Var s) = s
+    name (App _ e) = prime $ name e
+    name (M e) = name e
+    name (EStr n _) = n
+    name (EMap e) = name e
+
+    doExpr :: Expr -> [Do]
+    doExpr (Var _) = []
+    doExpr (App f e) = Let (prime $ name e) (App f (Var $ name e)) : (doExpr e)
+    doExpr (M (App f e)) = Bind (prime $ name e) (App f (Var $ name e)) : (doExpr e)
+    doExpr (M (EStr n e)) = [Bind n (EStr n e)]
+    doExpr (EMap (App f e)) = Let (prime $ name e)
+                              (App ("map " ++ f) (Var $ name e)) : (doExpr e)
+    doExpr (EMap (M (App f e))) = Bind (prime $ name e)
+                              (App ("mapM " ++ f) (Var $ name e)) : (doExpr e)
+    doExpr e = error $ "doExpr: " ++ show e
+
+    doStr (Let s e) = "let " ++ s ++ " = " ++ exprStr e
+    doStr (Bind s e) = s ++ " <- " ++ exprStr e
+
+    exprStr (Var s) = s
+    exprStr (App f e) = f ++ " " ++ exprStr e
+    exprStr (EStr _ s) = s
+    exprStr e = error $ "exprStr: " ++ show e
+
+interfaceName :: Type -> CodeGen (Maybe Name)
+interfaceName t = do
+    a <- findAPI t
+    case a of
+         Just (APIInterface _) -> do
+              case t of
+                   TInterface ns n -> return $ Just $ Name ns n
+                   _ -> error "Interface without TInterface!"
+         _ -> return Nothing
+
+-- Marshalling for conversions such as [a] -> GList (a')
+primitivePacker :: String -> Type -> CodeGen (Expr -> Expr)
+primitivePacker packer a = do
+  let conv'      :: (Expr -> Expr) -> Expr -> Expr
+      conv' ac e = M $ App packer $ EMap (ac e)
+  aConverter <- hToF a
+  return $ conv' aConverter
+
+hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen (Expr -> Expr)
+hToF' t a hType fType
+    | ( hType == fType ) = return id
+    | Just (APIEnum _) <- a = return $ App "(fromIntegral . fromEnum)"
+    | Just (APIFlags _) <- a = return $ App "fromIntegral"
+    | Just (APIObject _) <- a = return $
+                            App "(castPtr . unsafeManagedPtrGetPtr)"
+    | Just (APIInterface _) <- a = return $
+                               App "(castPtr . unsafeManagedPtrGetPtr)"
+    | ptr hType == fType = do
+        let con = tyConName $ typeRepTyCon hType
+        return $ App $ toPtr con
+    | (TGList a) <- t = primitivePacker "packGList" a
+    | (TGSList a) <- t = primitivePacker "packGSList" a
+    | otherwise = return $ case (show hType, show fType) of
+               ("[Char]", "CString") -> M . App "newCString"
+               ("Word", "Type")      -> App "fromIntegral"
+               ("Bool", "CInt")      -> App "(fromIntegral . fromEnum)"
+               _                     -> error $ "don't know how to convert "
+                                        ++ show hType ++ " into "
+                                        ++ show fType ++ "."
+
+hToF :: Type -> CodeGen (Expr -> Expr)
+hToF t = do
+  hType <- haskellType' t
+  fType <- foreignType' t
+  a <- findAPI t
+  hToF' t a hType fType
+
+-- Marshalling for conversions such as GList (a') -> a
+primitiveUnpacker :: String -> Type -> CodeGen (Expr -> Expr)
+primitiveUnpacker unpacker a = do
+  let conv'      :: (Expr -> Expr) -> Expr -> Expr
+      conv' ac e = EMap $ ac $ M $ App unpacker e
+  aConverter <- fToH a
+  return $ conv' aConverter
+
+fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen (Expr -> Expr)
+fToH' t a hType fType
+    | ( hType == fType ) = return id
+    | Just (APIEnum _) <- a = return $ App "(toEnum . fromIntegral)"
+    | Just (APIFlags _) <- a = return $ App "fromIntegral"
+    | ptr hType == fType = do
+          let constructor = tyConName $ typeRepTyCon hType
+          isGO <- isGObject t
+          prefixGO <- qualify "GObject"
+          if isGO
+          then return $ M . App (parenthesize $ prefixGO ++ "makeNewObject "
+                                               ++ constructor)
+          else do
+            --- These are for routines that return
+            --- abstract interfaces. We create a managed
+            --- pointer without actual refcounting.
+            ifaceName <- interfaceName t
+            case ifaceName of
+              Just _ -> return $ M . App (parenthesize $
+                       "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x")
+              _ -> return $ App $ constructor
+    | (TGList a) <- t = primitiveUnpacker "unpackGList" a
+    | (TGSList a) <- t = primitiveUnpacker "unpackGSList" a
+    | otherwise = return $ case (show fType, show hType) of
+               ("CString", "[Char]") -> M . App "peekCString"
+               ("Type", "Word")      -> App "fromIntegral"
+               ("CInt", "Bool")      -> App "(/= 0)"
+               _                     -> error $ "don't know how to convert "
+                                        ++ show fType ++ " into "
+                                        ++ show hType ++ "."
+
+fToH :: Type -> CodeGen (Expr -> Expr)
+fToH t = do
+    hType <- haskellType' t
+    fType <- foreignType' t
+    a <- findAPI t
+    fToH' t a hType fType
+
+convert :: Expr -> CodeGen (Expr -> Expr) -> CodeGen String
+convert e f = do
+  converter <- f
+  let (name, lines) = code $ converter e
+  mapM_ line lines
+  return name
+
+hOutType callable outArgs = do
+    hReturnType <- haskellType' $ returnType callable
+    hOutArgTypes <- mapM (haskellType' . argType) outArgs
+    let justType = case outArgs of
+            [] -> hReturnType
+            _ -> "(,)" `con` (hReturnType : hOutArgTypes)
+        maybeType = "Maybe" `con` [justType]
+    return $ if returnMayBeNull callable then maybeType else justType
+
+-- Given a type find the typeclasses the type belongs to, and return
+-- the representation of the type in the function signature and the
+-- list of typeclass constraints for the type.
+argumentType :: [Char] -> Type -> CodeGen ([Char], String, [String])
+argumentType [] _               = error "out of letters"
+argumentType letters (TGList a) = do
+  (ls, name, constraints) <- argumentType letters a
+  return (ls, "[" ++ name ++ "]", constraints)
+argumentType letters (TGSList a) = do
+  (ls, name, constraints) <- argumentType letters a
+  return (ls, "[" ++ name ++ "]", constraints)
+argumentType letters@(l:ls) t   = do
+  api <- findAPI t
+  s <- show <$> haskellType' t
+  case api of
+    Just (APIInterface _) -> return (ls, [l],
+                                     [interfaceClassName s ++ " " ++ [l],
+                                      "ManagedPtr " ++ [l]])
+    -- Instead of restricting to the actual class,
+    -- we allow for any object descending from it.
+    Just (APIObject _) -> do
+        isGO <- isGObject t
+        if isGO
+        then return (ls, [l], [klass s ++ " " ++ [l],
+                               "ManagedPtr " ++ [l]])
+        else return (letters, s, [])
+    _ -> return (letters, s, [])
+
+-- Given the list of arguments returns the list of constraints and the
+-- list of types in the signature.
+inArgInterfaces :: [Arg] -> CodeGen ([String], [String])
+inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
+  where
+    rec :: [Char] -> [Arg] -> CodeGen ([String], [String])
+    rec _ [] = return ([], [])
+    rec letters (arg:args) = do
+      (ls, t, cons) <- argumentType letters $ argType arg
+      (restCons, restTypes) <- rec ls args
+      return (cons ++ restCons, t : restTypes)
 
 mkForeignImport :: String -> Callable -> CodeGen ()
 mkForeignImport symbol callable = foreignImport $ do
@@ -186,153 +378,8 @@ mkForeignImport symbol callable = foreignImport $ do
         return $ padTo 40 start ++ "-- " ++ argName arg
     last = show <$> io <$> foreignType' (returnType callable)
 
-data Expr = Var String
-          | App String Expr
-          | M Expr
-          | EStr String String
-          deriving Show
-
-data Do = Bind String Expr | Let String Expr
-
--- This is somewhat ugly.
-code :: Expr -> (String, [String])
-code e = case doExpr e of
-             ds@((Bind s _) : _) -> (s, map doStr $ reverse ds)
-             ds@((Let s _) : _) -> (s, map doStr $ reverse ds)
-             [] -> (name e, [])
-  where
-    name :: Expr -> String
-    name (Var s) = s
-    name (App _ e) = prime $ name e
-    name (M e) = name e
-    name (EStr n _) = n
-
-    doExpr :: Expr -> [Do]
-    doExpr (Var _) = []
-    doExpr (App f e) = Let (prime $ name e) (App f (Var $ name e)) : (doExpr e)
-    doExpr (M (App f e)) = Bind (prime $ name e) (App f (Var $ name e)) : (doExpr e)
-    doExpr (M (EStr n e)) = [Bind n (EStr n e)]
-    doExpr _ = error "doExpr"
-
-    doStr (Let s e) = "let " ++ s ++ " = " ++ exprStr e
-    doStr (Bind s e) = s ++ " <- " ++ exprStr e
-
-    exprStr (Var s) = s
-    exprStr (App f e) = f ++ " " ++ exprStr e
-    exprStr (EStr _ s) = s
-    exprStr _ = error "exprStr"
-
-interfaceName :: Type -> CodeGen (Maybe Name)
-interfaceName t = do
-    a <- findAPI t
-    case a of
-         Just (APIInterface _) -> do
-              case t of
-                   TInterface ns n -> return $ Just $ Name ns n
-                   _ -> error "Interface without TInterface!"
-         _ -> return Nothing
-
-hToF :: Type -> CodeGen (Expr -> Expr)
-hToF t = do
-    hType <- haskellType' t
-    fType <- foreignType' t
-    if hType == fType
-      then return id
-      else do
-        conv <- convertGeneratedType
-        case conv of
-          Just c -> return c
-          Nothing ->
-            if ptr hType == fType
-               then
-                 let con = tyConName $ typeRepTyCon hType
-                 in return $ App $ toPtr con
-               else
-                 return $ hToF' (show hType) (show fType)
-
-    where
-    convertGeneratedType = do
-       a <- findAPI t
-       case a of
-         Just (APIEnum _) -> do
-           return $ Just $ App "(fromIntegral . fromEnum)"
-         Just (APIFlags _) -> do
-           return $ Just $ App "fromIntegral"
-         Just (APIObject _) -> do
-           return $ Just $ App "(castPtr . unsafeManagedPtrGetPtr)"
-         Just (APIInterface _) -> do
-           return $ Just $ App "(castPtr . unsafeManagedPtrGetPtr)"
-         _ -> return Nothing
-    hToF' "[Char]" "CString" = M . App "newCString"
-    hToF' "Word"   "Type"   = App "fromIntegral"
-    hToF' "Bool"   "CInt"    = App "(fromIntegral . fromEnum)"
-    hToF' "[Char]" "Ptr CString" = M . App "bullshit"
-    hToF' hType fType = error $
-        "don't know how to convert " ++ hType ++ " to " ++ fType
-
-fToH :: Type -> CodeGen (Expr -> Expr)
-fToH t = do
-    hType <- haskellType' t
-    fType <- foreignType' t
-    if hType == fType
-      then return id
-      else do
-        conv <- convertGeneratedType
-        case conv of
-          Just f -> return f
-          Nothing ->
-            if ptr hType == fType
-               then do
-                    let constructor = tyConName $ typeRepTyCon hType
-                    isGO <- isGObject t
-                    prefixGO <- qualify "GObject"
-                    if isGO
-                       then return $ M . App (prefixGO ++ "makeNewObject "
-                                              ++ constructor)
-                       else do
-                          --- These are for routines that return
-                          --- abstract interfaces. We create a managed
-                          --- pointer without actual refcounting.
-                          ifaceName <- interfaceName t
-                          case ifaceName of
-                               Just _ -> do
-                                    return $ M . App (constructor ++ " <$> newForeignPtr_")
-                               _ -> return $ App $ constructor
-               else return $ fToH' (show fType) (show hType)
-
-    where
-    convertGeneratedType = do
-       a <- findAPI t
-       case a of
-         Just (APIEnum _) -> do
-           return $ Just $ App "(toEnum . fromIntegral)"
-         Just (APIFlags _) -> do
-           return $ Just $ App "fromIntegral"
-         -- XXX: Do we ever need to convert out-arguments that are
-         -- specified by an interface type?
-         _ -> return Nothing
-    fToH' "CString" "[Char]" = M . App "peekCString"
-    fToH' "Type" "Word" = App "fromIntegral"
-    fToH' "CInt" "Bool" = App "(/= 0)"
-    fToH' fType hType = error $
-       "don't know how to convert " ++ fType ++ " to " ++ hType
-
-convert :: Expr -> CodeGen (Expr -> Expr) -> CodeGen String
-convert e f = do
-  converter <- f
-  let (name, lines) = code $ converter e
-  mapM_ line lines
-  return name
-
-hOutType callable outArgs = do
-    hReturnType <- haskellType' $ returnType callable
-    hOutArgTypes <- mapM (haskellType' . argType) outArgs
-    let justType = case outArgs of
-            [] -> hReturnType
-            _ -> "(,)" `con` (hReturnType : hOutArgTypes)
-        maybeType = "Maybe" `con` [justType]
-    return $ if returnMayBeNull callable then maybeType else justType
-
+-- XXX We should free the memory allocated for the [a] -> Glist (a')
+-- etc. conversions.
 genCallable :: Name -> String -> Callable -> CodeGen ()
 genCallable n symbol callable = do
     mkForeignImport symbol callable
@@ -357,41 +404,13 @@ genCallable n symbol callable = do
     signature = do
         name <- lowerName n
         line $ name ++ " ::"
-        ifs <- inArgInterfaces
-        let jIfs = catMaybes ifs
+        (constraints, types) <- inArgInterfaces inArgs
         indent $ do
-            when (not $ null jIfs) $ do
-                let ifaceList = map (\(c, ifaces) ->
-                                         map (++ (' ':[c])) ifaces) jIfs
-                line $ "(" ++ intercalate ", " (concat ifaceList) ++ ") =>"
-            forM_ (zip ifs inArgs) $ \(mIface, a) ->
-                case mIface of
-                    Just (c, _) -> line $ withComment ([c] ++ " ->") $ argName a
-                    Nothing -> line =<< hArgStr a
+            when (not $ null constraints) $ do
+                line $ "(" ++ intercalate ", " constraints ++ ") =>"
+            forM_ (zip types inArgs) $ \(t, a) ->
+                line $ withComment (t ++ " ->") $ argName a
             result >>= line
-    inArgInterfaces :: CodeGen [Maybe (Char, [[Char]])]
-    inArgInterfaces = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
-        where rec [] _ = error "out of letters"
-              rec _ [] = return []
-              rec (c:cs) (arg:args) = do
-                  api <- findAPI $ argType arg
-                  case api of
-                      Just (APIInterface _) -> do
-                          s <- show <$> (haskellType' $ argType arg)
-                          rest <- rec cs args
-                          return $ Just (c, [interfaceClassName s,
-                                             "ManagedPtr"]) : rest
-                      -- Instead of restricting to the actual class,
-                      -- we allow for any object descending from it.
-                      Just (APIObject _) -> do
-                        isGO <- isGObject $ argType arg
-                        case isGO of
-                           True -> do
-                             s <- show <$> (haskellType' $ argType arg)
-                             rest <- rec cs args
-                             return $ Just (c, [klass s, "ManagedPtr"]) : rest
-                           False -> (Nothing :) <$> rec (c:cs) args
-                      _ -> (Nothing :) <$> rec (c:cs) args
     convertIn = forM (args callable) $ \arg -> do
         ft <- foreignType' $ argType arg
         let name = escapeReserved $ argName arg
@@ -417,15 +436,18 @@ genCallable n symbol callable = do
     -- function was called.
     touchInArgs = forM_ (args callable) $ \arg -> do
         when (direction arg == DirectionIn) $ do
-             managed <- isManaged (argType arg)
-             when managed $ do
-               let name = escapeReserved $ argName arg
-               line $ "touchManagedPtr " ++ name
+           let name = escapeReserved $ argName arg
+           case argType arg of
+             (TGList a) -> do
+               managed <- isManaged a
+               when managed $ line $ "mapM_ touchManagedPtr " ++ name
+             (TGSList a) -> do
+               managed <- isManaged a
+               when managed $ line $ "mapM_ touchManagedPtr " ++ name
+             _ -> do
+               managed <- isManaged (argType arg)
+               when managed $ line $ "touchManagedPtr " ++ name
     withComment a b = padTo 40 a ++ "-- " ++ b
-    hArgStr arg = do
-        ht <- haskellType' $ argType arg
-        let start = show ht ++ " -> "
-        return $ withComment start $ argName arg
     result = show <$> io <$> hOutType callable outArgs
 
 genFunction :: Name -> Function -> CodeGen ()
@@ -697,7 +719,8 @@ genObject n o = do
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
-    genMethod n mn f
+    when (not $ fnSymbol f `elem` ignoredMethods cfg) $
+         genMethod n mn f
 
   -- And finally signals
   forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n o
@@ -721,7 +744,10 @@ genInterface n iface = do
     -- first argument. If we find a matching function, we don't
     -- generate the method.
     others_ <- others (fnSymbol f)
-    when (not others_) $ genMethod n mn f
+    when (not others_) $ do
+      cfg <- config
+      when (not $ fnSymbol f `elem` ignoredMethods cfg) $
+           genMethod n mn f
 
    where -- It may be expedient to keep a map of symbol -> function.
          others sym = do
@@ -742,14 +768,6 @@ genCode n (APIUnion u) = genUnion n u
 genCode n (APIObject o) = genObject n o
 genCode n (APIInterface i) = genInterface n i
 genCode _ (APIBoxed _) = return ()
-
-gLibBootstrap = do
-    line "type Type = Word"
-    line "data GArray a = GArray (Ptr (GArray a))"
-    line "data GHashTable a b = GHashTable (Ptr (GHashTable a b))"
-    line "data GList a = GList (Ptr (GList a))"
-    line "data GSList a = GSList (Ptr (GSList a))"
-    blank
 
 gObjectBootstrap = do
     line "-- Reference counting for constructors"
@@ -813,10 +831,9 @@ genModule name apis = do
     blank
     -- String and IOError also appear in GLib.
     line $ "import Prelude hiding (String, IOError)"
-    -- Basic data types for bindings.
+    -- Error types come from GLib.
     when (name /= "GLib") $
-         line $ "import " ++ ip "GLib (GArray(..), GList(..), "
-                ++ "GSList(..), GHashTable(..), Error(..), Type(..))"
+         line $ "import " ++ ip "GLib (Error(..))"
     line $ "import Data.Int"
     line $ "import Data.Word"
     line $ "import Foreign.Safe"
@@ -826,15 +843,14 @@ genModule name apis = do
     line $ "import Control.Monad (when)"
     blank
     line $ "import GI.Internal.ManagedPtr"
+    line $ "import GI.Internal.BasicTypes"
     blank
     cfg <- config
 
     let code = codeToList $ runCodeGen' cfg $
           forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
           (uncurry genCode)
-    -- GLib bootstrapping hacks.
     let code' = case name of
-          "GLib" -> (runCodeGen' cfg $ gLibBootstrap) : code
           "GObject" -> (runCodeGen' cfg $ gObjectBootstrap) : code
           _ -> code
     forM_ (imports cfg) $ \i -> do
@@ -850,4 +866,7 @@ genModule name apis = do
             "IOModule",
             "io_modules_load_all_in_directory",
             "io_modules_load_all_in_directory_with_scope",
-            "signal_set_va_marshaller"]
+            -- We can skip in the bindings
+            "signal_set_va_marshaller",
+            -- These seem to have some issues in the introspection data
+            "attribute_set_free"] -- atk_attribute_set_free

@@ -82,7 +82,14 @@ processAPI options name = do
           names = M.fromList (optRenames options),
           input = input',
           instances = parseObjectHierarchy input',
-          modName = name }
+          modName = name,
+          -- XXX We should read this from an external file, specified
+          -- from the command line.
+          ignoredMethods = ["atk_editable_text_set_run_attributes"
+                           , "atk_text_get_run_attributes"
+                           , "atk_text_get_default_attributes"
+                           , "atk_object_get_attributes"
+                           , "atk_document_get_attributes"]}
 
     case optMode options of
         GenerateCode ->

@@ -1,6 +1,7 @@
 {-# CFILES hsgclosure.c #-}
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
+import qualified GI.Gio as Gio
 
 import Foreign (nullPtr)
 
