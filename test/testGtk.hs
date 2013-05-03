@@ -3,6 +3,8 @@ import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.Gio as Gio
 
+import Control.Monad (forM_)
+
 import Foreign (nullPtr)
 
 -- A fancy notation for making signal connections easier to read.
@@ -32,6 +34,17 @@ main = do
         button <!> onButtonClicked $
                 labelSetMarkup label "This is <a href=\"http://www.gnome.org\">a test</a>"
         containerAdd grid button
+
+        ids <- stockListIds
+        forM_ ids putStrLn
+
+        infos <- Gio.appInfoGetAll
+        forM_ infos $ \info -> do
+          name <- Gio.appInfoGetName info
+          exe <- Gio.appInfoGetExecutable info
+          putStrLn $ "name: " ++ name
+          putStrLn $ "exe: " ++ exe
+          putStrLn ""
 
 	widgetShowAll win
 	Gtk.main
