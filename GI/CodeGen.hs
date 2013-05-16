@@ -13,7 +13,7 @@ import Control.Monad.Writer (tell)
 import Data.Char (toLower, toUpper)
 import Data.List (intercalate)
 import Data.Tuple (swap)
-import Data.Typeable (TypeRep, tyConName, typeRepTyCon)
+import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import qualified Data.Map as M
 
 import GI.API
@@ -311,13 +311,16 @@ convert e f = do
   return name
 
 hOutType callable outArgs = do
-    hReturnType <- haskellType' $ returnType callable
-    hOutArgTypes <- mapM (haskellType' . argType) outArgs
-    let justType = case outArgs of
-            [] -> hReturnType
-            _ -> "(,)" `con` (hReturnType : hOutArgTypes)
-        maybeType = "Maybe" `con` [justType]
-    return $ if returnMayBeNull callable then maybeType else justType
+  hReturnType <- case returnType callable of
+                   TBasicType TVoid -> return $ typeOf ()
+                   _                -> haskellType' $ returnType callable
+  hOutArgTypes <- mapM (haskellType' . argType) outArgs
+  let justType = case (outArgs, show hReturnType) of
+                   ([], _)   -> hReturnType
+                   (_, "()") -> "(,)" `con` hOutArgTypes
+                   _         -> "(,)" `con` (hReturnType : hOutArgTypes)
+      maybeType = "Maybe" `con` [justType]
+  return $ if returnMayBeNull callable then maybeType else justType
 
 -- Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
@@ -376,7 +379,9 @@ mkForeignImport symbol callable = foreignImport $ do
               DirectionIn -> ft
         let start = show ft' ++ " -> "
         return $ padTo 40 start ++ "-- " ++ argName arg
-    last = show <$> io <$> foreignType' (returnType callable)
+    last = show <$> io <$> case returnType callable of
+                             TBasicType TVoid -> return $ typeOf ()
+                             _  -> foreignType' (returnType callable)
 
 -- XXX We should free the memory allocated for the [a] -> Glist (a')
 -- etc. conversions.
@@ -398,7 +403,10 @@ genCallable n symbol callable = do
             " = do"
         indent $ do
             argNames <- convertIn
-            line $ "result <- " ++ symbol ++ concatMap (" " ++) argNames
+            let returnBind = case returnType callable of
+                               TBasicType TVoid -> ""
+                               _                -> "result <- "
+            line $ returnBind ++ symbol ++ concatMap (" " ++) argNames
             touchInArgs
             convertOut
     signature = do
@@ -409,8 +417,9 @@ genCallable n symbol callable = do
             when (not $ null constraints) $ do
                 line $ "(" ++ intercalate ", " constraints ++ ") =>"
             forM_ (zip types inArgs) $ \(t, a) ->
-                line $ withComment (t ++ " ->") $ argName a
+                             line $ withComment (t ++ " ->") $ argName a
             result >>= line
+    result = show <$> io <$> hOutType callable outArgs
     convertIn = forM (args callable) $ \arg -> do
         ft <- foreignType' $ argType arg
         let name = escapeReserved $ argName arg
@@ -423,12 +432,13 @@ genCallable n symbol callable = do
         -- Convert return value and out paramters.
         result <- convert (Var "result") (fToH $ returnType callable)
         pps <- forM outArgs $ \arg -> do
-            convert (M $ App "peek" (Var $ escapeReserved $ argName arg))
-              (fToH $ argType arg)
-        out <- hOutType callable outArgs
-        case (show out, outArgs) of
-            ("()", []) -> line $ "return ()"
-            ("()", _) -> line $ "return (" ++ intercalate ", " pps ++ ")"
+               convert (M $ App "peek" (Var $ escapeReserved $ argName arg))
+                 (fToH $ argType arg)
+        case (returnType callable, pps) of
+            (TBasicType TVoid, []) -> line $ "return ()"
+            (TBasicType TVoid, pp:[]) -> line $ "return " ++ pp
+            (TBasicType TVoid, _) -> line $
+                                     "return (" ++ intercalate ", " pps ++ ")"
             (_ , []) -> line $ "return " ++ result
             (_ , _) -> line $
                 "return (" ++ intercalate ", " (result : pps) ++ ")"
@@ -448,7 +458,6 @@ genCallable n symbol callable = do
                managed <- isManaged (argType arg)
                when managed $ line $ "touchManagedPtr " ++ name
     withComment a b = padTo 40 a ++ "-- " ++ b
-    result = show <$> io <$> hOutType callable outArgs
 
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable _flags) = do
@@ -605,7 +614,9 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
         indent $ do forM_ (args cb) $ \arg -> do
                        ft <- marshallFType $ argType arg
                        line $ show ft ++ " ->"
-                    ret <- io <$> (marshallFType $ returnType cb)
+                    ret <- io <$> case returnType cb of
+                                    TBasicType TVoid -> return $ typeOf ()
+                                    _ -> marshallFType $ returnType cb
                     line $ show ret
         let inArgNames = map (escapeReserved . argName) inArgs
             outArgNames = map (escapeReserved . argName) outArgs
@@ -616,10 +627,13 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
                      line $ "out: " ++ (show outArgs) -}
                    inNames <- forM (zip inArgNames inArgs) $ \(name, arg) ->
                         convertFMarshall name (argType arg)
-                   let hRetval = case outArgs of
-                           [] -> "ret"
-                           _ -> "(" ++ intercalate ", " ("ret":outArgNames) ++ ")" 
-                   line $ hRetval ++ " <- cb" ++ (concatMap (" " ++) inNames)
+                   let hRetval = case (returnType cb, outArgNames) of
+                           (TBasicType TVoid, []) -> ""
+                           (TBasicType TVoid, out:[]) -> out ++ " <- "
+                           (TBasicType TVoid, _) -> "(" ++ intercalate ", " outArgNames ++ ") <- "
+                           (_, []) -> "ret <- "
+                           _ -> "(" ++ intercalate ", " ("ret":outArgNames) ++ ") <- "
+                   line $ hRetval ++ "cb" ++ (concatMap (" " ++) inNames)
 {-
                    -- XXX non-basic type out values are not written back yet.
 
@@ -628,8 +642,11 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
                         TBasicType t -> line $ "poke " ++ 
                       n' <- convert (Var name) (hToF $ argType arg)
                    -}
-                   retval <- convertHMarshall "ret" (returnType cb)
-                   line $ "return " ++ retval
+                   case returnType cb of
+                     TBasicType TVoid -> line $ "return ()"
+                     _ -> do
+                       retval <- convertHMarshall "ret" (returnType cb)
+                       line $ "return " ++ retval
 
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
