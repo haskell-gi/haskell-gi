@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternGuards #-}
-
 module GI.CodeGen
     ( genConstant
     , genFunction
@@ -7,18 +5,20 @@ module GI.CodeGen
     , genModule
     ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>))
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
-import Data.Char (toLower, toUpper)
 import Data.List (intercalate)
 import Data.Tuple (swap)
-import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
+import Data.Typeable (typeOf)
 import qualified Data.Map as M
 
 import GI.API
+import GI.Callable (genCallable, hOutType)
 import GI.Code
+import GI.Conversions
 import GI.GObject
+import GI.SymbolNaming
 import GI.Type
 import GI.Util (split)
 import GI.Value
@@ -41,423 +41,13 @@ valueStr (VGType x)    = show x
 valueStr (VUTF8 x)     = show x
 valueStr (VFileName x) = show x
 
-interfaceClassName = (++"Iface_")
-
-toPtr con = "(\\(" ++ con ++ " x) -> x)"
-
-padTo n s = s ++ replicate (n - length s) ' '
-
-escapeReserved "type" = "type_"
-escapeReserved "in" = "in_"
-escapeReserved "data" = "data_"
-escapeReserved "instance" = "instance_"
-escapeReserved "where" = "where_"
--- Reserved because we generate code that uses this name.
-escapeReserved "result" = "result_"
-escapeReserved s = s
-
-lcFirst (x:xs) = toLower x : xs
-lcFirst "" = error "lcFirst: empty string"
-
-ucFirst (x:xs) = toUpper x : xs
-ucFirst "" = error "ucFirst: empty string"
-
-getPrefix :: String -> CodeGen String
-getPrefix ns = do
-    cfg <- config
-    case M.lookup ns (prefixes cfg) of
-        Just p -> return p
-        Nothing -> return ns
-
--- Return a qualified prefix for the given namespace. In case the
--- namespace corresponds to the current module the empty string is returned.
-qualify :: String -> CodeGen String
-qualify ns = do
-     cfg <- config
-     return $ if modName cfg == ns then
-                ""
-              else
-                ucFirst ns ++ "."
-
--- Returns whether the given type corresponds to a ManagedPtr
--- instance, currently we manage APIObjects and Interfaces.
-isManaged   :: Type -> CodeGen Bool
-isManaged t = do
-  a <- findAPI t
-  case a of
-    Just (APIObject _)    -> return True
-    Just (APIInterface _) -> return True
-    _                     -> return False
-
-specifiedName s fallback = do
-    cfg <- config
-
-    case M.lookup s (names cfg) of
-        Just s' -> return s'
-        Nothing -> fallback
-
-literalName (Name ns s) = specifiedName s lit
-    where lit = do
-              prefix <- getPrefix ns
-              return $ lcFirst prefix ++ "_" ++ s
-
-lowerName (Name _ s) = specifiedName s lowered
-    where lowered = return $ concat . rename $ split '_' s
-
-          rename [w] = [lcFirst w]
-          rename (w:ws) = lcFirst w : map ucFirst' ws
-          rename [] = error "rename: empty list"
-
-          ucFirst' "" = "_"
-          ucFirst' x = ucFirst x
-
-upperName (Name ns s) = do
-          name <- specifiedName s uppered
-          prefix <- qualify ns
-          return $ prefix ++ name
-    where uppered = return $ concatMap ucFirst' $ split '_' $ sanitize s
-          -- Move leading underscores to the end (for example in
-          -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
-          sanitize ('_':xs) = sanitize xs ++ "_"
-          sanitize xs = xs
-
-          ucFirst' "" = "_"
-          ucFirst' x = ucFirst x
-
-mapPrefixes :: Type -> CodeGen Type
-mapPrefixes t@(TBasicType _) = return t
-mapPrefixes (TArray t) = TArray <$> mapPrefixes t
-mapPrefixes (TGList t) = TGList <$> mapPrefixes t
-mapPrefixes (TGSList t) = TGSList <$> mapPrefixes t
-mapPrefixes (TGHash ta tb) =
-  TGHash <$> mapPrefixes ta <*> mapPrefixes tb
-mapPrefixes t@TError = return t
-mapPrefixes (TInterface ns s) = do
-    -- We qualify symbols with their namespace, unless they are in the
-    -- current module.
-    prefix <- qualify ns
-    return $ TInterface undefined $ prefix ++ s
-
-haskellType' :: Type -> CodeGen TypeRep
-haskellType' t = haskellType <$> mapPrefixes t
-
-foreignType' :: Type -> CodeGen TypeRep
-foreignType' t = do
-  isScalar <- getIsScalar
-  if isScalar
-     -- Enum and flag values are represented by machine words.
-    then return $ "Word" `con` []
-    else foreignType <$> mapPrefixes t
-
-  where getIsScalar = do
-          a <- findAPI t
-          case a of
-            Nothing -> return False
-            (Just (APIEnum _)) -> return True
-            (Just (APIFlags _)) -> return True
-            _ -> return False
-
-prime = (++ "'")
-parenthesize s = "(" ++ s ++ ")"
-
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant n@(Name _ name) (Constant value) = do
     name' <- literalName n
-    ht <- haskellType' $ valueType value
+    ht <- nsHaskellType $ valueType value
     line $ "-- constant " ++ name
     line $ name' ++ " :: " ++ show ht
     line $ name' ++ " = " ++ valueStr value
-
-data Expr = Var String
-          | App String Expr
-          | M Expr
-          | EMap Expr
-          | EStr String String
-          deriving Show
-
-data Do = Bind String Expr | Let String Expr
-
--- This is somewhat ugly.
-code :: Expr -> (String, [String])
-code e = case doExpr e of
-             ds@((Bind s _) : _) -> (s, map doStr $ reverse ds)
-             ds@((Let s _) : _) -> (s, map doStr $ reverse ds)
-             [] -> (name e, [])
-  where
-    name :: Expr -> String
-    name (Var s) = s
-    name (App _ e) = prime $ name e
-    name (M e) = name e
-    name (EStr n _) = n
-    name (EMap e) = name e
-
-    doExpr :: Expr -> [Do]
-    doExpr (Var _) = []
-    doExpr (App f e) = Let (prime $ name e) (App f (Var $ name e)) : (doExpr e)
-    doExpr (M (App f e)) = Bind (prime $ name e) (App f (Var $ name e)) : (doExpr e)
-    doExpr (M (EStr n e)) = [Bind n (EStr n e)]
-    doExpr (EMap (App f e)) = Let (prime $ name e)
-                              (App ("map " ++ f) (Var $ name e)) : (doExpr e)
-    doExpr (EMap (M (App f e))) = Bind (prime $ name e)
-                              (App ("mapM " ++ f) (Var $ name e)) : (doExpr e)
-    doExpr e = error $ "doExpr: " ++ show e
-
-    doStr (Let s e) = "let " ++ s ++ " = " ++ exprStr e
-    doStr (Bind s e) = s ++ " <- " ++ exprStr e
-
-    exprStr (Var s) = s
-    exprStr (App f e) = f ++ " " ++ exprStr e
-    exprStr (EStr _ s) = s
-    exprStr e = error $ "exprStr: " ++ show e
-
-interfaceName :: Type -> CodeGen (Maybe Name)
-interfaceName t = do
-    a <- findAPI t
-    case a of
-         Just (APIInterface _) -> do
-              case t of
-                   TInterface ns n -> return $ Just $ Name ns n
-                   _ -> error "Interface without TInterface!"
-         _ -> return Nothing
-
--- Marshalling for conversions such as [a] -> GList (a')
-primitivePacker :: String -> Type -> CodeGen (Expr -> Expr)
-primitivePacker packer a = do
-  let conv'      :: (Expr -> Expr) -> Expr -> Expr
-      conv' ac e = M $ App packer $ EMap (ac e)
-  aConverter <- hToF a
-  return $ conv' aConverter
-
-hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen (Expr -> Expr)
-hToF' t a hType fType
-    | ( hType == fType ) = return id
-    | Just (APIEnum _) <- a = return $ App "(fromIntegral . fromEnum)"
-    | Just (APIFlags _) <- a = return $ App "fromIntegral"
-    | Just (APIObject _) <- a = return $
-                            App "(castPtr . unsafeManagedPtrGetPtr)"
-    | Just (APIInterface _) <- a = return $
-                               App "(castPtr . unsafeManagedPtrGetPtr)"
-    | ptr hType == fType = do
-        let con = tyConName $ typeRepTyCon hType
-        return $ App $ toPtr con
-    | (TGList a) <- t = primitivePacker "packGList" a
-    | (TGSList a) <- t = primitivePacker "packGSList" a
-    | otherwise = return $ case (show hType, show fType) of
-               ("[Char]", "CString") -> M . App "newCString"
-               ("Word", "Type")      -> App "fromIntegral"
-               ("Bool", "CInt")      -> App "(fromIntegral . fromEnum)"
-               _                     -> error $ "don't know how to convert "
-                                        ++ show hType ++ " into "
-                                        ++ show fType ++ "."
-
-hToF :: Type -> CodeGen (Expr -> Expr)
-hToF t = do
-  hType <- haskellType' t
-  fType <- foreignType' t
-  a <- findAPI t
-  hToF' t a hType fType
-
--- Marshalling for conversions such as GList (a') -> a
-primitiveUnpacker :: String -> Type -> CodeGen (Expr -> Expr)
-primitiveUnpacker unpacker a = do
-  let conv'      :: (Expr -> Expr) -> Expr -> Expr
-      conv' ac e = EMap $ ac $ M $ App unpacker e
-  aConverter <- fToH a
-  return $ conv' aConverter
-
-fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen (Expr -> Expr)
-fToH' t a hType fType
-    | ( hType == fType ) = return id
-    | Just (APIEnum _) <- a = return $ App "(toEnum . fromIntegral)"
-    | Just (APIFlags _) <- a = return $ App "fromIntegral"
-    | ptr hType == fType = do
-          let constructor = tyConName $ typeRepTyCon hType
-          isGO <- isGObject t
-          prefixGO <- qualify "GObject"
-          if isGO
-          then return $ M . App (parenthesize $ prefixGO ++ "makeNewObject "
-                                               ++ constructor)
-          else do
-            --- These are for routines that return
-            --- abstract interfaces. We create a managed
-            --- pointer without actual refcounting.
-            ifaceName <- interfaceName t
-            case ifaceName of
-              Just _ -> return $ M . App (parenthesize $
-                       "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x")
-              _ -> return $ App $ constructor
-    | (TGList a) <- t = primitiveUnpacker "unpackGList" a
-    | (TGSList a) <- t = primitiveUnpacker "unpackGSList" a
-    | otherwise = return $ case (show fType, show hType) of
-               ("CString", "[Char]") -> M . App "peekCString"
-               ("Type", "Word")      -> App "fromIntegral"
-               ("CInt", "Bool")      -> App "(/= 0)"
-               _                     -> error $ "don't know how to convert "
-                                        ++ show fType ++ " into "
-                                        ++ show hType ++ "."
-
-fToH :: Type -> CodeGen (Expr -> Expr)
-fToH t = do
-    hType <- haskellType' t
-    fType <- foreignType' t
-    a <- findAPI t
-    fToH' t a hType fType
-
-convert :: Expr -> CodeGen (Expr -> Expr) -> CodeGen String
-convert e f = do
-  converter <- f
-  let (name, lines) = code $ converter e
-  mapM_ line lines
-  return name
-
-hOutType callable outArgs = do
-  hReturnType <- case returnType callable of
-                   TBasicType TVoid -> return $ typeOf ()
-                   _                -> haskellType' $ returnType callable
-  hOutArgTypes <- mapM (haskellType' . argType) outArgs
-  let justType = case (outArgs, show hReturnType) of
-                   ([], _)   -> hReturnType
-                   (_, "()") -> "(,)" `con` hOutArgTypes
-                   _         -> "(,)" `con` (hReturnType : hOutArgTypes)
-      maybeType = "Maybe" `con` [justType]
-  return $ if returnMayBeNull callable then maybeType else justType
-
--- Given a type find the typeclasses the type belongs to, and return
--- the representation of the type in the function signature and the
--- list of typeclass constraints for the type.
-argumentType :: [Char] -> Type -> CodeGen ([Char], String, [String])
-argumentType [] _               = error "out of letters"
-argumentType letters (TGList a) = do
-  (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" ++ name ++ "]", constraints)
-argumentType letters (TGSList a) = do
-  (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" ++ name ++ "]", constraints)
-argumentType letters@(l:ls) t   = do
-  api <- findAPI t
-  s <- show <$> haskellType' t
-  case api of
-    Just (APIInterface _) -> return (ls, [l],
-                                     [interfaceClassName s ++ " " ++ [l],
-                                      "ManagedPtr " ++ [l]])
-    -- Instead of restricting to the actual class,
-    -- we allow for any object descending from it.
-    Just (APIObject _) -> do
-        isGO <- isGObject t
-        if isGO
-        then return (ls, [l], [klass s ++ " " ++ [l],
-                               "ManagedPtr " ++ [l]])
-        else return (letters, s, [])
-    _ -> return (letters, s, [])
-
--- Given the list of arguments returns the list of constraints and the
--- list of types in the signature.
-inArgInterfaces :: [Arg] -> CodeGen ([String], [String])
-inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
-  where
-    rec :: [Char] -> [Arg] -> CodeGen ([String], [String])
-    rec _ [] = return ([], [])
-    rec letters (arg:args) = do
-      (ls, t, cons) <- argumentType letters $ argType arg
-      (restCons, restTypes) <- rec ls args
-      return (cons ++ restCons, t : restTypes)
-
-mkForeignImport :: String -> Callable -> CodeGen ()
-mkForeignImport symbol callable = foreignImport $ do
-    line first
-    indent $ do
-        mapM_ (\a -> line =<< fArgStr a) (args callable)
-        line =<< last
-    where
-    first = "foreign import ccall \"" ++ symbol ++ "\" " ++
-                symbol ++ " :: "
-    fArgStr arg = do
-        ft <- foreignType' $ argType arg
-        let ft' = case direction arg of
-              DirectionInout -> ptr ft
-              DirectionOut -> ptr ft
-              DirectionIn -> ft
-        let start = show ft' ++ " -> "
-        return $ padTo 40 start ++ "-- " ++ argName arg
-    last = show <$> io <$> case returnType callable of
-                             TBasicType TVoid -> return $ typeOf ()
-                             _  -> foreignType' (returnType callable)
-
--- XXX We should free the memory allocated for the [a] -> Glist (a')
--- etc. conversions.
-genCallable :: Name -> String -> Callable -> CodeGen ()
-genCallable n symbol callable = do
-    mkForeignImport symbol callable
-    wrapper
-
-    where
-    inArgs = filter ((== DirectionIn) . direction) $ args callable
-    outArgs = filter ((== DirectionOut) . direction) $ args callable
-    wrapper = group $ do
-        let argName' = escapeReserved . argName
-        name <- lowerName n
-        signature
-        line $
-            name ++ " " ++
-            intercalate " " (map argName' inArgs) ++
-            " = do"
-        indent $ do
-            argNames <- convertIn
-            let returnBind = case returnType callable of
-                               TBasicType TVoid -> ""
-                               _                -> "result <- "
-            line $ returnBind ++ symbol ++ concatMap (" " ++) argNames
-            touchInArgs
-            convertOut
-    signature = do
-        name <- lowerName n
-        line $ name ++ " ::"
-        (constraints, types) <- inArgInterfaces inArgs
-        indent $ do
-            when (not $ null constraints) $ do
-                line $ "(" ++ intercalate ", " constraints ++ ") =>"
-            forM_ (zip types inArgs) $ \(t, a) ->
-                             line $ withComment (t ++ " ->") $ argName a
-            result >>= line
-    result = show <$> io <$> hOutType callable outArgs
-    convertIn = forM (args callable) $ \arg -> do
-        ft <- foreignType' $ argType arg
-        let name = escapeReserved $ argName arg
-        if direction arg == DirectionIn
-            then convert (Var name) (hToF $ argType arg)
-            else convert (M $ EStr name $ "malloc :: " ++ show (io $ ptr ft)) (return id)
-    -- XXX: Should create ForeignPtrs for pointer results.
-    -- XXX: Check argument transfer.
-    convertOut = do
-        -- Convert return value and out paramters.
-        result <- convert (Var "result") (fToH $ returnType callable)
-        pps <- forM outArgs $ \arg -> do
-               convert (M $ App "peek" (Var $ escapeReserved $ argName arg))
-                 (fToH $ argType arg)
-        case (returnType callable, pps) of
-            (TBasicType TVoid, []) -> line $ "return ()"
-            (TBasicType TVoid, pp:[]) -> line $ "return " ++ pp
-            (TBasicType TVoid, _) -> line $
-                                     "return (" ++ intercalate ", " pps ++ ")"
-            (_ , []) -> line $ "return " ++ result
-            (_ , _) -> line $
-                "return (" ++ intercalate ", " (result : pps) ++ ")"
-    -- Touch in arguments so we are sure that they exist when the C
-    -- function was called.
-    touchInArgs = forM_ (args callable) $ \arg -> do
-        when (direction arg == DirectionIn) $ do
-           let name = escapeReserved $ argName arg
-           case argType arg of
-             (TGList a) -> do
-               managed <- isManaged a
-               when managed $ line $ "mapM_ touchManagedPtr " ++ name
-             (TGSList a) -> do
-               managed <- isManaged a
-               when managed $ line $ "mapM_ touchManagedPtr " ++ name
-             _ -> do
-               managed <- isManaged (argType arg)
-               when managed $ line $ "touchManagedPtr " ++ name
-    withComment a b = padTo 40 a ++ "-- " ++ b
 
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable _flags) = do
@@ -550,29 +140,6 @@ genMethod cn mn (Function {
       then genCallable mn' sym c''
       else genCallable mn' sym c'
 
--- The marshaller C code has some built in support for basic types, so
--- we only generate conversions for things that the marshaller cannot
--- do itself. (This list should be kept in sync with hsgclosure.c)
-
--- Marshaller to haskell types.
--- There is no support in the marshaller for converting Haskell
--- strings into C strings directly.
-marshallFType :: Type -> CodeGen TypeRep
-marshallFType t@(TBasicType TUTF8) = foreignType' t
-marshallFType t@(TBasicType TFileName) = foreignType' t
-marshallFType t@(TBasicType _) = return $ haskellType t
-marshallFType a = foreignType' a
-
-convertFMarshall name t@(TBasicType TUTF8) = convert (Var name) (fToH t)
-convertFMarshall name t@(TBasicType TFileName) = convert (Var name) (fToH t)
-convertFMarshall name (TBasicType _) = return name
-convertFMarshall name t = convert (Var name) (fToH t)
-
-convertHMarshall name t@(TBasicType TUTF8) = convert (Var name) (hToF t)
-convertHMarshall name t@(TBasicType TFileName) = convert (Var name) (hToF t)
-convertHMarshall name (TBasicType _) = return name
-convertHMarshall name t = convert (Var name) (hToF t)
-
 genSignal :: Name -> Signal -> Name -> Object -> CodeGen ()
 genSignal sn (Signal { sigCallable = cb }) on _o = do
   on' <- upperName on
@@ -590,10 +157,10 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
     indent $ do
       -- gtk2hs does not pass the object to the callback, we follow
       -- the same conventions.
-      --  t <- haskellType' $ TInterface
+      --  t <- nsHaskellType $ TInterface
       -- (namespace on) (name on) line $ show t ++ " ->"
       forM_ inArgs $ \arg -> do
-        ht <- haskellType' $ argType arg
+        ht <- nsHaskellType $ argType arg
         line $ show ht ++ " ->"
       ret <- io <$> hOutType cb outArgs
       line $ show ret

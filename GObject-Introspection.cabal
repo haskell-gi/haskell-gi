@@ -46,8 +46,11 @@ Executable haskell-gi
       GI.Internal.Typelib,
       GI.Internal.UnionInfo,
       GI.API,
+      GI.Callable,
       GI.Code,
+      GI.Conversions,
       GI.GObject,
+      GI.SymbolNaming,
       GI.Type,
       GI.Value,
       GI.Util
@@ -89,8 +92,11 @@ Executable test
       GI.Internal.Typelib,
       GI.Internal.UnionInfo,
       GI.API,
+      GI.Callable,
       GI.Code,
+      GI.Conversions,
       GI.GObject,
+      GI.SymbolNaming,
       GI.Type,
       GI.Value,
       GI.Util
