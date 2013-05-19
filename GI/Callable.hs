@@ -142,16 +142,21 @@ genCallable n symbol callable = do
         ft <- nsForeignType $ argType arg
         let name = escapeReserved $ argName arg
         if direction arg == DirectionIn
-            then convert (Var name) (hToF $ argType arg)
-            else convert (M $ EStr name $ "malloc :: " ++ show (io $ ptr ft)) (return id)
+            then convert name (hToF $ argType arg)
+            else genConversion name $
+                 literal $ M $ "malloc :: " ++ show (io $ ptr ft)
+
     -- XXX: Should create ForeignPtrs for pointer results.
     -- XXX: Check argument transfer.
     convertOut = do
         -- Convert return value and out paramters.
-        result <- convert (Var "result") (fToH $ returnType callable)
-        pps <- forM outArgs $ \arg -> do
-               convert (M $ App "peek" (Var $ escapeReserved $ argName arg))
-                 (fToH $ argType arg)
+        result <- convert "result" (fToH $ returnType callable)
+        pps <- forM outArgs $ \arg ->
+               do let name = escapeReserved $ argName arg
+                  constructor <- fToH $ argType arg
+                  genConversion name $
+                    do apply $ M "peek"
+                       constructor
         case (returnType callable, pps) of
             (TBasicType TVoid, []) -> line $ "return ()"
             (TBasicType TVoid, pp:[]) -> line $ "return " ++ pp

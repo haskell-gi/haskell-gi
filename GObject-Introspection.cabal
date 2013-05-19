@@ -22,7 +22,8 @@ Executable haskell-gi
       mtl,
       pretty-show,
       process,
-      bytestring
+      bytestring,
+      free
   build-tools: hsc2hs
   extensions: ForeignFunctionInterface, DoAndIfThenElse
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
@@ -68,7 +69,8 @@ Executable test
     bytestring,
     pretty-show,
     test-framework,
-    test-framework-hunit
+    test-framework-hunit,
+    free
   build-tools: hsc2hs
   extensions: ForeignFunctionInterface, DoAndIfThenElse
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
