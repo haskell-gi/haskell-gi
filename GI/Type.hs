@@ -6,13 +6,9 @@ module GI.Type
     , io
     , ptr
     , con
-    , haskellType
-    , foreignType
     ) where
 
-import Data.Int
 import Data.Typeable
-import Data.Word
 
 import GI.Internal.BaseInfo
 import GI.Internal.TypeInfo
@@ -42,7 +38,11 @@ data BasicType
 -- interfaces: the types of constants, arguments, etc.
 data Type
     = TBasicType BasicType
-    | TArray Type
+    -- Zero terminated, Array Fixed Size, Array Length, Element Type
+    | TCArray Bool Int Int Type
+    | TGArray Type
+    | TPtrArray Type
+    | TByteArray
     | TInterface String String
     | TGList Type
     | TGSList Type
@@ -73,7 +73,15 @@ typeFromTypeInfo ti =
     case basicTypeFromTypeTag tag of
       Just bt -> TBasicType bt
       Nothing -> case tag of
-           TypeTagArray -> TArray p1
+           TypeTagArray -> case typeInfoArrayType ti of
+                             ArrayTypeC         ->
+                                 TCArray (typeInfoIsZeroTerminated ti)
+                                         (typeInfoArrayFixedSize ti)
+                                         (typeInfoArrayLength ti)
+                                         p1
+                             ArrayTypeArray     -> TGArray p1
+                             ArrayTypePtrArray  -> TPtrArray p1
+                             ArrayTypeByteArray -> TByteArray
            -- TypeTagInterface -> TInterface (typeTagToString . typeInfoTag $ ti)
            TypeTagInterface ->
                let bi = baseInfo . typeInfoInterface $ ti
@@ -104,51 +112,3 @@ io t = "IO" `con` [t]
 
 ptr :: TypeRep -> TypeRep
 ptr t = "Ptr" `con` [t]
-
-haskellBasicType TVoid     = (ptr (typeOf ()))
-haskellBasicType TBoolean  = typeOf True
-haskellBasicType TInt8     = typeOf (0 :: Int8)
-haskellBasicType TUInt8    = typeOf (0 :: Word8)
-haskellBasicType TInt16    = typeOf (0 :: Int16)
-haskellBasicType TUInt16   = typeOf (0 :: Word16)
-haskellBasicType TInt32    = typeOf (0 :: Int32)
-haskellBasicType TUInt32   = typeOf (0 :: Word32)
-haskellBasicType TInt64    = typeOf (0 :: Int64)
-haskellBasicType TUInt64   = typeOf (0 :: Word64)
--- XXX: Is this correct?
-haskellBasicType TGType    = typeOf (0 :: Word)
-haskellBasicType TUTF8     = typeOf ""
-haskellBasicType TFloat    = typeOf (0 :: Float)
-haskellBasicType TDouble   = typeOf (0 :: Double)
-haskellBasicType TUniChar  = typeOf ('\0' :: Char)
-haskellBasicType TFileName = typeOf ""
-
--- This translates GI types to the types used for generated Haskell code.
-haskellType :: Type -> TypeRep
-haskellType (TBasicType bt) = haskellBasicType bt
-haskellType (TArray a) = "GArray" `con` [haskellType a]
-haskellType (TGList a) = "[]" `con` [haskellType a]
-haskellType (TGSList a) = "[]" `con` [haskellType a]
-haskellType (TGHash a b) = "GHashTable" `con` [haskellType a, haskellType b]
-haskellType TError = "Error" `con` []
--- We assume that any name qualification (e.g. "Checksum" ->
--- "GChecksum") has been done already, and that the interface's name
--- (i.e. ignoring the namespace) is the final name.
-haskellType (TInterface _ns s) = s `con` []
-
-foreignBasicType TVoid     = ptr (typeOf ())
-foreignBasicType TBoolean  = "CInt" `con` []
-foreignBasicType TUTF8     = "CString" `con` []
-foreignBasicType TGType    = "Type" `con` []
-foreignBasicType TFileName = "CString" `con` []
-foreignBasicType t         = haskellBasicType t
-
--- This translates GI types to the types used in foreign function calls.
-foreignType :: Type -> TypeRep
-foreignType (TBasicType t) = foreignBasicType t
-foreignType t@(TArray _) = ptr (haskellType t)
-foreignType (TGList a) = ptr ("GList" `con` [foreignType a])
-foreignType (TGSList a) = ptr ("GSList" `con` [foreignType a])
-foreignType t@(TGHash _ _) = ptr (haskellType t)
-foreignType t@TError = ptr (haskellType t)
-foreignType t@(TInterface _ _) = ptr (haskellType t)

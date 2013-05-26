@@ -1,7 +1,5 @@
 module GI.SymbolNaming
-    ( nsHaskellType
-    , nsForeignType
-    , qualify
+    ( qualify
     , ucFirst
     , lcFirst
     , literalName
@@ -11,14 +9,11 @@ module GI.SymbolNaming
     , interfaceClassName
     ) where
 
-import Control.Applicative ((<$>), (<*>))
 import Data.Char (toLower, toUpper)
-import Data.Typeable (TypeRep)
 import qualified Data.Map as M
 
 import GI.API
 import GI.Code
-import GI.Type
 import GI.Util (split)
 
 interfaceClassName = (++"Iface_")
@@ -81,44 +76,12 @@ qualify ns = do
               else
                 ucFirst ns ++ "."
 
-mapPrefixes :: Type -> CodeGen Type
-mapPrefixes t@(TBasicType _) = return t
-mapPrefixes (TArray t) = TArray <$> mapPrefixes t
-mapPrefixes (TGList t) = TGList <$> mapPrefixes t
-mapPrefixes (TGSList t) = TGSList <$> mapPrefixes t
-mapPrefixes (TGHash ta tb) =
-  TGHash <$> mapPrefixes ta <*> mapPrefixes tb
-mapPrefixes t@TError = return t
-mapPrefixes (TInterface ns s) = do
-    -- We qualify symbols with their namespace, unless they are in the
-    -- current module.
-    prefix <- qualify ns
-    return $ TInterface undefined $ prefix ++ s
-
-nsHaskellType :: Type -> CodeGen TypeRep
-nsHaskellType t = haskellType <$> mapPrefixes t
-
-nsForeignType :: Type -> CodeGen TypeRep
-nsForeignType t = do
-  isScalar <- getIsScalar
-  if isScalar
-     -- Enum and flag values are represented by machine words.
-    then return $ "Word" `con` []
-    else foreignType <$> mapPrefixes t
-
-  where getIsScalar = do
-          a <- findAPI t
-          case a of
-            Nothing -> return False
-            (Just (APIEnum _)) -> return True
-            (Just (APIFlags _)) -> return True
-            _ -> return False
-
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"
 escapeReserved "data" = "data_"
 escapeReserved "instance" = "instance_"
 escapeReserved "where" = "where_"
--- Reserved because we generate code that uses this name.
+-- Reserved because we generate code that uses these names.
 escapeReserved "result" = "result_"
+escapeReserved "length" = "length_"
 escapeReserved s = s

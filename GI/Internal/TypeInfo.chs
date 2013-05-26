@@ -1,6 +1,7 @@
 
 module GI.Internal.TypeInfo
     ( TypeTag(..)
+    , ArrayType(..)
     , typeInfoIsPointer
     , typeInfoTag
     , typeInfoParamType
@@ -13,8 +14,9 @@ module GI.Internal.TypeInfo
     )
 where
 
-import Foreign
+import Foreign (Ptr, castPtr)
 import Foreign.C
+import System.IO.Unsafe (unsafePerformIO)
 
 import Control.Applicative ((<$>))
 

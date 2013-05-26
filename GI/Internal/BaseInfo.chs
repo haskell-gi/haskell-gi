@@ -3,12 +3,14 @@ module GI.Internal.BaseInfo
   , baseInfoName
   , baseInfoNamespace
   , baseInfoType
+  , baseInfoAttribute
   , InfoType(..)
   )
 where
 
-import Foreign
+import Foreign (Ptr, castPtr, nullPtr)
 import Foreign.C
+import System.IO.Unsafe (unsafePerformIO)
 
 import Control.Applicative ((<$>))
 
@@ -51,3 +53,11 @@ baseInfoType :: BaseInfoClass base
              -> InfoType
 baseInfoType bi = unsafePerformIO $ do
     toEnum . fromIntegral <$> {# call get_type #} (stupidCast bi)
+
+baseInfoAttribute :: BaseInfoClass base
+                     => base -> String -> Maybe String
+baseInfoAttribute bi name = unsafePerformIO $ do
+    result <- withCString name $ {# call get_attribute #} (stupidCast bi)
+    if result == nullPtr
+       then return Nothing
+       else Just <$> peekCString result

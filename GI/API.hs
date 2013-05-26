@@ -86,7 +86,7 @@ data Arg = Arg {
     mayBeNull :: Bool,
     scope :: Scope,
     transfer :: Transfer }
-    deriving Show
+    deriving (Show, Eq)
 
 toArg :: ArgInfo -> Arg
 toArg ai =

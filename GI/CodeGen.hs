@@ -5,22 +5,19 @@ module GI.CodeGen
     , genModule
     ) where
 
-import Control.Applicative ((<$>))
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
-import Data.List (intercalate)
 import Data.Tuple (swap)
-import Data.Typeable (typeOf)
 import qualified Data.Map as M
 
 import GI.API
-import GI.Callable (genCallable, hOutType)
-import GI.Code
+import GI.Callable (genCallable)
 import GI.Conversions
+import GI.Code
 import GI.GObject
+import GI.Signal (genSignal)
 import GI.SymbolNaming
 import GI.Type
-import GI.Util (split)
 import GI.Value
 import GI.Internal.ArgInfo
 import GI.Internal.FunctionInfo
@@ -44,7 +41,7 @@ valueStr (VFileName x) = show x
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant n@(Name _ name) (Constant value) = do
     name' <- literalName n
-    ht <- nsHaskellType $ valueType value
+    ht <- haskellType $ valueType value
     line $ "-- constant " ++ name
     line $ name' ++ " :: " ++ show ht
     line $ name' ++ " = " ++ valueStr value
@@ -120,8 +117,17 @@ genMethod cn mn (Function {
         mn' = mn { name = name cn ++ "_" ++ name mn }
         -- Mangle the callable to make the implicit object parameter
         -- explicit.
-        c' = c {  args = args' }
-        args' = objArg : (args c)
+        c' = c {  args = args' , returnType = returnType' }
+        returnType' = fixCArrayLength $ returnType c
+        -- Since we are prepending an argument we need to adjust the
+        -- offset of the length arguments of CArrays.
+        args' = objArg : map fixLengthArg (args c)
+        fixLengthArg :: Arg -> Arg
+        fixLengthArg arg = arg { argType = fixCArrayLength (argType arg)}
+        fixCArrayLength :: Type -> Type
+        fixCArrayLength (TCArray zt fixed length t) =
+            TCArray zt fixed (length+1) t
+        fixCArrayLength t = t
         objArg = Arg {
           argName = "_obj",
           argType = TInterface (namespace cn) (name cn),
@@ -139,81 +145,6 @@ genMethod cn mn (Function {
     if FunctionIsConstructor `elem` fs
       then genCallable mn' sym c''
       else genCallable mn' sym c'
-
-genSignal :: Name -> Signal -> Name -> Object -> CodeGen ()
-genSignal sn (Signal { sigCallable = cb }) on _o = do
-  on' <- upperName on
-  let (w:ws) = split '-' $ name sn
-      sn' = w ++ concatMap ucFirst ws
-  line $ "-- signal " ++ on' ++ "::" ++ name sn
-
-  let inArgs = filter ((== DirectionIn) . direction) $ args cb
-      outArgs = filter ((== DirectionOut) . direction) $ args cb
-
-  -- Callback prototype
-  let cbType = on' ++ ucFirst sn' ++ "Callback"
-  group $ do
-    line $ "type " ++ cbType ++ " = "
-    indent $ do
-      -- gtk2hs does not pass the object to the callback, we follow
-      -- the same conventions.
-      --  t <- nsHaskellType $ TInterface
-      -- (namespace on) (name on) line $ show t ++ " ->"
-      forM_ inArgs $ \arg -> do
-        ht <- nsHaskellType $ argType arg
-        line $ show ht ++ " ->"
-      ret <- io <$> hOutType cb outArgs
-      line $ show ret
-
-  -- Wrapper for connecting functions to the signal
-  prefixGO <- qualify "GObject"
-  let signature = "(ManagedPtr a, " ++ klass (prefixGO ++ "Object") ++ " a) =>"
-                  ++ " a -> " ++ cbType ++ " -> IO Word32" 
-  -- XXX It would be better to walk through the whole tree and
-  -- disambiguate only those that are ambiguous.
-  let signalConnectorName = "on" ++ on' ++ ucFirst sn'
-  group $ do
-    line $ signalConnectorName ++ " :: " ++ signature
-    line $ signalConnectorName ++ " obj cb = " ++ prefixGO ++
-           "connectSignal obj \"" ++ (name sn) ++ "\" cb' where"
-    indent $ do
-        line $ "cb' :: Ptr " ++ prefixGO ++ "Object ->"
-        indent $ do forM_ (args cb) $ \arg -> do
-                       ft <- marshallFType $ argType arg
-                       line $ show ft ++ " ->"
-                    ret <- io <$> case returnType cb of
-                                    TBasicType TVoid -> return $ typeOf ()
-                                    _ -> marshallFType $ returnType cb
-                    line $ show ret
-        let inArgNames = map (escapeReserved . argName) inArgs
-            outArgNames = map (escapeReserved . argName) outArgs
-            allNames = map (escapeReserved . argName) (args cb)
-        line $ "cb' _ " ++ (concatMap (++ " ") allNames) ++ "= do"
-        indent $ do
-{-                   when ((not . null) outArgs) $
-                     line $ "out: " ++ (show outArgs) -}
-                   inNames <- forM (zip inArgNames inArgs) $ \(name, arg) ->
-                        convertFMarshall name (argType arg)
-                   let hRetval = case (returnType cb, outArgNames) of
-                           (TBasicType TVoid, []) -> ""
-                           (TBasicType TVoid, out:[]) -> out ++ " <- "
-                           (TBasicType TVoid, _) -> "(" ++ intercalate ", " outArgNames ++ ") <- "
-                           (_, []) -> "ret <- "
-                           _ -> "(" ++ intercalate ", " ("ret":outArgNames) ++ ") <- "
-                   line $ hRetval ++ "cb" ++ (concatMap (" " ++) inNames)
-{-
-                   -- XXX non-basic type out values are not written back yet.
-
-                   forM_ (zip outArgNames outArgs) $ \(name, arg) ->
-                      case argType arg of
-                        TBasicType t -> line $ "poke " ++ 
-                      n' <- convert (Var name) (hToF $ argType arg)
-                   -}
-                   case returnType cb of
-                     TBasicType TVoid -> line $ "return ()"
-                     _ -> do
-                       retval <- convertHMarshall "ret" (returnType cb)
-                       line $ "return " ++ retval
 
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
@@ -247,7 +178,7 @@ genGObjectCasts n o = do
 
   group $ do
     line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
-    indent $ line $ "c_" ++ cn_ ++ " :: Type"
+    indent $ line $ "c_" ++ cn_ ++ " :: GType"
 
   prefixGO <- qualify "GObject"
 
@@ -377,11 +308,11 @@ gObjectBootstrap = do
     blank
     line "-- Safe casting machinery"
     line "foreign import ccall unsafe \"check_object_type\""
-    line "    c_check_object_type :: Ptr Object -> Type -> CInt"
+    line "    c_check_object_type :: Ptr Object -> GType -> CInt"
     blank
     line $ "castTo :: (ManagedPtr o, " ++ (klass "Object") ++ " o, "
            ++ (klass "Object") ++ " o') =>"
-    line "           (ForeignPtr o' -> o') -> Type -> [Char] -> o -> IO o'"
+    line "           (ForeignPtr o' -> o') -> GType -> [Char] -> o -> IO o'"
     line "castTo constructor t typeName obj = do"
     line "    let ptrObj = (castPtr . unsafeManagedPtrGetPtr) obj"
     line "    when (c_check_object_type ptrObj t /= 1) $"
@@ -428,8 +359,12 @@ genModule name apis = do
     -- Error types come from GLib.
     when (name /= "GLib") $
          line $ "import " ++ ip "GLib (Error(..))"
+    line $ "import Data.Char"
     line $ "import Data.Int"
     line $ "import Data.Word"
+    line $ "import Data.Array (Array(..))"
+    line $ "import qualified Data.ByteString as B"
+    line $ "import Data.ByteString (ByteString)"
     line $ "import Foreign.Safe"
     line $ "import Foreign.ForeignPtr.Unsafe"
     line $ "import Foreign.C"
@@ -463,4 +398,21 @@ genModule name apis = do
             -- We can skip in the bindings
             "signal_set_va_marshaller",
             -- These seem to have some issues in the introspection data
-            "attribute_set_free"] -- atk_attribute_set_free
+            "attribute_set_free", -- atk_attribute_set_free
+            -- g_base64_decode_step, missing array length argument,
+            -- requires more complex logic.
+            "base64_decode_step",
+            -- Similar to base64_decode_step
+            "base64_encode_step",
+            "base64_encode_close",
+            -- g_ucs4_to_*, the first argument is marked as g_unichar, but it is really an array of g_unichar.
+            "ucs4_to_utf16",
+            "ucs4_to_utf8",
+            -- g_regex_escape_string. Length can be -1, in which case
+            -- it means zero terminated array of char.
+            "regex_escape_string",
+            -- g_signal_chain_from_overridden. Seems to be
+            -- null-terminated, but it is not marked as such.
+            "signal_chain_from_overridden",
+            -- g_signal_emitv, same as g_signal_chain_from_overridden
+            "signal_emitv" ]

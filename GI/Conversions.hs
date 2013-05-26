@@ -3,12 +3,16 @@
 module GI.Conversions
     ( convert
     , genConversion
+    , unpackCArray
+    , computeArrayLength
 
     , marshallFType
     , convertFMarshall
     , convertHMarshall
     , hToF
     , fToH
+    , haskellType
+    , foreignType
 
     , apply
     , mapC
@@ -16,9 +20,12 @@ module GI.Conversions
     , Constructor(..)
     ) where
 
+import Control.Applicative ((<$>))
 import Control.Monad.Free (Free(..), liftF)
-import Data.Typeable (TypeRep, tyConName, typeRepTyCon)
+import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import GHC.Exts (IsString(..))
+import Data.Int
+import Data.Word
 
 import GI.API
 import GI.Code
@@ -89,6 +96,19 @@ genConversion l (Free k) = do
            genConversion l next
     Literal Id next -> genConversion l next
 
+-- Given an array, together with its type, write down code for reading
+-- its length into the given variable.
+computeArrayLength :: String -> String -> Type -> CodeGen ()
+computeArrayLength length array (TCArray _ _ _ t) = do
+    let reader = case t of
+                   TBasicType TUInt8 -> "B.length"
+                   TBasicType _ -> "length"
+                   TInterface _ _ -> "length"
+                   _ -> error $ "Don't know how to compute length of " ++ show t
+    line $ "let " ++ length ++ " = fromIntegral $ " ++ reader ++ " " ++ array
+computeArrayLength _ _ t =
+    error $ "computeArrayLength called on non-CArray type " ++ show t
+
 convert :: String -> CodeGen Converter -> CodeGen String
 convert l c = do
   c' <- c
@@ -96,8 +116,8 @@ convert l c = do
 
 -- Given the Haskell and Foreign types, returns the name of the
 -- function marshalling between both.
-hToF' :: Maybe API -> TypeRep -> TypeRep -> CodeGen Constructor
-hToF' a hType fType
+hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen Constructor
+hToF' t a hType fType
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
     | Just (APIFlags _) <- a = return "fromIntegral"
@@ -106,39 +126,70 @@ hToF' a hType fType
     | ptr hType == fType = do
         let con = tyConName $ typeRepTyCon hType
         return $ P $ toPtr con
+    | TByteArray <- t = return $ M "packGByteArray"
+    | TCArray True _ _ (TBasicType TUTF8) <- t =
+        return $ M "packZeroTerminatedUTF8CArray"
+    | TCArray True _ _ (TBasicType TFileName) <- t =
+        return $ M "packZeroTerminatedStringCArray"
+    | TCArray True _ _ (TBasicType TVoid) <- t =
+        return $ M "packZeroTerminatedPtrArray"
+    | TCArray True _ _ (TBasicType TUInt8) <- t =
+        return $ M "packZeroTerminatedByteString"
+    | TCArray True _ _ (TBasicType _) <- t =
+        return $ M "packZeroTerminatedStorableArray"
+    | TCArray False _ _ (TBasicType TUTF8) <- t =
+        return $ M "packUTF8CArray"
+    | TCArray False _ _ (TBasicType TFileName) <- t =
+        return $ M "packStringCArray"
+    | TCArray False _ _ (TBasicType TVoid) <- t =
+        return $ M "packPtrArray"
+    | TCArray False _ _ (TBasicType TUInt8) <- t =
+        return $ M "packByteString"
+    | TCArray False _ _ (TBasicType _) <- t =
+        return $ M "packStorableArray"
+    | TCArray _ _ _ _ <- t =
+                         error $ "Don't know how to pack C array of type "
+                                   ++ show t
     | otherwise = return $ case (show hType, show fType) of
                ("[Char]", "CString") -> M "newCString"
                ("Word", "Type")      -> "fromIntegral"
+               ("Char", "CInt")      -> "(fromIntegral . ord)"
                ("Bool", "CInt")      -> "(fromIntegral . fromEnum)"
                _                     -> error $ "don't know how to convert "
                                         ++ show hType ++ " into "
-                                        ++ show fType ++ "."
+                                        ++ show fType ++ ".\n"
+                                        ++ "Internal type: "
+                                        ++ show t
 
 hToF :: Type -> CodeGen Converter
-hToF (TGList t) = do
-  a <- findAPI t
-  hType <- nsHaskellType t
-  fType <- nsForeignType t
-  innerConstructor <- hToF' a hType fType
-  return $ do
-    mapC innerConstructor
-    apply (M "packGList")
-
-hToF (TGSList t) = do
-  a <- findAPI t
-  hType <- nsHaskellType t
-  fType <- nsForeignType t
-  innerConstructor <- hToF' a hType fType
-  return $ do
-    mapC innerConstructor
-    apply (M "packGSList")
+hToF (TGList t) = hToF_PackedType t "packGList"
+hToF (TGSList t) = hToF_PackedType t "packGSList"
+hToF (TGArray t) = hToF_PackedType t "packGArray"
+hToF (TPtrArray t) = hToF_PackedType t "packGPtrArray"
+hToF (TCArray zt _ _ t@(TInterface _ _)) = do
+  isScalar <- getIsScalar t
+  let packer = if zt
+               then "packZeroTerminated"
+               else "pack"
+  if isScalar
+  then hToF_PackedType t $ packer ++ "StorableArray"
+  else hToF_PackedType t $ packer ++ "PtrArray"
 
 hToF t = do
   a <- findAPI t
-  hType <- nsHaskellType t
-  fType <- nsForeignType t
-  constructor <- hToF' a hType fType
+  hType <- haskellType t
+  fType <- foreignType t
+  constructor <- hToF' t a hType fType
   return $ apply constructor
+
+hToF_PackedType t packer = do
+  a <- findAPI t
+  hType <- haskellType t
+  fType <- foreignType t
+  innerConstructor <- hToF' t a hType fType
+  return $ do
+    mapC innerConstructor
+    apply (M packer)
 
 fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen Constructor
 fToH' t a hType fType
@@ -161,52 +212,104 @@ fToH' t a hType fType
               Just _ -> return $ M $ parenthesize $
                        "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
               _ -> return $ P constructor
+    | TCArray True _ _ (TBasicType TUTF8) <- t =
+        return $ M "unpackZeroTerminatedUTF8CArray"
+    | TCArray True _ _ (TBasicType TFileName) <- t =
+        return $ M "unpackZeroTerminatedStringList"
+    | TCArray True _ _ (TBasicType TUInt8) <- t =
+        return $ M "unpackZeroTerminatedByteString"
+    | TCArray True _ _ (TBasicType TVoid) <- t =
+        return $ M "unpackZeroTerminatedPtrArray"
+    | TCArray True _ _ (TBasicType _) <- t =
+        return $ M "unpackZeroTerminatedStorableArray"
+    | TCArray _ _ _ _ <- t =
+                         error $
+                           "fToH' : Don't know how to unpack C array of type "
+                           ++ show t
+    | TByteArray <- t = return $ M "unpackGByteArray"
     | otherwise = return $ case (show fType, show hType) of
                ("CString", "[Char]") -> M "peekCString"
                ("Type", "Word")      -> "fromIntegral"
+               ("CInt", "Char")      -> "(chr . fromIntegral)"
                ("CInt", "Bool")      -> "(/= 0)"
                _                     -> error $ "don't know how to convert "
                                         ++ show fType ++ " into "
-                                        ++ show hType ++ "."
+                                        ++ show hType ++ ".\n"
+                                        ++ "Internal type: "
+                                        ++ show t
+
 
 fToH :: Type -> CodeGen Converter
-fToH (TGList t) = do
-  a <- findAPI t
-  hType <- nsHaskellType t
-  fType <- nsForeignType t
-  innerConstructor <- fToH' t a hType fType
-  return $ do
-    apply (M "unpackGList")
-    mapC innerConstructor
 
-fToH (TGSList t) = do
-  a <- findAPI t
-  hType <- nsHaskellType t
-  fType <- nsForeignType t
-  innerConstructor <- fToH' t a hType fType
-  return $ do
-    apply (M "unpackGSList")
-    mapC innerConstructor
+fToH (TGList t) = fToH_PackedType t "unpackGList"
+fToH (TGSList t) = fToH_PackedType t "unpackGSList"
+fToH (TGArray t) = fToH_PackedType t "unpackGArray"
+fToH (TPtrArray t) = fToH_PackedType t "unpackGPtrArray"
+fToH (TCArray True _ _ t@(TInterface _ _)) = do
+  isScalar <- getIsScalar t
+  if isScalar
+  then fToH_PackedType t "unpackZeroTerminatedStorableArray"
+  else fToH_PackedType t "unpackZeroTerminatedPtrArray"
 
 fToH t = do
   a <- findAPI t
-  hType <- nsHaskellType t
-  fType <- nsForeignType t
+  hType <- haskellType t
+  fType <- foreignType t
   constructor <- fToH' t a hType fType
   return $ apply constructor
 
--- The marshaller C code has some built in support for basic types, so
--- we only generate conversions for things that the marshaller cannot
--- do itself. (This list should be kept in sync with hsgclosure.c)
+fToH_PackedType t unpacker = do
+  a <- findAPI t
+  hType <- haskellType t
+  fType <- foreignType t
+  innerConstructor <- fToH' t a hType fType
+  return $ do
+    apply (M unpacker)
+    mapC innerConstructor
+
+unpackCArray :: String -> Type -> CodeGen Converter
+unpackCArray length (TCArray False _ _ t) =
+  case t of
+    TBasicType TUTF8 -> return $ apply $ M $ parenthesize $
+                        "unpackUTF8CArrayWithLength " ++ length
+    TBasicType TFileName -> return $ apply $ M $ parenthesize $
+                            "unpackStringArrayWithLength " ++ length
+    TBasicType TUInt8 -> return $ apply $ M $ parenthesize $
+                         "unpackByteStringWithLength " ++ length
+    TBasicType TVoid -> return $ apply $ M $ parenthesize $
+                         "unpackPtrArrayWithLength " ++ length
+    TBasicType _ -> return $ apply $ M $ parenthesize $
+                         "unpackStorableArrayWithLength " ++ length
+    TInterface _ _ -> do
+           a <- findAPI t
+           isScalar <- getIsScalar t
+           hType <- haskellType t
+           fType <- foreignType t
+           innerConstructor <- fToH' t a hType fType
+           let unpacker = if isScalar
+                          then "unpackStorableArrayWithLength"
+                          else "unpackPtrArrayWithLength"
+           return $ do
+             apply $ M $ parenthesize $ unpacker ++ " " ++ length
+             mapC innerConstructor
+    _ -> error $ "unpackCArray : Don't know how to unpack C Array of type "
+                 ++ show t
+
+unpackCArray _ _ = error $ "unpackCArray : unexpected array type."
+
+-- The signal marshaller C code has some built in support for basic
+-- types, so we only generate conversions for things that the
+-- marshaller cannot do itself. (This list should be kept in sync with
+-- hsgclosure.c)
 
 -- Marshaller to haskell types.
 -- There is no support in the marshaller for converting Haskell
 -- strings into C strings directly.
 marshallFType :: Type -> CodeGen TypeRep
-marshallFType t@(TBasicType TUTF8) = nsForeignType t
-marshallFType t@(TBasicType TFileName) = nsForeignType t
-marshallFType t@(TBasicType _) = return $ haskellType t
-marshallFType a = nsForeignType a
+marshallFType t@(TBasicType TUTF8) = foreignType t
+marshallFType t@(TBasicType TFileName) = foreignType t
+marshallFType t@(TBasicType _) = haskellType t
+marshallFType a = foreignType a
 
 convertFMarshall :: String -> Type -> CodeGen String
 convertFMarshall name t@(TBasicType TUTF8) = convert name (fToH t)
@@ -219,3 +322,100 @@ convertHMarshall name t@(TBasicType TUTF8) = convert name (hToF t)
 convertHMarshall name t@(TBasicType TFileName) = convert name (hToF t)
 convertHMarshall name (TBasicType _) = return name
 convertHMarshall name t = convert name (hToF t)
+
+haskellBasicType TVoid     = (ptr (typeOf ()))
+haskellBasicType TBoolean  = typeOf True
+haskellBasicType TInt8     = typeOf (0 :: Int8)
+haskellBasicType TUInt8    = typeOf (0 :: Word8)
+haskellBasicType TInt16    = typeOf (0 :: Int16)
+haskellBasicType TUInt16   = typeOf (0 :: Word16)
+haskellBasicType TInt32    = typeOf (0 :: Int32)
+haskellBasicType TUInt32   = typeOf (0 :: Word32)
+haskellBasicType TInt64    = typeOf (0 :: Int64)
+haskellBasicType TUInt64   = typeOf (0 :: Word64)
+haskellBasicType TGType    = "GType" `con` []
+ -- XXX Text may be more appropriate
+haskellBasicType TUTF8     = typeOf ("" :: String)
+haskellBasicType TFloat    = typeOf (0 :: Float)
+haskellBasicType TDouble   = typeOf (0 :: Double)
+haskellBasicType TUniChar  = typeOf ('\0' :: Char)
+ --- XXX ByteString would be more appropriate
+haskellBasicType TFileName = typeOf ("" :: String)
+
+-- This translates GI types to the types used for generated Haskell code.
+haskellType :: Type -> CodeGen TypeRep
+haskellType (TBasicType bt) = return $ haskellBasicType bt
+haskellType (TCArray _ _ _ (TBasicType TUInt8)) =
+    return $ "ByteString" `con` []
+haskellType (TCArray _ _ _ (TBasicType b)) =
+    return $ "[]" `con` [haskellBasicType b]
+haskellType (TCArray _ _ _ a@(TInterface _ _)) = do
+  inner <- haskellType a
+  return $ "[]" `con` [inner]
+haskellType (TCArray _ _ _ a) =
+    error $ "haskellType : Don't recognize CArray of type " ++ show a
+haskellType (TGArray a) = do
+  inner <- haskellType a
+  return $ "[]" `con` [inner]
+haskellType (TPtrArray a) = do
+  inner <- haskellType a
+  return $ "[]" `con` [inner]
+haskellType (TByteArray) = return $ "ByteString" `con` []
+haskellType (TGList a) = do
+  inner <- haskellType a
+  return $ "[]" `con` [inner]
+haskellType (TGSList a) = do
+  inner <- haskellType a
+  return $ "[]" `con` [inner]
+haskellType (TGHash a b) = do
+  innerA <- haskellType a
+  innerB <- haskellType b
+  return $ "GHashTable" `con` [innerA, innerB]
+haskellType TError = return $ "Error" `con` []
+haskellType (TInterface ns n) = do
+  prefix <- qualify ns
+  return $ (prefix ++ n) `con` []
+
+foreignBasicType TVoid     = ptr (typeOf ())
+foreignBasicType TBoolean  = "CInt" `con` []
+foreignBasicType TUTF8     = "CString" `con` []
+foreignBasicType TGType    = "GType" `con` []
+foreignBasicType TFileName = "CString" `con` []
+foreignBasicType TUniChar  = "CInt" `con` []
+foreignBasicType t         = haskellBasicType t
+
+-- This translates GI types to the types used in foreign function calls.
+foreignType :: Type -> CodeGen TypeRep
+foreignType (TBasicType t) = return $ foreignBasicType t
+foreignType (TCArray _ _ _ t) = ptr <$> foreignType t
+foreignType (TGArray a) = do
+  inner <- foreignType a
+  return $ ptr ("GArray" `con` [inner])
+foreignType (TPtrArray a) = do
+  inner <- foreignType a
+  return $ ptr ("GPtrArray" `con` [inner])
+foreignType (TByteArray) = return $ ptr ("GByteArray" `con` [])
+foreignType (TGList a) = do
+  inner <- foreignType a
+  return $ ptr ("GList" `con` [inner])
+foreignType (TGSList a) = do
+  inner <- foreignType a
+  return $ ptr ("GSList" `con` [inner])
+foreignType t@(TGHash _ _) = ptr <$> haskellType t
+foreignType t@TError = ptr <$> haskellType t
+foreignType t@(TInterface ns n) = do
+  isScalar <- getIsScalar t
+  if isScalar
+  then return $ "Word" `con` []
+  else do
+    prefix <- qualify ns
+    return $ ptr $ (prefix ++ n) `con` []
+
+getIsScalar :: Type -> CodeGen Bool
+getIsScalar t = do
+  a <- findAPI t
+  case a of
+    Nothing -> return False
+    (Just (APIEnum _)) -> return True
+    (Just (APIFlags _)) -> return True
+    _ -> return False

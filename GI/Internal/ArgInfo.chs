@@ -13,9 +13,11 @@ module GI.Internal.ArgInfo
     , argInfoType
     ) where
 
-import Control.Applicative ((<$>))
-import Foreign
+import Foreign (Ptr, castPtr)
 import Foreign.C
+import System.IO.Unsafe (unsafePerformIO)
+
+import Control.Applicative ((<$>))
 
 {# import GI.Internal.Types #}
 
