@@ -130,7 +130,7 @@ hToF' t a hType fType
     | TCArray True _ _ (TBasicType TUTF8) <- t =
         return $ M "packZeroTerminatedUTF8CArray"
     | TCArray True _ _ (TBasicType TFileName) <- t =
-        return $ M "packZeroTerminatedStringCArray"
+        return $ M "packZeroTerminatedFileNameArray"
     | TCArray True _ _ (TBasicType TVoid) <- t =
         return $ M "packZeroTerminatedPtrArray"
     | TCArray True _ _ (TBasicType TUInt8) <- t =
@@ -140,7 +140,7 @@ hToF' t a hType fType
     | TCArray False _ _ (TBasicType TUTF8) <- t =
         return $ M "packUTF8CArray"
     | TCArray False _ _ (TBasicType TFileName) <- t =
-        return $ M "packStringCArray"
+        return $ M "packFileNameArray"
     | TCArray False _ _ (TBasicType TVoid) <- t =
         return $ M "packPtrArray"
     | TCArray False _ _ (TBasicType TUInt8) <- t =
@@ -152,6 +152,7 @@ hToF' t a hType fType
                                    ++ show t
     | otherwise = return $ case (show hType, show fType) of
                ("[Char]", "CString") -> M "newCString"
+               ("ByteString", "CString") -> M "byteStringToCString"
                ("Word", "Type")      -> "fromIntegral"
                ("Char", "CInt")      -> "(fromIntegral . ord)"
                ("Bool", "CInt")      -> "(fromIntegral . fromEnum)"
@@ -215,7 +216,7 @@ fToH' t a hType fType
     | TCArray True _ _ (TBasicType TUTF8) <- t =
         return $ M "unpackZeroTerminatedUTF8CArray"
     | TCArray True _ _ (TBasicType TFileName) <- t =
-        return $ M "unpackZeroTerminatedStringList"
+        return $ M "unpackZeroTerminatedFileNameArray"
     | TCArray True _ _ (TBasicType TUInt8) <- t =
         return $ M "unpackZeroTerminatedByteString"
     | TCArray True _ _ (TBasicType TVoid) <- t =
@@ -229,6 +230,7 @@ fToH' t a hType fType
     | TByteArray <- t = return $ M "unpackGByteArray"
     | otherwise = return $ case (show fType, show hType) of
                ("CString", "[Char]") -> M "peekCString"
+               ("CString", "ByteString") -> M "B.packCString"
                ("Type", "Word")      -> "fromIntegral"
                ("CInt", "Char")      -> "(chr . fromIntegral)"
                ("CInt", "Bool")      -> "(/= 0)"
@@ -273,7 +275,7 @@ unpackCArray length (TCArray False _ _ t) =
     TBasicType TUTF8 -> return $ apply $ M $ parenthesize $
                         "unpackUTF8CArrayWithLength " ++ length
     TBasicType TFileName -> return $ apply $ M $ parenthesize $
-                            "unpackStringArrayWithLength " ++ length
+                            "unpackFileNameArrayWithLength " ++ length
     TBasicType TUInt8 -> return $ apply $ M $ parenthesize $
                          "unpackByteStringWithLength " ++ length
     TBasicType TVoid -> return $ apply $ M $ parenthesize $
@@ -339,8 +341,7 @@ haskellBasicType TUTF8     = typeOf ("" :: String)
 haskellBasicType TFloat    = typeOf (0 :: Float)
 haskellBasicType TDouble   = typeOf (0 :: Double)
 haskellBasicType TUniChar  = typeOf ('\0' :: Char)
- --- XXX ByteString would be more appropriate
-haskellBasicType TFileName = typeOf ("" :: String)
+haskellBasicType TFileName = "ByteString" `con` []
 
 -- This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen TypeRep
