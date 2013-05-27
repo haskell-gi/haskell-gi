@@ -10,7 +10,7 @@ module GI.Internal.StructInfo
 where
 
 import Control.Applicative ((<$>))
-import Foreign hiding (unsafePerformIO)
+import Foreign.Safe
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 

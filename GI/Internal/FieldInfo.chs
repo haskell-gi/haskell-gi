@@ -7,8 +7,9 @@ module GI.Internal.FieldInfo
     ) where
 
 import Control.Applicative ((<$>))
-import Foreign
+import Foreign.Safe
 import Foreign.C
+import System.IO.Unsafe (unsafePerformIO)
 
 import GI.Util (toFlags)
 

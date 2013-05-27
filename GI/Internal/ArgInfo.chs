@@ -13,7 +13,7 @@ module GI.Internal.ArgInfo
     , argInfoType
     ) where
 
-import Foreign (Ptr, castPtr)
+import Foreign.Safe
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 

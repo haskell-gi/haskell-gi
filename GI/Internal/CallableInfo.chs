@@ -8,8 +8,9 @@ module GI.Internal.CallableInfo
     ) where
 
 import Control.Applicative ((<$>))
-import Foreign
+import Foreign.Safe
 import Foreign.C
+import System.IO.Unsafe (unsafePerformIO)
 
 import GI.Internal.ArgInfo
 import GI.Util (getList)

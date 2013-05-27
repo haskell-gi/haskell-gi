@@ -7,7 +7,7 @@ module GI.Internal.Typelib
   )
 where
 
-import Foreign
+import Foreign.Safe
 import Foreign.C
 
 import Control.Applicative ((<$>))

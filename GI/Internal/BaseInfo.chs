@@ -8,7 +8,7 @@ module GI.Internal.BaseInfo
   )
 where
 
-import Foreign (Ptr, castPtr, nullPtr)
+import Foreign.Safe
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 
