@@ -1,6 +1,7 @@
 
 module GI.Internal.EnumInfo
     ( enumInfoValues
+    , enumInfoErrorDomain
     , valueInfoValue
     ) where
 
@@ -28,6 +29,13 @@ stupidValueCast val = castPtr p
 enumInfoValues :: EnumInfoClass enum => enum -> [ValueInfo]
 enumInfoValues ei = unsafePerformIO $ map (ValueInfo <$> castPtr) <$>
     getList {# call get_n_values #} {# call get_value #} (stupidEnumCast ei)
+
+enumInfoErrorDomain :: EnumInfoClass enum => enum -> Maybe String
+enumInfoErrorDomain ei = unsafePerformIO $ do
+    result <- {# call get_error_domain #} (stupidEnumCast ei)
+    if result == nullPtr
+       then return Nothing
+       else Just <$> peekCString result
 
 valueInfoValue :: ValueInfoClass val => val -> Word64
 valueInfoValue vi = unsafePerformIO $ fromIntegral <$>

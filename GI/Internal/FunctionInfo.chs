@@ -4,7 +4,6 @@ module GI.Internal.FunctionInfo
     , functionInfoSymbol
     , functionInfoFlags
     -- XXX: Write these.
-    -- , functionInfoFlags,
     -- , functionInfoProperty
     -- , functionInfoVFunc
     )

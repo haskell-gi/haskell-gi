@@ -64,13 +64,15 @@ toConstant ci =
      in Constant value
 
 data Enumeration = Enumeration {
-    enumValues :: [(String, Word64)] }
+    enumValues :: [(String, Word64)],
+    errorDomain :: Maybe String}
     deriving Show
 
 toEnumeration :: EnumInfo -> Enumeration
-toEnumeration ei = Enumeration $
+toEnumeration ei = Enumeration
     (map (\vi -> (baseInfoName . baseInfo $ vi, valueInfoValue vi))
-        (enumInfoValues ei))
+             (enumInfoValues ei))
+    (enumInfoErrorDomain ei)
 
 data Flags = Flags Enumeration
     deriving Show

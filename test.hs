@@ -88,7 +88,7 @@ testFunction = testCase "function" $
 testEnum = testCase "enum" $ testCodeGen name api expected
   where
     name = Name "test" "enum"
-    api = APIEnum $ Enumeration [("foo", 1), ("bar", 2)]
+    api = APIEnum $ Enumeration [("foo", 1), ("bar", 2)] Nothing
     expected =
       [ Line "-- enum enum"
       , Group $ Sequence $ S.fromList

@@ -1,7 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# CFILES hsgclosure.c #-}
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.Gio as Gio
+import qualified GI.GLib as GLib
+
+import Data.ByteString.Char8 (pack, unpack)
+import qualified Data.ByteString.Char8 as B
 
 import Control.Monad (forM_)
 
@@ -12,6 +17,9 @@ import Foreign (nullPtr)
 
 main = do
 	gtk_init nullPtr nullPtr
+
+        (_,contents) <- GLib.fileGetContents "testGtk.hs"
+        B.putStrLn contents
 
 	win <- windowNew WindowTypeToplevel
         win <!> onWidgetDestroy $ do

@@ -8,6 +8,7 @@ module GI.CodeGen
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
 import Data.Tuple (swap)
+import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as M
 
 import GI.API
@@ -47,9 +48,9 @@ genConstant n@(Name _ name) (Constant value) = do
     line $ name' ++ " = " ++ valueStr value
 
 genFunction :: Name -> Function -> CodeGen ()
-genFunction n (Function symbol callable _flags) = do
+genFunction n (Function symbol callable flags) = do
   line $ "-- function " ++ symbol
-  genCallable n symbol callable
+  genCallable n symbol callable (FunctionThrows `elem` flags)
 
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n@(Name _ name) (Struct _fields isGType) =
@@ -60,7 +61,7 @@ genStruct n@(Name _ name) (Struct _fields isGType) =
       -- XXX: Generate code for fields.
 
 genEnum :: Name -> Enumeration -> CodeGen ()
-genEnum n@(Name ns name) (Enumeration fields) = do
+genEnum n@(Name ns name) (Enumeration fields eDomain) = do
   line $ "-- enum " ++ name
   name' <- upperName n
   fields' <- forM fields $ \(fieldName, value) -> do
@@ -82,9 +83,35 @@ genEnum n@(Name ns name) (Enumeration fields) = do
     blank
     indent $ forM_ valueNames $ \(v, n) ->
       line $ "toEnum " ++ show v ++ " = " ++ n
+  when (isJust eDomain) $ genErrorDomain name' (fromJust eDomain)
+
+genErrorDomain :: String -> String -> CodeGen ()
+genErrorDomain name' domain = do
+  group $ do
+    line $ "instance GErrorClass " ++ name' ++ " where"
+    indent $ line $
+               "gerrorDomain _ = \"" ++ domain ++ "\""
+  -- Generate type specific error handling (saves a bit of typing, and
+  -- it's clearer to read).
+  group $ do
+    let catcher = "catch" ++ name'
+    line $ catcher ++ " ::"
+    indent $ do
+            line $ "IO a ->"
+            line $ "(" ++ name' ++ " -> GErrorMessage -> IO a) ->"
+            line $ "IO a"
+    line $ catcher ++ " = catchGErrorJustDomain"
+  group $ do
+    let handler = "handle" ++ name'
+    line $ handler ++ " ::"
+    indent $ do
+            line $ "(" ++ name' ++ " -> GErrorMessage -> IO a) ->"
+            line $ "IO a ->"
+            line $ "IO a"
+    line $ handler ++ " = handleGErrorJustDomain"
 
 genFlags :: Name -> Flags -> CodeGen ()
-genFlags n@(Name _ name) (Flags (Enumeration _fields)) = do
+genFlags n@(Name _ name) (Flags (Enumeration _fields _)) = do
   line $ "-- flags " ++ name
   name' <- upperName n
   -- XXX: Generate code for fields.
@@ -141,10 +168,10 @@ genMethod cn mn (Function {
         returnType' = if returnsGObject then
                         TInterface (namespace cn) (name cn)
                       else
-                        returnType c        
+                        returnType c
     if FunctionIsConstructor `elem` fs
-      then genCallable mn' sym c''
-      else genCallable mn' sym c'
+      then genCallable mn' sym c'' (FunctionThrows `elem` fs)
+      else genCallable mn' sym c' (FunctionThrows `elem` fs)
 
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
@@ -373,6 +400,7 @@ genModule name apis = do
     blank
     line $ "import GI.Internal.ManagedPtr"
     line $ "import GI.Internal.BasicTypes"
+    line $ "import GI.Internal.GError"
     blank
     cfg <- config
 

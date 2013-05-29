@@ -43,11 +43,13 @@ hOutType callable outArgs = do
       maybeType = "Maybe" `con` [justType]
   return $ if returnMayBeNull callable then maybeType else justType
 
-mkForeignImport :: String -> Callable -> CodeGen ()
-mkForeignImport symbol callable = foreignImport $ do
+mkForeignImport :: String -> Callable -> Bool -> CodeGen ()
+mkForeignImport symbol callable throwsGError = foreignImport $ do
     line first
     indent $ do
         mapM_ (\a -> line =<< fArgStr a) (args callable)
+        when throwsGError $
+               line $ padTo 40 "Ptr (Ptr ()) -> " ++ "-- error"
         line =<< last
     where
     first = "foreign import ccall \"" ++ symbol ++ "\" " ++
@@ -133,14 +135,15 @@ arrayLengths callable = map snd (arrayLengthsMap callable) ++
 
 -- XXX We should free the memory allocated for the [a] -> Glist (a')
 -- etc. conversions.
-genCallable :: Name -> String -> Callable -> CodeGen ()
-genCallable n symbol callable = do
+genCallable :: Name -> String -> Callable -> Bool -> CodeGen ()
+genCallable n symbol callable throwsGError = do
     group $ do
       line $ "-- Args : " ++ (show $ args callable)
       line $ "-- Lengths : " ++ (show $ arrayLengths callable)
       line $ "-- hInArgs : " ++ show hInArgs
       line $ "-- returnType : " ++ (show $ returnType callable)
-    mkForeignImport symbol callable
+      line $ "-- throws : " ++ (show throwsGError)
+    mkForeignImport symbol callable throwsGError
     wrapper
 
     where
@@ -163,7 +166,11 @@ genCallable n symbol callable = do
           let returnBind = case returnType callable of
                              TBasicType TVoid -> ""
                              _                -> "result <- "
-          line $ returnBind ++ symbol ++ concatMap (" " ++) argNames
+              maybeCatchGErrors = if throwsGError
+                                  then "runCatchingGErrors $ "
+                                  else ""
+          line $ returnBind ++ maybeCatchGErrors
+                   ++ symbol ++ concatMap (" " ++) argNames
           touchInArgs
           convertOut
     signature = do
