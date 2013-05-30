@@ -162,6 +162,9 @@ handleGErrorJust code = flip (catchGErrorJust code)
 handleGErrorJustDomain :: GErrorClass err => (err -> GErrorMessage -> IO a) -> IO a -> IO a
 handleGErrorJustDomain = flip catchGErrorJustDomain
 
+foreign import ccall unsafe "g_error_free" g_error_free ::
+    Ptr () -> IO ()
+
 -- | Run the given function catching possible GErrors in its
 -- execution. If a GError is emitted this throws the corresponding
 -- exception.
@@ -176,5 +179,6 @@ runCatchingGErrors f = do
        code <- peek (gerror `plusPtr` sizeOf domain) :: IO GErrorCode
        c_msg <- peek (gerror `plusPtr` sizeOf domain `plusPtr` sizeOf code) :: IO CString
        msg <- peekCString c_msg
+       g_error_free gerror
        throw $ GError domain code msg
   return result
