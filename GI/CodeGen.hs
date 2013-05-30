@@ -74,7 +74,8 @@ genEnum n@(Name ns name) (Enumeration fields eDomain) = do
         ((fieldName, _value):fs) -> do
           line $ "  " ++ fieldName
           forM_ fs $ \(n, _) -> line $ "| " ++ n
-        _ -> return()
+          line $ "deriving (Show)"
+        _ -> return ()
   group $ do
     line $ "instance Enum " ++ name' ++ " where"
     indent $ forM_ fields' $ \(n, v) ->
@@ -427,6 +428,9 @@ genModule name apis = do
             "signal_set_va_marshaller",
             -- These seem to have some issues in the introspection data
             "attribute_set_free", -- atk_attribute_set_free
+            -- Accepts a NULL terminated array, but not
+            -- marked as such in the bindings.
+            "text_free_ranges", -- atk_text_free_ranges
             -- g_base64_decode_step, missing array length argument,
             -- requires more complex logic.
             "base64_decode_step",
