@@ -15,11 +15,37 @@ import Foreign (nullPtr)
 -- A fancy notation for making signal connections easier to read.
 (<!>) obj cb = cb obj
 
+testGio :: IO ()
+testGio = do
+  infos <- Gio.appInfoGetAll
+  forM_ infos $ \info -> do
+            name <- Gio.appInfoGetName info
+            exe <- Gio.appInfoGetExecutable info
+            putStrLn $ "name: " ++ name
+            putStrLn $ "exe: " ++ exe
+            putStrLn ""
+
+testExceptions :: IO ()
+testExceptions = do
+  -- This should work fine, without emitting any exception
+  (_,contents) <- GLib.fileGetContents "testGtk.hs"
+  B.putStrLn contents
+
+  -- Trying to read a file that does not exist should throw
+  -- FileErrorNoent, in the FileError domain.
+  _ <- GLib.catchFileError (GLib.fileGetContents "this file does not exist") $
+       \code msg ->
+           case code of
+             GLib.FileErrorNoent -> do
+                       putStrLn "<< Exception handled >>"
+                       return $ (True, "")
+             _ -> error $ "Unexpected error code : \"" ++ show code ++
+                            "\" with message : \"" ++ msg ++ "\""
+
+  return ()
+
 main = do
 	gtk_init nullPtr nullPtr
-
-        (_,contents) <- GLib.fileGetContents "testGtk.hs"
-        B.putStrLn contents
 
 	win <- windowNew WindowTypeToplevel
         win <!> onWidgetDestroy $ do
@@ -43,16 +69,8 @@ main = do
                 labelSetMarkup label "This is <a href=\"http://www.gnome.org\">a test</a>"
         containerAdd grid button
 
-        ids <- stockListIds
-        forM_ ids putStrLn
-
-        infos <- Gio.appInfoGetAll
-        forM_ infos $ \info -> do
-          name <- Gio.appInfoGetName info
-          exe <- Gio.appInfoGetExecutable info
-          putStrLn $ "name: " ++ name
-          putStrLn $ "exe: " ++ exe
-          putStrLn ""
+        testGio
+        testExceptions
 
 	widgetShowAll win
 	Gtk.main
