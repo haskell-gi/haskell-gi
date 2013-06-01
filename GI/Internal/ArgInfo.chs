@@ -51,7 +51,7 @@ argInfoIsOptional ai = unsafePerformIO $ (/= 0) <$>
 
 argInfoMayBeNull :: ArgInfoClass arg => arg -> Bool
 argInfoMayBeNull ai = unsafePerformIO $ (/= 0) <$>
-    {# call is_optional #} (stupidCast ai)
+    {# call may_be_null #} (stupidCast ai)
 
 argInfoOwnershipTransfer :: ArgInfoClass arg => arg -> Transfer
 argInfoOwnershipTransfer ai = unsafePerformIO $ toEnum <$> fromIntegral <$>

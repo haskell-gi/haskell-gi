@@ -11,6 +11,7 @@ Category:            Development
 Build-type:          Simple
 Cabal-version:       >=1.2
 Extra-source-files: GI/Utils/ManagedPtr.hs
+		    GI/Utils/Utils.hs
 
 Executable haskell-gi
   main-is: haskell-gi.hs

@@ -96,17 +96,18 @@ genConversion l (Free k) = do
            genConversion l next
     Literal Id next -> genConversion l next
 
--- Given an array, together with its type, write down code for reading
--- its length into the given variable.
-computeArrayLength :: String -> String -> Type -> CodeGen ()
-computeArrayLength length array (TCArray _ _ _ t) = do
-    let reader = case t of
-                   TBasicType TUInt8 -> "B.length"
-                   TBasicType _ -> "length"
-                   TInterface _ _ -> "length"
-                   _ -> error $ "Don't know how to compute length of " ++ show t
-    line $ "let " ++ length ++ " = fromIntegral $ " ++ reader ++ " " ++ array
-computeArrayLength _ _ t =
+-- Given an array, together with its type, return the code for reading
+-- its length.
+computeArrayLength :: String -> Type -> String
+computeArrayLength array (TCArray _ _ _ t) =
+    "fromIntegral $ " ++ reader ++ " " ++ array
+    where reader = case t of
+                     TBasicType TUInt8 -> "B.length"
+                     TBasicType _ -> "length"
+                     TInterface _ _ -> "length"
+                     _ -> error $ "Don't know how to compute length of "
+                          ++ show t
+computeArrayLength _ t =
     error $ "computeArrayLength called on non-CArray type " ++ show t
 
 convert :: String -> CodeGen Converter -> CodeGen String

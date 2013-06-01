@@ -104,8 +104,11 @@ inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
     rec _ [] = return ([], [])
     rec letters (arg:args) = do
       (ls, t, cons) <- argumentType letters $ argType arg
+      let t' = if mayBeNull arg
+               then "Maybe (" ++ t ++ ")"
+               else t
       (restCons, restTypes) <- rec ls args
-      return (cons ++ restCons, t : restTypes)
+      return (cons ++ restCons, t' : restTypes)
 
 -- Given a callable, return a list of (array, length) pairs, where in
 -- each pair "length" is the argument holding the length of the
@@ -188,7 +191,19 @@ genCallable n symbol callable throwsGError = do
         ft <- foreignType $ argType arg
         let name = escapeReserved $ argName arg
         if direction arg == DirectionIn
-            then convert name (hToF $ argType arg)
+            then if mayBeNull arg
+                 then do
+                   let maybeName = "maybe" ++ ucFirst name
+                   line $ maybeName ++ " <- case " ++ name ++ " of"
+                   indent $ do
+                        line $ "Nothing -> return nullPtr"
+                        let jName = "j" ++ ucFirst name
+                        line $ "Just " ++ jName ++ " -> do"
+                        indent $ do
+                              converted <- convert jName (hToF $ argType arg)
+                              line $ "return " ++ converted
+                   return maybeName
+                 else convert name (hToF $ argType arg)
             else do
               name' <- genConversion name $
                             literal $ M $ "malloc :: " ++ show (io $ ptr ft)
@@ -201,7 +216,17 @@ genCallable n symbol callable throwsGError = do
        when (direction array == DirectionIn) $
             do let lvar = escapeReserved $ argName length
                    avar = escapeReserved $ argName array
-               computeArrayLength lvar avar (argType array)
+               if mayBeNull array
+               then do
+                 line $ "let " ++ lvar ++ " = case " ++ avar ++ " of"
+                 indent $ indent $ do
+                      line $ "Nothing -> 0"
+                      let jarray = "j" ++ ucFirst avar
+                      line $ "Just " ++ jarray ++ " -> " ++
+                           computeArrayLength jarray (argType array)
+               else line $ "let " ++ lvar ++ " = " ++
+                         computeArrayLength avar (argType array)
+
     -- XXX: Should create ForeignPtrs for pointer results.
     -- XXX: Check argument transfer.
     convertOut = do
@@ -249,11 +274,17 @@ genCallable n symbol callable throwsGError = do
            case argType arg of
              (TGList a) -> do
                managed <- isManaged a
-               when managed $ line $ "mapM_ touchManagedPtr " ++ name
+               when managed $ line $ if mayBeNull arg
+                    then "whenJust " ++ name ++ " $ mapM_ touchManagedPtr "
+                    else "mapM_ touchManagedPtr " ++ name
              (TGSList a) -> do
                managed <- isManaged a
-               when managed $ line $ "mapM_ touchManagedPtr " ++ name
+               when managed $ line $ if mayBeNull arg
+                    then "whenJust " ++ name ++ " $ mapM_ touchManagedPtr "
+                    else "mapM_ touchManagedPtr " ++ name
              _ -> do
                managed <- isManaged (argType arg)
-               when managed $ line $ "touchManagedPtr " ++ name
+               when managed $ line $ if mayBeNull arg
+                    then "whenJust " ++ name ++ " touchManagedPtr"
+                    else "touchManagedPtr " ++ name
     withComment a b = padTo 40 a ++ "-- " ++ b

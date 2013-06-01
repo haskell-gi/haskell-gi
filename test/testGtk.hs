@@ -8,7 +8,8 @@ import qualified GI.GLib as GLib
 import Data.ByteString.Char8 (pack, unpack)
 import qualified Data.ByteString.Char8 as B
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
+import Control.Exception (assert)
 
 import Foreign (nullPtr)
 
@@ -44,6 +45,15 @@ testExceptions = do
 
   return ()
 
+testNullableArgs = do
+  uri <- GLib.filenameToUri "/usr/lib/test" Nothing
+  when (uri /= "file:///usr/lib/test") $
+       error $ "First nullable test failed : " ++ uri
+
+  uri' <- GLib.filenameToUri "/usr/lib/test" (Just "gnome.org")
+  when (uri' /= "file://gnome.org/usr/lib/test") $
+       error $ "Second nullable test failed : " ++ uri'
+
 main = do
 	gtk_init nullPtr nullPtr
 
@@ -71,6 +81,7 @@ main = do
 
         testGio
         testExceptions
+        testNullableArgs
 
 	widgetShowAll win
 	Gtk.main

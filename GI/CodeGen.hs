@@ -402,6 +402,7 @@ genModule name apis = do
     line $ "import GI.Utils.ManagedPtr"
     line $ "import GI.Utils.BasicTypes"
     line $ "import GI.Utils.GError"
+    line $ "import GI.Utils.Utils"
     blank
     cfg <- config
 
@@ -431,6 +432,18 @@ genModule name apis = do
             -- Accepts a NULL terminated array, but not
             -- marked as such in the bindings.
             "text_free_ranges", -- atk_text_free_ranges
+            -- g_unichar_fully_decompose. "result" parameter is an
+            -- array, but it is not marked as such.
+            "unichar_fully_decompose",
+            -- g_utf16_to_ucs4. "items_read" and "items_written" are
+            -- out parameters, but they are marked as in parameters
+            -- the introspection data.
+            "utf16_to_ucs4",
+            -- Same for the following functions
+            "utf16_to_utf8",
+            "utf8_to_ucs4",
+            "utf8_to_ucs4_fast",
+            "utf8_to_utf16",
             -- g_base64_decode_step, missing array length argument,
             -- requires more complex logic.
             "base64_decode_step",

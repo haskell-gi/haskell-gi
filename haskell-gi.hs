@@ -104,6 +104,10 @@ processAPI options name = do
                             -- g_object_interface_* functions
                             , "g_object_interface_install_property"
                             , "g_object_interface_list_properties"
+                            -- The length argument is an out value,
+                            -- but it is nto marked as such in the
+                            -- bindings.
+                            , "g_tls_password_get_value"
                            -- The size of the array depends on a
                            -- complicated combination of the rest of
                            -- the arguments.
