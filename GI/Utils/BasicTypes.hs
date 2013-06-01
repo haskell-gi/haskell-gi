@@ -59,39 +59,24 @@ data GSList a = GSList (Ptr (GSList a))
 foreign import ccall unsafe "g_list_prepend" g_list_prepend ::
     Ptr (GList (Ptr a)) -> Ptr a -> IO (Ptr (GList (Ptr a)))
 
-foreign import ccall unsafe "g_list_reverse" g_list_reverse ::
-    Ptr (GList a) -> IO (Ptr (GList a))
-
-foreign import ccall unsafe "g_list_delete_link" g_list_delete_link ::
-    Ptr (GList a) -> Ptr (GList a) -> IO (Ptr (GList a))
-
 -- Given a Haskell list of items, construct a GList with those values.
 packGList   :: [Ptr a] -> IO (Ptr (GList (Ptr a)))
 packGList l = foldM g_list_prepend nullPtr $ reverse l
 
--- Given a GList construct the corresponding Haskell list.
+-- Given a GSList construct the corresponding Haskell list.
 unpackGList   :: Ptr (GList (Ptr a)) -> IO [Ptr a]
-unpackGList gl = do
-  glist' <- g_list_reverse gl
-  extractList glist' []
-    where
-      extractList gl xs
-        | gl == nullPtr = return xs
-        | otherwise     = do
-            x <- peek (castPtr gl)
-            gl' <- g_list_delete_link gl gl
-            extractList gl' (x : xs)
+unpackGList gsl
+    | gsl == nullPtr = return []
+    | otherwise =
+        do x <- peek (castPtr gsl)
+           next <- peek (gsl `plusPtr` sizeOf x)
+           xs <- unpackGList next
+           return $ x : xs
 
 -- Same thing for singly linked lists
 
 foreign import ccall unsafe "g_slist_prepend" g_slist_prepend ::
     Ptr (GSList (Ptr a)) -> Ptr a -> IO (Ptr (GSList (Ptr a)))
-
-foreign import ccall unsafe "g_slist_reverse" g_slist_reverse ::
-    Ptr (GSList a) -> IO (Ptr (GSList a))
-
-foreign import ccall unsafe "g_slist_delete_link" g_slist_delete_link ::
-    Ptr (GSList a) -> Ptr (GSList a) -> IO (Ptr (GSList a))
 
 -- Given a Haskell list of items, construct a GSList with those values.
 packGSList   :: [Ptr a] -> IO (Ptr (GSList (Ptr a)))
@@ -99,13 +84,7 @@ packGSList l = foldM g_slist_prepend nullPtr $ reverse l
 
 -- Given a GSList construct the corresponding Haskell list.
 unpackGSList   :: Ptr (GSList (Ptr a)) -> IO [Ptr a]
-unpackGSList gsl
-    | gsl == nullPtr = return []
-    | otherwise = 
-        do x <- peek (castPtr gsl)
-           next <- peekElemOff (castPtr gsl) 1 :: IO (Ptr (GSList (Ptr a)))
-           xs <- unpackGSList next
-           return $ x : xs
+unpackGSList gsl = unpackGList (castPtr gsl)
 
 foreign import ccall unsafe "g_array_new" g_array_new ::
    CInt -> CInt -> CUInt -> IO (Ptr (GArray ()))
@@ -122,7 +101,7 @@ packGArray elems = do
   return $ castPtr array
   where
     fill            :: Storable a => Ptr a -> [a] -> IO ()
-    fill ptr []     = return ()
+    fill _ []       = return ()
     fill ptr (x:xs) =
         do poke ptr x
            fill (ptr `plusPtr` (sizeOf x)) xs
@@ -152,7 +131,7 @@ packGPtrArray elems = do
   return $ castPtr array
   where
     fill            :: Ptr (Ptr a) -> [Ptr a] -> IO ()
-    fill ptr []     = return ()
+    fill _ []       = return ()
     fill ptr (x:xs) =
         do poke ptr x
            fill (ptr `plusPtr` (sizeOf x)) xs
