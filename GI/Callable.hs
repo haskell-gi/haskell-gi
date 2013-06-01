@@ -167,7 +167,7 @@ genCallable n symbol callable throwsGError = do
                              TBasicType TVoid -> ""
                              _                -> "result <- "
               maybeCatchGErrors = if throwsGError
-                                  then "runCatchingGErrors $ "
+                                  then "propagateGError $ "
                                   else ""
           line $ returnBind ++ maybeCatchGErrors
                    ++ symbol ++ concatMap (" " ++) argNames

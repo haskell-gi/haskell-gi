@@ -13,11 +13,11 @@ import Foreign.C
 import Control.Applicative ((<$>))
 import Control.Monad (when)
 
-import System.Glib.GError
-import System.Glib.GList
-
 import GI.Internal.Types
 import GI.Util
+
+import GI.Utils.GError
+import GI.Utils.BasicTypes
 
 #include <girepository.h>
 
@@ -34,7 +34,7 @@ nullRepository = Repository nullPtr
 getSearchPath :: IO [FilePath]
 getSearchPath = do
     paths <- {# call unsafe get_search_path #}
-    pathPtrs <- readGSList paths
+    pathPtrs <- unpackGSList (castPtr paths)
     mapM peekCString pathPtrs
 
 mapCStrings f ptr = do

@@ -10,7 +10,7 @@ Stability:           Experimental
 Category:            Development
 Build-type:          Simple
 Cabal-version:       >=1.2
-Extra-source-files:
+Extra-source-files: GI/Utils/ManagedPtr.hs
 
 Executable haskell-gi
   main-is: haskell-gi.hs
@@ -18,7 +18,6 @@ Executable haskell-gi
   build-depends:
       base >= 4,
       containers,
-      glib,
       mtl,
       pretty-show,
       process,
@@ -28,7 +27,6 @@ Executable haskell-gi
   extensions: ForeignFunctionInterface, DoAndIfThenElse
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
-      System.Glib.Initialize,
       GI.Internal.Types,
       GI.Internal.ArgInfo,
       GI.Internal.BaseInfo,
@@ -56,3 +54,5 @@ Executable haskell-gi
       GI.Type,
       GI.Value,
       GI.Util
+      GI.Utils.GError
+      GI.Utils.BasicTypes

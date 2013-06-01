@@ -6,12 +6,11 @@ import Data.Maybe (mapMaybe)
 import System.Console.GetOpt
 import System.Exit
 import System.IO (hPutStr, hPutStrLn, stderr)
+import System.Environment (getArgs)
 
 import qualified Data.Map as M
 
---import Graphics.UI.Gtk
-import System.Glib.Initialize
-import System.Glib.GError
+import GI.Utils.GError
 import Text.Show.Pretty
 
 import GI.API (loadAPI)
@@ -116,8 +115,12 @@ processAPI options name = do
         Dump -> mapM_ (putStrLn . ppShow) apis
         Help -> putStr showHelp
 
+foreign import ccall "g_type.h g_type_init"
+    g_type_init :: IO ()
+
 main = printGError $ do
-    args <- initArgs
+    g_type_init -- Initialize GLib's type system
+    args <- getArgs
     let (actions, nonOptions, errors) = getOpt RequireOrder optDescrs args
         options  = foldl (.) id actions defaultOptions
 

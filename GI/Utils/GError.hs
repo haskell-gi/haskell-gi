@@ -46,17 +46,16 @@ module GI.Utils.GError
 
     , GErrorClass(..)
 
-    , runCatchingGErrors
+    , propagateGError
+    , checkGError
+
     ) where
 
 import Prelude hiding (catch)
 import Foreign.Safe
 import Foreign.C
-import Data.Word
-import System.Glib.UTFString
 import Control.Exception
 import Data.Typeable
-import Control.Monad (when)
 
 -- | A GError consists of a domain, code and a human readable message.
 data GError = GError !GErrorDomain !GErrorCode !GErrorMessage
@@ -168,17 +167,22 @@ foreign import ccall unsafe "g_error_free" g_error_free ::
 -- | Run the given function catching possible GErrors in its
 -- execution. If a GError is emitted this throws the corresponding
 -- exception.
-runCatchingGErrors :: (Ptr (Ptr ()) -> IO a) -> IO a
-runCatchingGErrors f = do
+propagateGError :: (Ptr (Ptr ()) -> IO a) -> IO a
+propagateGError f = checkGError f throw
+
+-- | Like propagateGError, but allows to specify a custom handler
+-- instead of just throwing the exception.
+checkGError :: (Ptr (Ptr ()) -> IO a) -> (GError -> IO a) -> IO a
+checkGError f handler = do
   gerrorPtr <- malloc :: IO (Ptr (Ptr ()))
   poke gerrorPtr nullPtr
   result <- f gerrorPtr
   gerror <- peek gerrorPtr
-  when (gerror /= nullPtr) $
-    do domain <- peek (castPtr gerror) :: IO GErrorDomain
-       code <- peek (gerror `plusPtr` sizeOf domain) :: IO GErrorCode
-       c_msg <- peek (gerror `plusPtr` sizeOf domain `plusPtr` sizeOf code) :: IO CString
-       msg <- peekCString c_msg
-       g_error_free gerror
-       throw $ GError domain code msg
-  return result
+  if gerror /= nullPtr
+  then do domain <- peek (castPtr gerror) :: IO GErrorDomain
+          code <- peek (gerror `plusPtr` sizeOf domain) :: IO GErrorCode
+          c_msg <- peek (gerror `plusPtr` sizeOf domain `plusPtr` sizeOf code) :: IO CString
+          msg <- peekCString c_msg
+          g_error_free gerror
+          handler $ GError domain code msg
+  else return result
