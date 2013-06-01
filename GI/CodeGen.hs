@@ -399,9 +399,9 @@ genModule name apis = do
     line $ "import Control.Applicative ((<$>))"
     line $ "import Control.Monad (when)"
     blank
-    line $ "import GI.Internal.ManagedPtr"
-    line $ "import GI.Internal.BasicTypes"
-    line $ "import GI.Internal.GError"
+    line $ "import GI.Utils.ManagedPtr"
+    line $ "import GI.Utils.BasicTypes"
+    line $ "import GI.Utils.GError"
     blank
     cfg <- config
 

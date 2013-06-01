@@ -1,4 +1,4 @@
-module GI.Internal.BasicTypes
+module GI.Utils.BasicTypes
     ( GType
     , GArray(..)
     , GPtrArray(..)

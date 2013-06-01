@@ -8,7 +8,7 @@
 -- Some of the code here comes straight from gtk2hs, but we have
 -- removed the deprecated methods.
 
-module GI.Internal.GError
+module GI.Utils.GError
     (
     -- * Data types
     --

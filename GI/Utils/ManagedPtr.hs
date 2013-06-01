@@ -1,4 +1,4 @@
-module GI.Internal.ManagedPtr
+module GI.Utils.ManagedPtr
     ( ManagedPtr(..)
     ) where
 
