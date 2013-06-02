@@ -5,13 +5,11 @@ import qualified GI.Gtk as Gtk
 import qualified GI.Gio as Gio
 import qualified GI.GLib as GLib
 
-import Data.ByteString.Char8 (pack, unpack)
 import qualified Data.ByteString.Char8 as B
 
 import Control.Monad (forM_, when)
-import Control.Exception (assert)
 
-import Foreign (nullPtr)
+import System.Environment (getProgName)
 
 -- A fancy notation for making signal connections easier to read.
 (<!>) obj cb = cb obj
@@ -55,7 +53,19 @@ testNullableArgs = do
        error $ "Second nullable test failed : " ++ uri'
 
 main = do
-	gtk_init nullPtr nullPtr
+        -- Generally one should do the following to init Gtk:
+        -- import System.Environment (getArgs, getProgName)
+        -- ...
+        -- args <- getArgs
+        -- progName <- getProgName
+        -- restArgs <- Gtk.init $ progName:args
+        --
+        -- Here we use synthetic arguments to test that we are
+        -- handling InOut arguments properly.
+        progName <- getProgName
+	restArgs <- Gtk.init $ progName:["--g-fatal-warnings"]
+        when (restArgs /= [progName]) $
+             error $ "gtk_init did not process --g-fatal-warnings"
 
 	win <- windowNew WindowTypeToplevel
         win <!> onWidgetDestroy $ do

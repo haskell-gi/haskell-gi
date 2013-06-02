@@ -3,6 +3,7 @@
 module GI.Conversions
     ( convert
     , genConversion
+    , prime
     , unpackCArray
     , computeArrayLength
 

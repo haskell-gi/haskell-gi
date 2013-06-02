@@ -10,6 +10,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM, forM_, when)
 import Data.List (intercalate)
 import Data.Typeable (typeOf)
+import qualified Data.Map as Map
 
 import GI.API
 import GI.Code
@@ -186,10 +187,10 @@ genCallable n symbol callable throwsGError = do
     wrapper
 
     where
-    inArgs = filter ((== DirectionIn) . direction) $ args callable
+    inArgs = filter ((`elem` [DirectionIn, DirectionInout]) . direction) $ args callable
     -- We do not need to expose the length of array arguments to Haskell code.
     hInArgs = filter (not . (`elem` (arrayLengths callable))) inArgs
-    outArgs = filter ((== DirectionOut) . direction) $ args callable
+    outArgs = filter ((`elem` [DirectionOut, DirectionInout]) . direction) $ args callable
     hOutArgs = filter (not . (`elem` (arrayLengths callable))) outArgs
     ignoreReturn = skipRetVal callable throwsGError
     wrapper = group $ do
@@ -202,19 +203,13 @@ genCallable n symbol callable throwsGError = do
             " = do"
         indent $ do
           readInArrayLengths
-          argNames <- convertIn
-          let returnBind = case returnType callable of
-                             TBasicType TVoid -> ""
-                             _                -> if ignoreReturn
-                                                 then "_ <- "
-                                                 else "result <- "
-              maybeCatchGErrors = if throwsGError
-                                  then "propagateGError $ "
-                                  else ""
-          line $ returnBind ++ maybeCatchGErrors
-                   ++ symbol ++ concatMap (" " ++) argNames
+          inArgNames <- convertIn
+          -- Map from argument names to names passed to the C function
+          let nameMap = Map.fromList $ flip zip inArgNames
+                                             $ map argName' $ args callable
+          invokeCFunction inArgNames
           touchInArgs
-          convertOut
+          convertOut nameMap
     signature = do
         name <- lowerName n
         line $ name ++ " ::"
@@ -229,30 +224,33 @@ genCallable n symbol callable throwsGError = do
     convertIn = forM (args callable) $ \arg -> do
         ft <- foreignType $ argType arg
         let name = escapeReserved $ argName arg
-        if direction arg == DirectionIn
-            then if wrapMaybe arg
-                 then do
-                   let maybeName = "maybe" ++ ucFirst name
-                   line $ maybeName ++ " <- case " ++ name ++ " of"
-                   indent $ do
-                        line $ "Nothing -> return nullPtr"
-                        let jName = "j" ++ ucFirst name
-                        line $ "Just " ++ jName ++ " -> do"
-                        indent $ do
-                              converted <- convert jName (hToF $ argType arg)
-                              line $ "return " ++ converted
-                   return maybeName
-                 else convert name (hToF $ argType arg)
-            else do
-              name' <- genConversion name $
+        case direction arg of
+          DirectionIn ->
+              if wrapMaybe arg
+              then do
+                let maybeName = "maybe" ++ ucFirst name
+                line $ maybeName ++ " <- case " ++ name ++ " of"
+                indent $ do
+                     line $ "Nothing -> return nullPtr"
+                     let jName = "j" ++ ucFirst name
+                     line $ "Just " ++ jName ++ " -> do"
+                     indent $ do
+                             converted <- convert jName (hToF $ argType arg)
+                             line $ "return " ++ converted
+                return maybeName
+             else convert name (hToF $ argType arg)
+          DirectionInout ->
+              do name' <- convert name (hToF $ argType arg)
+                 name'' <- genConversion (prime name') $
+                             literal $ M $ "malloc :: " ++ show (io $ ptr ft)
+                 line $ "poke " ++ name'' ++ " " ++ name'
+                 return name''
+          DirectionOut -> genConversion name $
                             literal $ M $ "malloc :: " ++ show (io $ ptr ft)
-              when (direction arg == DirectionInout) $
-                   line $ "-- XXX: InOut argument: " ++ name'
-              return name'
     -- Read the length of in array arguments from the corresponding
     -- Haskell objects.
     readInArrayLengths = forM_ (arrayLengthsMap callable) $ \(array, length) ->
-       when (direction array == DirectionIn) $
+       when (array `elem` hInArgs) $
             do let lvar = escapeReserved $ argName length
                    avar = escapeReserved $ argName array
                if wrapMaybe array
@@ -265,47 +263,70 @@ genCallable n symbol callable throwsGError = do
                            computeArrayLength jarray (argType array)
                else line $ "let " ++ lvar ++ " = " ++
                          computeArrayLength avar (argType array)
-    convertResult = case returnType callable of
-                      -- Non-zero terminated C arrays require knowledge of
-                      -- the length, so we deal with them directly.
-                      t@(TCArray False _ _ _) -> convertOutCArray t "result"
-                      _ -> convert "result" (fToH $ returnType callable)
+    invokeCFunction argNames = do
+      let returnBind = case returnType callable of
+                         TBasicType TVoid -> ""
+                         _                -> if ignoreReturn
+                                             then "_ <- "
+                                             else "result <- "
+          maybeCatchGErrors = if throwsGError
+                              then "propagateGError $ "
+                              else ""
+      line $ returnBind ++ maybeCatchGErrors
+                   ++ symbol ++ concatMap (" " ++) argNames
+    convertResult :: Map.Map String String -> CodeGen String
+    convertResult nameMap =
+        case returnType callable of
+          -- Non-zero terminated C arrays require knowledge of
+          -- the length, so we deal with them directly.
+          t@(TCArray False _ _ _) -> convertOutCArray t "result" nameMap
+          _ -> convert "result" (fToH $ returnType callable)
     -- XXX: Should create ForeignPtrs for pointer results.
     -- XXX: Check argument transfer.
-    convertOut = do
+    convertOut :: Map.Map String String -> CodeGen ()
+    convertOut nameMap = do
       -- Convert out parameters and result
       pps <- forM hOutArgs $ \arg ->
              do let name = escapeReserved $ argName arg
+                    inName = case Map.lookup name nameMap of
+                               Just name' -> name'
+                               Nothing -> error $ "Parameter " ++
+                                             name ++ " not found!"
                 case argType arg of
                   t@(TCArray False _ _ _) ->
-                      do let aname = escapeReserved $ argName arg
-                         aname' <- genConversion aname $ apply $ M "peek"
-                         convertOutCArray t aname'
+                      do aname' <- genConversion inName $ apply $ M "peek"
+                         convertOutCArray t aname' nameMap
                   _ -> do
                     constructor <- fToH $ argType arg
-                    genConversion name $ do apply $ M "peek"
-                                            constructor
+                    genConversion inName $ do apply $ M "peek"
+                                              constructor
       if ignoreReturn || returnType callable == TBasicType TVoid
       then case pps of
              []      -> line "return ()"
              (pp:[]) -> line $ "return " ++ pp
              _       -> line $ "return (" ++ intercalate ", " pps ++ ")"
       else do
-        result <- convertResult
+        result <- convertResult nameMap
         case pps of
           [] -> line $ "return " ++ result
           _  -> line $ "return (" ++ intercalate ", " (result : pps) ++ ")"
     -- Convert a non-zero terminated out array, stored in a variable
     -- named "aname".
-    convertOutCArray t@(TCArray False fixed length _) aname = do
+    convertOutCArray :: Type -> String -> Map.Map String String
+                        -> CodeGen String
+    convertOutCArray t@(TCArray False fixed length _) aname nameMap = do
       if fixed > -1
       then convert aname $ unpackCArray (show fixed) t
       else do
         let lname = escapeReserved $ argName $ (args callable)!!length
-        lname' <- genConversion lname $ apply $ M "peek"
-        convert aname $ unpackCArray lname' t
+            lname' = case Map.lookup lname nameMap of
+                       Just n -> n
+                       Nothing -> error $ "Couldn't find out array length " ++
+                                                   lname
+        lname'' <- genConversion lname' $ apply $ M "peek"
+        convert aname $ unpackCArray lname'' t
     -- Remove the warning, this should never be reached.
-    convertOutCArray t _ = error $ "convertOutCArray : unexpected " ++ show t
+    convertOutCArray t _ _ = error $ "convertOutCArray : unexpected " ++ show t
     -- Touch in arguments so we are sure that they exist when the C
     -- function was called.
     touchInArgs = forM_ (args callable) $ \arg -> do
