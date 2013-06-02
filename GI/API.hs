@@ -104,7 +104,8 @@ data Callable = Callable {
     returnMayBeNull :: Bool,
     returnTransfer :: Transfer,
     returnAttributes :: [(String, String)],
-    args :: [Arg] }
+    args :: [Arg],
+    skipReturn :: Bool }
     deriving Show
 
 toCallable :: CallableInfo -> Callable
@@ -117,6 +118,7 @@ toCallable ci =
                (callableInfoCallerOwns ci)
                (callableInfoReturnAttributes ci)
                (map toArg ais)
+               (callableInfoSkipReturn ci)
 
 data Function = Function {
     fnSymbol :: String,

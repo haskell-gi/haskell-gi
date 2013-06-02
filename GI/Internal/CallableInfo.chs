@@ -4,6 +4,7 @@ module GI.Internal.CallableInfo
     , callableInfoCallerOwns
     , callableInfoMayReturnNull
     , callableInfoReturnAttributes
+    , callableInfoSkipReturn
     , callableInfoArgs
     ) where
 
@@ -36,6 +37,10 @@ callableInfoCallerOwns ci = unsafePerformIO $ toEnum <$> fromIntegral <$>
 callableInfoMayReturnNull :: CallableInfoClass call => call -> Bool
 callableInfoMayReturnNull ci = unsafePerformIO $ (/= 0) <$>
     {# call may_return_null #} (stupidCast ci)
+
+callableInfoSkipReturn :: CallableInfoClass call => call -> Bool
+callableInfoSkipReturn ci = unsafePerformIO $ (/= 0) <$>
+    {# call skip_return #} (stupidCast ci)
 
 callableInfoReturnAttributes :: CallableInfoClass call => call -> [(String, String)]
 callableInfoReturnAttributes ci = unsafePerformIO $ do

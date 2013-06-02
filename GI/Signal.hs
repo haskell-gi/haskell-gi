@@ -41,7 +41,7 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
       forM_ hInArgs $ \arg -> do
         ht <- haskellType $ argType arg
         line $ show ht ++ " ->"
-      ret <- io <$> hOutType cb hOutArgs
+      ret <- io <$> hOutType cb hOutArgs False
       line $ show ret
 
   -- Wrapper for connecting functions to the signal

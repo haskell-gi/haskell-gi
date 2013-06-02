@@ -29,7 +29,7 @@ testGio = do
 testExceptions :: IO ()
 testExceptions = do
   -- This should work fine, without emitting any exception
-  (_,contents) <- GLib.fileGetContents "testGtk.hs"
+  contents <- GLib.fileGetContents "testGtk.hs"
   B.putStrLn contents
 
   -- Trying to read a file that does not exist should throw
@@ -39,7 +39,7 @@ testExceptions = do
            case code of
              GLib.FileErrorNoent -> do
                        putStrLn "<< Exception handled >>"
-                       return $ (True, "")
+                       return ""
              _ -> error $ "Unexpected error code : \"" ++ show code ++
                             "\" with message : \"" ++ msg ++ "\""
 
