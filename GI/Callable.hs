@@ -95,6 +95,20 @@ argumentType letters@(l:ls) t   = do
         else return (letters, s, [])
     _ -> return (letters, s, [])
 
+-- Given an (in) argument to a function, return whether it should be
+-- wrapped in a maybe type (useful for nullable types).
+wrapMaybe :: Arg -> Bool
+wrapMaybe arg =
+    if direction arg == DirectionIn && mayBeNull arg
+    then case argType arg of
+           -- NULL GLists and GSLists are semantically the same as an
+           -- empty list, so they don't need a Maybe wrapper on their
+           -- type.
+           TGList _ -> False
+           TGSList _ -> False
+           _ -> True
+    else False
+
 -- Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
 inArgInterfaces :: [Arg] -> CodeGen ([String], [String])
@@ -104,7 +118,9 @@ inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
     rec _ [] = return ([], [])
     rec letters (arg:args) = do
       (ls, t, cons) <- argumentType letters $ argType arg
-      let t' = if mayBeNull arg
+      --- XXX G(S)List types, and some containers (such as C-arrays)
+      --- are always nullable, we do not need to map those to Maybe types.
+      let t' = if wrapMaybe arg
                then "Maybe (" ++ t ++ ")"
                else t
       (restCons, restTypes) <- rec ls args
@@ -191,7 +207,7 @@ genCallable n symbol callable throwsGError = do
         ft <- foreignType $ argType arg
         let name = escapeReserved $ argName arg
         if direction arg == DirectionIn
-            then if mayBeNull arg
+            then if wrapMaybe arg
                  then do
                    let maybeName = "maybe" ++ ucFirst name
                    line $ maybeName ++ " <- case " ++ name ++ " of"
@@ -216,7 +232,7 @@ genCallable n symbol callable throwsGError = do
        when (direction array == DirectionIn) $
             do let lvar = escapeReserved $ argName length
                    avar = escapeReserved $ argName array
-               if mayBeNull array
+               if wrapMaybe array
                then do
                  line $ "let " ++ lvar ++ " = case " ++ avar ++ " of"
                  indent $ indent $ do
@@ -274,17 +290,13 @@ genCallable n symbol callable throwsGError = do
            case argType arg of
              (TGList a) -> do
                managed <- isManaged a
-               when managed $ line $ if mayBeNull arg
-                    then "whenJust " ++ name ++ " $ mapM_ touchManagedPtr "
-                    else "mapM_ touchManagedPtr " ++ name
+               when managed $ line $ "mapM_ touchManagedPtr " ++ name
              (TGSList a) -> do
                managed <- isManaged a
-               when managed $ line $ if mayBeNull arg
-                    then "whenJust " ++ name ++ " $ mapM_ touchManagedPtr "
-                    else "mapM_ touchManagedPtr " ++ name
+               when managed $ line $ "mapM_ touchManagedPtr " ++ name
              _ -> do
                managed <- isManaged (argType arg)
-               when managed $ line $ if mayBeNull arg
+               when managed $ line $ if wrapMaybe arg
                     then "whenJust " ++ name ++ " touchManagedPtr"
                     else "touchManagedPtr " ++ name
     withComment a b = padTo 40 a ++ "-- " ++ b
