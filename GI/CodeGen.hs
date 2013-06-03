@@ -133,6 +133,39 @@ genUnion n _ = do
   -- XXX
   line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
 
+-- Add the implicit object argument to methods of an object.
+fixMethodArgs :: Name -> Callable -> Callable
+fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
+    where
+      -- Since we are prepending an argument we need to adjust the
+      -- offset of the length arguments of CArrays.
+      returnType' = fixCArrayLength $ returnType c
+      args' = objArg : map fixLengthArg (args c)
+      fixLengthArg :: Arg -> Arg
+      fixLengthArg arg = arg { argType = fixCArrayLength (argType arg)}
+      fixCArrayLength :: Type -> Type
+      fixCArrayLength (TCArray zt fixed length t) =
+          TCArray zt fixed (length+1) t
+      fixCArrayLength t = t
+      objArg = Arg {
+                 argName = "_obj",
+                 argType = TInterface (namespace cn) (name cn),
+                 direction = DirectionIn,
+                 mayBeNull = False,
+                 scope = ScopeTypeInvalid,
+                 transfer = TransferNothing }
+
+-- For constructors we want to return the actual type of the object,
+-- rather than a generic superclass (so Gtk.labelNew returns a
+-- Gtk.Label, rather than a Gtk.Widget)
+fixConstructorReturnType :: Bool -> Name -> Callable -> Callable
+fixConstructorReturnType returnsGObject cn c = c { returnType = returnType' }
+    where
+      returnType' = if returnsGObject then
+                        TInterface (namespace cn) (name cn)
+                    else
+                        returnType c
+
 genMethod :: Name -> Name -> Function -> CodeGen ()
 genMethod cn mn (Function {
                     fnSymbol = sym,
@@ -141,38 +174,16 @@ genMethod cn mn (Function {
     name' <- upperName cn
     returnsGObject <- isGObject (returnType c)
     line $ "-- method " ++ name' ++ "::" ++ (name mn)
+    line $ "-- flags : " ++ show fs
     let -- Mangle the name to namespace it to the class.
         mn' = mn { name = name cn ++ "_" ++ name mn }
-        -- Mangle the callable to make the implicit object parameter
-        -- explicit.
-        c' = c {  args = args' , returnType = returnType' }
-        returnType' = fixCArrayLength $ returnType c
-        -- Since we are prepending an argument we need to adjust the
-        -- offset of the length arguments of CArrays.
-        args' = objArg : map fixLengthArg (args c)
-        fixLengthArg :: Arg -> Arg
-        fixLengthArg arg = arg { argType = fixCArrayLength (argType arg)}
-        fixCArrayLength :: Type -> Type
-        fixCArrayLength (TCArray zt fixed length t) =
-            TCArray zt fixed (length+1) t
-        fixCArrayLength t = t
-        objArg = Arg {
-          argName = "_obj",
-          argType = TInterface (namespace cn) (name cn),
-          direction = DirectionIn,
-          mayBeNull = False,
-          scope = ScopeTypeInvalid,
-          transfer = TransferNothing }
-    let -- Make GObject-derived constructors return the actual type of
-        -- the object.
-        c'' = c { returnType = returnType' }
-        returnType' = if returnsGObject then
-                        TInterface (namespace cn) (name cn)
-                      else
-                        returnType c
-    if FunctionIsConstructor `elem` fs
-      then genCallable mn' sym c'' (FunctionThrows `elem` fs)
-      else genCallable mn' sym c' (FunctionThrows `elem` fs)
+    let c'  = if FunctionIsConstructor `elem` fs
+              then fixConstructorReturnType returnsGObject cn c
+              else c
+        c'' = if FunctionIsMethod `elem` fs
+              then fixMethodArgs cn c'
+              else c'
+    genCallable mn' sym c'' (FunctionThrows `elem` fs)
 
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
