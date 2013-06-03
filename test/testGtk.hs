@@ -52,6 +52,8 @@ testNullableArgs = do
   when (uri' /= "file://gnome.org/usr/lib/test") $
        error $ "Second nullable test failed : " ++ uri'
 
+testOutArgs = iconThemeGetDefault >>= iconThemeGetSearchPath >>= print
+
 main = do
         -- Generally one should do the following to init Gtk:
         -- import System.Environment (getArgs, getProgName)
@@ -92,6 +94,7 @@ main = do
         testGio
         testExceptions
         testNullableArgs
+        testOutArgs
 
 	widgetShowAll win
 	Gtk.main
