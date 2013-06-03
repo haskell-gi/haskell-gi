@@ -17,13 +17,12 @@ getList getN getOne x = do
     n <- getN x
     mapM (getOne x) [0..n - 1]
 
--- XXX: Assumes all enum values are 0 mod 2^n.
 toFlags :: Enum a => CInt -> [a]
-toFlags n = loop n (0 :: Int)
-    where loop 0 _ = []
+toFlags n = loop n ((sizeOf n)*8 - 1) -- Number of bits in the argument
+    where loop _ (-1) = []
           loop n e =
-              let rest = loop (n `shiftR` 1) (e + 1)
-               in if testBit e 0 then toEnum (2 ^ e) : rest else rest
+              let rest = loop n (e - 1)
+               in if testBit n e then toEnum (2 ^ e) : rest else rest
 
 split c s = split' s "" []
     where split' [] w ws = reverse (reverse w : ws)
