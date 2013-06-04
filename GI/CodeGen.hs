@@ -372,12 +372,13 @@ gObjectBootstrap = do
     line "    IO Word32"
     blank
     line "connectSignal :: (ObjectKlass o, ManagedPtr o) => "
-    line "                  o -> [Char] -> a -> IO Word32"
-    line "connectSignal object signal fn = do"
+    line "                  o -> [Char] -> a -> Bool -> IO Word32"
+    line "connectSignal object signal fn after = do"
     line "      closure <- newStablePtr fn >>= gtk2hs_closure_new"
     line "      signal' <- newCString signal"
     line "      let object' = (castPtr . unsafeManagedPtrGetPtr) object"
-    line "      result <- g_signal_connect_closure' object' signal' closure 0"
+    line "      result <- g_signal_connect_closure' object' signal' closure "
+    line "                      ((fromIntegral . fromEnum) after)"
     line "      touchManagedPtr object"
     line "      return result"
 

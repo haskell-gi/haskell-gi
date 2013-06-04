@@ -45,17 +45,32 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
       line $ show ret
 
   -- Wrapper for connecting functions to the signal
-  prefixGO <- qualify "GObject"
-  let signature = "(ManagedPtr a, " ++ klass (prefixGO ++ "Object") ++ " a) =>"
-                  ++ " a -> " ++ cbType ++ " -> IO Word32" 
   -- XXX It would be better to walk through the whole tree and
   -- disambiguate only those that are ambiguous.
-  let signalConnectorName = "on" ++ on' ++ ucFirst sn'
+  let signalConnectorName = on' ++ ucFirst sn'
+
+  -- We can connect to a signal either before the default handler runs
+  -- ("on...") or after the default handler runs (after...). We
+  -- provide convenient wrappers for both cases.
   group $ do
-    line $ signalConnectorName ++ " :: " ++ signature
-    line $ signalConnectorName ++ " obj cb = " ++ prefixGO ++
-           "connectSignal obj \"" ++ (name sn) ++ "\" cb' where"
+    line $ "on" ++ signalConnectorName ++ " obj cb = connect"
+             ++ signalConnectorName ++ " obj cb False"
+    line $ "after" ++ signalConnectorName ++ " obj cb = connect"
+             ++ signalConnectorName ++ " obj cb True"
+
+  group $ do
+    prefixGO <- qualify "GObject"
+    let fullName = "connect" ++ signalConnectorName
+        signatureConstraints =
+          "(ManagedPtr a, " ++ klass (prefixGO ++ "Object") ++ " a) =>"
+        signatureArgs = "a -> " ++ cbType ++ " -> Bool -> IO Word32"
+    line $ fullName ++ " :: " ++ signatureConstraints
+    line $ replicate (4 + length fullName) ' ' ++ signatureArgs
+    line $ fullName ++ " obj cb after = "
     indent $ do
+        line $ prefixGO ++ "connectSignal obj \"" ++ (name sn) ++ "\" cb' after"
+        line "where"
+    indent $ indent $ do
         line $ "cb' :: Ptr " ++ prefixGO ++ "Object ->"
         indent $ do forM_ (args cb) $ \arg -> do
                        ft <- marshallFType $ argType arg
