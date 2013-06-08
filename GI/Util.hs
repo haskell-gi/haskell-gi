@@ -1,10 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module GI.Util
   ( maybeWithCString
   , getList
   , toFlags
   , split
-  )
-where
+
+  , prime
+  , unprime
+  , parenthesize
+  ) where
 
 import Foreign
 import Foreign.C
@@ -29,3 +34,16 @@ split c s = split' s "" []
           split' (x:xs) w ws =
               if x == c then split' xs "" (reverse w:ws)
                   else split' xs (x:w) ws
+
+prime :: String -> String
+prime = (++ "'")
+
+-- Remove the prime at the end of the given string
+unprime :: String -> String
+unprime "" = error "Empty variable to unprime!"
+unprime primed =
+    case last primed of
+      '\'' -> init primed
+      _ -> error $ primed ++ " is not primed!"
+
+parenthesize s = "(" ++ s ++ ")"

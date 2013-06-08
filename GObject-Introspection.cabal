@@ -52,6 +52,7 @@ Executable haskell-gi
       GI.GObject,
       GI.Signal,
       GI.SymbolNaming,
+      GI.Transfer,
       GI.Type,
       GI.Value,
       GI.Util

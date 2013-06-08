@@ -3,7 +3,6 @@
 module GI.Conversions
     ( convert
     , genConversion
-    , prime
     , unpackCArray
     , computeArrayLength
 
@@ -33,11 +32,9 @@ import GI.Code
 import GI.GObject
 import GI.SymbolNaming
 import GI.Type
+import GI.Util
 
 toPtr con = "(\\(" ++ con ++ " x) -> x)"
-
-prime = (++ "'")
-parenthesize s = "(" ++ s ++ ")"
 
 interfaceName :: Type -> CodeGen (Maybe Name)
 interfaceName t = do

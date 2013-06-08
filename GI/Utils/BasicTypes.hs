@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module GI.Utils.BasicTypes
     ( GType
     , GArray(..)
@@ -7,15 +8,20 @@ module GI.Utils.BasicTypes
     , GList(..)
     , packGList
     , unpackGList
+    , g_list_free
     , GSList(..)
     , packGSList
     , unpackGSList
+    , g_slist_free
     , packGArray
     , unpackGArray
+    , unrefGArray
     , packGPtrArray
     , unpackGPtrArray
+    , unrefPtrArray
     , packGByteArray
     , unpackGByteArray
+    , unrefByteArray
     , packByteString
     , packZeroTerminatedByteString
     , unpackByteStringWithLength
@@ -37,6 +43,13 @@ module GI.Utils.BasicTypes
     , unpackPtrArrayWithLength
     , unpackZeroTerminatedPtrArray
     , byteStringToCString
+
+    , mapZeroTerminatedCArray
+    , mapCArrayWithLength
+    , mapGArray
+    , mapPtrArray
+    , mapGList
+    , mapGSList
     ) where
 
 import Foreign
@@ -58,6 +71,8 @@ data GSList a = GSList (Ptr (GSList a))
 
 foreign import ccall unsafe "g_list_prepend" g_list_prepend ::
     Ptr (GList (Ptr a)) -> Ptr a -> IO (Ptr (GList (Ptr a)))
+foreign import ccall unsafe "g_list_free" g_list_free ::
+    Ptr (GList a) -> IO ()
 
 -- Given a Haskell list of items, construct a GList with those values.
 packGList   :: [Ptr a] -> IO (Ptr (GList (Ptr a)))
@@ -77,6 +92,8 @@ unpackGList gsl
 
 foreign import ccall unsafe "g_slist_prepend" g_slist_prepend ::
     Ptr (GSList (Ptr a)) -> Ptr a -> IO (Ptr (GSList (Ptr a)))
+foreign import ccall unsafe "g_slist_free" g_slist_free ::
+    Ptr (GSList a) -> IO ()
 
 -- Given a Haskell list of items, construct a GSList with those values.
 packGSList   :: [Ptr a] -> IO (Ptr (GSList (Ptr a)))
@@ -90,8 +107,10 @@ foreign import ccall unsafe "g_array_new" g_array_new ::
    CInt -> CInt -> CUInt -> IO (Ptr (GArray ()))
 foreign import ccall unsafe "g_array_set_size" g_array_set_size ::
     Ptr (GArray ()) -> CUInt -> IO (Ptr (GArray ()))
+foreign import ccall unsafe "g_array_unref" unrefGArray ::
+   Ptr (GArray a) -> IO ()
 
-packGArray :: Storable a => [a] -> IO (Ptr (GArray a))
+packGArray :: forall a. Storable a => [a] -> IO (Ptr (GArray a))
 packGArray elems = do
   let elemsize = sizeOf (elems!!0)
   array <- g_array_new 0 0 (fromIntegral elemsize)
@@ -100,18 +119,18 @@ packGArray elems = do
   fill dataPtr elems
   return $ castPtr array
   where
-    fill            :: Storable a => Ptr a -> [a] -> IO ()
+    fill            :: Ptr a -> [a] -> IO ()
     fill _ []       = return ()
     fill ptr (x:xs) =
         do poke ptr x
            fill (ptr `plusPtr` (sizeOf x)) xs
 
-unpackGArray :: Storable a => Ptr (GArray a) -> IO [a]
+unpackGArray :: forall a. Storable a => Ptr (GArray a) -> IO [a]
 unpackGArray array = do
   dataPtr <- peek (castPtr array :: Ptr (Ptr a))
   nitems <- peek (array `plusPtr` sizeOf dataPtr)
   go dataPtr nitems
-    where go :: Storable a => Ptr a -> Int -> IO [a]
+    where go :: Ptr a -> Int -> IO [a]
           go _ 0 = return []
           go ptr n = do
             x <- peek ptr
@@ -121,6 +140,8 @@ foreign import ccall unsafe "g_ptr_array_new" g_ptr_array_new ::
     IO (Ptr (GPtrArray ()))
 foreign import ccall unsafe "g_ptr_array_set_size" g_ptr_array_set_size ::
     Ptr (GPtrArray ()) -> CUInt -> IO (Ptr (GPtrArray ()))
+foreign import ccall unsafe "g_ptr_array_unref" unrefPtrArray ::
+   Ptr (GPtrArray a) -> IO ()
 
 packGPtrArray :: [Ptr a] -> IO (Ptr (GPtrArray (Ptr a)))
 packGPtrArray elems = do
@@ -151,6 +172,8 @@ foreign import ccall unsafe "g_byte_array_new" g_byte_array_new ::
     IO (Ptr GByteArray)
 foreign import ccall unsafe "g_byte_array_append" g_byte_array_append ::
     Ptr GByteArray -> Ptr a -> CUInt -> IO (Ptr GByteArray)
+foreign import ccall unsafe "g_byte_array_unref" unrefByteArray ::
+   Ptr GByteArray -> IO ()
 
 packGByteArray :: ByteString -> IO (Ptr GByteArray)
 packGByteArray bs = do
@@ -192,43 +215,44 @@ unpackZeroTerminatedByteString :: Ptr Word8 -> IO ByteString
 unpackZeroTerminatedByteString ptr =
   B.packCString (castPtr ptr)
 
-packStorableArray :: Storable a => [a] -> IO (Ptr a)
+packStorableArray :: forall a. Storable a => [a] -> IO (Ptr a)
 packStorableArray items = do
   let nitems = length items
   mem <- mallocBytes $ (sizeOf (items!!0)) * nitems
   fill mem items
   return mem
-  where fill            :: Storable a => Ptr a -> [a] -> IO ()
+  where fill            :: Ptr a -> [a] -> IO ()
         fill _ []       = return ()
         fill ptr (x:xs) = do
           poke ptr x
           fill (ptr `plusPtr` sizeOf x) xs
 
-packZeroTerminatedStorableArray :: (Num a, Storable a) => [a] -> IO (Ptr a)
+packZeroTerminatedStorableArray :: forall a. (Num a, Storable a) =>
+                                   [a] -> IO (Ptr a)
 packZeroTerminatedStorableArray items = do
   let nitems = length items
   mem <- mallocBytes $ (sizeOf (items!!0)) * (nitems+1)
   fill mem items
   return mem
-  where fill            :: (Num a, Storable a) => Ptr a -> [a] -> IO ()
+  where fill            :: Ptr a -> [a] -> IO ()
         fill ptr []     = poke ptr 0
         fill ptr (x:xs) = do
           poke ptr x
           fill (ptr `plusPtr` sizeOf x) xs
 
-unpackStorableArrayWithLength :: (Integral a, Storable b) =>
+unpackStorableArrayWithLength :: forall a b. (Integral a, Storable b) =>
                                  a -> Ptr b -> IO [b]
 unpackStorableArrayWithLength n ptr = go (fromIntegral n) ptr
-    where go :: Storable a => Int -> Ptr a -> IO [a]
+    where go :: Int -> Ptr b -> IO [b]
           go 0 _ = return []
           go n ptr = do
             x <- peek ptr
             (x:) <$> go (n-1) (ptr `plusPtr` sizeOf x)
 
-unpackZeroTerminatedStorableArray :: (Eq a, Num a, Storable a) =>
+unpackZeroTerminatedStorableArray :: forall a. (Eq a, Num a, Storable a) =>
                                      Ptr a -> IO [a]
 unpackZeroTerminatedStorableArray ptr = go ptr
-    where go :: (Eq a, Num a, Storable a) => Ptr a -> IO [a]
+    where go :: Ptr a -> IO [a]
           go ptr = do
             x <- peek ptr
             if x == 0
@@ -324,7 +348,6 @@ unpackFileNameArrayWithLength n ptr = go (fromIntegral n) ptr
             (:) <$> B.packCString cstring
                     <*> go (n-1) (ptr `plusPtr` sizeOf cstring)
 
-
 byteStringToCString :: ByteString -> IO CString
 byteStringToCString bs = castPtr <$> packZeroTerminatedByteString bs
 
@@ -365,3 +388,53 @@ unpackZeroTerminatedPtrArray ptr = go ptr
             if p == nullPtr
             then return []
             else (p:) <$> go (ptr `plusPtr` sizeOf p)
+
+mapZeroTerminatedCArray :: (Ptr a -> IO b) -> Ptr (Ptr a) -> IO ()
+mapZeroTerminatedCArray f dataPtr
+    | (dataPtr == nullPtr) = return ()
+    | otherwise =
+        do ptr <- peek dataPtr
+           if ptr == nullPtr
+           then return ()
+           else do
+             _ <- f ptr
+             mapZeroTerminatedCArray f (dataPtr `plusPtr` sizeOf ptr)
+
+mapCArrayWithLength :: (Storable a, Integral b) =>
+                       b -> (a -> IO c) -> Ptr a -> IO ()
+mapCArrayWithLength n f dataPtr
+    | (dataPtr == nullPtr) = return ()
+    | (n <= 0) = return ()
+    | otherwise =
+        do ptr <- peek dataPtr
+           _ <- f ptr
+           mapCArrayWithLength (n-1) f (dataPtr `plusPtr` sizeOf ptr)
+
+mapGArray :: forall a b. Storable a => (a -> IO b) -> Ptr (GArray a) -> IO ()
+mapGArray f array
+    | (array == nullPtr) = return ()
+    | otherwise =
+        do dataPtr <- peek (castPtr array :: Ptr (Ptr a))
+           nitems <- peek (array `plusPtr` sizeOf dataPtr)
+           go dataPtr nitems
+               where go :: Ptr a -> Int -> IO ()
+                     go _ 0 = return ()
+                     go ptr n = do
+                       x <- peek ptr
+                       _ <- f x
+                       go (ptr `plusPtr` sizeOf x) (n-1)
+
+mapPtrArray :: (Ptr a -> IO b) -> Ptr (GPtrArray (Ptr a)) -> IO ()
+mapPtrArray f array = mapGArray f (castPtr array)
+
+mapGList :: (Ptr a -> IO b) -> Ptr (GList (Ptr a)) -> IO ()
+mapGList f glist
+    | (glist == nullPtr) = return ()
+    | otherwise =
+        do ptr <- peek (castPtr glist)
+           next <- peek (glist `plusPtr` sizeOf ptr)
+           _ <- f ptr
+           mapGList f next
+
+mapGSList :: (Ptr a -> IO b) -> Ptr (GSList (Ptr a)) -> IO ()
+mapGSList f gslist = mapGList f (castPtr gslist)

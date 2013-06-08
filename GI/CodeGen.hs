@@ -406,10 +406,12 @@ genModule name apis = do
     line $ "import qualified Data.ByteString.Char8 as B"
     line $ "import Data.ByteString.Char8 (ByteString)"
     line $ "import Foreign.Safe"
+    line $ "import qualified Foreign.Safe as F"
     line $ "import Foreign.ForeignPtr.Unsafe"
     line $ "import Foreign.C"
     line $ "import Control.Applicative ((<$>))"
     line $ "import Control.Monad (when)"
+    line $ "import Control.Exception (finally)"
     blank
     line $ "import GI.Utils.ManagedPtr"
     line $ "import GI.Utils.BasicTypes"
