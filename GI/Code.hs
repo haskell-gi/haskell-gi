@@ -13,6 +13,7 @@ module GI.Code
     , group
     , foreignImport
     , findAPI
+    , findAPIByName
     , config
     ) where
 
@@ -22,6 +23,8 @@ import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
 import qualified Data.Foldable as F
 import qualified Data.Map as M
 import qualified Data.Sequence as S
+
+import Control.Applicative ((<$>))
 
 import GI.API (API, Name(..))
 import GI.Type (Type(..))
@@ -70,14 +73,16 @@ recurse cg = do
     return $ runCodeGen cfg cg
 
 findAPI :: Type -> CodeGen (Maybe API)
-findAPI (TInterface ns n) = do
-    cfg <- config
-    case M.lookup (Name ns n) (input cfg) of
-      Just api -> return $ Just api
-      Nothing -> error $
-                 "couldn't find API description for type " ++
-                 ns ++ "." ++ n
+findAPI (TInterface ns n) = Just <$> findAPIByName (Name ns n)
 findAPI _ = return Nothing
+
+findAPIByName :: Name -> CodeGen API
+findAPIByName n = do
+    cfg <- config
+    case M.lookup n (input cfg) of
+      Just api -> return api
+      Nothing -> error $ "couldn't find API description for "
+                                ++ namespace n ++ "." ++ name n
 
 line :: String -> CodeGen ()
 line = tell . Line

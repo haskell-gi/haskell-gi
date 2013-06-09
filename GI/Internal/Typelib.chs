@@ -3,6 +3,7 @@ module GI.Internal.Typelib
   , getLoadedNamespaces
   , getInfos
   , getSharedLibraries
+  , findByGType
   , load
   )
 where
@@ -95,3 +96,10 @@ load namespace version =
             _ <- {# call unsafe load_typelib #} nullRepository typelib 0 gError
             return ()
         return typelib
+
+findByGType :: CUInt -> IO (Maybe BaseInfo)
+findByGType gtype = do
+  ptr <- {# call unsafe find_by_gtype #} nullRepository gtype
+  if ptr /= nullPtr
+  then return $ (Just . BaseInfo . castPtr) ptr
+  else return Nothing

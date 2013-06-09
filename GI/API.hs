@@ -32,6 +32,7 @@ import GI.Internal.FunctionInfo
 import GI.Internal.InterfaceInfo
 import GI.Internal.ObjectInfo
 import GI.Internal.PropertyInfo
+import GI.Internal.RegisteredTypeInfo
 import GI.Internal.StructInfo
 import GI.Internal.Typelib (getInfos, load)
 import GI.Internal.UnionInfo
@@ -192,16 +193,20 @@ data Callback = Callback Callable
 toCallback = Callback . toCallable
 
 data Interface = Interface {
-    ifMethods :: [(Name, Function)],
     ifConstants :: [(Name, Constant)],
-    ifProperties :: [Property] }
+    ifProperties :: [Property],
+    ifPrerequisites :: [Name],
+    ifTypeInit :: Maybe String,
+    ifMethods :: [(Name, Function)] }
     deriving Show
 
 toInterface :: InterfaceInfo -> Interface
 toInterface ii = Interface {
-    ifMethods = map (withName toFunction) (interfaceInfoMethods ii),
     ifConstants = map (withName toConstant) (interfaceInfoConstants ii),
-    ifProperties = map toProperty (interfaceInfoProperties ii) }
+    ifProperties = map toProperty (interfaceInfoProperties ii),
+    ifPrerequisites = map (fst . toAPI) (interfaceInfoPrerequisites ii),
+    ifTypeInit = registeredTypeInfoTypeInit ii,
+    ifMethods = map (withName toFunction) (interfaceInfoMethods ii) }
 
 data Object = Object {
     objFields :: [Field],

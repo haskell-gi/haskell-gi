@@ -17,6 +17,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import GI.Util (getList)
 
 {# import GI.Internal.Types #}
+{# import GI.Internal.Typelib #}
 
 #include <girepository.h>
 
@@ -27,11 +28,29 @@ stupidCast :: InterfaceInfoClass iic => iic -> Ptr ()
 stupidCast ii = castPtr p
   where (InterfaceInfo p) = interfaceInfo ii
 
+-- g_interface_info_get_prerequisites does not seem very reliable, so
+-- we go through the gobject type machinery instead.
+foreign import ccall unsafe "g_type_interface_prerequisites"
+        g_type_interface_prerequisites :: CUInt -> Ptr a -> IO (Ptr CUInt)
+
 interfaceInfoPrerequisites :: InterfaceInfoClass iic => iic -> [BaseInfo]
-interfaceInfoPrerequisites ii = unsafePerformIO $
-    map baseInfo <$>
-    getList {# call get_n_prerequisites #} {# call get_prerequisite #}
-        (stupidCast ii)
+interfaceInfoPrerequisites ii = unsafePerformIO $ do
+    gtype <- {# call g_registered_type_info_get_g_type #} (stupidCast ii)
+    nprereqs' <- malloc :: IO (Ptr CUInt)
+    prereqs <- g_type_interface_prerequisites gtype nprereqs'
+    nprereqs <- peek nprereqs'
+    free nprereqs'
+    if prereqs == nullPtr || nprereqs == 0
+    then return []
+    else go prereqs nprereqs
+         where go :: Ptr CUInt -> CUInt -> IO [BaseInfo]
+               go _ 0 = return []
+               go ptr n = do
+                 gtype <- peek ptr
+                 pi <- findByGType gtype
+                 case pi of
+                   Just bi -> (bi :) <$> go (ptr `plusPtr` sizeOf gtype) (n-1)
+                   Nothing -> go (ptr `plusPtr` sizeOf gtype) (n-1)
 
 interfaceInfoMethods :: InterfaceInfoClass iic => iic -> [FunctionInfo]
 interfaceInfoMethods ii = unsafePerformIO $

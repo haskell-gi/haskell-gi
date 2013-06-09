@@ -36,16 +36,6 @@ import GI.Util
 
 toPtr con = "(\\(" ++ con ++ " x) -> x)"
 
-interfaceName :: Type -> CodeGen (Maybe Name)
-interfaceName t = do
-    a <- findAPI t
-    case a of
-         Just (APIInterface _) -> do
-              case t of
-                   TInterface ns n -> return $ Just $ Name ns n
-                   _ -> error "Interface without TInterface!"
-         _ -> return Nothing
-
 -- String identifying a constructor in the generated code, which is
 -- either (by default) a pure function P, or a function returning
 -- values on a monad M. 'Id' denotes the identity function.
@@ -191,6 +181,13 @@ hToF_PackedType t packer = do
     mapC innerConstructor
     apply (M packer)
 
+findInterface :: Type -> CodeGen (Maybe Interface)
+findInterface t = do
+    a <- findAPI t
+    case a of
+         Just (APIInterface iface) -> return $ Just iface
+         _ -> return Nothing
+
 fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen Constructor
 fToH' t a hType fType
     | ( hType == fType ) = return Id
@@ -199,19 +196,19 @@ fToH' t a hType fType
     | ptr hType == fType = do
           let constructor = tyConName $ typeRepTyCon hType
           isGO <- isGObject t
-          prefixGO <- qualify "GObject"
           if isGO
-          then return $ M $ parenthesize $ prefixGO ++ "makeNewObject "
-                                           ++ constructor
+          then return $ M $ parenthesize $ "makeNewObject " ++ constructor
           else do
-            --- These are for routines that return
-            --- abstract interfaces. We create a managed
-            --- pointer without actual refcounting.
-            ifaceName <- interfaceName t
-            case ifaceName of
-              Just _ -> return $ M $ parenthesize $
+            --- These are for routines that return abstract interfaces
+            --- which are not GObjects.
+            maybeIface <- findInterface t
+            case maybeIface of
+              Just _ -> do
+                line $ "-- XXX (Leak) Interface does not require GObject : "
+                         ++ show t
+                return $ M $ parenthesize $
                        "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
-              _ -> return $ P constructor
+              Nothing -> return $ P constructor
     | TCArray True _ _ (TBasicType TUTF8) <- t =
         return $ M "unpackZeroTerminatedUTF8CArray"
     | TCArray True _ _ (TBasicType TFileName) <- t =

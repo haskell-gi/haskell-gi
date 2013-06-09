@@ -9,6 +9,7 @@ module GI.GObject
 
 import Data.Map (Map)
 import qualified Data.Map as M
+import Control.Applicative ((<$>))
 
 import GI.API
 import GI.Code
@@ -26,16 +27,24 @@ instanceTree ih n = case M.lookup n ih of
 -- Returns whether the given object instance name is a descendant of
 -- GObject.
 isGObject :: Type -> CodeGen Bool
-isGObject (TInterface "GObject" "Object") = return True
-isGObject (TInterface ns' n') = go ns' n'
-          where
-            go ns n = do
-             cfg <- config
-             case M.lookup (Name ns n) (instances cfg) of
-               Just (Name "GObject" "Object") -> return True
-               Just (Name pns pn) -> go pns pn
-               Nothing -> return False
+isGObject (TInterface ns n) = findAPIByName name >>= apiIsGObject name
+                              where name = Name ns n
 isGObject _ = return False
+
+apiIsGObject :: Name -> API -> CodeGen Bool
+apiIsGObject (Name "GObject" "Object") _ = return True
+apiIsGObject n api = do
+  cfg <- config
+  case api of
+    APIObject _ ->
+        case M.lookup n (instances cfg) of
+          Just (Name pns pn) -> isGObject (TInterface pns pn)
+          Nothing -> return False
+    APIInterface iface ->
+        do let prs = ifPrerequisites iface
+           prereqs <- (zip prs) <$> mapM findAPIByName prs
+           or <$> mapM (uncurry apiIsGObject) prereqs
+    _ -> return False
 
 -- Construct the hierarchy of object instances. Also transform
 -- GObject.InitiallyUnowned to GObject.Object (the only difference

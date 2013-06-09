@@ -16,7 +16,7 @@ import GI.API
 import GI.Code
 import GI.Util (split)
 
-interfaceClassName = (++"Iface_")
+interfaceClassName = (++"IKlass")
 
 ucFirst (x:xs) = toUpper x : xs
 ucFirst "" = error "ucFirst: empty string"

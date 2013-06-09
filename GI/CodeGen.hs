@@ -300,7 +300,20 @@ genInterface n iface = do
       line $ "touchManagedPtr = (\\(" ++ name'
                ++ " x) -> touchForeignPtr x)"
 
-  line $ "instance " ++ cls ++ " " ++ name'
+  group $ do
+    line $ "instance " ++ cls ++ " " ++ name'
+    -- We are also instances of our prerequisites
+    forM_ (ifPrerequisites iface) $ \(Name ns n) -> do
+      prefix <- qualify ns
+      api <- findAPI (TInterface ns n)
+      case api of
+        Just (APIInterface _) ->
+            line $ "instance " ++ prefix ++ interfaceClassName n ++ " " ++ name'
+        Just (APIObject _) ->
+            line $ "instance " ++ prefix ++ klass n ++ " " ++ name'
+        _ -> error $ "Prerequisite is neither an object or an interface!? : "
+                       ++ ns ++ "." ++ n
+
   forM_ (ifMethods iface) $ \(mn, f) -> do
     -- Some type libraries seem to include spurious interface methods,
     -- where a method Mod.Foo::func is actually just a function
@@ -334,17 +347,6 @@ genCode n (APIInterface i) = genInterface n i
 genCode _ (APIBoxed _) = return ()
 
 gObjectBootstrap = do
-    line "-- Reference counting for constructors"
-    line "foreign import ccall unsafe \"&g_object_unref\""
-    indent $ line "ptr_to_g_object_unref :: FunPtr (Ptr a -> IO ())"
-    blank
-    line "makeNewObject :: (ForeignPtr a -> a) -> Ptr b -> IO a"
-    line "makeNewObject constructor ptr = do"
-    indent $ do
-           line "_ <- g_object_ref_sink $ castPtr ptr"
-           line "fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr"
-           line "return $! constructor fPtr"
-    blank
     line "-- Safe casting machinery"
     line "foreign import ccall unsafe \"check_object_type\""
     line "    c_check_object_type :: Ptr Object -> GType -> CInt"

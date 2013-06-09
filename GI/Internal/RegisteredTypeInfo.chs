@@ -2,6 +2,7 @@
 module GI.Internal.RegisteredTypeInfo
     ( registeredTypeInfoTypeName
     , registeredTypeInfoGType
+    , registeredTypeInfoTypeInit
     )
 where
 
@@ -27,6 +28,14 @@ registeredTypeInfoTypeName rti = unsafePerformIO $ do
     if name == nullPtr
         then return "?"
         else peekCString name
+
+registeredTypeInfoTypeInit :: RegisteredTypeInfoClass rtic => rtic -> Maybe String
+registeredTypeInfoTypeInit rti =
+    unsafePerformIO $ do
+      typeInit <- {# call get_type_init #} (stupidCast rti)
+      if typeInit == nullPtr
+      then return Nothing
+      else Just <$> peekCString typeInit
 
 registeredTypeInfoGType :: RegisteredTypeInfoClass rtic => rtic -> Integer
 registeredTypeInfoGType rti = unsafePerformIO $ fromIntegral <$>
