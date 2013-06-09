@@ -38,6 +38,10 @@ module GI.Utils.BasicTypes
     , packZeroTerminatedStorableArray
     , unpackStorableArrayWithLength
     , unpackZeroTerminatedStorableArray
+    , packMapStorableArray
+    , packMapZeroTerminatedStorableArray
+    , unpackMapStorableArrayWithLength
+    , unpackMapZeroTerminatedStorableArray
     , packPtrArray
     , packZeroTerminatedPtrArray
     , unpackPtrArrayWithLength
@@ -215,43 +219,57 @@ unpackZeroTerminatedByteString :: Ptr Word8 -> IO ByteString
 unpackZeroTerminatedByteString ptr =
   B.packCString (castPtr ptr)
 
-packStorableArray :: forall a. Storable a => [a] -> IO (Ptr a)
-packStorableArray items = do
+packStorableArray :: Storable a => [a] -> IO (Ptr a)
+packStorableArray = packMapStorableArray id
+
+packZeroTerminatedStorableArray :: (Num a, Storable a) => [a] -> IO (Ptr a)
+packZeroTerminatedStorableArray = packMapZeroTerminatedStorableArray id
+
+unpackStorableArrayWithLength :: (Integral a, Storable b) =>
+                                 a -> Ptr b -> IO [b]
+unpackStorableArrayWithLength = unpackMapStorableArrayWithLength id
+
+unpackZeroTerminatedStorableArray :: (Eq a, Num a, Storable a) =>
+                                     Ptr a -> IO [a]
+unpackZeroTerminatedStorableArray = unpackMapZeroTerminatedStorableArray id
+
+packMapStorableArray :: forall a b. Storable b => (a -> b) -> [a] -> IO (Ptr b)
+packMapStorableArray fn items = do
   let nitems = length items
-  mem <- mallocBytes $ (sizeOf (items!!0)) * nitems
-  fill mem items
+  mem <- mallocBytes $ (sizeOf (undefined::b)) * nitems
+  fill mem (map fn items)
   return mem
-  where fill            :: Ptr a -> [a] -> IO ()
+  where fill            :: Ptr b -> [b] -> IO ()
         fill _ []       = return ()
         fill ptr (x:xs) = do
           poke ptr x
           fill (ptr `plusPtr` sizeOf x) xs
 
-packZeroTerminatedStorableArray :: forall a. (Num a, Storable a) =>
-                                   [a] -> IO (Ptr a)
-packZeroTerminatedStorableArray items = do
+packMapZeroTerminatedStorableArray :: forall a b. (Num b, Storable b) =>
+                                      (a -> b) -> [a] -> IO (Ptr b)
+packMapZeroTerminatedStorableArray fn items = do
   let nitems = length items
-  mem <- mallocBytes $ (sizeOf (items!!0)) * (nitems+1)
-  fill mem items
+  mem <- mallocBytes $ (sizeOf (undefined::b)) * (nitems+1)
+  fill mem (map fn items)
   return mem
-  where fill            :: Ptr a -> [a] -> IO ()
+  where fill            :: Ptr b -> [b] -> IO ()
         fill ptr []     = poke ptr 0
         fill ptr (x:xs) = do
           poke ptr x
           fill (ptr `plusPtr` sizeOf x) xs
 
-unpackStorableArrayWithLength :: forall a b. (Integral a, Storable b) =>
-                                 a -> Ptr b -> IO [b]
-unpackStorableArrayWithLength n ptr = go (fromIntegral n) ptr
+unpackMapStorableArrayWithLength :: forall a b c. (Integral a, Storable b) =>
+                                    (b -> c) -> a -> Ptr b -> IO [c]
+unpackMapStorableArrayWithLength fn n ptr = map fn <$> go (fromIntegral n) ptr
     where go :: Int -> Ptr b -> IO [b]
           go 0 _ = return []
           go n ptr = do
             x <- peek ptr
             (x:) <$> go (n-1) (ptr `plusPtr` sizeOf x)
 
-unpackZeroTerminatedStorableArray :: forall a. (Eq a, Num a, Storable a) =>
-                                     Ptr a -> IO [a]
-unpackZeroTerminatedStorableArray ptr = go ptr
+unpackMapZeroTerminatedStorableArray :: forall a b. (Eq a, Num a, Storable a) =>
+                                        (a -> b) -> Ptr a -> IO [b]
+unpackMapZeroTerminatedStorableArray fn ptr = map fn <$> go ptr
     where go :: Ptr a -> IO [a]
           go ptr = do
             x <- peek ptr

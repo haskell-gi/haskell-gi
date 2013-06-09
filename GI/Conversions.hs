@@ -124,6 +124,8 @@ hToF' t a hType fType
         return $ M "packZeroTerminatedPtrArray"
     | TCArray True _ _ (TBasicType TUInt8) <- t =
         return $ M "packZeroTerminatedByteString"
+    | TCArray True _ _ (TBasicType TBoolean) <- t =
+        return $ M "(packMapZeroTerminatedStorableArray (fromIntegral . fromEnum))"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "packZeroTerminatedStorableArray"
     | TCArray False _ _ (TBasicType TUTF8) <- t =
@@ -134,6 +136,8 @@ hToF' t a hType fType
         return $ M "packPtrArray"
     | TCArray False _ _ (TBasicType TUInt8) <- t =
         return $ M "packByteString"
+    | TCArray False _ _ (TBasicType TBoolean) <- t =
+        return $ M "(packMapStorableArray (fromIntegral . fromEnum))"
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
     | TCArray _ _ _ _ <- t =
@@ -217,6 +221,8 @@ fToH' t a hType fType
         return $ M "unpackZeroTerminatedByteString"
     | TCArray True _ _ (TBasicType TVoid) <- t =
         return $ M "unpackZeroTerminatedPtrArray"
+    | TCArray True _ _ (TBasicType TBoolean) <- t =
+        return $ M "(unpackMapZeroTerminatedStorableArray (/= 0))"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "unpackZeroTerminatedStorableArray"
     | TCArray _ _ _ _ <- t =
@@ -276,6 +282,8 @@ unpackCArray length (TCArray False _ _ t) =
                          "unpackByteStringWithLength " ++ length
     TBasicType TVoid -> return $ apply $ M $ parenthesize $
                          "unpackPtrArrayWithLength " ++ length
+    TBasicType TBoolean -> return $ apply $ M $ parenthesize $
+                         "unpackMapStorableArrayWithLength (/= 0) " ++ length
     TBasicType _ -> return $ apply $ M $ parenthesize $
                          "unpackStorableArrayWithLength " ++ length
     TInterface _ _ -> do
