@@ -169,12 +169,15 @@ toField fi =
 
 data Struct = Struct {
     fields :: [Field],
+    structMethods :: [(Name, Function)],
     isGTypeStruct :: Bool}
     deriving Show
 
 toStruct :: StructInfo -> Struct
 toStruct si = Struct {
                 fields = map toField $ structInfoFields si,
+                structMethods = map (withName toFunction)
+                                (structInfoMethods si),
                 isGTypeStruct = structInfoIsGTypeStruct si }
 
 -- XXX: Capture alignment and method info.

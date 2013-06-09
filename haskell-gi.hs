@@ -96,18 +96,44 @@ processAPI options name = do
                            -- The size of the array depends on the
                            -- second argument in a nontrivial way.
                            , "g_inet_address_new_from_bytes"
-                            -- This is listed as a method of
-                            -- GObject.Object, but the object
-                            -- parameter to the function is missing.
-                            , "g_object_interface_find_property"
-                            -- The same for the other
-                            -- g_object_interface_* functions
-                            , "g_object_interface_install_property"
-                            , "g_object_interface_list_properties"
-                            -- The length argument is an out value,
-                            -- but it is nto marked as such in the
-                            -- bindings.
-                            , "g_tls_password_get_value"
+                           -- This is listed as a method of
+                           -- GObject.Object, but the object
+                           -- parameter to the function is missing.
+                           , "g_object_interface_find_property"
+                           -- The same for the other
+                           -- g_object_interface_* functions
+                           , "g_object_interface_install_property"
+                           , "g_object_interface_list_properties"
+                           -- caller-allocates, which we don't support
+                           -- yet.
+                           , "g_io_channel_read_chars"
+                           -- The length of the array is marked as the
+                           -- 0th argument, but it is the 2nd.
+                           , "g_io_channel_write_chars"
+                           -- "count" argument is not marked as out.
+                           , "g_bookmark_file_get_app_info"
+                           -- "length" is not marked as out
+                           , "g_bookmark_file_to_data"
+                           -- "terminator_pos" is not marked as out.
+                           , "g_io_channel_read_line_string"
+                           -- "line_number" is not marked as out.
+                           , "g_markup_parse_context_get_position"
+                           -- The length of the array is given by a
+                           -- call to pango_tab_array_get_size(), not
+                           -- an argument.
+                           , "pango_tab_array_get_tabs"
+                           -- Length of log_attrs is not given
+                           , "pango_glyph_item_letter_space"
+                           -- The length of logical_widths is not
+                           -- given by an argument.
+                           , "pango_glyph_string_get_logical_widths"
+                           -- The length of logical_widths is not
+                           -- given by an argument.
+                           , "pango_glyph_item_get_logical_widths"
+                           -- The length argument is an out value,
+                           -- but it is nto marked as such in the
+                           -- bindings.
+                           , "g_tls_password_get_value"
                            -- The size of the array depends on a
                            -- complicated combination of the rest of
                            -- the arguments.

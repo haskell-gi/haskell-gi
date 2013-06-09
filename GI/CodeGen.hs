@@ -53,12 +53,19 @@ genFunction n (Function symbol callable flags) = do
   genCallable n symbol callable (FunctionThrows `elem` flags)
 
 genStruct :: Name -> Struct -> CodeGen ()
-genStruct n@(Name _ name) (Struct _fields isGType) =
-    when (not isGType) $ do
-      line $ "-- struct " ++ name
-      name' <- upperName n
-      line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
-      -- XXX: Generate code for fields.
+genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
+  cfg <- config
+
+  line $ "-- struct " ++ name
+  name' <- upperName n
+  line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+  -- XXX: Generate code for fields.
+
+  -- Methods
+  forM_ (structMethods s) $ \(mn, f) ->
+      do isFunction <- symbolFromFunction (fnSymbol f)
+         when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+              genMethod n mn f
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name ns name) (Enumeration fields eDomain) = do
@@ -74,7 +81,7 @@ genEnum n@(Name ns name) (Enumeration fields eDomain) = do
         ((fieldName, _value):fs) -> do
           line $ "  " ++ fieldName
           forM_ fs $ \(n, _) -> line $ "| " ++ n
-          line $ "deriving (Show)"
+          line $ "deriving (Show, Eq)"
         _ -> return ()
   group $ do
     line $ "instance Enum " ++ name' ++ " where"
@@ -314,25 +321,25 @@ genInterface n iface = do
         _ -> error $ "Prerequisite is neither an object or an interface!? : "
                        ++ ns ++ "." ++ n
 
+  cfg <- config
   forM_ (ifMethods iface) $ \(mn, f) -> do
-    -- Some type libraries seem to include spurious interface methods,
-    -- where a method Mod.Foo::func is actually just a function
-    -- mod_foo_func that doesn't take the interface as an (implicit)
-    -- first argument. If we find a matching function, we don't
-    -- generate the method.
-    others_ <- others (fnSymbol f)
-    when (not others_) $ do
-      cfg <- config
-      when (not $ fnSymbol f `elem` ignoredMethods cfg) $
-           genMethod n mn f
+    isFunction <- symbolFromFunction (fnSymbol f)
+    when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+       genMethod n mn f
 
-   where -- It may be expedient to keep a map of symbol -> function.
-         others sym = do
-              cfg <- config
-              return $ any (hasSymbol sym . snd) $ M.toList $ input cfg
-
-         hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2 })) = sym1 == sym2
-         hasSymbol _ _ = False
+-- Some type libraries seem to include spurious interface/struct
+-- methods, where a method Mod.Foo::func also appears as an ordinary
+-- function in the list of APIs. If we find a matching function, we
+-- don't generate the method.
+--
+-- It may be more expedient to keep a map of symbol -> function.
+symbolFromFunction :: String -> CodeGen Bool
+symbolFromFunction sym = do
+  cfg <- config
+  return $ any (hasSymbol sym . snd) $ M.toList $ input cfg
+    where
+      hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2 })) = sym1 == sym2
+      hasSymbol _ _ = False
 
 genCode :: Name -> API -> CodeGen ()
 genCode n (APIConst c) = genConstant n c

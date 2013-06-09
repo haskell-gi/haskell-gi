@@ -54,6 +54,12 @@ testNullableArgs = do
 
 testOutArgs = iconThemeGetDefault >>= iconThemeGetSearchPath >>= print
 
+testStruct = do
+  date <- GLib.dateNewDmy 9 GLib.DateMonthJune 2013
+  weekday <- GLib.dateGetWeekday date
+  when (weekday /= GLib.DateWeekdaySunday) $
+       error $ "Got wrong weekday! : " ++ show weekday
+
 main = do
         -- Generally one should do the following to init Gtk:
         -- import System.Environment (getArgs, getProgName)
@@ -95,6 +101,7 @@ main = do
         testExceptions
         testNullableArgs
         testOutArgs
+        testStruct
 
 	widgetShowAll win
 	Gtk.main
