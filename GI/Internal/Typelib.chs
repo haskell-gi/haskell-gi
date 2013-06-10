@@ -16,9 +16,10 @@ import Control.Monad (when)
 
 import GI.Internal.Types
 import GI.Util
+import GI.GType (GType)
 
 import GI.Utils.GError
-import GI.Utils.BasicTypes
+import GI.Utils.BasicTypes (unpackGSList)
 
 #include <girepository.h>
 
@@ -97,9 +98,12 @@ load namespace version =
             return ()
         return typelib
 
-findByGType :: CUInt -> IO (Maybe BaseInfo)
+foreign import ccall unsafe "g_irepository_find_by_gtype" find_by_gtype ::
+    Ptr Repository -> GType -> IO (Ptr BaseInfo)
+
+findByGType :: GType -> IO (Maybe BaseInfo)
 findByGType gtype = do
-  ptr <- {# call unsafe find_by_gtype #} nullRepository gtype
+  ptr <- find_by_gtype nullPtr gtype
   if ptr /= nullPtr
   then return $ (Just . BaseInfo . castPtr) ptr
   else return Nothing

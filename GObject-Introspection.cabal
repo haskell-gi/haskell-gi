@@ -29,6 +29,7 @@ Executable haskell-gi
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
       GI.Internal.Types,
+      GI.Internal.Typelib,
       GI.Internal.ArgInfo,
       GI.Internal.BaseInfo,
       GI.Internal.CallableInfo,
@@ -43,13 +44,13 @@ Executable haskell-gi
       GI.Internal.RegisteredTypeInfo,
       GI.Internal.StructInfo,
       GI.Internal.TypeInfo,
-      GI.Internal.Typelib,
       GI.Internal.UnionInfo,
       GI.API,
       GI.Callable,
       GI.Code,
       GI.Conversions,
       GI.GObject,
+      GI.GType,
       GI.Signal,
       GI.SymbolNaming,
       GI.Transfer,

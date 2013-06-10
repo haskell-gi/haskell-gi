@@ -146,7 +146,6 @@ hToF' t a hType fType
     | otherwise = return $ case (show hType, show fType) of
                ("[Char]", "CString") -> M "newCString"
                ("ByteString", "CString") -> M "byteStringToCString"
-               ("Word", "Type")      -> "fromIntegral"
                ("Char", "CInt")      -> "(fromIntegral . ord)"
                ("Bool", "CInt")      -> "(fromIntegral . fromEnum)"
                _                     -> error $ "don't know how to convert "
@@ -233,7 +232,6 @@ fToH' t a hType fType
     | otherwise = return $ case (show fType, show hType) of
                ("CString", "[Char]") -> M "peekCString"
                ("CString", "ByteString") -> M "B.packCString"
-               ("Type", "Word")      -> "fromIntegral"
                ("CInt", "Char")      -> "(chr . fromIntegral)"
                ("CInt", "Bool")      -> "(/= 0)"
                _                     -> error $ "don't know how to convert "
@@ -384,7 +382,6 @@ haskellType (TInterface ns n) = do
 foreignBasicType TVoid     = ptr (typeOf ())
 foreignBasicType TBoolean  = "CInt" `con` []
 foreignBasicType TUTF8     = "CString" `con` []
-foreignBasicType TGType    = "GType" `con` []
 foreignBasicType TFileName = "CString" `con` []
 foreignBasicType TUniChar  = "CInt" `con` []
 foreignBasicType t         = haskellBasicType t

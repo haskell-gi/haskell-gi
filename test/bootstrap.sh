@@ -69,4 +69,5 @@ generate \
     Gtk > GI/Gtk.hs
 
 ghc -c hsgclosure.c $(pkg-config --cflags gobject-2.0)
+hsc2hs-ghc GI/Utils/BasicTypes.hsc $(pkg-config --cflags gobject-2.0)
 ghc --make testGtk.hs hsgclosure.o $(pkg-config --libs gtk+-3.0)

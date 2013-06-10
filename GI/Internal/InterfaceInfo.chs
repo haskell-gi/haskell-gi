@@ -15,6 +15,7 @@ import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 
 import GI.Util (getList)
+import GI.GType (GType)
 
 {# import GI.Internal.Types #}
 {# import GI.Internal.Typelib #}
@@ -31,19 +32,22 @@ stupidCast ii = castPtr p
 -- g_interface_info_get_prerequisites does not seem very reliable, so
 -- we go through the gobject type machinery instead.
 foreign import ccall unsafe "g_type_interface_prerequisites"
-        g_type_interface_prerequisites :: CUInt -> Ptr a -> IO (Ptr CUInt)
+        g_type_interface_prerequisites :: GType -> Ptr a -> IO (Ptr GType)
+
+foreign import ccall unsafe "g_registered_type_info_get_g_type"
+        g_registered_type_info_get_g_type :: Ptr () -> IO GType
 
 interfaceInfoPrerequisites :: InterfaceInfoClass iic => iic -> [BaseInfo]
 interfaceInfoPrerequisites ii = unsafePerformIO $ do
-    gtype <- {# call g_registered_type_info_get_g_type #} (stupidCast ii)
-    nprereqs' <- malloc :: IO (Ptr CUInt)
+    gtype <- g_registered_type_info_get_g_type (stupidCast ii)
+    nprereqs' <- malloc :: IO (Ptr GType)
     prereqs <- g_type_interface_prerequisites gtype nprereqs'
     nprereqs <- peek nprereqs'
     free nprereqs'
     if prereqs == nullPtr || nprereqs == 0
     then return []
     else go prereqs nprereqs
-         where go :: Ptr CUInt -> CUInt -> IO [BaseInfo]
+         where go :: Ptr GType -> GType -> IO [BaseInfo]
                go _ 0 = return []
                go ptr n = do
                  gtype <- peek ptr

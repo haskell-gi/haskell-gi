@@ -65,7 +65,10 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
 
-type GType = Word
+#include <glib-object.h>
+
+type GType = #type GType
+
 data GArray a = GArray (Ptr (GArray a))
 data GPtrArray a = GPtrArray (Ptr (GPtrArray a))
 data GByteArray = GByteArray (Ptr GByteArray)

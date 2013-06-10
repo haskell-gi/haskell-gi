@@ -36,6 +36,7 @@ import GI.Internal.RegisteredTypeInfo
 import GI.Internal.StructInfo
 import GI.Internal.Typelib (getInfos, load)
 import GI.Internal.UnionInfo
+import GI.GType
 import GI.Type
 import GI.Value
 
@@ -168,6 +169,7 @@ toField fi =
         (fieldInfoFlags fi)
 
 data Struct = Struct {
+    structIsBoxed :: Bool,
     fields :: [Field],
     structMethods :: [(Name, Function)],
     isGTypeStruct :: Bool}
@@ -175,6 +177,7 @@ data Struct = Struct {
 
 toStruct :: StructInfo -> Struct
 toStruct si = Struct {
+                structIsBoxed = gtypeIsBoxed $ registeredTypeInfoGType si,
                 fields = map toField $ structInfoFields si,
                 structMethods = map (withName toFunction)
                                 (structInfoMethods si),
