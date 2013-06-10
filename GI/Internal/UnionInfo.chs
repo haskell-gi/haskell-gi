@@ -1,6 +1,7 @@
 
 module GI.Internal.UnionInfo
     ( unionInfoFields
+    , unionInfoMethods
     ) where
 
 import Control.Applicative ((<$>))
@@ -24,3 +25,8 @@ unionInfoFields :: UnionInfoClass uic => uic -> [FieldInfo]
 unionInfoFields ui = unsafePerformIO $
     map (FieldInfo <$> castPtr) <$>
     getList {# call get_n_fields #} {# call get_field #} (stupidCast ui)
+
+unionInfoMethods :: UnionInfoClass sic => sic -> [FunctionInfo]
+unionInfoMethods ui = unsafePerformIO $
+    map (FunctionInfo <$> castPtr) <$>
+    getList {# call get_n_methods #} {# call get_method #} (stupidCast ui)

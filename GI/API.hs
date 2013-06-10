@@ -170,15 +170,15 @@ toField fi =
 
 data Struct = Struct {
     structIsBoxed :: Bool,
-    fields :: [Field],
+    structFields :: [Field],
     structMethods :: [(Name, Function)],
-    isGTypeStruct :: Bool}
+    isGTypeStruct :: Bool }
     deriving Show
 
 toStruct :: StructInfo -> Struct
 toStruct si = Struct {
                 structIsBoxed = gtypeIsBoxed $ registeredTypeInfoGType si,
-                fields = map toField $ structInfoFields si,
+                structFields = map toField $ structInfoFields si,
                 structMethods = map (withName toFunction)
                                 (structInfoMethods si),
                 isGTypeStruct = structInfoIsGTypeStruct si }
@@ -186,11 +186,17 @@ toStruct si = Struct {
 -- XXX: Capture alignment and method info.
 
 data Union = Union {
-    unionFields :: [Field] }
+    unionIsBoxed :: Bool,
+    unionFields :: [Field],
+    unionMethods :: [(Name, Function)] }
     deriving Show
 
 toUnion :: UnionInfo -> Union
-toUnion ui = Union $ map toField $ unionInfoFields ui
+toUnion ui = Union {
+               unionIsBoxed = gtypeIsBoxed $ registeredTypeInfoGType ui,
+               unionFields = map toField $ unionInfoFields ui,
+               unionMethods = map (withName toFunction)
+                                (unionInfoMethods ui) }
 
 -- XXX
 data Callback = Callback Callable

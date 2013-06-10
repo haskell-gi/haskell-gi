@@ -58,7 +58,9 @@ genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
 
   line $ "-- struct " ++ name
   name' <- upperName n
+
   line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+
   -- XXX: Generate code for fields.
 
   -- Methods
@@ -134,11 +136,21 @@ genCallback n _ = do
   --line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr (IO ()))"
   line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
 
-genUnion n _ = do
+genUnion n u = do
   name' <- upperName n
+  cfg <- config
+
   line $ "-- union " ++ name' ++ " "
-  -- XXX
+
   line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+
+  -- XXX Fields
+
+  -- Methods
+  forM_ (unionMethods u) $ \(mn, f) ->
+      do isFunction <- symbolFromFunction (fnSymbol f)
+         when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+              genMethod n mn f
 
 -- Add the implicit object argument to methods of an object.
 fixMethodArgs :: Name -> Callable -> Callable
@@ -198,17 +210,9 @@ genGObjectType iT n = do
   name' <- upperName n
   let className = klass name'
 
-  -- ManagedPtr implementation
-  group $ do
-    line $ "instance ManagedPtr " ++ name' ++ " where"
-    indent $ do
-            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
-                     " x) -> unsafeForeignPtrToPtr x)"
-            line $ "touchManagedPtr        = (\\(" ++ name' ++
-                     " x) -> touchForeignPtr x)"
-
-
   group $ line $ "class " ++ className ++ " o"
+
+  manageManagedPtr n
 
   group $ do
     line $ "instance " ++ className ++ " " ++ name'
@@ -234,6 +238,17 @@ genGObjectCasts n o = do
            "o -> IO " ++ name'
     line $ "castTo" ++ name' ++ " = " ++ prefixGO ++ "castTo " ++ name' ++ 
            " c_" ++ cn_ ++ " \"" ++ name' ++ "\""
+
+-- ManagedPtr implementation, for types with real memory management.
+manageManagedPtr n = do
+  name' <- upperName n
+  group $ do
+    line $ "instance ManagedPtr " ++ name' ++ " where"
+    indent $ do
+            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
+                     " x) -> unsafeForeignPtrToPtr x)"
+            line $ "touchManagedPtr        = (\\(" ++ name' ++
+                     " x) -> touchForeignPtr x)"
 
 -- We do not currently manage properly APIObjects not descending from
 -- GObjects, but we should do so eventually. For the moment we just
