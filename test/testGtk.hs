@@ -6,10 +6,12 @@ import qualified GI.Gio as Gio
 import qualified GI.GLib as GLib
 
 import qualified Data.ByteString.Char8 as B
+import Data.Word
 
 import Control.Monad (forM_, when)
 
 import System.Environment (getProgName)
+import System.Random (randomRIO)
 
 -- A fancy notation for making signal connections easier to read.
 (<!>) obj cb = cb obj
@@ -54,11 +56,14 @@ testNullableArgs = do
 
 testOutArgs = iconThemeGetDefault >>= iconThemeGetSearchPath >>= print
 
-testStruct = do
-  date <- GLib.dateNewDmy 9 GLib.DateMonthJune 2013
-  weekday <- GLib.dateGetWeekday date
-  when (weekday /= GLib.DateWeekdaySunday) $
-       error $ "Got wrong weekday! : " ++ show weekday
+testBoxed = do
+  forM_ [1..500] $ \_ -> do
+    r <- randomRIO (0,6)
+    let expected = toEnum $ (fromEnum GLib.DateWeekdayMonday) + r
+    date <- GLib.dateNewDmy (fromIntegral $ 17 + r) GLib.DateMonthJune 2013
+    weekday <- GLib.dateGetWeekday date
+    when (weekday /= expected) $
+         error $ show r ++ " -> Got wrong weekday! : " ++ show weekday
 
 main = do
         -- Generally one should do the following to init Gtk:
@@ -101,7 +106,7 @@ main = do
         testExceptions
         testNullableArgs
         testOutArgs
-        testStruct
+        testBoxed
 
 	widgetShowAll win
 	Gtk.main

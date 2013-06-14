@@ -52,6 +52,20 @@ genFunction n (Function symbol callable flags) = do
   line $ "-- function " ++ symbol
   genCallable n symbol callable (FunctionThrows `elem` flags)
 
+genBoxedObject :: Name -> String -> CodeGen ()
+genBoxedObject n typeInit = do
+  name' <- upperName n
+
+  manageManagedPtr n
+
+  group $ do
+    line $ "foreign import ccall unsafe \"" ++ typeInit ++ "\" c_" ++
+            typeInit ++ " :: "
+    indent $ line $ "IO GType"
+  group $ do
+       line $ "instance BoxedObject " ++ name' ++ " where"
+       indent $ line $ "boxedType _ = c_" ++ typeInit
+
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
   cfg <- config
@@ -59,7 +73,11 @@ genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
   line $ "-- struct " ++ name
   name' <- upperName n
 
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+  line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+
+  if structIsBoxed s
+  then genBoxedObject n $ fromJust (structTypeInit s)
+  else manageUnManagedPtr n
 
   -- XXX: Generate code for fields.
 
@@ -142,7 +160,11 @@ genUnion n u = do
 
   line $ "-- union " ++ name' ++ " "
 
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
+  line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+
+  if unionIsBoxed u
+  then genBoxedObject n $ fromJust (unionTypeInit u)
+  else manageUnManagedPtr n
 
   -- XXX Fields
 
@@ -246,19 +268,20 @@ manageManagedPtr n = do
     line $ "instance ManagedPtr " ++ name' ++ " where"
     indent $ do
             line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
-                     " x) -> unsafeForeignPtrToPtr x)"
+                     " x) -> castPtr $ unsafeForeignPtrToPtr x)"
             line $ "touchManagedPtr        = (\\(" ++ name' ++
                      " x) -> touchForeignPtr x)"
 
--- We do not currently manage properly APIObjects not descending from
--- GObjects, but we should do so eventually. For the moment we just
--- implement no-ops here.
+-- Some objects, such as APIObjects not descending from GObjects, or
+-- structs/unions which are not boxed cannot be automatically memoery
+-- managed. For the moment we just implement no-ops here.
 manageUnManagedPtr n = do
   name' <- upperName n
   group $ do
     line $ "instance ManagedPtr " ++ name' ++ " where"
     indent $ do
-            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++ " x) -> x)"
+            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
+                     " x) -> castPtr $ unsafeForeignPtrToPtr x)"
             line $ "touchManagedPtr      _ = return ()"
 
 genObject n o = do
@@ -272,11 +295,7 @@ genObject n o = do
   when (not isGO) $ line $ "-- XXX APIObject \"" ++ name' ++
            "\" does not descend from GObject."
 
-  line $ "newtype " ++ name' ++ " = " ++ name' ++
-       if isGO then
-          " (ForeignPtr " ++ name' ++ ")"
-       else
-          " (Ptr " ++ name' ++ ")"
+  line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
   cfg <- config
 
   -- Instances and type conversions
@@ -314,13 +333,10 @@ genInterface n iface = do
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
   line $ "class " ++ cls ++ " a"
 
-  group $ do
-    line $ "instance ManagedPtr " ++ name' ++ " where"
-    indent $ do
-      line $ "unsafeManagedPtrGetPtr = (\\(" ++ name'
-               ++ " x) -> unsafeForeignPtrToPtr x)"
-      line $ "touchManagedPtr = (\\(" ++ name'
-               ++ " x) -> touchForeignPtr x)"
+  isGO <- apiIsGObject n (APIInterface iface)
+  if isGO
+  then manageManagedPtr n
+  else manageUnManagedPtr n
 
   group $ do
     line $ "instance " ++ cls ++ " " ++ name'
@@ -380,7 +396,7 @@ gObjectBootstrap = do
     line "    let ptrObj = (castPtr . unsafeManagedPtrGetPtr) obj"
     line "    when (c_check_object_type ptrObj t /= 1) $"
     line "         error $ \"Cannot cast object to \" ++ typeName"
-    line "    result <- makeNewObject constructor ptrObj"
+    line "    result <- newObject constructor ptrObj"
     line "    touchManagedPtr obj"
     line "    return result"
     blank
@@ -435,7 +451,7 @@ genModule name apis = do
     line $ "import Foreign.C"
     line $ "import Control.Applicative ((<$>))"
     line $ "import Control.Monad (when)"
-    line $ "import Control.Exception (finally)"
+    line $ "import Control.Exception (onException)"
     blank
     line $ "import GI.Utils.ManagedPtr"
     line $ "import GI.Utils.BasicTypes"

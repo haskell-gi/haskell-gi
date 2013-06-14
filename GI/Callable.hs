@@ -22,16 +22,6 @@ import GI.Type
 import GI.Util
 import GI.Internal.ArgInfo
 
--- Returns whether the given type corresponds to a ManagedPtr
--- instance, currently we manage APIObjects and Interfaces.
-isManaged   :: Type -> CodeGen Bool
-isManaged t = do
-  a <- findAPI t
-  case a of
-    Just (APIObject _)    -> return True
-    Just (APIInterface _) -> return True
-    _                     -> return False
-
 padTo n s = s ++ replicate (n - length s) ' '
 
 hOutType callable outArgs ignoreReturn = do
@@ -171,19 +161,43 @@ skipRetVal callable throwsGError =
     (skipReturn callable) ||
          (throwsGError && returnType callable == TBasicType TBoolean)
 
--- Return the list of actions freeing the memory associated with the
--- callable variables.
-freeInArgs :: Callable -> Map.Map String String -> [String]
-freeInArgs callable nameMap = concat $
-    (flip map) (args callable) $ \arg ->
+freeInArgs' :: (Arg -> String -> String -> CodeGen [String]) ->
+               Callable -> Map.Map String String -> CodeGen [String]
+freeInArgs' freeFn callable nameMap = concat <$> actions
+    where
+      actions :: CodeGen [[String]]
+      actions = forM (args callable) $ \arg ->
         case Map.lookup (escapeReserved $ argName arg) nameMap of
-          Just name -> freeInArg arg name $
+          Just name -> freeFn arg name $
                        -- Pass in the length argument in case it's needed.
                        case argType arg of
                          TCArray False (-1) length _ ->
                              escapeReserved $ argName $ (args callable)!!length
                          _ -> undefined
           Nothing -> error $ "freeInArgs: do not understand " ++ show arg
+
+-- Return the list of actions freeing the memory associated with the
+-- callable variables. This is run if the call to the C function
+-- succeeds, if there is an error freeInArgsOnError below is called
+-- instead.
+freeInArgs = freeInArgs' freeInArg
+
+-- Return the list of actions freeing the memory associated with the
+-- callable variables. This is run in case there is an error during
+-- the call.
+freeInArgsOnError = freeInArgs' freeInArgOnError
+
+-- Returns whether the given type corresponds to a ManagedPtr
+-- instance (a thin wrapper over a ForeignPtr).
+isManaged   :: Type -> CodeGen Bool
+isManaged t = do
+  a <- findAPI t
+  case a of
+    Just (APIObject _)    -> return True
+    Just (APIInterface _) -> return True
+    Just (APIStruct _)    -> return True
+    Just (APIUnion _)     -> return True
+    _                     -> return False
 
 -- XXX We should free the memory allocated for the [a] -> Glist (a')
 -- etc. conversions.
@@ -223,30 +237,29 @@ genCallable n symbol callable throwsGError = do
           -- Map from argument names to names passed to the C function
           let nameMap = Map.fromList $ flip zip inArgNames
                                              $ map argName' $ args callable
-          forM_ (zip inArgNames $ args callable) $ uncurry prepareForCCall
           if throwsGError
           then do
-            line "finally (do"
+            line "onException (do"
             indent $ do
               invokeCFunction inArgNames
               result <- convertResult nameMap
               pps <- convertOut nameMap
               touchInArgs
+              mapM_ line =<< freeInArgs callable nameMap
               returnResult result pps
             line " ) (do"
             indent $ do
-                   forM_ (zip inArgNames $ args callable)
-                             $ uncurry unprepareForCCall
-                   case freeInArgs callable nameMap of
-                     [] -> line $ "return ()"
-                     actions -> mapM_ line actions
+                   actions <- freeInArgsOnError callable nameMap
+                   case actions of
+                       [] -> line $ "return ()"
+                       _ -> mapM_ line actions
             line " )"
           else do
             invokeCFunction inArgNames
             result <- convertResult nameMap
             pps <- convertOut nameMap
             touchInArgs
-            mapM_ line $ freeInArgs callable nameMap
+            mapM_ line =<< freeInArgs callable nameMap
             returnResult result pps
 
     signature = do
@@ -274,12 +287,13 @@ genCallable n symbol callable throwsGError = do
                      let jName = "j" ++ ucFirst name
                      line $ "Just " ++ jName ++ " -> do"
                      indent $ do
-                             converted <- convert jName (hToF $ argType arg)
+                             converted <- convert jName $ hToF (argType arg)
+                                                               (transfer arg)
                              line $ "return " ++ converted
                 return maybeName
-             else convert name (hToF $ argType arg)
+             else convert name $ hToF (argType arg) (transfer arg)
           DirectionInout ->
-              do name' <- convert name (hToF $ argType arg)
+              do name' <- convert name $ hToF (argType arg) (transfer arg)
                  name'' <- genConversion (prime name') $
                              literal $ M $ "malloc :: " ++ show (io $ ptr ft)
                  line $ "poke " ++ name'' ++ " " ++ name'
@@ -324,15 +338,14 @@ genCallable n symbol callable throwsGError = do
                t@(TCArray False _ _ _) ->
                    convertOutCArray t "result" nameMap (returnTransfer callable)
                t -> do
-                 result <- convert "result" (fToH $ returnType callable)
+                 result <- convert "result" $ fToH (returnType callable)
+                                                   (returnTransfer callable)
                  when (returnTransfer callable == TransferEverything) $
-                      mapM_ line $ freeElements t "result" undefined
+                      mapM_ line =<< freeElements t "result" undefined
                  when (returnTransfer callable /= TransferNothing) $
-                      mapM_ line $ freeContainer t "result"
+                      mapM_ line =<< freeContainer t "result"
                  return result
 
-    -- XXX: Should create ForeignPtrs for pointer results.
-    -- XXX: Check argument transfer.
     convertOut :: Map.Map String String -> CodeGen [String]
     convertOut nameMap = do
       -- Convert out parameters and result
@@ -348,12 +361,12 @@ genCallable n symbol callable throwsGError = do
                   convertOutCArray t aname' nameMap (transfer arg)
            t -> do
              peeked <- genConversion inName $ apply $ M "peek"
-             result <- convert peeked $ fToH $ argType arg
+             result <- convert peeked $ fToH (argType arg) (transfer arg)
              -- Free the memory associated with the out argument
              when (transfer arg == TransferEverything) $
-                  mapM_ line $ freeElements t peeked undefined
+                  mapM_ line =<< freeElements t peeked undefined
              when (transfer arg /= TransferNothing) $
-                  mapM_ line $ freeContainer t peeked
+                  mapM_ line =<< freeContainer t peeked
              return result
 
     returnResult :: String -> [String] -> CodeGen ()
@@ -375,12 +388,12 @@ genCallable n symbol callable throwsGError = do
     convertOutCArray t@(TCArray False fixed length _) aname nameMap transfer = do
       if fixed > -1
       then do
-        unpacked <- convert aname $ unpackCArray (show fixed) t
+        unpacked <- convert aname $ unpackCArray (show fixed) t transfer
         -- Free the memory associated with the array
         when (transfer == TransferEverything) $
-             mapM_ line $ freeElements t aname undefined
+             mapM_ line =<< freeElements t aname undefined
         when (transfer /= TransferNothing) $
-             mapM_ line $ freeContainer t aname
+             mapM_ line =<< freeContainer t aname
         return unpacked
       else do
         let lname = escapeReserved $ argName $ (args callable)!!length
@@ -389,12 +402,12 @@ genCallable n symbol callable throwsGError = do
                        Nothing -> error $ "Couldn't find out array length " ++
                                                    lname
         lname'' <- genConversion lname' $ apply $ M "peek"
-        unpacked <- convert aname $ unpackCArray lname'' t
+        unpacked <- convert aname $ unpackCArray lname'' t transfer
         -- Free the memory associated with the array
         when (transfer == TransferEverything) $
-             mapM_ line $ freeElements t aname lname''
+             mapM_ line =<< freeElements t aname lname''
         when (transfer /= TransferNothing) $
-             mapM_ line $ freeContainer t aname
+             mapM_ line =<< freeContainer t aname
         return unpacked
     -- Remove the warning, this should never be reached.
     convertOutCArray t _ _ _ =

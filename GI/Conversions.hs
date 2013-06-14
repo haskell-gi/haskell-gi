@@ -34,11 +34,14 @@ import GI.SymbolNaming
 import GI.Type
 import GI.Util
 
+import GI.Internal.ArgInfo (Transfer(..))
+
 toPtr con = "(\\(" ++ con ++ " x) -> x)"
 
 -- String identifying a constructor in the generated code, which is
--- either (by default) a pure function P, or a function returning
--- values on a monad M. 'Id' denotes the identity function.
+-- either (by default) a pure function (indicated by the P
+-- constructor) or a function returning values on a monad (M
+-- constructor). 'Id' denotes the identity function.
 data Constructor = P String | M String | Id
                    deriving (Eq,Show)
 instance IsString Constructor where
@@ -103,16 +106,44 @@ convert l c = do
   c' <- c
   genConversion l c'
 
+hObjectToF :: Type -> Transfer -> CodeGen Constructor
+hObjectToF t transfer = do
+  if transfer == TransferEverything
+  then do
+    isGO <- isGObject t
+    if isGO
+    then return $ M "refObject"
+    else do
+      line $ "-- XXX Transferring a non-GObject object!"
+      return "unsafeManagedPtrGetPtr"
+  else return "unsafeManagedPtrGetPtr"
+
+hBoxedToF :: Bool -> Transfer -> CodeGen Constructor
+hBoxedToF isBoxed transfer = do
+  if transfer == TransferEverything
+  then do
+    if isBoxed
+    then return $ M "copyBoxed"
+    else do
+      line $ "-- XXX Transferring a non-Boxed object!"
+      return "unsafeManagedPtrGetPtr"
+  else return "unsafeManagedPtrGetPtr"
+
 -- Given the Haskell and Foreign types, returns the name of the
 -- function marshalling between both.
-hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen Constructor
-hToF' t a hType fType
+hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
+            -> CodeGen Constructor
+hToF' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
     | Just (APIFlags _) <- a = return "fromIntegral"
-    | Just (APIObject _) <- a = return "(castPtr . unsafeManagedPtrGetPtr)"
-    | Just (APIInterface _) <- a = return "(castPtr . unsafeManagedPtrGetPtr)"
-    | ptr hType == fType = do
+    | Just (APIObject _) <- a = hObjectToF t transfer
+    | Just (APIInterface _) <- a = hObjectToF t transfer
+    | Just (APIStruct s) <- a = hBoxedToF (structIsBoxed s) transfer
+    | Just (APIUnion u) <- a = hBoxedToF (unionIsBoxed u) transfer
+    | TError <- t = hBoxedToF True transfer
+    | Just (APICallback _) <- a = do
+        line $ "--- XXX Callback types are not properly supported yet"
         let con = tyConName $ typeRepTyCon hType
         return $ P $ toPtr con
     | TByteArray <- t = return $ M "packGByteArray"
@@ -143,6 +174,10 @@ hToF' t a hType fType
     | TCArray _ _ _ _ <- t =
                          error $ "Don't know how to pack C array of type "
                                    ++ show t
+    | TGHash _ _ <- t = do
+        line $ "-- XXX Hash tables are not properly supported yet"
+        let con = tyConName $ typeRepTyCon hType
+        return $ P $ toPtr con
     | otherwise = return $ case (show hType, show fType) of
                ("[Char]", "CString") -> M "newCString"
                ("ByteString", "CString") -> M "byteStringToCString"
@@ -154,64 +189,88 @@ hToF' t a hType fType
                                         ++ "Internal type: "
                                         ++ show t
 
-hToF :: Type -> CodeGen Converter
-hToF (TGList t) = hToF_PackedType t "packGList"
-hToF (TGSList t) = hToF_PackedType t "packGSList"
-hToF (TGArray t) = hToF_PackedType t "packGArray"
-hToF (TPtrArray t) = hToF_PackedType t "packGPtrArray"
-hToF (TCArray zt _ _ t@(TInterface _ _)) = do
+hToF_PackedType t packer transfer = do
+  a <- findAPI t
+  hType <- haskellType t
+  fType <- foreignType t
+  innerConstructor <- hToF' t a hType fType transfer
+  return $ do
+    mapC innerConstructor
+    apply (M packer)
+
+hToF :: Type -> Transfer -> CodeGen Converter
+hToF (TGList t) transfer = hToF_PackedType t "packGList" transfer
+hToF (TGSList t) transfer = hToF_PackedType t "packGSList" transfer
+hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
+hToF (TPtrArray t) transfer = hToF_PackedType t "packGPtrArray" transfer
+hToF (TCArray zt _ _ t@(TInterface _ _)) transfer = do
   isScalar <- getIsScalar t
   let packer = if zt
                then "packZeroTerminated"
                else "pack"
   if isScalar
-  then hToF_PackedType t $ packer ++ "StorableArray"
-  else hToF_PackedType t $ packer ++ "PtrArray"
+  then hToF_PackedType t (packer ++ "StorableArray") transfer
+  else hToF_PackedType t (packer ++ "PtrArray") transfer
 
-hToF t = do
+hToF t transfer = do
   a <- findAPI t
   hType <- haskellType t
   fType <- foreignType t
-  constructor <- hToF' t a hType fType
+  constructor <- hToF' t a hType fType transfer
   return $ apply constructor
 
-hToF_PackedType t packer = do
-  a <- findAPI t
-  hType <- haskellType t
-  fType <- foreignType t
-  innerConstructor <- hToF' t a hType fType
-  return $ do
-    mapC innerConstructor
-    apply (M packer)
+boxedForeignPtr :: TypeRep -> Bool -> Transfer -> CodeGen Constructor
+boxedForeignPtr hType boxed transfer = do
+  let constructor = tyConName $ typeRepTyCon hType
+  case transfer of
+    TransferEverything ->
+        if boxed
+        then return $ M $ parenthesize $ "wrapBoxed " ++ constructor
+        else do
+          line $ "-- XXX (Leak) Got a transfer of an unboxed object"
+          return $ M $ parenthesize $
+           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+    _ ->
+        if boxed
+        then return $ M $ parenthesize $ "newBoxed " ++ constructor
+        else do
+          line $ "-- XXX Wrapping an unboxed object with no copy..."
+          return $ M $ parenthesize $
+           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
 
-findInterface :: Type -> CodeGen (Maybe Interface)
-findInterface t = do
-    a <- findAPI t
-    case a of
-         Just (APIInterface iface) -> return $ Just iface
-         _ -> return Nothing
+fObjectToH :: Type -> TypeRep -> Transfer -> CodeGen Constructor
+fObjectToH t hType transfer = do
+  let constructor = tyConName $ typeRepTyCon hType
+  isGO <- isGObject t
+  case transfer of
+    TransferEverything ->
+        if isGO
+        then return $ M $ parenthesize $ "wrapObject " ++ constructor
+        else do
+          line $ "-- XXX (Leak) Got a transfer of something not a GObject"
+          return $ M $ parenthesize $
+           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+    _ ->
+        if isGO
+        then return $ M $ parenthesize $ "newObject " ++ constructor
+        else do
+          line $ "-- XXX Wrapping not a GObject with no copy..."
+          return $ M $ parenthesize $
+           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
 
-fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> CodeGen Constructor
-fToH' t a hType fType
+fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
+         -> CodeGen Constructor
+fToH' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(toEnum . fromIntegral)"
     | Just (APIFlags _) <- a = return "fromIntegral"
-    | ptr hType == fType = do
-          let constructor = tyConName $ typeRepTyCon hType
-          isGO <- isGObject t
-          if isGO
-          then return $ M $ parenthesize $ "makeNewObject " ++ constructor
-          else do
-            --- These are for routines that return abstract interfaces
-            --- which are not GObjects.
-            maybeIface <- findInterface t
-            case maybeIface of
-              Just _ -> do
-                line $ "-- XXX (Leak) Interface does not require GObject : "
-                         ++ show t
-                return $ M $ parenthesize $
-                       "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
-              Nothing -> return $ P constructor
+    | TError <- t = case transfer of
+        TransferEverything -> return $ M "(wrapBoxed GI.GLib.Error)"
+        _ -> return $ M "(newBoxed GI.GLib.Error)"
+    | Just (APIStruct s) <- a = boxedForeignPtr hType (structIsBoxed s) transfer
+    | Just (APIUnion u) <- a = boxedForeignPtr hType (unionIsBoxed u) transfer
+    | Just (APIObject _) <- a = fObjectToH t hType transfer
+    | Just (APIInterface _) <- a = fObjectToH t hType transfer
     | TCArray True _ _ (TBasicType TUTF8) <- t =
         return $ M "unpackZeroTerminatedUTF8CArray"
     | TCArray True _ _ (TBasicType TFileName) <- t =
@@ -240,37 +299,36 @@ fToH' t a hType fType
                                         ++ "Internal type: "
                                         ++ show t
 
-
-fToH :: Type -> CodeGen Converter
-
-fToH (TGList t) = fToH_PackedType t "unpackGList"
-fToH (TGSList t) = fToH_PackedType t "unpackGSList"
-fToH (TGArray t) = fToH_PackedType t "unpackGArray"
-fToH (TPtrArray t) = fToH_PackedType t "unpackGPtrArray"
-fToH (TCArray True _ _ t@(TInterface _ _)) = do
-  isScalar <- getIsScalar t
-  if isScalar
-  then fToH_PackedType t "unpackZeroTerminatedStorableArray"
-  else fToH_PackedType t "unpackZeroTerminatedPtrArray"
-
-fToH t = do
+fToH_PackedType t unpacker transfer = do
   a <- findAPI t
   hType <- haskellType t
   fType <- foreignType t
-  constructor <- fToH' t a hType fType
-  return $ apply constructor
-
-fToH_PackedType t unpacker = do
-  a <- findAPI t
-  hType <- haskellType t
-  fType <- foreignType t
-  innerConstructor <- fToH' t a hType fType
+  innerConstructor <- fToH' t a hType fType transfer
   return $ do
     apply (M unpacker)
     mapC innerConstructor
 
-unpackCArray :: String -> Type -> CodeGen Converter
-unpackCArray length (TCArray False _ _ t) =
+fToH :: Type -> Transfer -> CodeGen Converter
+
+fToH (TGList t) transfer = fToH_PackedType t "unpackGList" transfer
+fToH (TGSList t) transfer = fToH_PackedType t "unpackGSList" transfer
+fToH (TGArray t) transfer = fToH_PackedType t "unpackGArray" transfer
+fToH (TPtrArray t) transfer = fToH_PackedType t "unpackGPtrArray" transfer
+fToH (TCArray True _ _ t@(TInterface _ _)) transfer = do
+  isScalar <- getIsScalar t
+  if isScalar
+  then fToH_PackedType t "unpackZeroTerminatedStorableArray" transfer
+  else fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
+
+fToH t transfer = do
+  a <- findAPI t
+  hType <- haskellType t
+  fType <- foreignType t
+  constructor <- fToH' t a hType fType transfer
+  return $ apply constructor
+
+unpackCArray :: String -> Type -> Transfer -> CodeGen Converter
+unpackCArray length (TCArray False _ _ t) transfer =
   case t of
     TBasicType TUTF8 -> return $ apply $ M $ parenthesize $
                         "unpackUTF8CArrayWithLength " ++ length
@@ -289,7 +347,7 @@ unpackCArray length (TCArray False _ _ t) =
            isScalar <- getIsScalar t
            hType <- haskellType t
            fType <- foreignType t
-           innerConstructor <- fToH' t a hType fType
+           innerConstructor <- fToH' t a hType fType transfer
            let unpacker = if isScalar
                           then "unpackStorableArrayWithLength"
                           else "unpackPtrArrayWithLength"
@@ -299,7 +357,7 @@ unpackCArray length (TCArray False _ _ t) =
     _ -> error $ "unpackCArray : Don't know how to unpack C Array of type "
                  ++ show t
 
-unpackCArray _ _ = error $ "unpackCArray : unexpected array type."
+unpackCArray _ _ _ = error $ "unpackCArray : unexpected array type."
 
 -- The signal marshaller C code has some built in support for basic
 -- types, so we only generate conversions for things that the
@@ -315,17 +373,22 @@ marshallFType t@(TBasicType TFileName) = foreignType t
 marshallFType t@(TBasicType _) = haskellType t
 marshallFType a = foreignType a
 
-convertFMarshall :: String -> Type -> CodeGen String
-convertFMarshall name t@(TBasicType TUTF8) = convert name (fToH t)
-convertFMarshall name t@(TBasicType TFileName) = convert name (fToH t)
-convertFMarshall name (TBasicType _) = return name
-convertFMarshall name t = convert name (fToH t)
+convertFMarshall :: String -> Type -> Transfer -> CodeGen String
+convertFMarshall name t@(TBasicType TUTF8) transfer =
+    convert name $ fToH t transfer
+convertFMarshall name t@(TBasicType TFileName) transfer =
+    convert name $ fToH t transfer
+convertFMarshall name (TBasicType _ ) _ = return name
+convertFMarshall name t transfer = convert name $ fToH t transfer
 
-convertHMarshall :: String -> Type -> CodeGen String
-convertHMarshall name t@(TBasicType TUTF8) = convert name (hToF t)
-convertHMarshall name t@(TBasicType TFileName) = convert name (hToF t)
-convertHMarshall name (TBasicType _) = return name
-convertHMarshall name t = convert name (hToF t)
+convertHMarshall :: String -> Type -> Transfer -> CodeGen String
+convertHMarshall name t@(TBasicType TUTF8) transfer =
+    convert name $ hToF t transfer
+convertHMarshall name t@(TBasicType TFileName) transfer =
+    convert name $ hToF t transfer
+convertHMarshall name (TBasicType _) _ = return name
+convertHMarshall name t transfer =
+    convert name $ hToF t transfer
 
 haskellBasicType TVoid     = (ptr (typeOf ()))
 haskellBasicType TBoolean  = typeOf True

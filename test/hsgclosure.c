@@ -275,11 +275,11 @@ gtk2hs_value_from_haskellobj(GValue *value, HaskellObj obj) {
     case G_TYPE_POINTER:
         g_value_set_pointer(value, rts_getPtr(obj));
         return;
-/*    case G_TYPE_BOXED: {
+    case G_TYPE_BOXED: {
         g_value_set_boxed(value, obj);
         break;
     }
-    case G_TYPE_PARAM:
+/*    case G_TYPE_PARAM:
         g_value_set_param(value, (obj));
         break;                                          */
     case G_TYPE_OBJECT:
@@ -294,4 +294,11 @@ gtk2hs_value_from_haskellobj(GValue *value, HaskellObj obj) {
 int check_object_type(void *instance, GType type)
 {
   return !!G_TYPE_CHECK_INSTANCE_TYPE(instance, type);
+}
+
+/* Auxiliary function for freeing boxed types */
+void boxed_free_helper (GType *gtype, void *boxed)
+{
+  g_boxed_free (*gtype, boxed);
+  free (gtype);
 }

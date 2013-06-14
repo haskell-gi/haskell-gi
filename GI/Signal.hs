@@ -87,12 +87,12 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
                        case argType arg of
                          t@(TCArray False fixed length _) -> do
                            if fixed > -1
-                           then convert name $ unpackCArray (show fixed) t
+                           then convert name $ unpackCArray (show fixed) t (transfer arg)
                            else do
                              let lname = escapeReserved $ argName $
                                          (args cb)!!length
-                             convert name $ unpackCArray lname t
-                         _ -> convertFMarshall name (argType arg)
+                             convert name $ unpackCArray lname t (transfer arg)
+                         _ -> convertFMarshall name (argType arg) (transfer arg)
           let hOutArgNames = map (escapeReserved . argName) hOutArgs
               hRetval = case (returnType cb, hOutArgNames) of
                           (TBasicType TVoid, []) -> ""
@@ -113,4 +113,5 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
             TBasicType TVoid -> line $ "return ()"
             _ -> do
                retval <- convertHMarshall "ret" (returnType cb)
+                                                (returnTransfer cb)
                line $ "return " ++ retval

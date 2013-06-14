@@ -20,6 +20,7 @@ module GI.API
     ) where
 
 import Data.Word
+import Data.Maybe (isJust)
 
 import GI.Internal.Types
 import GI.Internal.ArgInfo
@@ -170,6 +171,7 @@ toField fi =
 
 data Struct = Struct {
     structIsBoxed :: Bool,
+    structTypeInit :: Maybe String,
     structFields :: [Field],
     structMethods :: [(Name, Function)],
     isGTypeStruct :: Bool }
@@ -177,7 +179,9 @@ data Struct = Struct {
 
 toStruct :: StructInfo -> Struct
 toStruct si = Struct {
-                structIsBoxed = gtypeIsBoxed $ registeredTypeInfoGType si,
+                structIsBoxed = isJust (registeredTypeInfoTypeInit si) &&
+                                gtypeIsBoxed (registeredTypeInfoGType si),
+                structTypeInit = registeredTypeInfoTypeInit si,
                 structFields = map toField $ structInfoFields si,
                 structMethods = map (withName toFunction)
                                 (structInfoMethods si),
@@ -187,13 +191,16 @@ toStruct si = Struct {
 
 data Union = Union {
     unionIsBoxed :: Bool,
+    unionTypeInit :: Maybe String,
     unionFields :: [Field],
     unionMethods :: [(Name, Function)] }
     deriving Show
 
 toUnion :: UnionInfo -> Union
 toUnion ui = Union {
-               unionIsBoxed = gtypeIsBoxed $ registeredTypeInfoGType ui,
+               unionIsBoxed = isJust (registeredTypeInfoTypeInit ui) &&
+                              gtypeIsBoxed (registeredTypeInfoGType ui),
+               unionTypeInit = registeredTypeInfoTypeInit ui,
                unionFields = map toField $ unionInfoFields ui,
                unionMethods = map (withName toFunction)
                                 (unionInfoMethods ui) }

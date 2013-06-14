@@ -5,6 +5,7 @@ module GI.GObject
     , parseObjectHierarchy
     , instanceTree
     , isGObject
+    , apiIsGObject
     ) where
 
 import Data.Map (Map)
