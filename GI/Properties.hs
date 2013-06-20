@@ -80,8 +80,7 @@ genPropertySetter :: Name -> String -> Property -> CodeGen ()
 genPropertySetter n pName prop = group $ do
   oName <- upperName n
   (constraints, t) <- attrType prop
-  let constraints' = [klass oName ++ " o", "GObject o", "ManagedPtr o"]
-                     ++ constraints
+  let constraints' = (goConstraint oName ++ " o"):constraints
   tStr <- propTypeStr $ propType prop
   line $ "set" ++ pName ++ " :: (" ++ intercalate ", " constraints'
            ++ ") => o -> " ++ t ++ " -> IO ()"
@@ -92,7 +91,7 @@ genPropertyGetter :: Name -> String -> Property -> CodeGen ()
 genPropertyGetter n pName prop = group $ do
   oName <- upperName n
   outType <- haskellType (propType prop)
-  let constraints = "(" ++ klass oName ++ " o, ManagedPtr o, GObject o)"
+  let constraints = "(" ++ goConstraint oName ++ " o)"
   line $ "get" ++ pName ++ " :: " ++ constraints ++
                 " => o -> " ++ show (io outType)
   tStr <- propTypeStr $ propType prop
@@ -109,7 +108,11 @@ genPropertyConstructor pName prop = group $ do
            then parenthesize t
            else t
   tStr <- propTypeStr $ propType prop
-  line $ "construct" ++ pName ++ " :: (" ++ intercalate ", " constraints ++ ") => "
+  let constraints' =
+          case constraints of
+            [] -> ""
+            _ -> parenthesize (intercalate ", " constraints) ++ " => "
+  line $ "construct" ++ pName ++ " :: " ++ constraints'
            ++ t' ++ " -> IO ([Char], GValuePtr)"
   line $ "construct" ++ pName ++ " val = constructObjectProperty" ++ tStr
            ++ " \"" ++ propName prop ++ "\" val"
@@ -170,8 +173,7 @@ genProperties n props = do
         then return ([], "()")
         else attrType prop
 
-    let constraints' = [klass name ++ " o", "GObject o", "ManagedPtr o"]
-                       ++ constraints
+    let constraints' = (goConstraint name ++ " o") : constraints
         lens = lcFirst pName
 
     group $ do

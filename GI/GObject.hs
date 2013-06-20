@@ -1,7 +1,6 @@
-{-# LANGUAGE RecordWildCards, NamedFieldPuns, OverloadedStrings #-}
-
 module GI.GObject
     ( klass
+    , goConstraint
     , parseObjectHierarchy
     , instanceTree
     , isGObject
@@ -17,6 +16,7 @@ import GI.Code
 import GI.Type
 
 klass n = n ++ "Klass"
+goConstraint n = n ++ "K"
 
 -- Compute the (ordered) list of parents of the current object.
 instanceTree :: Map Name Name -> Name -> [Name]

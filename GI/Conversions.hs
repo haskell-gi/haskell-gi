@@ -384,20 +384,18 @@ argumentType letters@(l:ls) t   = do
   case api of
     Just (APIInterface _) -> do
              isGO <- isGObject t
-             let constraints = [interfaceClassName s ++ " " ++ [l],
-                                "ManagedPtr " ++ [l]]
-                               ++ if isGO
-                                  then ["GObject " ++ [l]]
-                                  else []
+             let constraints =
+                     if isGO
+                     then [goConstraint s ++ " " ++ [l]]
+                     else [interfaceClassName s ++ " " ++ [l],
+                           "ManagedPtr " ++ [l]]
              return (ls, [l], constraints)
     -- Instead of restricting to the actual class,
     -- we allow for any object descending from it.
     Just (APIObject _) -> do
         isGO <- isGObject t
         if isGO
-        then return (ls, [l], [klass s ++ " " ++ [l],
-                               "ManagedPtr " ++ [l],
-                               "GObject " ++ [l]])
+        then return (ls, [l], [goConstraint s ++ " " ++ [l]])
         else return (letters, s, [])
     _ -> return (letters, s, [])
 

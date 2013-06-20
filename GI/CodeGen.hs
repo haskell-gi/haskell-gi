@@ -232,13 +232,23 @@ genMethod cn mn (Function {
               else c'
     genCallable mn' sym c'' (FunctionThrows `elem` fs)
 
+-- Since all GObjects are instances of their own class, ManagedPtr and
+-- GObject, the signatures can get a little cumbersome. We use the
+-- ConstraintKinds extension to make things prettier by defining a
+-- constraint synonym.
+genUnifiedConstraint name' =
+  line $ "type " ++ goConstraint name'
+           ++ " a = (ManagedPtr a, GObject a, " ++ klass name' ++ " a)"
+
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
 genGObjectType iT n = do
   name' <- upperName n
   let className = klass name'
 
-  group $ line $ "class " ++ className ++ " o"
+  line $ "class " ++ className ++ " o"
+
+  genUnifiedConstraint name'
 
   manageManagedPtr n
 
@@ -346,7 +356,9 @@ genInterface n iface = do
 
   isGO <- apiIsGObject n (APIInterface iface)
   if isGO
-  then manageManagedPtr n
+  then do
+    genUnifiedConstraint name'
+    manageManagedPtr n
   else manageUnManagedPtr n
 
   group $ do
@@ -416,7 +428,7 @@ genModule :: String -> [(Name, API)] -> CodeGen ()
 genModule name apis = do
     line $ "-- Generated code."
     blank
-    line $ "{-# LANGUAGE ForeignFunctionInterface #-}"
+    line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds #-}"
     blank
     -- XXX: This should be a command line option.
     let installationPrefix = "GI."
