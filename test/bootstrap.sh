@@ -68,6 +68,9 @@ generate \
     -i Atk \
     Gtk > GI/Gtk.hs
 
+LDFLAGS=$(echo $(pkg-config --libs gobject-2.0) | sed -e "s/-l/--lflag=-l/g")
+
 ghc -c hsgclosure.c $(pkg-config --cflags gobject-2.0)
-hsc2hs-ghc GI/Utils/BasicTypes.hsc $(pkg-config --cflags gobject-2.0)
+hsc2hs GI/Utils/BasicTypes.hsc $(pkg-config --cflags gobject-2.0)
+hsc2hs GI/Utils/Properties.hsc $(pkg-config --cflags gobject-2.0) $LDFLAGS
 ghc --make testGtk.hs hsgclosure.o $(pkg-config --libs gtk+-3.0)

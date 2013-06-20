@@ -15,7 +15,6 @@ import qualified Data.Map as Map
 import GI.API
 import GI.Code
 import GI.Conversions
-import GI.GObject
 import GI.SymbolNaming
 import GI.Transfer
 import GI.Type
@@ -63,34 +62,6 @@ mkForeignImport symbol callable throwsGError = foreignImport $ do
                              TBasicType TVoid -> return $ typeOf ()
                              _  -> foreignType (returnType callable)
 
--- Given a type find the typeclasses the type belongs to, and return
--- the representation of the type in the function signature and the
--- list of typeclass constraints for the type.
-argumentType :: [Char] -> Type -> CodeGen ([Char], String, [String])
-argumentType [] _               = error "out of letters"
-argumentType letters (TGList a) = do
-  (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" ++ name ++ "]", constraints)
-argumentType letters (TGSList a) = do
-  (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" ++ name ++ "]", constraints)
-argumentType letters@(l:ls) t   = do
-  api <- findAPI t
-  s <- show <$> haskellType t
-  case api of
-    Just (APIInterface _) -> return (ls, [l],
-                                     [interfaceClassName s ++ " " ++ [l],
-                                      "ManagedPtr " ++ [l]])
-    -- Instead of restricting to the actual class,
-    -- we allow for any object descending from it.
-    Just (APIObject _) -> do
-        isGO <- isGObject t
-        if isGO
-        then return (ls, [l], [klass s ++ " " ++ [l],
-                               "ManagedPtr " ++ [l]])
-        else return (letters, s, [])
-    _ -> return (letters, s, [])
-
 -- Given an (in) argument to a function, return whether it should be
 -- wrapped in a maybe type (useful for nullable types).
 wrapMaybe :: Arg -> Bool
@@ -114,8 +85,6 @@ inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
     rec _ [] = return ([], [])
     rec letters (arg:args) = do
       (ls, t, cons) <- argumentType letters $ argType arg
-      --- XXX G(S)List types, and some containers (such as C-arrays)
-      --- are always nullable, we do not need to map those to Maybe types.
       let t' = if wrapMaybe arg
                then "Maybe (" ++ t ++ ")"
                else t
@@ -186,18 +155,6 @@ freeInArgs = freeInArgs' freeInArg
 -- callable variables. This is run in case there is an error during
 -- the call.
 freeInArgsOnError = freeInArgs' freeInArgOnError
-
--- Returns whether the given type corresponds to a ManagedPtr
--- instance (a thin wrapper over a ForeignPtr).
-isManaged   :: Type -> CodeGen Bool
-isManaged t = do
-  a <- findAPI t
-  case a of
-    Just (APIObject _)    -> return True
-    Just (APIInterface _) -> return True
-    Just (APIStruct _)    -> return True
-    Just (APIUnion _)     -> return True
-    _                     -> return False
 
 -- XXX We should free the memory allocated for the [a] -> Glist (a')
 -- etc. conversions.
@@ -417,14 +374,14 @@ genCallable n symbol callable throwsGError = do
     touchInArgs = forM_ (args callable) $ \arg -> do
         when (direction arg == DirectionIn) $ do
            let name = escapeReserved $ argName arg
-           case argType arg of
-             (TGList a) -> do
+           case elementType (argType arg) of
+             Just a -> do
                managed <- isManaged a
-               when managed $ line $ "mapM_ touchManagedPtr " ++ name
-             (TGSList a) -> do
-               managed <- isManaged a
-               when managed $ line $ "mapM_ touchManagedPtr " ++ name
-             _ -> do
+               when managed $ line $
+                    if wrapMaybe arg
+                    then "whenJust " ++ name ++ " (mapM_ touchManagedPtr)"
+                    else "mapM_ touchManagedPtr " ++ name
+             Nothing -> do
                managed <- isManaged (argType arg)
                when managed $ line $ if wrapMaybe arg
                     then "whenJust " ++ name ++ " touchManagedPtr"

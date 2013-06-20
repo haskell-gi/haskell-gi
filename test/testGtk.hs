@@ -5,6 +5,9 @@ import qualified GI.Gtk as Gtk
 import qualified GI.Gio as Gio
 import qualified GI.GLib as GLib
 
+import GI.Utils.Attributes
+import GI.Utils.Properties (new)
+
 import qualified Data.ByteString.Char8 as B
 import Data.Word
 
@@ -85,11 +88,10 @@ main = do
                   putStrLn "Closing the program"
                   mainQuit
 
-        grid <- gridNew
-        orientableSetOrientation grid OrientationVertical
+        grid <- new Grid [orientableOrientation := OrientationVertical]
         containerAdd win grid
 
-        label <- labelNew "Test"
+        label <- new Label [labelLabel := "Test"]
         widgetShow label
         label <!> onLabelActivateLink $ \uri -> do
                       putStrLn $ uri ++ " clicked."
@@ -97,9 +99,21 @@ main = do
                                   -- the browser
         containerAdd grid label
 
-        button <- buttonNewWithLabel "Click me!"
-        button <!> onButtonClicked $
-                labelSetMarkup label "This is <a href=\"http://www.gnome.org\">a test</a>"
+        button <- new Button [buttonLabel := "Click me!",
+                              buttonRelief := ReliefStyleNone]
+        button <!> onButtonClicked $ do
+                set label [labelLabel := "This is <a href=\"http://www.gnome.org\">a test</a>",
+                           labelUseMarkup := True ]
+                -- set button [widgetSensitive := False, ...] would be
+                -- more natural, but this serves as a test of
+                -- attribute updating functions.
+                set button [widgetSensitive :~ not,
+                            buttonLabel := "Thanks for clicking!"]
+                sensitive <- get button widgetSensitive
+                label <- get button buttonLabel
+                putStrLn $ "New button text is "
+                             ++ show label
+                             ++ " and sensitive is " ++ show sensitive
         containerAdd grid button
 
         testGio

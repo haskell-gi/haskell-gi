@@ -3,6 +3,7 @@ module GI.Internal.PropertyInfo
     ( ParamFlag(..)
     , propertyInfoFlags
     , propertyInfoType
+    , propertyInfoTransfer
     )
 where
 
@@ -12,6 +13,7 @@ import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 
 import GI.Internal.ParamFlag
+import GI.Internal.ArgInfo (Transfer(..))
 import GI.Util (toFlags)
 
 {# import GI.Internal.Types #}
@@ -40,3 +42,6 @@ propertyInfoType :: PropertyInfoClass pic => pic -> TypeInfo
 propertyInfoType pi = unsafePerformIO $ TypeInfo <$> castPtr <$>
     {# call get_type #} (stupidCast pi)
 
+propertyInfoTransfer :: PropertyInfoClass pic => pic -> Transfer
+propertyInfoTransfer pi = unsafePerformIO $ toEnum <$> fromIntegral <$>
+    {# call get_ownership_transfer #} (stupidCast pi)

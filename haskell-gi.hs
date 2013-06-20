@@ -134,6 +134,15 @@ processAPI options name = do
                            -- but it is nto marked as such in the
                            -- bindings.
                            , "g_tls_password_get_value"
+                           -- This clashes with the corresponding
+                           -- property getter.
+                           , "gtk_widget_is_focus"
+                           -- Same for some other properties
+                           , "gtk_widget_has_focus"
+                           , "gtk_widget_has_default"
+                           , "gtk_mount_operation_is_showing"
+                           , "gtk_window_has_toplevel_focus"
+                           , "gtk_window_is_active"
                            -- The size of the array depends on a
                            -- complicated combination of the rest of
                            -- the arguments.

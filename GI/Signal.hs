@@ -11,7 +11,6 @@ import GI.API
 import GI.Callable (hOutType, arrayLengths)
 import GI.Code
 import GI.Conversions
-import GI.GObject
 import GI.SymbolNaming
 import GI.Type
 import GI.Util (split)
@@ -59,19 +58,18 @@ genSignal sn (Signal { sigCallable = cb }) on _o = do
              ++ signalConnectorName ++ " obj cb True"
 
   group $ do
-    prefixGO <- qualify "GObject"
     let fullName = "connect" ++ signalConnectorName
         signatureConstraints =
-          "(ManagedPtr a, " ++ klass (prefixGO ++ "Object") ++ " a) =>"
+          "(ManagedPtr a, GObject a) =>"
         signatureArgs = "a -> " ++ cbType ++ " -> Bool -> IO Word32"
     line $ fullName ++ " :: " ++ signatureConstraints
     line $ replicate (4 + length fullName) ' ' ++ signatureArgs
     line $ fullName ++ " obj cb after = "
     indent $ do
-        line $ prefixGO ++ "connectSignal obj \"" ++ (name sn) ++ "\" cb' after"
+        line $ "connectSignal obj \"" ++ (name sn) ++ "\" cb' after"
         line "where"
     indent $ indent $ do
-        line $ "cb' :: Ptr " ++ prefixGO ++ "Object ->"
+        line $ "cb' :: Ptr () ->"
         indent $ do forM_ (args cb) $ \arg -> do
                        ft <- marshallFType $ argType arg
                        line $ show ft ++ " ->"

@@ -14,6 +14,12 @@ module GI.Conversions
     , haskellType
     , foreignType
 
+    , argumentType
+    , elementType
+    , isManaged
+
+    , getIsScalar
+
     , apply
     , mapC
     , literal
@@ -26,6 +32,8 @@ import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import GHC.Exts (IsString(..))
 import Data.Int
 import Data.Word
+
+import Foreign.C
 
 import GI.API
 import GI.Code
@@ -359,6 +367,40 @@ unpackCArray length (TCArray False _ _ t) transfer =
 
 unpackCArray _ _ _ = error $ "unpackCArray : unexpected array type."
 
+-- Given a type find the typeclasses the type belongs to, and return
+-- the representation of the type in the function signature and the
+-- list of typeclass constraints for the type.
+argumentType :: [Char] -> Type -> CodeGen ([Char], String, [String])
+argumentType [] _               = error "out of letters"
+argumentType letters (TGList a) = do
+  (ls, name, constraints) <- argumentType letters a
+  return (ls, "[" ++ name ++ "]", constraints)
+argumentType letters (TGSList a) = do
+  (ls, name, constraints) <- argumentType letters a
+  return (ls, "[" ++ name ++ "]", constraints)
+argumentType letters@(l:ls) t   = do
+  api <- findAPI t
+  s <- show <$> haskellType t
+  case api of
+    Just (APIInterface _) -> do
+             isGO <- isGObject t
+             let constraints = [interfaceClassName s ++ " " ++ [l],
+                                "ManagedPtr " ++ [l]]
+                               ++ if isGO
+                                  then ["GObject " ++ [l]]
+                                  else []
+             return (ls, [l], constraints)
+    -- Instead of restricting to the actual class,
+    -- we allow for any object descending from it.
+    Just (APIObject _) -> do
+        isGO <- isGObject t
+        if isGO
+        then return (ls, [l], [klass s ++ " " ++ [l],
+                               "ManagedPtr " ++ [l],
+                               "GObject " ++ [l]])
+        else return (letters, s, [])
+    _ -> return (letters, s, [])
+
 -- The signal marshaller C code has some built in support for basic
 -- types, so we only generate conversions for things that the
 -- marshaller cannot do itself. (This list should be kept in sync with
@@ -403,8 +445,8 @@ haskellBasicType TUInt64   = typeOf (0 :: Word64)
 haskellBasicType TGType    = "GType" `con` []
  -- XXX Text may be more appropriate
 haskellBasicType TUTF8     = typeOf ("" :: String)
-haskellBasicType TFloat    = typeOf (0 :: Float)
-haskellBasicType TDouble   = typeOf (0 :: Double)
+haskellBasicType TFloat    = typeOf (0 :: CFloat)
+haskellBasicType TDouble   = typeOf (0 :: CDouble)
 haskellBasicType TUniChar  = typeOf ('\0' :: Char)
 haskellBasicType TFileName = "ByteString" `con` []
 
@@ -471,7 +513,7 @@ foreignType t@TError = ptr <$> haskellType t
 foreignType t@(TInterface ns n) = do
   isScalar <- getIsScalar t
   if isScalar
-  then return $ "Word" `con` []
+  then return $ "CUInt" `con` []
   else do
     prefix <- qualify ns
     return $ ptr $ (prefix ++ n) `con` []
@@ -484,3 +526,26 @@ getIsScalar t = do
     (Just (APIEnum _)) -> return True
     (Just (APIFlags _)) -> return True
     _ -> return False
+
+-- Returns whether the given type corresponds to a ManagedPtr
+-- instance (a thin wrapper over a ForeignPtr).
+isManaged   :: Type -> CodeGen Bool
+isManaged t = do
+  a <- findAPI t
+  case a of
+    Just (APIObject _)    -> return True
+    Just (APIInterface _) -> return True
+    Just (APIStruct _)    -> return True
+    Just (APIUnion _)     -> return True
+    _                     -> return False
+
+-- If the given type maps to a list in Haskell, return the type of the
+-- elements.
+elementType :: Type -> Maybe Type
+elementType (TCArray _ _ _ (TBasicType TUInt8)) = Nothing -- ByteString
+elementType (TCArray _ _ _ t) = Just t
+elementType (TGArray t) = Just t
+elementType (TPtrArray t) = Just t
+elementType (TGList t) = Just t
+elementType (TGSList t) = Just t
+elementType _ = Nothing

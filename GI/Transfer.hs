@@ -13,6 +13,7 @@ import Data.Maybe (fromMaybe)
 
 import GI.API
 import GI.Code
+import GI.Conversions
 import GI.GObject
 import GI.Type
 import GI.Util
@@ -29,7 +30,7 @@ basicFreeFn (TInterface _ _) = Nothing
 basicFreeFn (TCArray _ _ _ _) = Just "F.free"
 basicFreeFn (TGArray _) = Just "unrefGArray"
 basicFreeFn (TPtrArray _) = Just "unrefPtrArray"
-basicFreeFn (TByteArray) = Just "unrefByteArray"
+basicFreeFn (TByteArray) = Just "unrefGByteArray"
 basicFreeFn (TGList _) = Just "g_list_free"
 basicFreeFn (TGSList _) = Just "g_slist_free"
 basicFreeFn (TGHash _ _) = Nothing
@@ -79,22 +80,11 @@ basicFreeFnOnError t@(TInterface _ _) transfer = do
 basicFreeFnOnError (TCArray _ _ _ _) _ = return $ Just "F.free"
 basicFreeFnOnError (TGArray _) _ = return $ Just "unrefGArray"
 basicFreeFnOnError (TPtrArray _) _ = return $ Just "unrefPtrArray"
-basicFreeFnOnError (TByteArray) _ = return $ Just "unrefByteArray"
+basicFreeFnOnError (TByteArray) _ = return $ Just "unrefGByteArray"
 basicFreeFnOnError (TGList _) _ = return $ Just "g_list_free"
 basicFreeFnOnError (TGSList _) _ = return $ Just "g_slist_free"
 basicFreeFnOnError (TGHash _ _) _ = return Nothing
 basicFreeFnOnError (TError) _ = return Nothing
-
--- If the given type maps to a list in Haskell, return the type of the
--- elements.
-elementType :: Type -> Maybe Type
-elementType (TCArray _ _ _ (TBasicType TUInt8)) = Nothing -- ByteString
-elementType (TCArray _ _ _ t) = Just t
-elementType (TGArray t) = Just t
-elementType (TPtrArray t) = Just t
-elementType (TGList t) = Just t
-elementType (TGSList t) = Just t
-elementType _ = Nothing
 
 -- Return the name of the function mapping over elements in a
 -- container type.

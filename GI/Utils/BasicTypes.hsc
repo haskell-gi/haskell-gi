@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module GI.Utils.BasicTypes
     ( GType
+    , GValuePtr
     , GArray(..)
     , GPtrArray(..)
     , GByteArray(..)
@@ -21,7 +22,7 @@ module GI.Utils.BasicTypes
     , unrefPtrArray
     , packGByteArray
     , unpackGByteArray
-    , unrefByteArray
+    , unrefGByteArray
     , packByteString
     , packZeroTerminatedByteString
     , unpackByteStringWithLength
@@ -68,6 +69,8 @@ import qualified Data.ByteString.Internal as BI
 #include <glib-object.h>
 
 type GType = #type GType
+
+type GValuePtr = Ptr ()
 
 data GArray a = GArray (Ptr (GArray a))
 data GPtrArray a = GPtrArray (Ptr (GPtrArray a))
@@ -179,7 +182,7 @@ foreign import ccall unsafe "g_byte_array_new" g_byte_array_new ::
     IO (Ptr GByteArray)
 foreign import ccall unsafe "g_byte_array_append" g_byte_array_append ::
     Ptr GByteArray -> Ptr a -> CUInt -> IO (Ptr GByteArray)
-foreign import ccall unsafe "g_byte_array_unref" unrefByteArray ::
+foreign import ccall unsafe "g_byte_array_unref" unrefGByteArray ::
    Ptr GByteArray -> IO ()
 
 packGByteArray :: ByteString -> IO (Ptr GByteArray)

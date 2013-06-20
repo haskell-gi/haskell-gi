@@ -1,7 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module GI.Utils.ManagedPtr
     ( ManagedPtr(..)
+    , withManagedPtr
     , BoxedObject(..)
+    , GObject(..)
+    , castTo
+    , connectSignal
     , newObject
     , wrapObject
     , refObject
@@ -13,15 +17,62 @@ module GI.Utils.ManagedPtr
     ) where
 
 import Foreign.Safe
+import Foreign.C
+import Control.Monad (when)
+
 import GI.Utils.BasicTypes (GType)
 
 class ManagedPtr a where
     unsafeManagedPtrGetPtr :: a -> Ptr b
     touchManagedPtr        :: a -> IO ()
 
+withManagedPtr :: ManagedPtr a => a -> (Ptr a -> IO c) -> IO c
+withManagedPtr managed action = do
+  let ptr = unsafeManagedPtrGetPtr managed
+  result <- action ptr
+  touchManagedPtr managed
+  return result
+
 class BoxedObject a where
     boxedType :: a -> IO GType -- This should not use the value of its
                                -- argument.
+
+class GObject a where
+    gobjectType :: a -> IO GType -- This should not use the value of
+                                 -- its argument.
+
+-- Safe casting machinery
+foreign import ccall unsafe "check_object_type"
+    c_check_object_type :: Ptr o -> GType -> CInt
+
+castTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
+          (ForeignPtr o' -> o') -> [Char] -> o -> IO o'
+castTo constructor typeName obj =
+    withManagedPtr obj $ \objPtr -> do
+      t <- gobjectType (undefined :: o')
+      when (c_check_object_type objPtr t /= 1) $
+         error $ "Cannot cast object to " ++ typeName
+      newObject constructor objPtr
+
+-- Connecting GObjects to signals
+foreign import ccall unsafe "gtk2hs_closure_new"
+  gtk2hs_closure_new :: StablePtr a -> IO (Ptr ())
+
+foreign import ccall "g_signal_connect_closure" g_signal_connect_closure' ::
+    Ptr a ->                                -- instance
+    CString ->                              -- detailed_signal
+    Ptr b ->                                -- closure
+    CInt ->                                 -- after
+    IO Word32
+
+connectSignal :: (GObject o, ManagedPtr o) =>
+                  o -> [Char] -> a -> Bool -> IO Word32
+connectSignal object signal fn after = do
+      closure <- newStablePtr fn >>= gtk2hs_closure_new
+      signal' <- newCString signal
+      withManagedPtr object $ \objPtr ->
+          g_signal_connect_closure' objPtr signal' closure
+                      ((fromIntegral . fromEnum) after)
 
 -- Reference counting for constructors
 foreign import ccall unsafe "&g_object_unref"
@@ -31,24 +82,24 @@ foreign import ccall "g_object_ref" g_object_ref ::
     Ptr a -> IO (Ptr a)
 
 -- Construct a Haskell wrapper for a GObject, making a copy.
-newObject :: (ForeignPtr a -> a) -> Ptr b -> IO a
+newObject :: (GObject a, GObject b) => (ForeignPtr a -> a) -> Ptr b -> IO a
 newObject constructor ptr = do
-  _ <- g_object_ref $ castPtr ptr
+  _ <- g_object_ref ptr
   fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
     Ptr a -> IO (Ptr a)
 
--- Same as makeNewObject, but we take ownership of the object (which
+-- Same as newObject, but we take ownership of the object (which
 -- is typically floating), so we use g_object_ref_sink.
-wrapObject :: (ForeignPtr a -> a) -> Ptr b -> IO a
+wrapObject :: (GObject a, GObject b) => (ForeignPtr a -> a) -> Ptr b -> IO a
 wrapObject constructor ptr = do
   _ <- g_object_ref_sink $ castPtr ptr
   fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
-refObject :: (ManagedPtr a) => a -> IO (Ptr b)
+refObject :: (ManagedPtr a, GObject a, GObject b) => a -> IO (Ptr b)
 refObject obj = do
   let ptr = unsafeManagedPtrGetPtr obj
   _ <- g_object_ref ptr
@@ -58,7 +109,7 @@ refObject obj = do
 foreign import ccall "g_object_unref" g_object_unref ::
     Ptr a -> IO ()
 
-unrefObject :: (ManagedPtr a) => a -> IO ()
+unrefObject :: (ManagedPtr a, GObject a) => a -> IO ()
 unrefObject obj = do
   let ptr = unsafeManagedPtrGetPtr obj
   g_object_unref ptr

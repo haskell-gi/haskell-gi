@@ -12,6 +12,8 @@ Build-type:          Simple
 Cabal-version:       >=1.2
 Extra-source-files: GI/Utils/ManagedPtr.hs
 		    GI/Utils/Utils.hs
+		    GI/Utils/Properties.hsc
+		    GI/Utils/Attributes.hs
 
 Executable haskell-gi
   main-is: haskell-gi.hs
@@ -51,6 +53,7 @@ Executable haskell-gi
       GI.Conversions,
       GI.GObject,
       GI.GType,
+      GI.Properties,
       GI.Signal,
       GI.SymbolNaming,
       GI.Transfer,

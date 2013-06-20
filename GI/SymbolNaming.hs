@@ -7,6 +7,7 @@ module GI.SymbolNaming
     , upperName
     , escapeReserved
     , interfaceClassName
+    , hyphensToCamelCase
     ) where
 
 import Data.Char (toLower, toUpper)
@@ -16,7 +17,7 @@ import GI.API
 import GI.Code
 import GI.Util (split)
 
-interfaceClassName = (++"IKlass")
+interfaceClassName = (++"Klass")
 
 ucFirst (x:xs) = toUpper x : xs
 ucFirst "" = error "ucFirst: empty string"
@@ -75,6 +76,10 @@ qualify ns = do
                 ""
               else
                 ucFirst ns ++ "."
+
+-- For a string of the form "one-sample-string" return "OneSampleString"
+hyphensToCamelCase :: String -> String
+hyphensToCamelCase str = concat $ map ucFirst $ split '-' str
 
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"

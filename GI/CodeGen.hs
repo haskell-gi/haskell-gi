@@ -16,6 +16,7 @@ import GI.Callable (genCallable)
 import GI.Conversions
 import GI.Code
 import GI.GObject
+import GI.Properties (genProperties)
 import GI.Signal (genSignal)
 import GI.SymbolNaming
 import GI.Type
@@ -56,8 +57,6 @@ genBoxedObject :: Name -> String -> CodeGen ()
 genBoxedObject n typeInit = do
   name' <- upperName n
 
-  manageManagedPtr n
-
   group $ do
     line $ "foreign import ccall unsafe \"" ++ typeInit ++ "\" c_" ++
             typeInit ++ " :: "
@@ -76,7 +75,9 @@ genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
   line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
   if structIsBoxed s
-  then genBoxedObject n $ fromJust (structTypeInit s)
+  then do
+    manageManagedPtr n
+    genBoxedObject n $ fromJust (structTypeInit s)
   else manageUnManagedPtr n
 
   -- XXX: Generate code for fields.
@@ -88,7 +89,7 @@ genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
               genMethod n mn f
 
 genEnum :: Name -> Enumeration -> CodeGen ()
-genEnum n@(Name ns name) (Enumeration fields eDomain) = do
+genEnum n@(Name ns name) (Enumeration fields eDomain maybeTypeInit) = do
   line $ "-- enum " ++ name
   name' <- upperName n
   fields' <- forM fields $ \(fieldName, value) -> do
@@ -111,7 +112,10 @@ genEnum n@(Name ns name) (Enumeration fields eDomain) = do
     blank
     indent $ forM_ valueNames $ \(v, n) ->
       line $ "toEnum " ++ show v ++ " = " ++ n
+
   when (isJust eDomain) $ genErrorDomain name' (fromJust eDomain)
+
+  when (isJust maybeTypeInit) $ genBoxedObject n (fromJust maybeTypeInit)
 
 genErrorDomain :: String -> String -> CodeGen ()
 genErrorDomain name' domain = do
@@ -139,7 +143,7 @@ genErrorDomain name' domain = do
     line $ handler ++ " = handleGErrorJustDomain"
 
 genFlags :: Name -> Flags -> CodeGen ()
-genFlags n@(Name _ name) (Flags (Enumeration _fields _)) = do
+genFlags n@(Name _ name) (Flags (Enumeration _fields _ _)) = do
   line $ "-- flags " ++ name
   name' <- upperName n
   -- XXX: Generate code for fields.
@@ -163,7 +167,9 @@ genUnion n u = do
   line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
   if unionIsBoxed u
-  then genBoxedObject n $ fromJust (unionTypeInit u)
+  then do
+    manageManagedPtr n
+    genBoxedObject n $ fromJust (unionTypeInit u)
   else manageUnManagedPtr n
 
   -- XXX Fields
@@ -250,16 +256,18 @@ genGObjectCasts n o = do
 
   group $ do
     line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
-    indent $ line $ "c_" ++ cn_ ++ " :: GType"
+    indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
 
-  prefixGO <- qualify "GObject"
+  group $ do
+    line $ "instance GObject " ++ name' ++ " where"
+    indent $ line $ "gobjectType _ = c_" ++ cn_
 
   group $ do
     line $ "castTo" ++ name' ++ " :: " ++
-           "(ManagedPtr o, " ++ klass (prefixGO ++ "Object") ++ " o) => " ++
+           "(ManagedPtr o, GObject o) => " ++
            "o -> IO " ++ name'
-    line $ "castTo" ++ name' ++ " = " ++ prefixGO ++ "castTo " ++ name' ++ 
-           " c_" ++ cn_ ++ " \"" ++ name' ++ "\""
+    line $ "castTo" ++ name' ++ " = castTo " ++ name' ++
+           " \"" ++ name' ++ "\""
 
 -- ManagedPtr implementation, for types with real memory management.
 manageManagedPtr n = do
@@ -313,6 +321,9 @@ genObject n o = do
   -- Type safe casting
   when isGO $ genGObjectCasts n o
 
+  -- Properties
+  when isGO $ genProperties n (objProperties o)
+
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
     when (not $ fnSymbol f `elem` ignoredMethods cfg) $
@@ -352,6 +363,23 @@ genInterface n iface = do
         _ -> error $ "Prerequisite is neither an object or an interface!? : "
                        ++ ns ++ "." ++ n
 
+  when isGO $ do
+    let cn_ = case ifTypeInit iface of
+                Just typeInit -> typeInit
+                Nothing -> error $ "GObject derived interface without a type!"
+
+    group $ do
+      line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
+      indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
+
+    group $ do
+      line $ "instance GObject " ++ name' ++ " where"
+      indent $ line $ "gobjectType _ = c_" ++ cn_
+
+  -- Properties
+  when isGO $ genProperties n (ifProperties iface)
+
+  -- Methods
   cfg <- config
   forM_ (ifMethods iface) $ \(mn, f) -> do
     isFunction <- symbolFromFunction (fnSymbol f)
@@ -384,44 +412,6 @@ genCode n (APIObject o) = genObject n o
 genCode n (APIInterface i) = genInterface n i
 genCode _ (APIBoxed _) = return ()
 
-gObjectBootstrap = do
-    line "-- Safe casting machinery"
-    line "foreign import ccall unsafe \"check_object_type\""
-    line "    c_check_object_type :: Ptr Object -> GType -> CInt"
-    blank
-    line $ "castTo :: (ManagedPtr o, " ++ (klass "Object") ++ " o, "
-           ++ (klass "Object") ++ " o') =>"
-    line "           (ForeignPtr o' -> o') -> GType -> [Char] -> o -> IO o'"
-    line "castTo constructor t typeName obj = do"
-    line "    let ptrObj = (castPtr . unsafeManagedPtrGetPtr) obj"
-    line "    when (c_check_object_type ptrObj t /= 1) $"
-    line "         error $ \"Cannot cast object to \" ++ typeName"
-    line "    result <- newObject constructor ptrObj"
-    line "    touchManagedPtr obj"
-    line "    return result"
-    blank
-    line "-- Connecting GObjects to signals"
-    line "foreign import ccall unsafe \"gtk2hs_closure_new\""
-    line "  gtk2hs_closure_new :: StablePtr a -> IO (Ptr Closure)"
-    blank
-    line "foreign import ccall \"g_signal_connect_closure\" g_signal_connect_closure' ::"
-    line "    Ptr Object ->                           -- instance"
-    line "    CString ->                              -- detailed_signal"
-    line "    Ptr Closure ->                          -- closure"
-    line "    CInt ->                                 -- after"
-    line "    IO Word32"
-    blank
-    line "connectSignal :: (ObjectKlass o, ManagedPtr o) => "
-    line "                  o -> [Char] -> a -> Bool -> IO Word32"
-    line "connectSignal object signal fn after = do"
-    line "      closure <- newStablePtr fn >>= gtk2hs_closure_new"
-    line "      signal' <- newCString signal"
-    line "      let object' = (castPtr . unsafeManagedPtrGetPtr) object"
-    line "      result <- g_signal_connect_closure' object' signal' closure "
-    line "                      ((fromIntegral . fromEnum) after)"
-    line "      touchManagedPtr object"
-    line "      return result"
-
 genModule :: String -> [(Name, API)] -> CodeGen ()
 genModule name apis = do
     line $ "-- Generated code."
@@ -453,9 +443,11 @@ genModule name apis = do
     line $ "import Control.Monad (when)"
     line $ "import Control.Exception (onException)"
     blank
-    line $ "import GI.Utils.ManagedPtr"
+    line $ "import GI.Utils.Attributes"
     line $ "import GI.Utils.BasicTypes"
     line $ "import GI.Utils.GError"
+    line $ "import GI.Utils.ManagedPtr"
+    line $ "import GI.Utils.Properties"
     line $ "import GI.Utils.Utils"
     blank
     cfg <- config
@@ -463,13 +455,10 @@ genModule name apis = do
     let code = codeToList $ runCodeGen' cfg $
           forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
           (uncurry genCode)
-    let code' = case name of
-          "GObject" -> (runCodeGen' cfg $ gObjectBootstrap) : code
-          _ -> code
     forM_ (imports cfg) $ \i -> do
       line $ "import qualified " ++ ip (ucFirst i) ++ " as " ++ ucFirst i
     blank
-    mapM_ (\c -> tell c >> blank) code'
+    mapM_ (\c -> tell c >> blank) code
 
     where ignore = [
             "dummy_decl",

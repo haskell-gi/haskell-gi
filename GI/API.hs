@@ -68,7 +68,8 @@ toConstant ci =
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Word64)],
-    errorDomain :: Maybe String}
+    errorDomain :: Maybe String,
+    enumTypeInit :: Maybe String }
     deriving Show
 
 toEnumeration :: EnumInfo -> Enumeration
@@ -76,6 +77,7 @@ toEnumeration ei = Enumeration
     (map (\vi -> (baseInfoName . baseInfo $ vi, valueInfoValue vi))
              (enumInfoValues ei))
     (enumInfoErrorDomain ei)
+    (registeredTypeInfoTypeInit ei)
 
 data Flags = Flags Enumeration
     deriving Show
@@ -148,7 +150,8 @@ toSignal si = Signal {
 data Property = Property {
     propName :: String,
     propType :: Type,
-    propFlags :: [ParamFlag] }
+    propFlags :: [ParamFlag],
+    propTransfer :: Transfer }
     deriving Show
 
 toProperty :: PropertyInfo -> Property
@@ -156,6 +159,7 @@ toProperty pi =
     Property (baseInfoName $ baseInfo pi)
         (typeFromTypeInfo $ propertyInfoType pi)
         (propertyInfoFlags pi)
+        (propertyInfoTransfer pi)
 
 data Field = Field {
     fieldName :: String,
