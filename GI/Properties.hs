@@ -147,31 +147,38 @@ genProperties n props = do
          error $ "Property " ++  pName ++ " has unsupported transfer type "
                    ++ show (propTransfer prop)
 
-    when writable $ genPropertySetter n pName prop
+    let getter = "get" ++ pName
+        setter = "set" ++ pName
+        constructor = "construct" ++ pName
 
-    when readable $ genPropertyGetter n pName prop
+    if readable
+    then genPropertyGetter n pName prop
+    else line $ getter ++ " _ = error \"" ++ name ++ " property \\\""
+                ++ propName prop ++ "\\\" is not readable.\""
 
-    when (writable || constructOnly) $ genPropertyConstructor pName prop
+    if writable
+    then genPropertySetter n pName prop
+    else line $ setter ++ " _ _ = error \"" ++ name ++ " property \\\""
+                ++ propName prop ++ "\\\" is " ++ if constructOnly
+                                                  then "construct-only.\""
+                                                  else "read-only.\""
 
-    (getter, outType) <-
-        if not readable
-        then return ("undefined", "()")
-        else do
-          sOutType <- show <$> haskellType (propType prop)
-          let outType = if ' ' `elem` sOutType
-                        then parenthesize sOutType
-                        else sOutType
-          return ("get" ++ pName, outType)
-    let setter = if not writable
-                 then "undefined"
-                 else "set" ++ pName
-        constructor = if not (writable || constructOnly)
-                      then "undefined"
-                      else "construct" ++ pName
-    (constraints, inType) <-
-        if not (writable || constructOnly)
-        then return ([], "()")
-        else attrType prop
+    if writable || constructOnly
+    then genPropertyConstructor pName prop
+    else line $ constructor ++ " _ = error \"" ++ name ++ " property \\\""
+                ++ propName prop ++ "\\\" is read-only.\""
+
+    outType <- if not readable
+               then return "()"
+               else do
+                 sOutType <- show <$> haskellType (propType prop)
+                 return $ if ' ' `elem` sOutType
+                          then parenthesize sOutType
+                          else sOutType
+
+    (constraints, inType) <- if not (writable || constructOnly)
+                             then return ([], "()")
+                             else attrType prop
 
     let constraints' = (goConstraint name ++ " o") : constraints
         lens = lcFirst pName

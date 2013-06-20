@@ -83,7 +83,7 @@ main = do
         when (restArgs /= [progName]) $
              error $ "gtk_init did not process --g-fatal-warnings"
 
-	win <- windowNew WindowTypeToplevel
+	win <- new Window [windowType := WindowTypeToplevel]
         win <!> onWidgetDestroy $ do
                   putStrLn "Closing the program"
                   mainQuit
