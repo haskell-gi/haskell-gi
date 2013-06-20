@@ -135,47 +135,47 @@ genProperties n props = do
       line $ "   -- Type: " ++ show (propType prop)
       line $ "   -- Flags: " ++ show (propFlags prop)
 
-      -- For properties the meaning of having transfer /=
-      -- TransferNothing is not totally clear (what are the right
-      -- semantics for GValue setters?), and the other possibilities
-      -- are in any case unused for Gtk at least, so let us just
-      -- assume that TransferNothing is always the case.
-      when (propTransfer prop /= TransferNothing) $
-           error $ "Property " ++  pName ++ " has unsupported transfer type "
-                     ++ show (propTransfer prop)
+    -- For properties the meaning of having transfer /=
+    -- TransferNothing is not totally clear (what are the right
+    -- semantics for GValue setters?), and the other possibilities
+    -- are in any case unused for Gtk at least, so let us just
+    -- assume that TransferNothing is always the case.
+    when (propTransfer prop /= TransferNothing) $
+         error $ "Property " ++  pName ++ " has unsupported transfer type "
+                   ++ show (propTransfer prop)
 
-      when writable $ genPropertySetter n pName prop
+    when writable $ genPropertySetter n pName prop
 
-      when readable $ genPropertyGetter n pName prop
+    when readable $ genPropertyGetter n pName prop
 
-      when (writable || constructOnly) $ genPropertyConstructor pName prop
+    when (writable || constructOnly) $ genPropertyConstructor pName prop
 
-      (getter, outType) <-
-          if not readable
-          then return ("undefined", "()")
-          else do
-            sOutType <- show <$> haskellType (propType prop)
-            let outType = if ' ' `elem` sOutType
-                          then parenthesize sOutType
-                          else sOutType
-            return ("get" ++ pName, outType)
-      let setter = if not writable
-                   then "undefined"
-                   else "set" ++ pName
-          constructor = if not (writable || constructOnly)
-                        then "undefined"
-                        else "construct" ++ pName
-      (constraints, inType) <-
-          if not (writable || constructOnly)
-          then return ([], "()")
-          else attrType prop
+    (getter, outType) <-
+        if not readable
+        then return ("undefined", "()")
+        else do
+          sOutType <- show <$> haskellType (propType prop)
+          let outType = if ' ' `elem` sOutType
+                        then parenthesize sOutType
+                        else sOutType
+          return ("get" ++ pName, outType)
+    let setter = if not writable
+                 then "undefined"
+                 else "set" ++ pName
+        constructor = if not (writable || constructOnly)
+                      then "undefined"
+                      else "construct" ++ pName
+    (constraints, inType) <-
+        if not (writable || constructOnly)
+        then return ([], "()")
+        else attrType prop
 
-      let constraints' = [klass name ++ " o", "GObject o", "ManagedPtr o"]
-                         ++ constraints
-          lens = lcFirst pName
-      
-      group $ do
-        line $ lens ++ " :: " ++ parenthesize (intercalate ", " constraints')
-                 ++ " => RWCAttr o " ++ outType ++ " " ++ inType
-        line $ lens ++ " = Attr \"" ++ propName prop ++ "\" "
-                 ++ getter ++ " " ++ setter ++ " " ++ constructor
+    let constraints' = [klass name ++ " o", "GObject o", "ManagedPtr o"]
+                       ++ constraints
+        lens = lcFirst pName
+
+    group $ do
+      line $ lens ++ " :: " ++ parenthesize (intercalate ", " constraints')
+               ++ " => RWCAttr o " ++ outType ++ " " ++ inType
+      line $ lens ++ " = Attr \"" ++ propName prop ++ "\" "
+               ++ getter ++ " " ++ setter ++ " " ++ constructor
