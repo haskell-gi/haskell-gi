@@ -151,22 +151,11 @@ genProperties n props = do
         setter = "set" ++ pName
         constructor = "construct" ++ pName
 
-    if readable
-    then genPropertyGetter n pName prop
-    else line $ getter ++ " _ = error \"" ++ name ++ " property \\\""
-                ++ propName prop ++ "\\\" is not readable.\""
+    when readable $ genPropertyGetter n pName prop
 
-    if writable
-    then genPropertySetter n pName prop
-    else line $ setter ++ " _ _ = error \"" ++ name ++ " property \\\""
-                ++ propName prop ++ "\\\" is " ++ if constructOnly
-                                                  then "construct-only.\""
-                                                  else "read-only.\""
+    when writable $ genPropertySetter n pName prop
 
-    if writable || constructOnly
-    then genPropertyConstructor pName prop
-    else line $ constructor ++ " _ = error \"" ++ name ++ " property \\\""
-                ++ propName prop ++ "\\\" is read-only.\""
+    when (writable || constructOnly) $ genPropertyConstructor pName prop
 
     outType <- if not readable
                then return "()"
@@ -183,8 +172,27 @@ genProperties n props = do
     let constraints' = (goConstraint name ++ " o") : constraints
         lens = lcFirst pName
 
+    let (setterFns, writeType, attrWriteType) =
+            if constructOnly
+            then if readable
+                 then ([constructor], "C", "ConstructibleAttr")
+                 else ([constructor], "O", "ConstructibleAttr")
+            else if writable
+                 then if readable
+                      then ([setter, constructor], "W", "w")
+                      else ([setter, constructor], "O", "w")
+                 else ([], "O", "ReadOnlyAttr")
+        (getterFns, readType, attrReadType) =
+            if readable
+            then ([getter], "R", "ReadableAttr")
+            else if constructOnly
+                 then ([], "C", "UnreadableAttr")
+                 else ([], "W", "UnreadableAttr")
+        attrConstructor = readType ++ writeType ++ "Attr"
+
     group $ do
       line $ lens ++ " :: " ++ parenthesize (intercalate ", " constraints')
-               ++ " => RWCAttr o " ++ outType ++ " " ++ inType
-      line $ lens ++ " = Attr \"" ++ propName prop ++ "\" "
-               ++ getter ++ " " ++ setter ++ " " ++ constructor
+               ++ " => Attr o " ++ outType ++ " " ++ inType
+                      ++ " " ++ attrReadType ++ " " ++ attrWriteType
+      line $ lens ++ " = " ++ attrConstructor ++ " \"" ++ propName prop ++ "\" "
+               ++ intercalate " " (getterFns ++ setterFns)

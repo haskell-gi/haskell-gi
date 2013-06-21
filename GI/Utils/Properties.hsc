@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, GADTs #-}
 {-# OPTIONS_GHC -Wall #-}
 
 module GI.Utils.Properties
@@ -72,7 +72,7 @@ foreign import ccall unsafe "g_object_newv" g_object_newv ::
 -- | Construct a GObject given the constructor and a list of settable
 -- attributes.
 new :: forall o. GObject o => (ForeignPtr o -> o) ->
-       [AttrOp JustSetsAttr o] -> IO o
+       [AttrOp JustSetsAttr o ConstructibleAttr] -> IO o
 new constructor attrs = do
   props <- mapM construct attrs
   let nprops = length props
@@ -85,14 +85,16 @@ new constructor attrs = do
   mapM_ (freeGValue . snd) props
   wrapObject constructor (result :: Ptr o)
   where
-    construct (Attr _ _ _ cons :=  x) = cons x
-    construct (Attr _ _ _ cons :=> x) = x >>= cons
-    -- Any other options will never typecheck (see the comments in
-    -- GI.Utils.Attributes), so the following is unnecessary, but we
-    -- keep it since GHC does not realize that and we compile with
-    -- -Wall.
-    construct _ =
-        error $ "\"new\" invoked with a non-constructor type."
+    construct :: AttrOp JustSetsAttr o ConstructibleAttr ->
+                 IO (String, GValuePtr)
+    construct (RWAttr _ _ _ cons :=  x) = cons x
+    construct (RCAttr _ _   cons :=  x) = cons x
+    construct (WOAttr _   _ cons :=  x) = cons x
+    construct (COAttr _     cons :=  x) = cons x
+    construct (RWAttr _ _ _ cons :=> x) = x >>= cons
+    construct (RCAttr _ _   cons :=> x) = x >>= cons
+    construct (WOAttr _   _ cons :=> x) = x >>= cons
+    construct (COAttr _     cons :=> x) = x >>= cons
 
     gvalueSize = #size GValue
     gparameterSize = #size GParameter
