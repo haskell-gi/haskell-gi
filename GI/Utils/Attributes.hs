@@ -3,7 +3,7 @@
 
 -- -*-haskell-*-
 
---  Based on gtk2hs, with copyright as below.
+--  Based on gtk2hs, with copyright below.
 
 --  GIMP Toolkit (GTK) Attributes interface
 --
@@ -65,10 +65,11 @@
 module GI.Utils.Attributes (
   Attr(..),
   WritableAttr,
+  NonWritableAttr,
   ConstructibleAttr,
-  ReadOnlyAttr,
+  NonConstructibleAttr,
   ReadableAttr,
-  UnreadableAttr,
+  NonReadableAttr,
 
   -- * Interface for getting, setting and updating attributes
   AttrOp(..),
@@ -82,68 +83,86 @@ import GI.Utils.BasicTypes (GValuePtr)
 
 infixr 0 :=,:~,:=>,:~>,::=,::~
 
-data WritableAttr
-data ConstructibleAttr
-data ReadOnlyAttr
+-- The idea of the construction below is to be able to enforce at
+-- compile time that the read-only etc. properties of attributes are
+-- satisfied. In order to do this, we use a GADT on the Attr
+-- constructor to tag the type of Attr with one of the types below,
+-- and the "get", "set", "new" and the AttrOp constructors specialize
+-- the type so that the readability/writability/constructibility
+-- constraints are enforced.
+
+-- The case of NonWritableAttr is somewhat special. Attributes which
+-- are really non-writable will have that tag set, but writable
+-- attributes will be abstract on that type. Functions that don't care
+-- whether the attribute is writable or not (such as "get" and "new")
+-- will then specialize to NonWritableAttr, which lets them accept
+-- both writable and non-writable attrs. "set", which needs the
+-- argument to be writable, will specialize to WritableAttr and in
+-- this way give an error if a non-writable attr is passed to it.
 
 data ReadableAttr
-data UnreadableAttr
+data NonReadableAttr
+
+data WritableAttr
+data NonWritableAttr
+
+data ConstructibleAttr
+data NonConstructibleAttr
 
 type Getter o a = o -> IO a
 type Setter o b = o -> b -> IO ()
 type Constructor b = b -> IO (String, GValuePtr)
 
--- | The most general version, with a getter, a setter, and a constructor.
-data Attr o a b r w where
+-- | The most general version, with a getter, a setter, and a
+-- constructor. The type of the attr is parameterized by "a", while
+-- "r", "w", "c" parameterize whether the attribute can be read (using
+-- "get"), written to (using "set", i.e. after creation of the
+-- object), and created (using "new").
+data Attr o a b r w c where
     RCAttr :: String -> Getter o a -> Constructor b ->
-              Attr o a b ReadableAttr ConstructibleAttr
+              Attr o a b ReadableAttr NonWritableAttr ConstructibleAttr
     RWAttr :: String -> Getter o a -> Setter o b -> Constructor b ->
-              Attr o a b ReadableAttr w
+              Attr o a b ReadableAttr w ConstructibleAttr
     ROAttr :: String -> Getter o a ->
-              Attr o a () ReadableAttr ReadOnlyAttr
+              Attr o a () ReadableAttr NonWritableAttr NonConstructibleAttr
 
     COAttr :: String -> Constructor b ->
-              Attr o () b UnreadableAttr ConstructibleAttr
+              Attr o () b NonReadableAttr NonWritableAttr ConstructibleAttr
     WOAttr :: String -> Setter o b -> Constructor b ->
-              Attr o () b UnreadableAttr w
+              Attr o () b NonReadableAttr w ConstructibleAttr
 
-instance Show (Attr o a b r w) where
+instance Show (Attr o a b r w c) where
   show (RCAttr str _ _)   = str
   show (RWAttr str _ _ _) = str
   show (ROAttr str _)     = str
   show (COAttr str _)     = str
   show (WOAttr str _ _)   = str
 
--- The idea of the construction below is to be able to check at
--- compile time that "new" is called only with constructors that do
--- not require a read (AttrSetOp). "set", on the other hand, can work
--- also with constructors that require a read (AttrGetSetOp). Using
--- the GADT and specializing on the signature of the receiving
--- function allows us to use the same syntax on constructors for both
--- "set" and "new", but with checking at the type level that we don't
--- try to call "new" with a constructor that is not just setting an
--- argument. Compile-time checking of readability/writability of
--- read/write properties is done using the same idea.
 data JustSetsAttr
 data SetsAndGetsAttr
 
+-- Notice that Writable implies Constructible, so here we just require
+-- constructible. "set" will then specialize on w to enforce that the
+-- parameter is writable.
 data AttrOp s o w where
     -- ^ Assign a value to an attribute
-    (:=)  :: Attr o a b r w -> b -> AttrOp s o w
+    (:=)  :: Attr o a b r w ConstructibleAttr -> b ->
+             AttrOp s o w
     -- ^ Assign the result of an IO action to an attribute
-    (:=>) :: Attr o a b r w -> IO b -> AttrOp s o w
+    (:=>) :: Attr o a b r w ConstructibleAttr -> IO b ->
+             AttrOp s o w
     -- ^ Apply an update function to an attribute
-    (:~)  :: Attr o a b ReadableAttr w -> (a -> b) ->
+    (:~)  :: Attr o a b ReadableAttr w ConstructibleAttr -> (a -> b) ->
              AttrOp SetsAndGetsAttr o w
     -- ^ Apply an IO update function to an attribute
-    (:~>) :: Attr o a b ReadableAttr w -> (a -> IO b) ->
+    (:~>) :: Attr o a b ReadableAttr w ConstructibleAttr -> (a -> IO b) ->
              AttrOp SetsAndGetsAttr o w
     -- ^ Assign a value to an attribute with the object as an argument
-    (::=) :: Attr o a b r w -> (o -> b) ->
+    (::=) :: Attr o a b r w ConstructibleAttr -> (o -> b) ->
              AttrOp SetsAndGetsAttr o w
     -- ^ Apply an update function to an attribute with the object as
     -- an argument
-    (::~) :: Attr o a b ReadableAttr w -> (o -> a -> b) ->
+    (::~) :: Attr o a b ReadableAttr w ConstructibleAttr -> (o -> a -> b) ->
              AttrOp SetsAndGetsAttr o w
 
 -- | Set a number of properties for some object.
@@ -163,7 +182,7 @@ set obj = mapM_ app
    app (RWAttr _ getter setter _ ::~ f) = getter obj >>= \v -> setter obj (f obj v)
 
 -- | Get an Attr of an object.
-get :: o -> Attr o a b ReadableAttr w -> IO a
+get :: o -> Attr o a b ReadableAttr NonWritableAttr c -> IO a
 get o (ROAttr _ getter) = getter o
 get o (RWAttr _ getter _ _) = getter o
 get o (RCAttr _ getter _) = getter o

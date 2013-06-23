@@ -70,9 +70,10 @@ foreign import ccall unsafe "g_object_newv" g_object_newv ::
     GType -> CUInt -> Ptr a -> IO (Ptr b)
 
 -- | Construct a GObject given the constructor and a list of settable
--- attributes.
+-- attributes. AttrOps are always constructible, so we don't need to
+-- enforce constraints here.
 new :: forall o. GObject o => (ForeignPtr o -> o) ->
-       [AttrOp JustSetsAttr o ConstructibleAttr] -> IO o
+       [AttrOp JustSetsAttr o NonWritableAttr] -> IO o
 new constructor attrs = do
   props <- mapM construct attrs
   let nprops = length props
@@ -85,7 +86,7 @@ new constructor attrs = do
   mapM_ (freeGValue . snd) props
   wrapObject constructor (result :: Ptr o)
   where
-    construct :: AttrOp JustSetsAttr o ConstructibleAttr ->
+    construct :: AttrOp JustSetsAttr o NonWritableAttr ->
                  IO (String, GValuePtr)
     construct (RWAttr _ _ _ cons :=  x) = cons x
     construct (RCAttr _ _   cons :=  x) = cons x

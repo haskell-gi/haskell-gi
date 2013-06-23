@@ -152,7 +152,7 @@ data Property = Property {
     propType :: Type,
     propFlags :: [ParamFlag],
     propTransfer :: Transfer }
-    deriving Show
+    deriving (Show, Eq)
 
 toProperty :: PropertyInfo -> Property
 toProperty pi =

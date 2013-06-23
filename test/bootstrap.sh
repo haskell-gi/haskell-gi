@@ -24,31 +24,38 @@ generate()
 mkdir -p GI
 
 generate \
-    GLib > GI/GLib.hs
+    -m GI.GLib \
+    GLib
 generate \
     -i GLib \
-    GObject > GI/GObject.hs
-generate \
-    -i GLib \
-    -i GObject \
-    cairo > GI/Cairo.hs
-generate \
-    -i GLib \
-    -i GObject \
-    Gio > GI/Gio.hs
+    -m GI.GObject \
+    GObject
 generate \
     -i GLib \
     -i GObject \
-    Pango > GI/Pango.hs
+    -m GI.Cairo \
+    cairo
 generate \
     -i GLib \
     -i GObject \
-    Atk > GI/Atk.hs
+    -m GI.Gio \
+    Gio
+generate \
+    -i GLib \
+    -i GObject \
+    -m GI.Pango \
+    Pango
+generate \
+    -i GLib \
+    -i GObject \
+    -m GI.Atk \
+    Atk
 generate \
     -i GLib \
     -i GObject \
     -i Gio \
-    GdkPixbuf > GI/GdkPixbuf.hs
+    -m GI.GdkPixbuf \
+    GdkPixbuf
 generate \
     -i GLib \
     -i GObject \
@@ -56,7 +63,8 @@ generate \
     -i cairo \
     -i GdkPixbuf \
     -i Pango \
-    Gdk > GI/Gdk.hs
+    -m GI.Gdk \
+    Gdk
 generate \
     -i GLib \
     -i GObject \
@@ -66,7 +74,8 @@ generate \
     -i Gdk \
     -i Pango \
     -i Atk \
-    Gtk > GI/Gtk.hs
+    -m GI.Gtk \
+    Gtk
 
 LDFLAGS=$(echo $(pkg-config --libs gobject-2.0) | sed -e "s/-l/--lflag=-l/g")
 

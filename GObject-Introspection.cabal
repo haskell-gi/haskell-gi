@@ -21,6 +21,8 @@ Executable haskell-gi
   build-depends:
       base >= 4,
       containers,
+      directory,
+      filepath,
       mtl,
       pretty-show,
       process,
@@ -54,6 +56,7 @@ Executable haskell-gi
       GI.GObject,
       GI.GType,
       GI.Properties,
+      GI.Lenses,
       GI.Signal,
       GI.SymbolNaming,
       GI.Transfer,

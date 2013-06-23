@@ -7,6 +7,7 @@ module GI.CodeGen
 
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
+import Data.List (intercalate)
 import Data.Tuple (swap)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as M
@@ -16,10 +17,11 @@ import GI.Callable (genCallable)
 import GI.Conversions
 import GI.Code
 import GI.GObject
-import GI.Properties (genProperties)
+import GI.Properties
 import GI.Signal (genSignal)
 import GI.SymbolNaming
 import GI.Type
+import GI.Util
 import GI.Value
 import GI.Internal.ArgInfo
 import GI.Internal.FunctionInfo
@@ -67,26 +69,26 @@ genBoxedObject n typeInit = do
 
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
-  cfg <- config
+      cfg <- config
 
-  line $ "-- struct " ++ name
-  name' <- upperName n
+      line $ "-- struct " ++ name
+      name' <- upperName n
 
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+      line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
-  if structIsBoxed s
-  then do
-    manageManagedPtr n
-    genBoxedObject n $ fromJust (structTypeInit s)
-  else manageUnManagedPtr n
+      if structIsBoxed s
+      then do
+        manageManagedPtr n
+        genBoxedObject n $ fromJust (structTypeInit s)
+      else manageUnManagedPtr n
 
-  -- XXX: Generate code for fields.
+    -- XXX: Generate code for fields.
 
-  -- Methods
-  forM_ (structMethods s) $ \(mn, f) ->
-      do isFunction <- symbolFromFunction (fnSymbol f)
-         when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
-              genMethod n mn f
+    -- Methods
+      forM_ (structMethods s) $ \(mn, f) ->
+          do isFunction <- symbolFromFunction (fnSymbol f)
+             when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+                  genMethod n mn f
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name ns name) (Enumeration fields eDomain maybeTypeInit) = do
@@ -233,12 +235,21 @@ genMethod cn mn (Function {
     genCallable mn' sym c'' (FunctionThrows `elem` fs)
 
 -- Since all GObjects are instances of their own class, ManagedPtr and
--- GObject, the signatures can get a little cumbersome. We use the
--- ConstraintKinds extension to make things prettier by defining a
--- constraint synonym.
-genUnifiedConstraint name' =
-  line $ "type " ++ goConstraint name'
-           ++ " a = (ManagedPtr a, GObject a, " ++ klass name' ++ " a)"
+-- GObject, the method signatures can get a little cumbersome. The
+-- construction below basically defines a constraint synonym, so the
+-- resulting signatures are shorter. A perhaps nicer way of achieving
+-- the same thing would be to use the ConstraintKinds extension, but
+-- doing things in the current manner has the advantage that the
+-- generated (goConstraint name') has directly kind "* -> Constraint",
+-- which plays well with the way we are implementing polymorphic
+-- lenses for GObject properties.
+genUnifiedConstraint name' = do
+  let unified = parenthesize (intercalate ", " $ [klass name' ++ " a",
+                                                  "ManagedPtr a",
+                                                  "GObject a"])
+                ++ " => " ++ goConstraint name' ++ " a where {}"
+  line $ "class " ++ unified
+  line $ "instance " ++ unified
 
 -- Instantiation mechanism, so we can convert different object types
 -- descending from GObject into each other.
@@ -332,7 +343,7 @@ genObject n o = do
   when isGO $ genGObjectCasts n o
 
   -- Properties
-  when isGO $ genProperties n (objProperties o)
+  when isGO $ genObjectProperties n o
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
@@ -343,6 +354,8 @@ genObject n o = do
   forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n o
 
 genInterface n iface = do
+  cfg <- config
+
   -- For each interface, we generate a class IFoo and a data structure
   -- Foo. We only really need a separate Foo so that we can return
   -- them from bound functions. In principle we might be able to do
@@ -364,14 +377,18 @@ genInterface n iface = do
   group $ do
     line $ "instance " ++ cls ++ " " ++ name'
     -- We are also instances of our prerequisites
-    forM_ (ifPrerequisites iface) $ \(Name ns n) -> do
+    forM_ (ifPrerequisites iface) $ \pName@(Name ns n) -> do
       prefix <- qualify ns
       api <- findAPI (TInterface ns n)
       case api of
         Just (APIInterface _) ->
             line $ "instance " ++ prefix ++ interfaceClassName n ++ " " ++ name'
-        Just (APIObject _) ->
+        Just (APIObject _) -> do
             line $ "instance " ++ prefix ++ klass n ++ " " ++ name'
+            -- We are also instances of the parents of the object
+            forM_ (instanceTree (instances cfg) pName) $ \ancestor -> do
+                  ancestor' <- upperName ancestor
+                  line $ "instance " ++ (klass ancestor') ++ " " ++ name'
         _ -> error $ "Prerequisite is neither an object or an interface!? : "
                        ++ ns ++ "." ++ n
 
@@ -389,7 +406,7 @@ genInterface n iface = do
       indent $ line $ "gobjectType _ = c_" ++ cn_
 
   -- Properties
-  when isGO $ genProperties n (ifProperties iface)
+  when isGO $ genInterfaceProperties n iface
 
   -- Methods
   cfg <- config
@@ -424,23 +441,25 @@ genCode n (APIObject o) = genObject n o
 genCode n (APIInterface i) = genInterface n i
 genCode _ (APIBoxed _) = return ()
 
-genModule :: String -> [(Name, API)] -> CodeGen ()
-genModule name apis = do
+genModule :: String -> [(Name, API)] -> String -> CodeGen ()
+genModule name apis modulePrefix = do
+    cfg <- config
+
     line $ "-- Generated code."
     blank
-    line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds #-}"
+    line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
+    line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
+    line $ "    FlexibleInstances, UndecidableInstances #-}"
     blank
-    -- XXX: This should be a command line option.
-    let installationPrefix = "GI."
-        ip = (installationPrefix ++)
+    let mp = (modulePrefix ++)
     -- XXX: Generate export list.
-    line $ "module " ++ ip (ucFirst name) ++ " where"
+    line $ "module " ++ mp name ++ " where"
     blank
     -- String and IOError also appear in GLib.
     line $ "import Prelude hiding (String, IOError)"
     -- Error types come from GLib.
     when (name /= "GLib") $
-         line $ "import " ++ ip "GLib (Error(..))"
+         line $ "import " ++ mp "GLib (Error(..))"
     line $ "import Data.Char"
     line $ "import Data.Int"
     line $ "import Data.Word"
@@ -455,21 +474,24 @@ genModule name apis = do
     line $ "import Control.Monad (when)"
     line $ "import Control.Exception (onException)"
     blank
-    line $ "import GI.Utils.Attributes"
-    line $ "import GI.Utils.BasicTypes"
-    line $ "import GI.Utils.GError"
-    line $ "import GI.Utils.ManagedPtr"
-    line $ "import GI.Utils.Properties"
-    line $ "import GI.Utils.Utils"
+    line $ "import " ++ mp "Utils.Attributes"
+    line $ "import " ++ mp "Utils.BasicTypes"
+    line $ "import " ++ mp "Utils.GError"
+    line $ "import " ++ mp "Utils.ManagedPtr"
+    line $ "import " ++ mp "Utils.Properties"
+    line $ "import " ++ mp "Utils.Utils"
     blank
-    cfg <- config
+    line $ "import " ++ mp name ++ "Lenses"
+    blank
+
+    forM_ (imports cfg) $ \i -> do
+      line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
+
+    blank
 
     let code = codeToList $ runCodeGen' cfg $
           forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
           (uncurry genCode)
-    forM_ (imports cfg) $ \i -> do
-      line $ "import qualified " ++ ip (ucFirst i) ++ " as " ++ ucFirst i
-    blank
     mapM_ (\c -> tell c >> blank) code
 
     where ignore = [

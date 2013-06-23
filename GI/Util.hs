@@ -14,6 +14,8 @@ module GI.Util
 import Foreign
 import Foreign.C
 
+import Data.List (unfoldr)
+
 maybeWithCString :: Maybe String -> (CString -> IO a) -> IO a
 maybeWithCString = maybe ($ nullPtr) withCString
 
@@ -29,11 +31,15 @@ toFlags n = loop n ((sizeOf n)*8 - 1) -- Number of bits in the argument
               let rest = loop n (e - 1)
                in if testBit n e then toEnum (2 ^ e) : rest else rest
 
-split c s = split' s "" []
-    where split' [] w ws = reverse (reverse w : ws)
-          split' (x:xs) w ws =
-              if x == c then split' xs "" (reverse w:ws)
-                  else split' xs (x:w) ws
+-- Splits a string separated by the given separator into a list of
+-- constituents. For example: split '.' "A.BC.D" = ["A", "BC", "D"]
+split :: Char -> String -> [String]
+split sep str = unfoldr span' str
+    where span' :: String -> Maybe (String, String)
+          span' [] = Nothing
+          span' s@(x:xs)
+              | x == sep  = Just $ span (/= sep) xs
+              | otherwise = Just $ span (/= sep) s
 
 prime :: String -> String
 prime = (++ "'")

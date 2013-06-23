@@ -3,6 +3,9 @@ module Main where
 import Control.Applicative ((<$>))
 import Control.Exception (handle)
 import Data.Maybe (mapMaybe)
+import Data.List (intercalate)
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (joinPath)
 import System.Console.GetOpt
 import System.Exit
 import System.IO (hPutStr, hPutStrLn, stderr)
@@ -16,8 +19,11 @@ import Text.Show.Pretty
 import GI.API (loadAPI)
 import GI.Code (Config(..), codeToString, runCodeGen')
 import GI.CodeGen (genModule)
-import GI.Shlib (typelibSymbols, strip)
 import GI.GObject (parseObjectHierarchy)
+import GI.Lenses (genLenses)
+import GI.SymbolNaming (ucFirst)
+import GI.Shlib (typelibSymbols, strip)
+import GI.Util (split)
 
 data Mode = GenerateCode | Dump | Help
   deriving Show
@@ -25,6 +31,7 @@ data Mode = GenerateCode | Dump | Help
 data Options = Options {
   optImports :: [String],
   optMode :: Mode,
+  optModuleName :: Maybe String,
   optRenames :: [(String, String)],
   optPrefixes :: [(String, String)] }
     deriving Show
@@ -32,6 +39,7 @@ data Options = Options {
 defaultOptions = Options {
   optImports = [],
   optMode = GenerateCode,
+  optModuleName = Nothing,
   optRenames = [],
   optPrefixes = [] }
 
@@ -48,6 +56,9 @@ optDescrs = [
     "add an import to the generated code",
   Option "d" ["dump"] (NoArg $ \opt -> opt { optMode = Dump })
     "dump internal representation instead of generating code",
+  Option "m" ["module"] (ReqArg
+    (\arg opt -> opt { optModuleName = Just arg}) "MODNAME")
+    "Generated module name (something like GI.GObject)",
   Option "p" ["prefix"] (ReqArg
     (\arg opt ->
       let (a, b) = parseKeyValue arg
@@ -149,8 +160,22 @@ processAPI options name = do
                            , "gdk_pixbuf_new_from_data"]}
 
     case optMode options of
-        GenerateCode ->
-            putStrLn $ codeToString $ runCodeGen' cfg $ genModule name apis
+        GenerateCode -> do
+          let mn = case optModuleName options of
+                          Nothing -> ucFirst name
+                          Just s -> s
+          (modPrefix, dirPrefix, modName) <- case split '.' mn of
+            [] -> error $ "Empty module name"
+            [m] -> return ("", ".", m)
+            xs -> do
+              let installDir = joinPath $ init xs
+              createDirectoryIfMissing True installDir
+              return (intercalate "." (init xs) ++ ".", installDir, last xs)
+          writeFile (joinPath [dirPrefix, modName ++ ".hs"]) $
+             codeToString $ runCodeGen' cfg $ genModule modName apis modPrefix
+          writeFile (joinPath [dirPrefix, modName ++ "Lenses.hs"]) $
+             codeToString $ runCodeGen' cfg $
+                        genLenses modName (M.toList input') modPrefix
         Dump -> mapM_ (putStrLn . ppShow) apis
         Help -> putStr showHelp
 
