@@ -77,6 +77,13 @@ generate \
     -m GI.Gtk \
     Gtk
 
+mkdir -p GI/Utils
+
+if [ x"$HASKELL_GI_BUILD_DIR" = x ]; then
+    HASKELL_GI_BUILD_DIR=".."
+fi
+cp "$HASKELL_GI_BUILD_DIR"/GI/Utils/* GI/Utils
+
 LDFLAGS=$(echo $(pkg-config --libs gobject-2.0) | sed -e "s/-l/--lflag=-l/g")
 
 ghc -c hsgclosure.c $(pkg-config --cflags gobject-2.0)
