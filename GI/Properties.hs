@@ -38,6 +38,8 @@ propTypeStr t = case t of
      when (sizeOf (0 :: CUInt) /= 4) $
           error $ "C Integers are not 4 bytes, unsupported platform."
      return "CUInt"
+   TBasicType TInt64 -> return "Int64"
+   TBasicType TUInt64 -> return "UInt64"
    TBasicType TBoolean -> return "Bool"
    TBasicType TFloat -> return "CFloat"
    TBasicType TDouble -> return "CDouble"

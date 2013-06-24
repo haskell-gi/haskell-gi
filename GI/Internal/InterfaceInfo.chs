@@ -40,14 +40,14 @@ foreign import ccall unsafe "g_registered_type_info_get_g_type"
 interfaceInfoPrerequisites :: InterfaceInfoClass iic => iic -> [BaseInfo]
 interfaceInfoPrerequisites ii = unsafePerformIO $ do
     gtype <- g_registered_type_info_get_g_type (stupidCast ii)
-    nprereqs' <- malloc :: IO (Ptr GType)
+    nprereqs' <- malloc :: IO (Ptr CUInt)
     prereqs <- g_type_interface_prerequisites gtype nprereqs'
     nprereqs <- peek nprereqs'
     free nprereqs'
     if prereqs == nullPtr || nprereqs == 0
     then return []
     else go prereqs nprereqs
-         where go :: Ptr GType -> GType -> IO [BaseInfo]
+         where go :: Ptr GType -> CUInt -> IO [BaseInfo]
                go _ 0 = return []
                go ptr n = do
                  gtype <- peek ptr

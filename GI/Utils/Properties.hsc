@@ -9,6 +9,8 @@ module GI.Utils.Properties
     , setObjectPropertyPtr
     , setObjectPropertyCInt
     , setObjectPropertyCUInt
+    , setObjectPropertyInt64
+    , setObjectPropertyUInt64
     , setObjectPropertyCFloat
     , setObjectPropertyCDouble
     , setObjectPropertyBool
@@ -25,6 +27,8 @@ module GI.Utils.Properties
     , getObjectPropertyPtr
     , getObjectPropertyCInt
     , getObjectPropertyCUInt
+    , getObjectPropertyInt64
+    , getObjectPropertyUInt64
     , getObjectPropertyCFloat
     , getObjectPropertyCDouble
     , getObjectPropertyBool
@@ -41,6 +45,8 @@ module GI.Utils.Properties
     , constructObjectPropertyPtr
     , constructObjectPropertyCInt
     , constructObjectPropertyCUInt
+    , constructObjectPropertyInt64
+    , constructObjectPropertyUInt64
     , constructObjectPropertyCFloat
     , constructObjectPropertyCDouble
     , constructObjectPropertyBool
@@ -240,6 +246,42 @@ foreign import ccall unsafe "g_value_get_uint" get_uint ::
 getObjectPropertyCUInt :: (ManagedPtr a, GObject a) => a -> String -> IO Word32
 getObjectPropertyCUInt obj propName =
     getObjectProperty obj propName get_uint #const G_TYPE_UINT
+
+foreign import ccall unsafe "g_value_set_int64" set_int64 ::
+    GValuePtr -> Int64 -> IO ()
+setObjectPropertyInt64 :: (ManagedPtr a, GObject a) =>
+                          a -> String -> Int64 -> IO ()
+setObjectPropertyInt64 obj propName int64 =
+    setObjectProperty obj propName int64 set_int64 #const G_TYPE_INT64
+
+constructObjectPropertyInt64 :: String -> Int64 ->
+                                IO (String, GValuePtr)
+constructObjectPropertyInt64 propName int64 =
+    constructObjectProperty propName int64 set_int64 #const G_TYPE_INT64
+
+foreign import ccall unsafe "g_value_get_int64" get_int64 ::
+    GValuePtr -> IO Int64
+getObjectPropertyInt64 :: (ManagedPtr a, GObject a) => a -> String -> IO Int64
+getObjectPropertyInt64 obj propName =
+    getObjectProperty obj propName get_int64 #const G_TYPE_INT64
+
+foreign import ccall unsafe "g_value_set_uint64" set_uint64 ::
+    GValuePtr -> Word64 -> IO ()
+setObjectPropertyUInt64 :: (ManagedPtr a, GObject a) =>
+                          a -> String -> Word64 -> IO ()
+setObjectPropertyUInt64 obj propName uint64 =
+    setObjectProperty obj propName uint64 set_uint64 #const G_TYPE_UINT64
+
+constructObjectPropertyUInt64 :: String -> Word64 ->
+                                 IO (String, GValuePtr)
+constructObjectPropertyUInt64 propName uint64 =
+    constructObjectProperty propName uint64 set_uint64 #const G_TYPE_UINT64
+
+foreign import ccall unsafe "g_value_get_uint64" get_uint64 ::
+    GValuePtr -> IO Word64
+getObjectPropertyUInt64 :: (ManagedPtr a, GObject a) => a -> String -> IO Word64
+getObjectPropertyUInt64 obj propName =
+    getObjectProperty obj propName get_uint64 #const G_TYPE_UINT64
 
 foreign import ccall unsafe "g_value_set_float" set_float ::
     GValuePtr -> CFloat -> IO ()
