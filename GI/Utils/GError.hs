@@ -40,7 +40,7 @@ module GI.Utils.GError
     -- 'handlePixbufError'.
     , catchGErrorJust
     , catchGErrorJustDomain
-  
+
     , handleGErrorJust
     , handleGErrorJustDomain
 
@@ -80,7 +80,7 @@ type GErrorDomain  = GQuark
 --   enumeration type for each error domain. Of course which enumeraton to use
 --   depends on the error domain, but if you use 'catchGErrorJustDomain' or
 --   'handleGErrorJustDomain', this is worked out for you automatically.
-type GErrorCode = Int
+type GErrorCode = CInt
 
 -- | A human readable error message.
 type GErrorMessage = String
@@ -126,7 +126,8 @@ catchGErrorJust code action handler = do
   catch action (handler' errorQuark)
   where handler' quark gerror@(GError domain code' msg)
           | domain == quark
-           && code' == fromEnum code   = handler msg
+           && code' == (fromIntegral . fromEnum) code
+                                       = handler msg
           | otherwise                  = throw gerror
 
 -- | Catch all GErrors from a particular error domain. The handler function
@@ -150,7 +151,7 @@ catchGErrorJustDomain action handler = do
   errorQuark <- gErrorQuarkFromDomain $ gerrorDomain (undefined::err)
   catch action (handler' errorQuark)
   where handler' quark gerror@(GError domain code msg)
-          | domain == quark = handler (toEnum code) msg
+          | domain == quark = handler (toEnum $ fromIntegral code) msg
           | otherwise       = throw gerror
 
 -- | A verson of 'handleGErrorJust' with the arguments swapped around.

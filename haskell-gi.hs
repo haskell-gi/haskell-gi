@@ -127,6 +127,8 @@ processAPI options name = do
                            , "g_bookmark_file_to_data"
                            -- "terminator_pos" is not marked as out.
                            , "g_io_channel_read_line_string"
+                           -- length and terminator_pos are not marked as out.
+                           , "g_io_channel_read_line"
                            -- "line_number" is not marked as out.
                            , "g_markup_parse_context_get_position"
                            -- The length of the array is given by a
