@@ -23,6 +23,8 @@ import System.Random (randomRIO)
 
 testGio :: IO ()
 testGio = do
+  putStrLn "*** Gio test"
+
   infos <- Gio.appInfoGetAll
   forM_ infos $ \info -> do
             name <- Gio.appInfoGetName info
@@ -31,8 +33,11 @@ testGio = do
             putStrLn $ "exe: " ++ exe
             putStrLn ""
 
+  putStrLn "+++ Gio test done"
+
 testExceptions :: IO ()
 testExceptions = do
+  putStrLn "*** Exception test"
   -- This should work fine, without emitting any exception
   contents <- GLib.fileGetContents "testGtk.hs"
   B.putStrLn contents
@@ -48,10 +53,11 @@ testExceptions = do
              _ -> error $ "Unexpected error code : \"" ++ show code ++
                             "\" with message : \"" ++ msg ++ "\""
 
-  return ()
+  putStrLn "+++ Exception test done"
 
 testNullableArgs :: IO ()
 testNullableArgs = do
+  putStrLn "*** Nullable args test"
   uri <- GLib.filenameToUri "/usr/lib/test" Nothing
   when (uri /= "file:///usr/lib/test") $
        error $ "First nullable test failed : " ++ uri
@@ -59,12 +65,17 @@ testNullableArgs = do
   uri' <- GLib.filenameToUri "/usr/lib/test" (Just "gnome.org")
   when (uri' /= "file://gnome.org/usr/lib/test") $
        error $ "Second nullable test failed : " ++ uri'
+  putStrLn "+++ Nullable args test done"
 
 testOutArgs :: IO ()
-testOutArgs = iconThemeGetDefault >>= iconThemeGetSearchPath >>= print
+testOutArgs = do
+  putStrLn "*** Out args test"
+  iconThemeGetDefault >>= iconThemeGetSearchPath >>= print
+  putStrLn "+++ Out args test done"
 
 testBoxed :: IO ()
-testBoxed =
+testBoxed = do
+  putStrLn "*** Boxed test"
   forM_ [1..500::Int] $ \_ -> do
     r <- randomRIO (0,6)
     let expected = toEnum $ r + fromEnum GLib.DateWeekdayMonday
@@ -72,14 +83,18 @@ testBoxed =
     weekday <- GLib.dateGetWeekday date
     when (weekday /= expected) $
          error $ show r ++ " -> Got wrong weekday! : " ++ show weekday
+  putStrLn "+++ Boxed test done"
 
 testImportedLenses :: IO ()
 testImportedLenses = do
+  putStrLn "*** Imported lenses test"
   address <- Gio.inetAddressNewFromString "173.194.40.51"
   print =<< address `get` LGio._family
+  putStrLn "+++ Imported lenses test done"
 
 testPolymorphicLenses :: Window -> String -> IO ()
 testPolymorphicLenses parent message = do
+  putStrLn "*** Polymorphic lenses test"
   messageBox <- new MessageDialog
                 [ _buttons := ButtonsTypeYesNo, -- ConstructOnly
                   _text := message,
@@ -105,6 +120,7 @@ testPolymorphicLenses parent message = do
   putStrLn $ " >>> " ++ show ((toEnum . fromIntegral) result :: ResponseType)
 
   widgetDestroy messageBox
+  putStrLn "+++ Polymorphic lenses test done"
 
 main :: IO ()
 main = do
