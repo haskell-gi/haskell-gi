@@ -46,7 +46,7 @@ foreign import ccall unsafe "check_object_type"
     c_check_object_type :: Ptr o -> GType -> CInt
 
 castTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
-          (ForeignPtr o' -> o') -> [Char] -> o -> IO o'
+          (ForeignPtr o' -> o') -> String -> o -> IO o'
 castTo constructor typeName obj =
     withManagedPtr obj $ \objPtr -> do
       t <- gobjectType (undefined :: o')
@@ -66,7 +66,7 @@ foreign import ccall "g_signal_connect_closure" g_signal_connect_closure' ::
     IO Word32
 
 connectSignal :: (GObject o, ManagedPtr o) =>
-                  o -> [Char] -> a -> Bool -> IO Word32
+                  o -> String -> a -> Bool -> IO Word32
 connectSignal object signal fn after = do
       closure <- newStablePtr fn >>= gtk2hs_closure_new
       signal' <- newCString signal
