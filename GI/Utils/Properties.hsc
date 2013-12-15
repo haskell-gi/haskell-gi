@@ -350,47 +350,52 @@ foreign import ccall unsafe "g_value_set_object" set_object ::
 setObjectPropertyObject :: (ManagedPtr a, GObject a,
                             ManagedPtr b, GObject b) =>
                            a -> String -> b -> IO ()
-setObjectPropertyObject obj propName object =
-    withManagedPtr object $ \objectPtr ->
-        setObjectProperty obj propName objectPtr set_object #const G_TYPE_OBJECT
+setObjectPropertyObject obj propName object = do
+  gtype <- gobjectType object
+  withManagedPtr object $ \objectPtr ->
+      setObjectProperty obj propName objectPtr set_object gtype
 
 constructObjectPropertyObject :: (ManagedPtr a, GObject a) =>
                                  String -> a -> IO (String, GValuePtr)
-constructObjectPropertyObject propName object =
-    withManagedPtr object $ \objectPtr ->
-        constructObjectProperty propName objectPtr set_object #const G_TYPE_OBJECT
+constructObjectPropertyObject propName object = do
+  gtype <- gobjectType object
+  withManagedPtr object $ \objectPtr ->
+      constructObjectProperty propName objectPtr set_object gtype
 
 foreign import ccall unsafe "g_value_get_object" get_object ::
     GValuePtr -> IO (Ptr a)
 getObjectPropertyObject :: forall a b. (ManagedPtr a, GObject a, GObject b) =>
                            a -> String -> (ForeignPtr b -> b) -> IO b
-getObjectPropertyObject obj propName constructor =
-    getObjectProperty obj propName
-                      (\val -> (get_object val :: IO (Ptr b))
-                               >>= newObject constructor)
-                      #const G_TYPE_OBJECT
+getObjectPropertyObject obj propName constructor = do
+  gtype <- gobjectType (undefined :: b)
+  getObjectProperty obj propName
+                        (\val -> (get_object val :: IO (Ptr b))
+                                 >>= newObject constructor)
+                      gtype
 
 foreign import ccall unsafe "g_value_set_boxed" set_boxed ::
     GValuePtr -> Ptr a -> IO ()
-setObjectPropertyBoxed :: (ManagedPtr a, GObject a, ManagedPtr b) =>
+setObjectPropertyBoxed :: (ManagedPtr a, GObject a, ManagedPtr b, BoxedObject b) =>
                           a -> String -> b -> IO ()
-setObjectPropertyBoxed obj propName boxed =
-    withManagedPtr boxed $ \boxedPtr ->
-        setObjectProperty obj propName boxedPtr set_boxed #const G_TYPE_BOXED
+setObjectPropertyBoxed obj propName boxed = do
+  gtype <- boxedType boxed
+  withManagedPtr boxed $ \boxedPtr ->
+        setObjectProperty obj propName boxedPtr set_boxed gtype
 
-constructObjectPropertyBoxed :: ManagedPtr a => String -> a ->
+constructObjectPropertyBoxed :: (ManagedPtr a, BoxedObject a) => String -> a ->
                                 IO (String, GValuePtr)
-constructObjectPropertyBoxed propName boxed =
-    withManagedPtr boxed $ \boxedPtr ->
-        constructObjectProperty propName boxedPtr set_boxed #const G_TYPE_BOXED
+constructObjectPropertyBoxed propName boxed = do
+  gtype <- boxedType boxed
+  withManagedPtr boxed $ \boxedPtr ->
+      constructObjectProperty propName boxedPtr set_boxed gtype
 
 foreign import ccall unsafe "g_value_get_boxed" get_boxed ::
     GValuePtr -> IO (Ptr b)
-getObjectPropertyBoxed :: (ManagedPtr a, GObject a, BoxedObject b) =>
+getObjectPropertyBoxed :: forall a b. (ManagedPtr a, GObject a, BoxedObject b) =>
                           a -> String -> (ForeignPtr b -> b) -> IO b
-getObjectPropertyBoxed obj propName constructor =
-    getObjectProperty obj propName (get_boxed >=> newBoxed constructor)
-                          #const G_TYPE_BOXED
+getObjectPropertyBoxed obj propName constructor = do
+  gtype <- boxedType (undefined :: b)
+  getObjectProperty obj propName (get_boxed >=> newBoxed constructor) gtype
 
 setObjectPropertyStringArray :: (ManagedPtr a, GObject a) =>
                                 a -> String -> [String] -> IO ()
