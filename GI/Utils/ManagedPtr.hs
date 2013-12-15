@@ -14,6 +14,8 @@ module GI.Utils.ManagedPtr
     , wrapBoxed
     , copyBoxed
     , freeBoxed
+    , wrapPtr
+    , newPtr
     ) where
 
 import Foreign.Safe
@@ -21,6 +23,7 @@ import Foreign.C
 import Control.Monad (when)
 
 import GI.Utils.BasicTypes (GType)
+import GI.Utils.Utils
 
 class ManagedPtr a where
     unsafeManagedPtrGetPtr :: a -> Ptr b
@@ -161,3 +164,17 @@ freeBoxed boxed = do
   let ptr = unsafeManagedPtrGetPtr boxed
   g_boxed_free gtype ptr
   touchManagedPtr boxed
+
+-- Wrap a pointer, taking ownership of it.
+wrapPtr :: (ForeignPtr a -> a) -> Ptr a -> IO a
+wrapPtr constructor ptr = do
+  fPtr <- newForeignPtr finalizerFree ptr
+  return $! constructor fPtr
+
+-- Wrap a pointer to n bytes, making a copy of the data.
+newPtr :: Int -> (ForeignPtr a -> a) -> Ptr a -> IO a
+newPtr n constructor ptr = do
+  ptr' <- callocBytes n :: IO (Ptr a)
+  memcpy ptr' ptr n
+  fPtr <- newForeignPtr finalizerFree ptr'
+  return $! constructor fPtr

@@ -47,6 +47,9 @@ module GI.Utils.BasicTypes
     , packZeroTerminatedPtrArray
     , unpackPtrArrayWithLength
     , unpackZeroTerminatedPtrArray
+    , packBlockArray
+    , unpackBlockArrayWithLength
+
     , byteStringToCString
 
     , mapZeroTerminatedCArray
@@ -65,6 +68,8 @@ import Control.Applicative ((<$>), (<*>))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
+
+import GI.Utils.Utils (memcpy)
 
 #include <glib-object.h>
 
@@ -205,7 +210,7 @@ packByteString bs = do
   let (ptr, offset, length) = BI.toForeignPtr bs
   mem <- mallocBytes length
   withForeignPtr ptr $ \dataPtr ->
-      BI.memcpy mem (dataPtr `plusPtr` offset) (fromIntegral length)
+      memcpy mem (dataPtr `plusPtr` offset) (fromIntegral length)
   return mem
 
 packZeroTerminatedByteString :: ByteString -> IO (Ptr Word8)
@@ -213,7 +218,7 @@ packZeroTerminatedByteString bs = do
   let (ptr, offset, length) = BI.toForeignPtr bs
   mem <- mallocBytes (length+1)
   withForeignPtr ptr $ \dataPtr ->
-      BI.memcpy mem (dataPtr `plusPtr` offset) (fromIntegral length)
+      memcpy mem (dataPtr `plusPtr` offset) (fromIntegral length)
   poke (mem `plusPtr` (offset+length)) (0 :: Word8)
   return mem
 
@@ -423,6 +428,26 @@ mapZeroTerminatedCArray f dataPtr
            else do
              _ <- f ptr
              mapZeroTerminatedCArray f (dataPtr `plusPtr` sizeOf ptr)
+
+packBlockArray :: Int -> [Ptr a] -> IO (Ptr a)
+packBlockArray size items = do
+  let nitems = length items
+  mem <- mallocBytes $ size * nitems
+  fill mem items
+  return mem
+  where fill :: Ptr a -> [Ptr a] -> IO ()
+        fill _ [] = return ()
+        fill ptr (x:xs) = do memcpy ptr x size
+                             fill (ptr `plusPtr` size) xs
+
+unpackBlockArrayWithLength :: (Integral a) => Int -> a -> Ptr b -> IO [Ptr b]
+unpackBlockArrayWithLength size n ptr = go size (fromIntegral n) ptr
+    where go       :: Int -> Int -> Ptr b -> IO [Ptr b]
+          go _ 0 _   = return []
+          go size n ptr = do
+            buf <- mallocBytes size
+            memcpy buf ptr size
+            (buf :) <$> go size (n-1) (ptr `plusPtr` size)
 
 mapCArrayWithLength :: (Storable a, Integral b) =>
                        b -> (a -> IO c) -> Ptr a -> IO ()

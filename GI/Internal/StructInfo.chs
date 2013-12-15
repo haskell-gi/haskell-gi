@@ -3,8 +3,9 @@ module GI.Internal.StructInfo
     ( structInfoFields
     , structInfoIsGTypeStruct
     , structInfoMethods
+    , structInfoSize
+    , structInfoIsForeign
     -- XXX: Implement these.
-    -- , structInfoSize
     -- , structInfoAlignment
     )
 where
@@ -40,3 +41,11 @@ structInfoMethods :: StructInfoClass sic => sic -> [FunctionInfo]
 structInfoMethods si = unsafePerformIO $
     map (FunctionInfo <$> castPtr) <$>
     getList {# call get_n_methods #} {# call get_method #} (stupidCast si)
+
+structInfoSize :: StructInfoClass sic => sic -> Int
+structInfoSize si = unsafePerformIO $ fromIntegral <$>
+                    {# call get_size #} (stupidCast si)
+
+structInfoIsForeign :: StructInfoClass sic => sic -> Bool
+structInfoIsForeign si = unsafePerformIO $ (/= 0) <$>
+    {# call is_foreign #} (stupidCast si)

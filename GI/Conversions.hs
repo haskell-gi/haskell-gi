@@ -19,6 +19,7 @@ module GI.Conversions
     , isManaged
 
     , getIsScalar
+    , requiresAlloc
 
     , apply
     , mapC
@@ -27,6 +28,7 @@ module GI.Conversions
     ) where
 
 import Control.Applicative ((<$>))
+import Control.Monad (when)
 import Control.Monad.Free (Free(..), liftF)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import GHC.Exts (IsString(..))
@@ -126,16 +128,29 @@ hObjectToF t transfer = do
       return "unsafeManagedPtrGetPtr"
   else return "unsafeManagedPtrGetPtr"
 
-hBoxedToF :: Bool -> Transfer -> CodeGen Constructor
-hBoxedToF isBoxed transfer = do
+hBoxedToF :: Transfer -> CodeGen Constructor
+hBoxedToF transfer = do
   if transfer == TransferEverything
-  then do
-    if isBoxed
-    then return $ M "copyBoxed"
-    else do
-      line $ "-- XXX Transferring a non-Boxed object!"
-      return "unsafeManagedPtrGetPtr"
+  then return $ M "copyBoxed"
   else return "unsafeManagedPtrGetPtr"
+
+hStructToF :: Struct -> Transfer -> CodeGen Constructor
+hStructToF s transfer =
+    if transfer /= TransferEverything || structIsBoxed s then
+        hBoxedToF transfer
+    else do
+        when (structSize s == 0) $
+             line $ "-- XXX Transferring a non-boxed struct with unknown size!"
+        return "unsafeManagedPtrGetPtr"
+
+hUnionToF :: Union -> Transfer -> CodeGen Constructor
+hUnionToF u transfer =
+    if transfer /= TransferEverything || unionIsBoxed u then
+        hBoxedToF transfer
+    else do
+        when (unionSize u == 0) $
+             line $ "-- XXX Transferring a non-boxed union with unknown size!"
+        return "unsafeManagedPtrGetPtr"
 
 -- Given the Haskell and Foreign types, returns the name of the
 -- function marshalling between both.
@@ -147,9 +162,9 @@ hToF' t a hType fType transfer
     | Just (APIFlags _) <- a = return "fromIntegral"
     | Just (APIObject _) <- a = hObjectToF t transfer
     | Just (APIInterface _) <- a = hObjectToF t transfer
-    | Just (APIStruct s) <- a = hBoxedToF (structIsBoxed s) transfer
-    | Just (APIUnion u) <- a = hBoxedToF (unionIsBoxed u) transfer
-    | TError <- t = hBoxedToF True transfer
+    | Just (APIStruct s) <- a = hStructToF s transfer
+    | Just (APIUnion u) <- a = hUnionToF u transfer
+    | TError <- t = hBoxedToF transfer
     | Just (APICallback _) <- a = do
         line $ "--- XXX Callback types are not properly supported yet"
         let con = tyConName $ typeRepTyCon hType
@@ -218,7 +233,15 @@ hToF (TCArray zt _ _ t@(TInterface _ _)) transfer = do
                else "pack"
   if isScalar
   then hToF_PackedType t (packer ++ "StorableArray") transfer
-  else hToF_PackedType t (packer ++ "PtrArray") transfer
+  else do
+    api <- findAPI t
+    let size = case api of
+                 Just (APIStruct s) -> structSize s
+                 Just (APIUnion u) -> unionSize u
+                 _ -> 0
+    if size == 0 || zt
+    then hToF_PackedType t (packer ++ "PtrArray") transfer
+    else hToF_PackedType t (packer ++ "BlockArray " ++ show size) transfer
 
 hToF t transfer = do
   a <- findAPI t
@@ -227,24 +250,34 @@ hToF t transfer = do
   constructor <- hToF' t a hType fType transfer
   return $ apply constructor
 
-boxedForeignPtr :: TypeRep -> Bool -> Transfer -> CodeGen Constructor
-boxedForeignPtr hType boxed transfer = do
+boxedForeignPtr :: String -> Transfer -> CodeGen Constructor
+boxedForeignPtr constructor transfer = return $
+   case transfer of
+     TransferEverything -> M $ parenthesize $ "wrapBoxed " ++ constructor
+     _ -> M $ parenthesize $ "newBoxed " ++ constructor
+
+suForeignPtr :: Bool -> Int -> TypeRep -> Transfer -> CodeGen Constructor
+suForeignPtr isBoxed size hType transfer = do
   let constructor = tyConName $ typeRepTyCon hType
-  case transfer of
-    TransferEverything ->
-        if boxed
-        then return $ M $ parenthesize $ "wrapBoxed " ++ constructor
-        else do
-          line $ "-- XXX (Leak) Got a transfer of an unboxed object"
-          return $ M $ parenthesize $
-           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
-    _ ->
-        if boxed
-        then return $ M $ parenthesize $ "newBoxed " ++ constructor
-        else do
-          line $ "-- XXX Wrapping an unboxed object with no copy..."
-          return $ M $ parenthesize $
-           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+  if isBoxed then
+      boxedForeignPtr constructor transfer
+  else case size of
+         0 -> do
+           line $ "-- XXX Wrapping a foreign union with no known destructor, leak?"
+           return $ M $ parenthesize $
+                      "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+         n -> return $ M $ parenthesize $
+              case transfer of
+                TransferEverything -> "wrapPtr " ++ constructor
+                _ -> "newPtr " ++ show n ++ " " ++ constructor
+
+structForeignPtr :: Struct -> TypeRep -> Transfer -> CodeGen Constructor
+structForeignPtr s hType transfer =
+    suForeignPtr (structIsBoxed s) (structSize s) hType transfer
+
+unionForeignPtr :: Union -> TypeRep -> Transfer -> CodeGen Constructor
+unionForeignPtr u hType transfer =
+    suForeignPtr (unionIsBoxed u) (unionSize u) hType transfer
 
 fObjectToH :: Type -> TypeRep -> Transfer -> CodeGen Constructor
 fObjectToH t hType transfer = do
@@ -272,11 +305,9 @@ fToH' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(toEnum . fromIntegral)"
     | Just (APIFlags _) <- a = return "fromIntegral"
-    | TError <- t = case transfer of
-        TransferEverything -> return $ M "(wrapBoxed GI.GLib.Error)"
-        _ -> return $ M "(newBoxed GI.GLib.Error)"
-    | Just (APIStruct s) <- a = boxedForeignPtr hType (structIsBoxed s) transfer
-    | Just (APIUnion u) <- a = boxedForeignPtr hType (unionIsBoxed u) transfer
+    | TError <- t = boxedForeignPtr "GI.GLib.Error" transfer
+    | Just (APIStruct s) <- a = structForeignPtr s hType transfer
+    | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
     | Just (APIObject _) <- a = fObjectToH t hType transfer
     | Just (APIInterface _) <- a = fObjectToH t hType transfer
     | TCArray True _ _ (TBasicType TUTF8) <- t =
@@ -356,9 +387,15 @@ unpackCArray length (TCArray False _ _ t) transfer =
            hType <- haskellType t
            fType <- foreignType t
            innerConstructor <- fToH' t a hType fType transfer
+           let size = case a of
+                        Just (APIStruct s) -> structSize s
+                        Just (APIUnion u) -> unionSize u
+                        _ -> 0
            let unpacker = if isScalar
                           then "unpackStorableArrayWithLength"
-                          else "unpackPtrArrayWithLength"
+                          else if size == 0
+                               then "unpackPtrArrayWithLength"
+                               else "unpackBlockArrayWithLength " ++ show size
            return $ do
              apply $ M $ parenthesize $ unpacker ++ " " ++ length
              mapC innerConstructor
@@ -492,7 +529,15 @@ foreignBasicType t         = haskellBasicType t
 -- This translates GI types to the types used in foreign function calls.
 foreignType :: Type -> CodeGen TypeRep
 foreignType (TBasicType t) = return $ foreignBasicType t
-foreignType (TCArray _ _ _ t) = ptr <$> foreignType t
+foreignType (TCArray zt _ _ t) = do
+  api <- findAPI t
+  let size = case api of
+               Just (APIStruct s) -> structSize s
+               Just (APIUnion u) -> unionSize u
+               _ -> 0
+  if size == 0 || zt
+  then ptr <$> foreignType t
+  else foreignType t
 foreignType (TGArray a) = do
   inner <- foreignType a
   return $ ptr ("GArray" `con` [inner])
@@ -524,6 +569,18 @@ getIsScalar t = do
     (Just (APIEnum _)) -> return True
     (Just (APIFlags _)) -> return True
     _ -> return False
+
+-- Whether the given type corresponds to a struct we allocate
+-- ourselves. If we need to allocate the struct we return its size in
+-- bytes, otherwise we return Nothing.
+requiresAlloc :: Type -> CodeGen (Maybe Int)
+requiresAlloc t = do
+  api <- findAPI t
+  case api of
+    Just (APIStruct s) -> case structSize s of
+                            0 -> return Nothing
+                            n -> return (Just n)
+    _ -> return Nothing
 
 -- Returns whether the given type corresponds to a ManagedPtr
 -- instance (a thin wrapper over a ForeignPtr).

@@ -122,6 +122,31 @@ testPolymorphicLenses parent message = do
   widgetDestroy messageBox
   putStrLn "+++ Polymorphic lenses test done"
 
+testOutStructs :: IO ()
+testOutStructs = do
+  putStrLn "*** Out Structs test"
+  (result, timeval) <- GLib.timeValFromIso8601 "2013-12-15T11:11:07Z"
+  if result == True
+  then do
+    GLib.timeValAdd timeval (60*1000000)
+    timevalStr <- GLib.timeValToIso8601 timeval
+    if timevalStr /= "2013-12-15T11:12:07Z"
+    then error $ "Time conversion failed, got " ++ timevalStr
+    else putStrLn "+++ Out Structs test done"
+  else error $ "timeValFromIso8601 failed!"
+
+testOutBlockPacks :: IO ()
+testOutBlockPacks = do
+  putStrLn "*** Out Block packs test"
+  (result, palette) <- colorSelectionPaletteFromString "BlanchedAlmond:RoyalBlue:#ffccaa"
+  if result == True
+  then do
+    paletteStr <- colorSelectionPaletteToString palette
+    if paletteStr /= "#FFEBCD:#4169E1:#FFCCAA"
+    then error $ "Color conversion failed, got " ++ paletteStr
+    else putStrLn "+++ Out Block packs test done"
+  else error $ "colorSelecionPaletteFromString failed!"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -183,6 +208,8 @@ main = do
         testOutArgs
         testBoxed
         testImportedLenses
+        testOutStructs
+        testOutBlockPacks
 
 	widgetShowAll win
 	Gtk.main

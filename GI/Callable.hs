@@ -9,6 +9,7 @@ module GI.Callable
 import Control.Applicative ((<$>))
 import Control.Monad (forM, forM_, when)
 import Data.List (intercalate)
+import Data.Maybe (isJust)
 import Data.Typeable (typeOf)
 import qualified Data.Map as Map
 
@@ -51,10 +52,11 @@ mkForeignImport symbol callable throwsGError = foreignImport $ do
                 symbol ++ " :: "
     fArgStr arg = do
         ft <- foreignType $ argType arg
-        let ft' = case direction arg of
-              DirectionInout -> ptr ft
-              DirectionOut -> ptr ft
-              DirectionIn -> ft
+        weAlloc <- isJust <$> requiresAlloc (argType arg)
+        let ft' = if direction arg == DirectionIn || weAlloc then
+                      ft
+                  else
+                      ptr ft
         let start = show ft' ++ " -> "
         return $ padTo 40 start ++ "-- " ++ argName arg
                    ++ " : " ++ show (argType arg)
@@ -251,11 +253,28 @@ genCallable n symbol callable throwsGError = do
              else convert name $ hToF (argType arg) (transfer arg)
           DirectionInout ->
               do name' <- convert name $ hToF (argType arg) (transfer arg)
-                 name'' <- genConversion (prime name') $
-                             literal $ M $ "malloc :: " ++ show (io $ ptr ft)
-                 line $ "poke " ++ name'' ++ " " ++ name'
-                 return name''
-          DirectionOut -> genConversion name $
+                 allocSize <- requiresAlloc (argType arg)
+                 case allocSize of
+                   Just n -> do
+                       name'' <- genConversion (prime name') $
+                                    literal $ M $ "callocBytes " ++ show n ++
+                                                " :: " ++ show (io ft)
+                       line $ "memcpy " ++ name'' ++ " " ++ name' ++ " " ++ show n
+                       return name''
+                   Nothing -> do
+                       name'' <- genConversion (prime name') $
+                                    literal $ M $ "malloc :: " ++
+                                            show (io $ ptr ft)
+                       line $ "poke " ++ name'' ++ " " ++ name'
+                       return name''
+          DirectionOut -> do
+            allocSize <- requiresAlloc (argType arg)
+            case allocSize of
+              Just n ->
+                  genConversion name $ literal $ M $ "callocBytes " ++ show n ++
+                                                " :: " ++ show (io ft)
+              Nothing ->
+                  genConversion name $
                             literal $ M $ "malloc :: " ++ show (io $ ptr ft)
     -- Read the length of in array arguments from the corresponding
     -- Haskell objects.
@@ -317,12 +336,20 @@ genCallable n symbol callable throwsGError = do
                do aname' <- genConversion inName $ apply $ M "peek"
                   convertOutCArray t aname' nameMap (transfer arg)
            t -> do
-             peeked <- genConversion inName $ apply $ M "peek"
-             result <- convert peeked $ fToH (argType arg) (transfer arg)
+             weAlloc <- isJust <$> requiresAlloc t
+             peeked <- if weAlloc
+                       then return inName
+                       else genConversion inName $ apply $ M "peek"
+             -- If we alloc we always take control of the resulting
+             -- memory, otherwise we may leak.
+             let transfer' = if weAlloc
+                             then TransferEverything
+                             else transfer arg
+             result <- convert peeked $ fToH (argType arg) transfer'
              -- Free the memory associated with the out argument
-             when (transfer arg == TransferEverything) $
+             when (transfer' == TransferEverything) $
                   mapM_ line =<< freeElements t peeked undefined
-             when (transfer arg /= TransferNothing) $
+             when (transfer' /= TransferNothing) $
                   mapM_ line =<< freeContainer t peeked
              return result
 
@@ -372,7 +399,7 @@ genCallable n symbol callable throwsGError = do
     -- Touch in arguments so we are sure that they exist when the C
     -- function was called.
     touchInArgs = forM_ (args callable) $ \arg -> do
-        when (direction arg == DirectionIn) $ do
+        when (direction arg /= DirectionOut) $ do
            let name = escapeReserved $ argName arg
            case elementType (argType arg) of
              Just a -> do

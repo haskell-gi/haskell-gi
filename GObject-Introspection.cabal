@@ -11,7 +11,6 @@ Category:            Development
 Build-type:          Simple
 Cabal-version:       >=1.2
 Extra-source-files: GI/Utils/ManagedPtr.hs
-		    GI/Utils/Utils.hs
 		    GI/Utils/Properties.hsc
 		    GI/Utils/Attributes.hs
 
@@ -28,7 +27,7 @@ Executable haskell-gi
       process,
       bytestring,
       free
-  build-tools: hsc2hs
+  build-tools: hsc2hs, c2hs
   extensions: ForeignFunctionInterface, DoAndIfThenElse
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
@@ -65,3 +64,4 @@ Executable haskell-gi
       GI.Util
       GI.Utils.GError
       GI.Utils.BasicTypes
+      GI.Utils.Utils

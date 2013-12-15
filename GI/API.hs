@@ -176,9 +176,12 @@ toField fi =
 data Struct = Struct {
     structIsBoxed :: Bool,
     structTypeInit :: Maybe String,
+    structSize :: Int,
+    structIsForeign :: Bool,
+    isGTypeStruct :: Bool,
     structFields :: [Field],
-    structMethods :: [(Name, Function)],
-    isGTypeStruct :: Bool }
+    structMethods :: [(Name, Function)]
+    }
     deriving Show
 
 toStruct :: StructInfo -> Struct
@@ -189,12 +192,15 @@ toStruct si = Struct {
                 structFields = map toField $ structInfoFields si,
                 structMethods = map (withName toFunction)
                                 (structInfoMethods si),
+                structSize = structInfoSize si,
+                structIsForeign = structInfoIsForeign si,
                 isGTypeStruct = structInfoIsGTypeStruct si }
 
 -- XXX: Capture alignment and method info.
 
 data Union = Union {
     unionIsBoxed :: Bool,
+    unionSize :: Int,
     unionTypeInit :: Maybe String,
     unionFields :: [Field],
     unionMethods :: [(Name, Function)] }
@@ -204,6 +210,7 @@ toUnion :: UnionInfo -> Union
 toUnion ui = Union {
                unionIsBoxed = isJust (registeredTypeInfoTypeInit ui) &&
                               gtypeIsBoxed (registeredTypeInfoGType ui),
+               unionSize = unionInfoSize ui,
                unionTypeInit = registeredTypeInfoTypeInit ui,
                unionFields = map toField $ unionInfoFields ui,
                unionMethods = map (withName toFunction)

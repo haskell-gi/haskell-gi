@@ -9,7 +9,7 @@ module GI.Transfer
     ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 
 import GI.API
 import GI.Code
@@ -150,10 +150,17 @@ freeOut label = return ["F.free " ++ label]
 -- for the argument (if appropriate, depending on the ownership
 -- transfer semantics of the callable).
 freeInArg :: Arg -> String -> String -> CodeGen [String]
-freeInArg arg label len = case direction arg of
-                            DirectionIn -> freeIn arg label len
-                            DirectionOut -> freeOut label
-                            DirectionInout -> freeOut label
+freeInArg arg label len = do
+  weAlloc <- isJust <$> requiresAlloc (argType arg)
+  -- Arguments that we alloc ourselves do not need to be freed, they
+  -- will always be soaked up by the wrapPtr constructor, or they will
+  -- be DirectionIn.
+  if not weAlloc
+  then case direction arg of
+         DirectionIn -> freeIn arg label len
+         DirectionOut -> freeOut label
+         DirectionInout -> freeOut label
+  else return []
 
 -- Same thing as freeInArg, but called in case the call to C didn't
 -- succeed. We thus free everything we allocated in preparation for
