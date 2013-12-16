@@ -1,6 +1,20 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module GI.Utils.BasicTypes
     ( GType
+
+    , gtypeString
+    , gtypePointer
+    , gtypeInt32
+    , gtypeUInt32
+    , gtypeInt64
+    , gtypeUInt64
+    , gtypeFloat
+    , gtypeDouble
+    , gtypeBoolean
+    , gtypeStrv
+    , gtypeBoxed
+    , gtypeObject
+
     , GValuePtr
     , GArray(..)
     , GPtrArray(..)
@@ -73,7 +87,47 @@ import GI.Utils.Utils (memcpy)
 
 #include <glib-object.h>
 
+#if !defined(GLIB_VERSION_2_36)
+#literal g_type_init();
+#endif
+
 type GType = #type GType
+
+gtypeString :: GType
+gtypeString = #const G_TYPE_STRING
+
+gtypePointer :: GType
+gtypePointer = #const G_TYPE_POINTER
+
+gtypeInt32 :: GType
+gtypeInt32 = #const G_TYPE_INT
+
+gtypeUInt32 :: GType
+gtypeUInt32 = #const G_TYPE_UINT
+
+gtypeInt64 :: GType
+gtypeInt64 = #const G_TYPE_INT64
+
+gtypeUInt64 :: GType
+gtypeUInt64 = #const G_TYPE_UINT64
+
+gtypeFloat :: GType
+gtypeFloat = #const G_TYPE_FLOAT
+
+gtypeDouble :: GType
+gtypeDouble = #const G_TYPE_DOUBLE
+
+gtypeBoolean :: GType
+gtypeBoolean = #const G_TYPE_BOOLEAN
+
+gtypeStrv :: GType
+gtypeStrv = #const G_TYPE_STRV
+
+gtypeBoxed :: GType
+gtypeBoxed = #const G_TYPE_BOXED
+
+gtypeObject :: GType
+gtypeObject = #const G_TYPE_OBJECT
 
 type GValuePtr = Ptr ()
 
