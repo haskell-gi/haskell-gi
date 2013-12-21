@@ -114,7 +114,7 @@ genPropertyConstructor pName prop = group $ do
             [] -> ""
             _ -> parenthesize (intercalate ", " constraints) ++ " => "
   line $ "construct" ++ pName ++ " :: " ++ constraints'
-           ++ t ++ " -> IO ([Char], GValuePtr)"
+           ++ t ++ " -> IO ([Char], GValue)"
   line $ "construct" ++ pName ++ " val = constructObjectProperty" ++ tStr
            ++ " \"" ++ propName prop ++ "\" val"
 

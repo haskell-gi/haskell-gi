@@ -15,7 +15,6 @@ module GI.Utils.BasicTypes
     , gtypeBoxed
     , gtypeObject
 
-    , GValuePtr
     , GArray(..)
     , GPtrArray(..)
     , GByteArray(..)
@@ -128,8 +127,6 @@ gtypeBoxed = #const G_TYPE_BOXED
 
 gtypeObject :: GType
 gtypeObject = #const G_TYPE_OBJECT
-
-type GValuePtr = Ptr ()
 
 data GArray a = GArray (Ptr (GArray a))
 data GPtrArray a = GPtrArray (Ptr (GPtrArray a))

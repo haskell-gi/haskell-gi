@@ -66,6 +66,7 @@ import qualified Data.ByteString.Char8 as B
 import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr
 import GI.Utils.Attributes
+import GI.Utils.GValue
 
 import Foreign.Safe hiding (new)
 import Foreign.C
@@ -93,11 +94,10 @@ new constructor attrs = do
   result <- g_object_newv gtype (fromIntegral nprops) params
   freeStrings nprops params
   free params
-  mapM_ (freeGValue . snd) props
   wrapObject constructor (result :: Ptr o)
   where
     construct :: AttrOp JustSetsAttr o NonWritableAttr ->
-                 IO (String, GValuePtr)
+                 IO (String, GValue)
     construct (RWAttr _ _ _ cons :=  x) = cons x
     construct (RCAttr _ _   cons :=  x) = cons x
     construct (WOAttr _   _ cons :=  x) = cons x
@@ -112,12 +112,13 @@ new constructor attrs = do
 
     -- Fill the given memory address with the contents of the array of
     -- GParameters.
-    fill :: Ptr () -> [(String, GValuePtr)] -> IO ()
+    fill :: Ptr () -> [(String, GValue)] -> IO ()
     fill _ [] = return ()
     fill dataPtr ((str, gvalue):xs) =
         do cstr <- newCString str
            poke (castPtr dataPtr) cstr
-           copyBytes (dataPtr `plusPtr` sizeOf nullPtr) gvalue gvalueSize
+           withManagedPtr gvalue $ \gvalueptr ->
+               copyBytes (dataPtr `plusPtr` sizeOf nullPtr) gvalueptr gvalueSize
            fill (dataPtr `plusPtr` gparameterSize) xs
 
     -- Free the strings in the GParameter array (the GValues will be
@@ -129,224 +130,166 @@ new constructor attrs = do
            free cstr
            freeStrings (n-1) (dataPtr `plusPtr` gparameterSize)
 
-foreign import ccall unsafe "alloc_new_GValue" alloc_new_GValue ::
-    GType -> IO GValuePtr
-
-foreign import ccall unsafe "g_value_unset" g_value_unset ::
-    GValuePtr -> IO ()
-
 foreign import ccall unsafe "g_object_set_property" g_object_set_property ::
-    Ptr a -> CString -> GValuePtr -> IO ()
-
-freeGValue :: GValuePtr -> IO ()
-freeGValue gvalue = do
-  g_value_unset gvalue
-  free gvalue
+    Ptr a -> CString -> Ptr GValue -> IO ()
 
 setObjectProperty :: (ManagedPtr a, GObject a) => a -> String -> b ->
-                     (GValuePtr -> b -> IO ()) -> GType -> IO ()
+                     (GValue -> b -> IO ()) -> GType -> IO ()
 setObjectProperty obj propName propValue setter gtype = do
-  gvalue <- alloc_new_GValue gtype
-  setter gvalue propValue
+  gvalue <- buildGValue gtype setter propValue
   withManagedPtr obj $ \objPtr ->
       withCString propName $ \cPropName ->
-          g_object_set_property objPtr cPropName gvalue
-  freeGValue gvalue
+          withManagedPtr gvalue $ \gvalueptr ->
+              g_object_set_property objPtr cPropName gvalueptr
 
 foreign import ccall unsafe "g_object_get_property" g_object_get_property ::
-    Ptr a -> CString -> GValuePtr -> IO ()
+    Ptr a -> CString -> Ptr GValue -> IO ()
 
 getObjectProperty :: (GObject a, ManagedPtr a) => a -> String ->
-                     (GValuePtr -> IO b) -> GType -> IO b
+                     (GValue -> IO b) -> GType -> IO b
 getObjectProperty obj propName getter gtype = do
-  gvalue <- alloc_new_GValue gtype
+  gvalue <- newGValue gtype
   withManagedPtr obj $ \objPtr ->
       withCString propName $ \cPropName ->
-          g_object_get_property objPtr cPropName gvalue
-  result <- getter gvalue
-  freeGValue gvalue
-  return result  
+          withManagedPtr gvalue $ \gvalueptr ->
+              g_object_get_property objPtr cPropName gvalueptr
+  getter gvalue
 
-constructObjectProperty :: String -> b -> (GValuePtr -> b -> IO ()) ->
-                           GType -> IO (String, GValuePtr)
+constructObjectProperty :: String -> b -> (GValue -> b -> IO ()) ->
+                           GType -> IO (String, GValue)
 constructObjectProperty propName propValue setter gtype = do
-  gvalue <- alloc_new_GValue gtype
-  setter gvalue propValue
+  gvalue <- buildGValue gtype setter propValue
   return (propName, gvalue)
 
-foreign import ccall unsafe "g_value_set_string" set_string ::
-    GValuePtr -> CString -> IO ()
 setObjectPropertyString :: (GObject a, ManagedPtr a) =>
                            a -> String -> String -> IO ()
 setObjectPropertyString obj propName str =
-    withCString str $ \cstr ->
-        setObjectProperty obj propName cstr set_string #const G_TYPE_STRING
+    setObjectProperty obj propName str set_string #const G_TYPE_STRING
 
 constructObjectPropertyString :: String -> String ->
-                                 IO (String, GValuePtr)
+                                 IO (String, GValue)
 constructObjectPropertyString propName str =
-    withCString str $ \cstr ->
-        constructObjectProperty propName cstr set_string #const G_TYPE_STRING
+    constructObjectProperty propName str set_string #const G_TYPE_STRING
 
-foreign import ccall unsafe "g_value_get_string" get_string ::
-    GValuePtr -> IO CString
 getObjectPropertyString :: (ManagedPtr a, GObject a) =>
                            a -> String -> IO String
 getObjectPropertyString obj propName =
-    getObjectProperty obj propName (get_string >=> peekCString)
-                          #const G_TYPE_STRING
+    getObjectProperty obj propName get_string #const G_TYPE_STRING
 
-foreign import ccall unsafe "g_value_set_pointer" set_pointer ::
-    GValuePtr -> Ptr a -> IO ()
 setObjectPropertyPtr :: (ManagedPtr a, GObject a) =>
                         a -> String -> Ptr b -> IO ()
 setObjectPropertyPtr obj propName ptr =
     setObjectProperty obj propName ptr set_pointer #const G_TYPE_POINTER
 
 constructObjectPropertyPtr :: String -> Ptr b ->
-                              IO (String, GValuePtr)
+                              IO (String, GValue)
 constructObjectPropertyPtr propName ptr =
     constructObjectProperty propName ptr set_pointer #const G_TYPE_POINTER
 
-foreign import ccall unsafe "g_value_get_pointer" get_pointer ::
-    GValuePtr -> IO (Ptr b)
 getObjectPropertyPtr :: (ManagedPtr a, GObject a) =>
                         a -> String -> IO (Ptr b)
 getObjectPropertyPtr obj propName =
     getObjectProperty obj propName get_pointer #const G_TYPE_POINTER
 
-foreign import ccall unsafe "g_value_set_int" set_int ::
-    GValuePtr -> Int32 -> IO ()
 setObjectPropertyCInt :: (ManagedPtr a, GObject a) =>
                          a -> String -> Int32 -> IO ()
 setObjectPropertyCInt obj propName int =
-    setObjectProperty obj propName int set_int #const G_TYPE_INT
+    setObjectProperty obj propName int set_int32 #const G_TYPE_INT
 
 constructObjectPropertyCInt :: String -> Int32 ->
-                                IO (String, GValuePtr)
+                                IO (String, GValue)
 constructObjectPropertyCInt propName int =
-    constructObjectProperty propName int set_int #const G_TYPE_INT
+    constructObjectProperty propName int set_int32 #const G_TYPE_INT
 
-foreign import ccall unsafe "g_value_get_int" get_int ::
-    GValuePtr -> IO Int32
 getObjectPropertyCInt :: (ManagedPtr a, GObject a) => a -> String -> IO Int32
 getObjectPropertyCInt obj propName =
-    getObjectProperty obj propName get_int #const G_TYPE_INT
+    getObjectProperty obj propName get_int32 #const G_TYPE_INT
 
-foreign import ccall unsafe "g_value_set_uint" set_uint ::
-    GValuePtr -> Word32 -> IO ()
 setObjectPropertyCUInt :: (ManagedPtr a, GObject a) =>
                           a -> String -> Word32 -> IO ()
 setObjectPropertyCUInt obj propName uint =
-    setObjectProperty obj propName uint set_uint #const G_TYPE_UINT
+    setObjectProperty obj propName uint set_uint32 #const G_TYPE_UINT
 
 constructObjectPropertyCUInt :: String -> Word32 ->
-                                IO (String, GValuePtr)
+                                IO (String, GValue)
 constructObjectPropertyCUInt propName uint =
-    constructObjectProperty propName uint set_uint #const G_TYPE_UINT
+    constructObjectProperty propName uint set_uint32 #const G_TYPE_UINT
 
-foreign import ccall unsafe "g_value_get_uint" get_uint ::
-    GValuePtr -> IO Word32
 getObjectPropertyCUInt :: (ManagedPtr a, GObject a) => a -> String -> IO Word32
 getObjectPropertyCUInt obj propName =
-    getObjectProperty obj propName get_uint #const G_TYPE_UINT
+    getObjectProperty obj propName get_uint32 #const G_TYPE_UINT
 
-foreign import ccall unsafe "g_value_set_int64" set_int64 ::
-    GValuePtr -> Int64 -> IO ()
 setObjectPropertyInt64 :: (ManagedPtr a, GObject a) =>
                           a -> String -> Int64 -> IO ()
 setObjectPropertyInt64 obj propName int64 =
     setObjectProperty obj propName int64 set_int64 #const G_TYPE_INT64
 
 constructObjectPropertyInt64 :: String -> Int64 ->
-                                IO (String, GValuePtr)
+                                IO (String, GValue)
 constructObjectPropertyInt64 propName int64 =
     constructObjectProperty propName int64 set_int64 #const G_TYPE_INT64
 
-foreign import ccall unsafe "g_value_get_int64" get_int64 ::
-    GValuePtr -> IO Int64
 getObjectPropertyInt64 :: (ManagedPtr a, GObject a) => a -> String -> IO Int64
 getObjectPropertyInt64 obj propName =
     getObjectProperty obj propName get_int64 #const G_TYPE_INT64
 
-foreign import ccall unsafe "g_value_set_uint64" set_uint64 ::
-    GValuePtr -> Word64 -> IO ()
 setObjectPropertyUInt64 :: (ManagedPtr a, GObject a) =>
                           a -> String -> Word64 -> IO ()
 setObjectPropertyUInt64 obj propName uint64 =
     setObjectProperty obj propName uint64 set_uint64 #const G_TYPE_UINT64
 
 constructObjectPropertyUInt64 :: String -> Word64 ->
-                                 IO (String, GValuePtr)
+                                 IO (String, GValue)
 constructObjectPropertyUInt64 propName uint64 =
     constructObjectProperty propName uint64 set_uint64 #const G_TYPE_UINT64
 
-foreign import ccall unsafe "g_value_get_uint64" get_uint64 ::
-    GValuePtr -> IO Word64
 getObjectPropertyUInt64 :: (ManagedPtr a, GObject a) => a -> String -> IO Word64
 getObjectPropertyUInt64 obj propName =
     getObjectProperty obj propName get_uint64 #const G_TYPE_UINT64
 
-foreign import ccall unsafe "g_value_set_float" set_float ::
-    GValuePtr -> CFloat -> IO ()
 setObjectPropertyCFloat :: (ManagedPtr a, GObject a) =>
                            a -> String -> CFloat -> IO ()
 setObjectPropertyCFloat obj propName float =
     setObjectProperty obj propName float set_float #const G_TYPE_FLOAT
 
 constructObjectPropertyCFloat :: String -> CFloat ->
-                                 IO (String, GValuePtr)
+                                 IO (String, GValue)
 constructObjectPropertyCFloat propName float =
     constructObjectProperty propName float set_float #const G_TYPE_FLOAT
 
-foreign import ccall unsafe "g_value_get_float" get_float ::
-    GValuePtr -> IO CFloat
 getObjectPropertyCFloat :: (ManagedPtr a, GObject a) =>
                            a -> String -> IO CFloat
 getObjectPropertyCFloat obj propName =
     getObjectProperty obj propName get_float #const G_TYPE_FLOAT
 
-foreign import ccall unsafe "g_value_set_double" set_double ::
-    GValuePtr -> CDouble -> IO ()
 setObjectPropertyCDouble :: (ManagedPtr a, GObject a) =>
                             a -> String -> CDouble -> IO ()
 setObjectPropertyCDouble obj propName double =
     setObjectProperty obj propName double set_double #const G_TYPE_DOUBLE
 
 constructObjectPropertyCDouble :: String -> CDouble ->
-                                  IO (String, GValuePtr)
+                                  IO (String, GValue)
 constructObjectPropertyCDouble propName double =
     constructObjectProperty propName double set_double #const G_TYPE_DOUBLE
 
-foreign import ccall unsafe "g_value_get_double" get_double ::
-    GValuePtr -> IO CDouble
 getObjectPropertyCDouble :: (ManagedPtr a, GObject a) =>
                             a -> String -> IO CDouble
 getObjectPropertyCDouble obj propName =
     getObjectProperty obj propName get_double #const G_TYPE_DOUBLE
 
-foreign import ccall unsafe "g_value_set_boolean" set_boolean ::
-    GValuePtr -> CInt -> IO ()
 setObjectPropertyBool :: (ManagedPtr a, GObject a) =>
                          a -> String -> Bool -> IO ()
 setObjectPropertyBool obj propName bool =
-    let cBool = (fromIntegral . fromEnum) bool
-    in setObjectProperty obj propName cBool set_boolean #const G_TYPE_BOOLEAN
+    setObjectProperty obj propName bool set_boolean #const G_TYPE_BOOLEAN
 
-constructObjectPropertyBool :: String -> Bool -> IO (String, GValuePtr)
+constructObjectPropertyBool :: String -> Bool -> IO (String, GValue)
 constructObjectPropertyBool propName bool =
-    let cBool = (fromIntegral . fromEnum) bool
-    in constructObjectProperty propName cBool set_boolean #const G_TYPE_BOOLEAN
+    constructObjectProperty propName bool set_boolean #const G_TYPE_BOOLEAN
 
-foreign import ccall unsafe "g_value_get_boolean" get_boolean ::
-    GValuePtr -> IO CInt
 getObjectPropertyBool :: (ManagedPtr a, GObject a) => a -> String -> IO Bool
 getObjectPropertyBool obj propName =
-    getObjectProperty obj propName (\val -> (/= 0) <$> get_boolean val)
-                          #const G_TYPE_BOOLEAN
+    getObjectProperty obj propName get_boolean #const G_TYPE_BOOLEAN
 
-foreign import ccall unsafe "g_value_set_object" set_object ::
-    GValuePtr -> Ptr a -> IO ()
 setObjectPropertyObject :: (ManagedPtr a, GObject a,
                             ManagedPtr b, GObject b) =>
                            a -> String -> b -> IO ()
@@ -356,14 +299,12 @@ setObjectPropertyObject obj propName object = do
       setObjectProperty obj propName objectPtr set_object gtype
 
 constructObjectPropertyObject :: (ManagedPtr a, GObject a) =>
-                                 String -> a -> IO (String, GValuePtr)
+                                 String -> a -> IO (String, GValue)
 constructObjectPropertyObject propName object = do
   gtype <- gobjectType object
   withManagedPtr object $ \objectPtr ->
       constructObjectProperty propName objectPtr set_object gtype
 
-foreign import ccall unsafe "g_value_get_object" get_object ::
-    GValuePtr -> IO (Ptr a)
 getObjectPropertyObject :: forall a b. (ManagedPtr a, GObject a, GObject b) =>
                            a -> String -> (ForeignPtr b -> b) -> IO b
 getObjectPropertyObject obj propName constructor = do
@@ -373,8 +314,6 @@ getObjectPropertyObject obj propName constructor = do
                                  >>= newObject constructor)
                       gtype
 
-foreign import ccall unsafe "g_value_set_boxed" set_boxed ::
-    GValuePtr -> Ptr a -> IO ()
 setObjectPropertyBoxed :: (ManagedPtr a, GObject a, ManagedPtr b, BoxedObject b) =>
                           a -> String -> b -> IO ()
 setObjectPropertyBoxed obj propName boxed = do
@@ -383,14 +322,12 @@ setObjectPropertyBoxed obj propName boxed = do
         setObjectProperty obj propName boxedPtr set_boxed gtype
 
 constructObjectPropertyBoxed :: (ManagedPtr a, BoxedObject a) => String -> a ->
-                                IO (String, GValuePtr)
+                                IO (String, GValue)
 constructObjectPropertyBoxed propName boxed = do
   gtype <- boxedType boxed
   withManagedPtr boxed $ \boxedPtr ->
       constructObjectProperty propName boxedPtr set_boxed gtype
 
-foreign import ccall unsafe "g_value_get_boxed" get_boxed ::
-    GValuePtr -> IO (Ptr b)
 getObjectPropertyBoxed :: forall a b. (ManagedPtr a, GObject a, BoxedObject b) =>
                           a -> String -> (ForeignPtr b -> b) -> IO b
 getObjectPropertyBoxed obj propName constructor = do
@@ -406,7 +343,7 @@ setObjectPropertyStringArray obj propName strv = do
   free cStrv
 
 constructObjectPropertyStringArray :: String -> [String] ->
-                                      IO (String, GValuePtr)
+                                      IO (String, GValue)
 constructObjectPropertyStringArray propName strv = do
   cStrv <- packZeroTerminatedUTF8CArray strv
   result <- constructObjectProperty propName cStrv set_boxed #const G_TYPE_STRV
@@ -421,8 +358,6 @@ getObjectPropertyStringArray obj propName =
                       (get_boxed >=> unpackZeroTerminatedUTF8CArray . castPtr)
                       #const G_TYPE_STRV
 
-foreign import ccall unsafe "g_value_set_enum" set_enum ::
-    GValuePtr -> CUInt -> IO ()
 setObjectPropertyEnum :: (ManagedPtr a, GObject a, Enum b, BoxedObject b) =>
                          a -> String -> b -> IO ()
 setObjectPropertyEnum obj propName enum = do
@@ -431,14 +366,12 @@ setObjectPropertyEnum obj propName enum = do
   setObjectProperty obj propName cEnum set_enum gtype
 
 constructObjectPropertyEnum :: (Enum a, BoxedObject a) =>
-                               String -> a -> IO (String, GValuePtr)
+                               String -> a -> IO (String, GValue)
 constructObjectPropertyEnum propName enum = do
   gtype <- boxedType enum
   let cEnum = (fromIntegral . fromEnum) enum
   constructObjectProperty propName cEnum set_enum gtype
 
-foreign import ccall unsafe "g_value_get_enum" get_enum ::
-    GValuePtr -> IO CUInt
 getObjectPropertyEnum :: forall a b. (ManagedPtr a, GObject a,
                                       Enum b, BoxedObject b) =>
                          a -> String -> IO b
@@ -448,8 +381,6 @@ getObjectPropertyEnum obj propName = do
                     (\val -> toEnum . fromIntegral <$> get_enum val)
                     gtype
 
-foreign import ccall unsafe "g_value_set_flags" set_flags ::
-    GValuePtr -> CUInt -> IO ()
 setObjectPropertyFlags :: (ManagedPtr a, GObject a) =>
                           a -> String -> Word -> IO ()
 setObjectPropertyFlags obj propName flags =
@@ -457,13 +388,11 @@ setObjectPropertyFlags obj propName flags =
     in setObjectProperty obj propName cFlags set_flags #const G_TYPE_FLAGS
 
 constructObjectPropertyFlags :: String -> Word ->
-                                IO (String, GValuePtr)
+                                IO (String, GValue)
 constructObjectPropertyFlags propName flags =
     let cFlags = fromIntegral flags
     in constructObjectProperty propName cFlags set_flags #const G_TYPE_FLAGS
 
-foreign import ccall unsafe "g_value_get_flags" get_flags ::
-    GValuePtr -> IO CUInt
 getObjectPropertyFlags :: (ManagedPtr a, GObject a) => a -> String -> IO Word
 getObjectPropertyFlags obj propName =
     getObjectProperty obj propName (\val -> fromIntegral <$> get_flags val)
@@ -473,7 +402,7 @@ setObjectPropertyVariant :: (ManagedPtr a, GObject a) =>
                             a -> String -> b -> IO ()
 setObjectPropertyVariant = error $ "Setting variant types not supported yet."
 
-constructObjectPropertyVariant :: String -> b -> IO (String, GValuePtr)
+constructObjectPropertyVariant :: String -> b -> IO (String, GValue)
 constructObjectPropertyVariant =
     error $ "Constructing variant types not supported yet."
 
@@ -488,7 +417,7 @@ setObjectPropertyByteArray obj propName bytes = do
   unrefGByteArray packed
 
 constructObjectPropertyByteArray :: String -> B.ByteString ->
-                                    IO (String, GValuePtr)
+                                    IO (String, GValue)
 constructObjectPropertyByteArray propName bytes = do
   packed <- packGByteArray bytes
   result <- constructObjectProperty propName packed
@@ -496,7 +425,7 @@ constructObjectPropertyByteArray propName bytes = do
   unrefGByteArray packed
   return result
 
-getObjectPropertyByteArray :: (ManagedPtr a, GObject a) => 
+getObjectPropertyByteArray :: (ManagedPtr a, GObject a) =>
                               a -> String -> IO B.ByteString
 getObjectPropertyByteArray obj propName =
     getObjectProperty obj propName (get_boxed >=> unpackGByteArray)
@@ -506,7 +435,7 @@ setObjectPropertyHash :: (ManagedPtr a, GObject a) => a -> String -> b -> IO ()
 setObjectPropertyHash =
     error $ "Setting GHashTable properties not supported yet."
 
-constructObjectPropertyHash :: String -> b -> IO (String, GValuePtr)
+constructObjectPropertyHash :: String -> b -> IO (String, GValue)
 constructObjectPropertyHash =
     error $ "Constructing GHashTable properties not supported yet."
 

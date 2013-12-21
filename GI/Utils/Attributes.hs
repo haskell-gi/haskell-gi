@@ -79,7 +79,7 @@ module GI.Utils.Attributes (
   set
   ) where
 
-import GI.Utils.BasicTypes (GValuePtr)
+import GI.Utils.GValue (GValue(..))
 
 infixr 0 :=,:~,:=>,:~>,::=,::~
 
@@ -111,7 +111,7 @@ data NonConstructibleAttr
 
 type Getter o a = o -> IO a
 type Setter o b = o -> b -> IO ()
-type Constructor b = b -> IO (String, GValuePtr)
+type Constructor b = b -> IO (String, GValue)
 
 -- | The most general version, with a getter, a setter, and a
 -- constructor. The type of the attr is parameterized by "a", while

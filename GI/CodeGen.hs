@@ -480,6 +480,7 @@ genModule name apis modulePrefix = do
     line $ "import " ++ mp "Utils.ManagedPtr"
     line $ "import " ++ mp "Utils.Properties"
     line $ "import " ++ mp "Utils.Utils"
+    line $ "import " ++ mp "Utils.GValue"
     blank
     line $ "import " ++ mp name ++ "Lenses"
     blank

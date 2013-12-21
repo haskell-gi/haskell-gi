@@ -318,13 +318,3 @@ void boxed_free_helper (GType *gtype, void *boxed)
   g_boxed_free (*gtype, boxed);
   free (gtype);
 }
-
-/* Allocate a value of the given GType */
-GValue *alloc_new_GValue (GType gtype)
-{
-  GValue *gvalue = calloc(1, sizeof(GValue));
-
-  g_value_init(gvalue, gtype);
-
-  return gvalue;
-}
