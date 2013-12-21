@@ -11,8 +11,8 @@ module GI.Utils.Properties
     , setObjectPropertyCUInt
     , setObjectPropertyInt64
     , setObjectPropertyUInt64
-    , setObjectPropertyCFloat
-    , setObjectPropertyCDouble
+    , setObjectPropertyFloat
+    , setObjectPropertyDouble
     , setObjectPropertyBool
     , setObjectPropertyObject
     , setObjectPropertyBoxed
@@ -29,8 +29,8 @@ module GI.Utils.Properties
     , getObjectPropertyCUInt
     , getObjectPropertyInt64
     , getObjectPropertyUInt64
-    , getObjectPropertyCFloat
-    , getObjectPropertyCDouble
+    , getObjectPropertyFloat
+    , getObjectPropertyDouble
     , getObjectPropertyBool
     , getObjectPropertyObject
     , getObjectPropertyBoxed
@@ -47,8 +47,8 @@ module GI.Utils.Properties
     , constructObjectPropertyCUInt
     , constructObjectPropertyInt64
     , constructObjectPropertyUInt64
-    , constructObjectPropertyCFloat
-    , constructObjectPropertyCDouble
+    , constructObjectPropertyFloat
+    , constructObjectPropertyDouble
     , constructObjectPropertyBool
     , constructObjectPropertyObject
     , constructObjectPropertyBoxed
@@ -247,34 +247,34 @@ getObjectPropertyUInt64 :: (ManagedPtr a, GObject a) => a -> String -> IO Word64
 getObjectPropertyUInt64 obj propName =
     getObjectProperty obj propName get_uint64 #const G_TYPE_UINT64
 
-setObjectPropertyCFloat :: (ManagedPtr a, GObject a) =>
-                           a -> String -> CFloat -> IO ()
-setObjectPropertyCFloat obj propName float =
+setObjectPropertyFloat :: (ManagedPtr a, GObject a) =>
+                           a -> String -> Float -> IO ()
+setObjectPropertyFloat obj propName float =
     setObjectProperty obj propName float set_float #const G_TYPE_FLOAT
 
-constructObjectPropertyCFloat :: String -> CFloat ->
+constructObjectPropertyFloat :: String -> Float ->
                                  IO (String, GValue)
-constructObjectPropertyCFloat propName float =
+constructObjectPropertyFloat propName float =
     constructObjectProperty propName float set_float #const G_TYPE_FLOAT
 
-getObjectPropertyCFloat :: (ManagedPtr a, GObject a) =>
-                           a -> String -> IO CFloat
-getObjectPropertyCFloat obj propName =
+getObjectPropertyFloat :: (ManagedPtr a, GObject a) =>
+                           a -> String -> IO Float
+getObjectPropertyFloat obj propName =
     getObjectProperty obj propName get_float #const G_TYPE_FLOAT
 
-setObjectPropertyCDouble :: (ManagedPtr a, GObject a) =>
-                            a -> String -> CDouble -> IO ()
-setObjectPropertyCDouble obj propName double =
+setObjectPropertyDouble :: (ManagedPtr a, GObject a) =>
+                            a -> String -> Double -> IO ()
+setObjectPropertyDouble obj propName double =
     setObjectProperty obj propName double set_double #const G_TYPE_DOUBLE
 
-constructObjectPropertyCDouble :: String -> CDouble ->
+constructObjectPropertyDouble :: String -> Double ->
                                   IO (String, GValue)
-constructObjectPropertyCDouble propName double =
+constructObjectPropertyDouble propName double =
     constructObjectProperty propName double set_double #const G_TYPE_DOUBLE
 
-getObjectPropertyCDouble :: (ManagedPtr a, GObject a) =>
-                            a -> String -> IO CDouble
-getObjectPropertyCDouble obj propName =
+getObjectPropertyDouble :: (ManagedPtr a, GObject a) =>
+                            a -> String -> IO Double
+getObjectPropertyDouble obj propName =
     getObjectProperty obj propName get_double #const G_TYPE_DOUBLE
 
 setObjectPropertyBool :: (ManagedPtr a, GObject a) =>

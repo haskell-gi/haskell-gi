@@ -41,8 +41,8 @@ propTypeStr t = case t of
    TBasicType TInt64 -> return "Int64"
    TBasicType TUInt64 -> return "UInt64"
    TBasicType TBoolean -> return "Bool"
-   TBasicType TFloat -> return "CFloat"
-   TBasicType TDouble -> return "CDouble"
+   TBasicType TFloat -> return "Float"
+   TBasicType TDouble -> return "Double"
    TCArray True _ _ (TBasicType TUTF8) -> return "StringArray"
    TCArray True _ _ (TBasicType TFileName) -> return "StringArray"
    t@(TInterface ns n) -> do

@@ -113,10 +113,10 @@ instance IsGValue Int64 where
 instance IsGValue Word64 where
     toGValue = buildGValue gtypeUInt64 set_uint64
 
-instance IsGValue CFloat where
+instance IsGValue Float where
     toGValue = buildGValue gtypeFloat set_float
 
-instance IsGValue CDouble where
+instance IsGValue Double where
     toGValue = buildGValue gtypeDouble set_double
 
 instance IsGValue Bool where
@@ -195,22 +195,22 @@ foreign import ccall unsafe "g_value_set_float" _set_float ::
 foreign import ccall unsafe "g_value_get_float" _get_float ::
     Ptr GValue -> IO CFloat
 
-set_float :: GValue -> CFloat -> IO ()
-set_float gv f = withManagedPtr gv $ flip _set_float f
+set_float :: GValue -> Float -> IO ()
+set_float gv f = withManagedPtr gv $ flip _set_float (realToFrac f)
 
-get_float :: GValue -> IO CFloat
-get_float gv = withManagedPtr gv _get_float
+get_float :: GValue -> IO Float
+get_float gv = realToFrac <$> withManagedPtr gv _get_float
 
 foreign import ccall unsafe "g_value_set_double" _set_double ::
     Ptr GValue -> CDouble -> IO ()
 foreign import ccall unsafe "g_value_get_double" _get_double ::
     Ptr GValue -> IO CDouble
 
-set_double :: GValue -> CDouble -> IO ()
-set_double gv d = withManagedPtr gv $ flip _set_double d
+set_double :: GValue -> Double -> IO ()
+set_double gv d = withManagedPtr gv $ flip _set_double (realToFrac d)
 
-get_double :: GValue -> IO CDouble
-get_double gv = withManagedPtr gv _get_double
+get_double :: GValue -> IO Double
+get_double gv = realToFrac <$> withManagedPtr gv _get_double
 
 foreign import ccall unsafe "g_value_set_boolean" _set_boolean ::
     Ptr GValue -> CInt -> IO ()

@@ -35,8 +35,6 @@ import GHC.Exts (IsString(..))
 import Data.Int
 import Data.Word
 
-import Foreign.C
-
 import GI.API
 import GI.Code
 import GI.GObject
@@ -192,6 +190,10 @@ hToF' t a hType fType transfer
         return $ M "packByteString"
     | TCArray False _ _ (TBasicType TBoolean) <- t =
         return $ M "(packMapStorableArray (fromIntegral . fromEnum))"
+    | TCArray False _ _ (TBasicType TFloat) <- t =
+        return $ M "(packMapStorableArray realToFrac)"
+    | TCArray False _ _ (TBasicType TDouble) <- t =
+        return $ M "(packMapStorableArray realToFrac)"
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
     | TCArray _ _ _ _ <- t =
@@ -206,6 +208,8 @@ hToF' t a hType fType transfer
                ("ByteString", "CString") -> M "byteStringToCString"
                ("Char", "CInt")      -> "(fromIntegral . ord)"
                ("Bool", "CInt")      -> "(fromIntegral . fromEnum)"
+               ("Float", "CFloat")   -> "realToFrac"
+               ("Double", "CDouble") -> "realToFrac"
                _                     -> error $ "don't know how to convert "
                                         ++ show hType ++ " into "
                                         ++ show fType ++ ".\n"
@@ -320,6 +324,10 @@ fToH' t a hType fType transfer
         return $ M "unpackZeroTerminatedPtrArray"
     | TCArray True _ _ (TBasicType TBoolean) <- t =
         return $ M "(unpackMapZeroTerminatedStorableArray (/= 0))"
+    | TCArray True _ _ (TBasicType TFloat) <- t =
+        return $ M "(unpackMapZeroTerminatedStorableArray realToFrac)"
+    | TCArray True _ _ (TBasicType TDouble) <- t =
+        return $ M "(unpackMapZeroTerminatedStorableArray realToFrac)"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "unpackZeroTerminatedStorableArray"
     | TCArray _ _ _ _ <- t =
@@ -332,6 +340,8 @@ fToH' t a hType fType transfer
                ("CString", "ByteString") -> M "B.packCString"
                ("CInt", "Char")      -> "(chr . fromIntegral)"
                ("CInt", "Bool")      -> "(/= 0)"
+               ("CFloat", "Float")   -> "realToFrac"
+               ("CDouble", "Double") -> "realToFrac"
                _                     -> error $ "don't know how to convert "
                                         ++ show fType ++ " into "
                                         ++ show hType ++ ".\n"
@@ -379,6 +389,10 @@ unpackCArray length (TCArray False _ _ t) transfer =
                          "unpackPtrArrayWithLength " ++ length
     TBasicType TBoolean -> return $ apply $ M $ parenthesize $
                          "unpackMapStorableArrayWithLength (/= 0) " ++ length
+    TBasicType TFloat -> return $ apply $ M $ parenthesize $
+                         "unpackMapStorableArrayWithLength realToFrac " ++ length
+    TBasicType TDouble -> return $ apply $ M $ parenthesize $
+                         "unpackMapStorableArrayWithLength realToFrac " ++ length
     TBasicType _ -> return $ apply $ M $ parenthesize $
                          "unpackStorableArrayWithLength " ++ length
     TInterface _ _ -> do
@@ -480,8 +494,8 @@ haskellBasicType TUInt64   = typeOf (0 :: Word64)
 haskellBasicType TGType    = "GType" `con` []
  -- XXX Text may be more appropriate
 haskellBasicType TUTF8     = typeOf ("" :: String)
-haskellBasicType TFloat    = typeOf (0 :: CFloat)
-haskellBasicType TDouble   = typeOf (0 :: CDouble)
+haskellBasicType TFloat    = typeOf (0 :: Float)
+haskellBasicType TDouble   = typeOf (0 :: Double)
 haskellBasicType TUniChar  = typeOf ('\0' :: Char)
 haskellBasicType TFileName = "ByteString" `con` []
 
@@ -525,6 +539,8 @@ foreignBasicType TBoolean  = "CInt" `con` []
 foreignBasicType TUTF8     = "CString" `con` []
 foreignBasicType TFileName = "CString" `con` []
 foreignBasicType TUniChar  = "CInt" `con` []
+foreignBasicType TFloat    = "CFloat" `con` []
+foreignBasicType TDouble   = "CDouble" `con` []
 foreignBasicType t         = haskellBasicType t
 
 -- This translates GI types to the types used in foreign function calls.
