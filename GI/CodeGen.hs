@@ -449,7 +449,7 @@ genModule name apis modulePrefix = do
     blank
     line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
     line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
-    line $ "    FlexibleInstances, UndecidableInstances #-}"
+    line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
     blank
     let mp = (modulePrefix ++)
     -- XXX: Generate export list.

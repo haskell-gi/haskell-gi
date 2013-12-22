@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, GADTs #-}
+{-# LANGUAGE ScopedTypeVariables, GADTs, DataKinds #-}
 {-# OPTIONS_GHC -Wall #-}
 
 module GI.Utils.Properties
@@ -84,7 +84,7 @@ foreign import ccall unsafe "g_object_newv" g_object_newv ::
 -- attributes. AttrOps are always constructible, so we don't need to
 -- enforce constraints here.
 new :: forall o. GObject o => (ForeignPtr o -> o) ->
-       [AttrOp JustSetsAttr o NonWritableAttr] -> IO o
+       [AttrOp SetAndConstructOp o NonWritableAttr] -> IO o
 new constructor attrs = do
   props <- mapM construct attrs
   let nprops = length props
@@ -96,16 +96,10 @@ new constructor attrs = do
   free params
   wrapObject constructor (result :: Ptr o)
   where
-    construct :: AttrOp JustSetsAttr o NonWritableAttr ->
+    construct :: AttrOp SetAndConstructOp o NonWritableAttr ->
                  IO (String, GValue)
-    construct (RWAttr _ _ _ cons :=  x) = cons x
-    construct (RCAttr _ _   cons :=  x) = cons x
-    construct (WOAttr _   _ cons :=  x) = cons x
-    construct (COAttr _     cons :=  x) = cons x
-    construct (RWAttr _ _ _ cons :=> x) = x >>= cons
-    construct (RCAttr _ _   cons :=> x) = x >>= cons
-    construct (WOAttr _   _ cons :=> x) = x >>= cons
-    construct (COAttr _     cons :=> x) = x >>= cons
+    construct (attr := x) = attrConstruct attr x
+    construct (attr :=> x) = x >>= attrConstruct attr
 
     gvalueSize = #size GValue
     gparameterSize = #size GParameter

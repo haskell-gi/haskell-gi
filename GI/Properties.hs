@@ -193,7 +193,8 @@ genProperties n props = do
 
   forM_ props' $ \(propOwner@(Name ons on), prop) -> do
     propOwnerName <- upperName propOwner
-    let pName = propOwnerName ++ hyphensToCamelCase (propName prop)
+    let cName = hyphensToCamelCase $ propName prop
+        pName = propOwnerName ++ cName
         flags = propFlags prop
         writable = ParamWritable `elem` flags &&
                    not (ParamConstructOnly `elem` flags)
@@ -204,9 +205,21 @@ genProperties n props = do
                                -- for properties inherited from parent
                                -- classes.
 
-    let getter = "get" ++ pName
-        setter = "set" ++ pName
-        constructor = "construct" ++ pName
+    getter <- do
+      prefix <- qualify ons
+      if readable
+      then return $ prefix ++ "get" ++ on ++ cName
+      else return "undefined"
+    setter <- do
+      prefix <- qualify ons
+      if writable
+      then return $ prefix ++ "set" ++ on ++ cName
+      else return "undefined"
+    constructor <- do
+      prefix <- qualify ons
+      if (writable || constructOnly)
+      then return $ prefix ++ "construct" ++ on ++ cName
+      else return "undefined"
 
     when owned $ do
       when (not $ readable || writable || constructOnly) $
@@ -239,53 +252,15 @@ genProperties n props = do
                           then parenthesize sOutType
                           else sOutType
 
-    (constraints, inType) <- if not (writable || constructOnly)
-                             then return ([], "()")
-                             else attrType prop
-
-    let (getterFns, readType) =
-            if readable
-            then ([getter], "R")
-            else if constructOnly
-                 then ([], "C")
-                 else ([], "W")
-        (setterFns, writeType) =
-            if constructOnly
-            then if readable
-                 then ([constructor], "C")
-                 else ([constructor], "O")
-            else if writable
-                 then if readable
-                      then ([setter, constructor], "W")
-                      else ([setter, constructor], "O")
-                 else ([], "O")
-        attrConstructor = readType ++ writeType ++ "Attr"
-
-    let attrReadType = if readable
-                       then "ReadableAttr"
-                       else "NonReadableAttr"
-        attrWriteType = if writable
-                        then "w"
-                        else "NonWritableAttr"
-        attrConstructType = if (writable || constructOnly)
-                            then "ConstructibleAttr"
-                            else "NonConstructibleAttr"
-
     qualifiedLens <- do
       prefix <- qualify ons
-      return $ prefix ++ lcFirst on ++ hyphensToCamelCase (propName prop)
+      return $ prefix ++ lcFirst on ++ cName
 
     when owned $ group $ do
-      let constraints' = (goConstraint name ++ " o") : constraints
-
       line $ qualifiedLens ++ " :: "
-               ++ parenthesize (intercalate ", " constraints')
-               ++ " => Attr o " ++ outType ++ " " ++ inType ++ " "
-                      ++ attrReadType ++ " " ++ attrWriteType ++ " "
-                      ++ attrConstructType
-      line $ qualifiedLens ++ " = "
-               ++ attrConstructor ++ " \"" ++ propName prop ++ "\" "
-               ++ intercalate " " (getterFns ++ setterFns)
+               ++ parenthesize (goConstraint name ++ " o")
+               ++ " => Attr \"" ++ cName ++ "\" o w"
+      line $ qualifiedLens ++ " = undefined"
 
     -- Polymorphic _label style lens
     group $ do
@@ -298,17 +273,29 @@ genProperties n props = do
                                              then parenthesize hInType
                                              else hInType
                          else "(~) ()"
-          cName = hyphensToCamelCase $ propName prop
+          instanceVars = "\"" ++ cName ++ "\" " ++ name
+          attrWriteType = if writable
+                          then "w"
+                          else "NonWritableAttr"
+
+      line $ "instance HasAttr " ++ instanceVars ++ " where"
+      indent $ do
+              line $ "type AttrIsReadable " ++ instanceVars
+                       ++ " = " ++ show readable
+              line $ "type AttrIsConstructible " ++ instanceVars
+                       ++ " = " ++ show (writable || constructOnly)
+              line $ "type AttrGetType " ++ instanceVars
+                       ++ " = " ++ outType
+              line $ "type " ++ "AttrSetConstraint " ++ instanceVars
+                       ++ " = " ++ inConstraint
+              line $ "attrLabel _ _ = \"" ++ name ++ ":" ++ cName ++ "\""
+              line $ "attrGet _ = " ++ getter
+              line $ "attrSet _ = " ++ setter
+              line $ "attrConstruct _ = " ++ constructor
+
+      blank
 
       line $ "instance HasProperty"
                ++ cName ++ " " ++ name ++ " " ++ attrWriteType ++ " where"
       indent $ do
-              line $ "type " ++ cName ++ "Readable " ++ name
-                       ++" = " ++ attrReadType
-              line $ "type " ++ cName ++ "Constructible " ++ name
-                       ++ " = " ++ attrConstructType
-              line $ "type " ++ cName ++ "OutType " ++ name
-                       ++ " = " ++ outType
-              line $ "type " ++ cName ++ "InConstraint " ++ name
-                       ++ " = " ++ inConstraint
               line $ "_" ++ lcFirst cName ++ " = " ++ qualifiedLens

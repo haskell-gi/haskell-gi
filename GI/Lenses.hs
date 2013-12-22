@@ -38,13 +38,7 @@ genPropertyLens pName = group $ do
   let name = hyphensToCamelCase pName
   line $ "class HasProperty" ++ name ++ " o w where"
   indent $ do
-    line $ "type " ++ name ++ "Readable o"
-    line $ "type " ++ name ++ "Constructible o"
-    line $ "type " ++ name ++ "OutType o"
-    line $ "type " ++ name ++ "InConstraint o :: * -> Constraint"
-    line $ "_" ++ lcFirst name ++ " :: (" ++ name ++ "InConstraint o) k => "
-    indent $ line $ "Attr o (" ++ name ++ "OutType o) k (" ++ name
-                      ++ "Readable o) w (" ++ name ++ "Constructible o)"
+    line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ name ++ "\" o w"
 
 genLenses :: String -> [(Name, API)] -> String -> CodeGen ()
 genLenses name apis modPrefix = do
@@ -52,12 +46,11 @@ genLenses name apis modPrefix = do
   blank
   line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
   line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
-  line $ "    FlexibleInstances, UndecidableInstances #-}"
+  line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
   blank
   line $ "module " ++ modPrefix ++ name ++ "Lenses where"
   blank
   line $ "import " ++ modPrefix ++ "Utils.Attributes (Attr)"
-  line $ "import GHC.Exts (Constraint)"
   blank
 
   -- We generate polymorphic lenses for all properties appearing in

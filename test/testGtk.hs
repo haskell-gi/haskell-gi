@@ -103,18 +103,32 @@ testPolymorphicLenses parent message = do
                   _iconName := "dialog-information"]
 
   -- This should fail to compile with
-  -- >> No instance for (HasPropertyButtons MessageDialog WritableAttr)
+{-
+    Couldn't match type `AttrIsConstructible "Buttons" String'
+                  with 'True
+    Expected type: 'True
+      Actual type: AttrIsConstructible "Buttons" String
+-}
   -- set message [ _buttons := ButtonsTypeOk ]
 
   _ <- get messageBox _messageArea >>= castToBox
 
   -- Should fail to compile, with
-  -- >> Couldn't match type `NonConstructibleAttr' with `ConstructibleAttr'
+{-
+    Couldn't match type 'False with 'True
+    Expected type: 'True
+      Actual type: AttrIsConstructible "MessageArea" MessageDialog
+-}
   -- set messageBox [_messageArea := undefined]
 
   -- This should fail to compile with
-  -- >> Couldn't match type `NonReadableAttr' with `ReadableAttr'
-  -- get messageArea _child
+{-
+    Couldn't match type 'False with 'True
+    Expected type: 'True
+      Actual type: AttrIsReadable "Child" MessageDialog
+
+-}
+  -- get messageBox _child
 
   result <- dialogRun messageBox
   putStrLn $ " >>> " ++ show ((toEnum . fromIntegral) result :: ResponseType)
