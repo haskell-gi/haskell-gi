@@ -1,5 +1,6 @@
 module GI.SymbolNaming
     ( qualify
+    , qualifyWithSuffix
     , ucFirst
     , lcFirst
     , literalName
@@ -68,14 +69,19 @@ upperName (Name ns s) = do
           ucFirst' x = ucFirst x
 
 -- Return a qualified prefix for the given namespace. In case the
--- namespace corresponds to the current module the empty string is returned.
-qualify :: String -> CodeGen String
-qualify ns = do
+-- namespace corresponds to the current module the empty string is
+-- returned, otherwise the namespace ++ suffix is returned. Suffix is
+-- typically just ".", see "qualify" below.
+qualifyWithSuffix :: String -> String -> CodeGen String
+qualifyWithSuffix suffix ns = do
      cfg <- config
      return $ if modName cfg == ns then
                 ""
               else
-                ucFirst ns ++ "."
+                ucFirst ns ++ suffix
+
+qualify:: String -> CodeGen String
+qualify = qualifyWithSuffix "."
 
 -- For a string of the form "one-sample-string" return "OneSampleString"
 hyphensToCamelCase :: String -> String

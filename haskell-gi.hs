@@ -175,9 +175,9 @@ processAPI options name = do
               return (intercalate "." (init xs) ++ ".", installDir, last xs)
           writeFile (joinPath [dirPrefix, modName ++ ".hs"]) $
              codeToString $ runCodeGen' cfg $ genModule modName apis modPrefix
-          writeFile (joinPath [dirPrefix, modName ++ "Lenses.hs"]) $
+          writeFile (joinPath [dirPrefix, modName ++ "Attributes.hs"]) $
              codeToString $ runCodeGen' cfg $
-                        genLenses modName (M.toList input') modPrefix
+                        genLenses modName apis (M.toList input') modPrefix
         Dump -> mapM_ (putStrLn . ppShow) apis
         Help -> putStr showHelp
 

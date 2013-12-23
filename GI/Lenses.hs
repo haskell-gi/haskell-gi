@@ -4,12 +4,15 @@ module GI.Lenses
 
 import Control.Applicative ((<$>))
 import Control.Monad (forM_)
+import Control.Monad.Writer (tell)
 import qualified Data.Set as S
 
 import GI.API
 import GI.Code
 import GI.GObject
 import GI.SymbolNaming
+import GI.Properties
+import GI.CodeGen (genPrelude)
 
 -- A list of distinct property names for all GObjects appearing in the
 -- given list of APIs.
@@ -40,17 +43,18 @@ genPropertyLens pName = group $ do
   indent $ do
     line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ name ++ "\" o w"
 
-genLenses :: String -> [(Name, API)] -> String -> CodeGen ()
-genLenses name apis modPrefix = do
-  line $ "-- Generated code"
-  blank
-  line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
-  line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
-  line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
-  blank
-  line $ "module " ++ modPrefix ++ name ++ "Lenses where"
-  blank
-  line $ "import " ++ modPrefix ++ "Utils.Attributes (Attr)"
+genProps :: (Name, API) -> CodeGen ()
+genProps (n, APIObject o) = genObjectProperties n o
+genProps (n, APIInterface i) = genInterfaceProperties n i
+genProps _ = return ()
+
+genLenses :: String -> [(Name, API)] -> [(Name, API)] -> String -> CodeGen ()
+genLenses name apis allApis modulePrefix = do
+  cfg <- config
+
+  genPrelude (name ++ "Attributes") modulePrefix
+
+  line $ "import " ++ modulePrefix ++ name
   blank
 
   -- We generate polymorphic lenses for all properties appearing in
@@ -59,7 +63,10 @@ genLenses name apis modPrefix = do
   -- this way one can just import the top module (Gtk, say)
   -- unqualified, and obtain access to all the necessary
   -- lenses.
-  propNames <- findObjectPropNames apis
+  propNames <- findObjectPropNames allApis
   forM_ propNames $ \name -> do
       genPropertyLens name
       blank
+
+  let code = codeToList $ runCodeGen' cfg $ forM_ apis genProps
+  mapM_ (\c -> tell c >> blank) code

@@ -2,6 +2,7 @@ module GI.CodeGen
     ( genConstant
     , genFunction
     , genCode
+    , genPrelude
     , genModule
     ) where
 
@@ -17,7 +18,6 @@ import GI.Callable (genCallable)
 import GI.Conversions
 import GI.Code
 import GI.GObject
-import GI.Properties
 import GI.Signal (genSignal)
 import GI.SymbolNaming
 import GI.Type
@@ -342,9 +342,6 @@ genObject n o = do
   -- Type safe casting
   when isGO $ genGObjectCasts n o
 
-  -- Properties
-  when isGO $ genObjectProperties n o
-
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
     when (not $ fnSymbol f `elem` ignoredMethods cfg) $
@@ -405,9 +402,6 @@ genInterface n iface = do
       line $ "instance GObject " ++ name' ++ " where"
       indent $ line $ "gobjectType _ = c_" ++ cn_
 
-  -- Properties
-  when isGO $ genInterfaceProperties n iface
-
   -- Methods
   cfg <- config
   forM_ (ifMethods iface) $ \(mn, f) -> do
@@ -441,8 +435,8 @@ genCode n (APIObject o) = genObject n o
 genCode n (APIInterface i) = genInterface n i
 genCode _ (APIBoxed _) = return ()
 
-genModule :: String -> [(Name, API)] -> String -> CodeGen ()
-genModule name apis modulePrefix = do
+genPrelude :: String -> String -> CodeGen ()
+genPrelude name modulePrefix = do
     cfg <- config
 
     line $ "-- Generated code."
@@ -482,60 +476,66 @@ genModule name apis modulePrefix = do
     line $ "import " ++ mp "Utils.Utils"
     line $ "import " ++ mp "Utils.GValue"
     blank
-    line $ "import " ++ mp name ++ "Lenses"
-    blank
 
     forM_ (imports cfg) $ \i -> do
       line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
+      line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
+               ++ ucFirst i ++ "A"
 
     blank
 
-    let code = codeToList $ runCodeGen' cfg $
-          forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
-          (uncurry genCode)
-    mapM_ (\c -> tell c >> blank) code
+genModule :: String -> [(Name, API)] -> String -> CodeGen ()
+genModule name apis modulePrefix = do
+  cfg <- config
+
+  genPrelude name modulePrefix
+
+  let code = codeToList $ runCodeGen' cfg $
+             forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
+                       (uncurry genCode)
+  mapM_ (\c -> tell c >> blank) code
 
     where ignore = [
-            "dummy_decl",
-            -- These API elements refer to symbols which are
-            -- dynamically loaded, which ghci has trouble with. Skip
-            -- them.
-            "IOModule",
-            "io_modules_load_all_in_directory",
-            "io_modules_load_all_in_directory_with_scope",
-            -- We can skip in the bindings
-            "signal_set_va_marshaller",
-            -- These seem to have some issues in the introspection data
-            "attribute_set_free", -- atk_attribute_set_free
-            -- Accepts a NULL terminated array, but not
-            -- marked as such in the bindings.
-            "text_free_ranges", -- atk_text_free_ranges
-            -- g_unichar_fully_decompose. "result" parameter is an
-            -- array, but it is not marked as such.
-            "unichar_fully_decompose",
-            -- g_utf16_to_ucs4. "items_read" and "items_written" are
-            -- out parameters, but they are marked as in parameters
-            -- the introspection data.
-            "utf16_to_ucs4",
-            -- Same for the following functions
-            "utf16_to_utf8",
-            "utf8_to_ucs4",
-            "utf8_to_ucs4_fast",
-            "utf8_to_utf16",
-            -- g_base64_decode_step, missing array length argument,
-            -- requires more complex logic.
-            "base64_decode_step",
-            -- Similar to base64_decode_step
-            "base64_encode_step",
-            "base64_encode_close",
-            -- g_ucs4_to_*, the first argument is marked as g_unichar, but it is really an array of g_unichar.
-            "ucs4_to_utf16",
-            "ucs4_to_utf8",
-            -- g_regex_escape_string. Length can be -1, in which case
-            -- it means zero terminated array of char.
-            "regex_escape_string",
-            -- g_signal_chain_from_overridden. Seems to be
-            -- null-terminated, but it is not marked as such.
-            "signal_chain_from_overridden",
-            -- g_signal_emitv, same as g_signal_chain_from_overridden
-            "signal_emitv" ]
+           "dummy_decl",
+           -- These API elements refer to symbols which are
+           -- dynamically loaded, which ghci has trouble with. Skip
+           -- them.
+           "IOModule",
+           "io_modules_load_all_in_directory",
+           "io_modules_load_all_in_directory_with_scope",
+           -- We can skip in the bindings
+           "signal_set_va_marshaller",
+           -- These seem to have some issues in the introspection data
+           "attribute_set_free", -- atk_attribute_set_free
+           -- Accepts a NULL terminated array, but not
+           -- marked as such in the bindings.
+           "text_free_ranges", -- atk_text_free_ranges
+           -- g_unichar_fully_decompose. "result" parameter is an
+           -- array, but it is not marked as such.
+           "unichar_fully_decompose",
+           -- g_utf16_to_ucs4. "items_read" and "items_written" are
+           -- out parameters, but they are marked as in parameters
+           -- the introspection data.
+           "utf16_to_ucs4",
+           -- Same for the following functions
+           "utf16_to_utf8",
+           "utf8_to_ucs4",
+           "utf8_to_ucs4_fast",
+           "utf8_to_utf16",
+           -- g_base64_decode_step, missing array length argument,
+           -- requires more complex logic.
+           "base64_decode_step",
+           -- Similar to base64_decode_step
+           "base64_encode_step",
+           "base64_encode_close",
+           -- g_ucs4_to_*, the first argument is marked as g_unichar, but it is really an array of g_unichar.
+           "ucs4_to_utf16",
+           "ucs4_to_utf8",
+           -- g_regex_escape_string. Length can be -1, in which case
+           -- it means zero terminated array of char.
+           "regex_escape_string",
+           -- g_signal_chain_from_overridden. Seems to be
+           -- null-terminated, but it is not marked as such.
+           "signal_chain_from_overridden",
+           -- g_signal_emitv, same as g_signal_chain_from_overridden
+           "signal_emitv" ]

@@ -149,11 +149,16 @@ fullInterfacePropertyList n iface =
        <$> (concat <$> (mapM fullAPIPropertyList $ ifPrerequisites iface))
 
 genObjectProperties :: Name -> Object -> CodeGen ()
-genObjectProperties n o = fullObjectPropertyList n o >>= genProperties n
+genObjectProperties n o = do
+  isGO <- apiIsGObject n (APIObject o)
+  when isGO $
+       fullObjectPropertyList n o >>= genProperties n
 
 genInterfaceProperties :: Name -> Interface -> CodeGen ()
-genInterfaceProperties n iface =
-    fullInterfacePropertyList n iface >>= genProperties n
+genInterfaceProperties n iface = do
+  isGO <- apiIsGObject n (APIInterface iface)
+  when isGO $
+       fullInterfacePropertyList n iface >>= genProperties n
 
 -- It is sometimes the case that a property name is defined both in an
 -- object and in one of its ancestors/implemented interfaces. This is
@@ -185,6 +190,17 @@ removeDuplicateProps props =
       filterTainted xs =
           [(name, prop) | (_, (tainted, name, prop)) <- xs, not tainted]
 
+-- If the given accesor is available (indicated by available == True),
+-- generate a fully qualified accesor name, otherwise just return
+-- "undefined". accessor is "get", "set" or "construct"
+accessorOrUndefined :: Bool -> String -> Name -> String -> CodeGen String
+accessorOrUndefined available accessor (Name ons on) cName =
+    if not available
+    then return "undefined"
+    else do
+      prefix <- qualifyWithSuffix "A." ons
+      return $ prefix ++ accessor ++ on ++ cName
+
 genProperties :: Name -> [(Name, Property)] -> CodeGen ()
 genProperties n props = do
   name <- upperName n
@@ -205,21 +221,10 @@ genProperties n props = do
                                -- for properties inherited from parent
                                -- classes.
 
-    getter <- do
-      prefix <- qualify ons
-      if readable
-      then return $ prefix ++ "get" ++ on ++ cName
-      else return "undefined"
-    setter <- do
-      prefix <- qualify ons
-      if writable
-      then return $ prefix ++ "set" ++ on ++ cName
-      else return "undefined"
-    constructor <- do
-      prefix <- qualify ons
-      if (writable || constructOnly)
-      then return $ prefix ++ "construct" ++ on ++ cName
-      else return "undefined"
+    getter <- accessorOrUndefined readable "get" propOwner cName
+    setter <- accessorOrUndefined writable "set" propOwner cName
+    constructor <- accessorOrUndefined (writable || constructOnly)
+                   "construct" propOwner cName
 
     when owned $ do
       when (not $ readable || writable || constructOnly) $
@@ -253,7 +258,7 @@ genProperties n props = do
                           else sOutType
 
     qualifiedLens <- do
-      prefix <- qualify ons
+      prefix <- qualifyWithSuffix "A." ons
       return $ prefix ++ lcFirst on ++ cName
 
     when owned $ group $ do

@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 import GI.Gtk hiding (main)
-import GI.GtkLenses
+import GI.GtkAttributes
 import qualified GI.Gtk as Gtk
 import qualified GI.Gio as Gio
-import qualified GI.GioLenses as LGio
+import qualified GI.GioAttributes as GioA
 import qualified GI.GLib as GLib
 
 import GI.Utils.Attributes
@@ -89,7 +89,7 @@ testImportedLenses :: IO ()
 testImportedLenses = do
   putStrLn "*** Imported lenses test"
   address <- Gio.inetAddressNewFromString "173.194.40.51"
-  print =<< address `get` LGio._family
+  print =<< address `get` GioA._family
   putStrLn "+++ Imported lenses test done"
 
 testPolymorphicLenses :: Window -> String -> IO ()
