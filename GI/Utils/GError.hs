@@ -51,7 +51,6 @@ module GI.Utils.GError
 
     ) where
 
-import Prelude hiding (catch)
 import Foreign.Safe
 import Foreign.C
 import Control.Exception
