@@ -13,6 +13,9 @@ import Data.Tuple (swap)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as M
 
+import Foreign.Storable (sizeOf)
+import Foreign.C (CUInt)
+
 import GI.API
 import GI.Callable (genCallable)
 import GI.Conversions
@@ -25,6 +28,7 @@ import GI.Util
 import GI.Value
 import GI.Internal.ArgInfo
 import GI.Internal.FunctionInfo
+import GI.Internal.TypeInfo
 
 valueStr VVoid         = "()"
 valueStr (VBoolean x)  = show x
@@ -90,9 +94,17 @@ genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
              when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
                   genMethod n mn f
 
-genEnum :: Name -> Enumeration -> CodeGen ()
-genEnum n@(Name ns name) (Enumeration fields eDomain maybeTypeInit) = do
-  line $ "-- enum " ++ name
+genEnumOrFlags :: Name -> Enumeration -> CodeGen ()
+genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage) = do
+  -- Conversion functions expect enums and flags to map to CUInt,
+  -- which we assume to be of 32 bits. Fail early, instead of giving
+  -- strange errors at runtime.
+  when (sizeOf (0 :: CUInt) /= 4) $
+       error $ "Unsupported CUInt size: " ++ show (sizeOf (0 :: CUInt))
+  when (storage /= TypeTagInt32 && storage /= TypeTagUint32) $
+       error $ show n ++ " : storage of size /= 32 not supported for enum : "
+                 ++ show storage
+
   name' <- upperName n
   fields' <- forM fields $ \(fieldName, value) -> do
       n <- upperName $ Name ns (name ++ "_" ++ fieldName)
@@ -119,6 +131,23 @@ genEnum n@(Name ns name) (Enumeration fields eDomain maybeTypeInit) = do
 
   when (isJust maybeTypeInit) $ genBoxedObject n (fromJust maybeTypeInit)
 
+genEnum :: Name -> Enumeration -> CodeGen ()
+genEnum n@(Name _ name) enum = do
+  line $ "-- Enum " ++ name
+
+  genEnumOrFlags n enum
+
+-- Very similar to enums, but we also declare ourselves as members of
+-- the IsGFlag typeclass.
+genFlags :: Name -> Flags -> CodeGen ()
+genFlags n@(Name _ name) (Flags enum) = do
+  line $ "-- Flags " ++ name
+
+  genEnumOrFlags n enum
+
+  name' <- upperName n
+  group $ line $ "instance IsGFlag " ++ name'
+
 genErrorDomain :: String -> String -> CodeGen ()
 genErrorDomain name' domain = do
   group $ do
@@ -143,14 +172,6 @@ genErrorDomain name' domain = do
             line $ "IO a ->"
             line $ "IO a"
     line $ handler ++ " = handleGErrorJustDomain"
-
-genFlags :: Name -> Flags -> CodeGen ()
-genFlags n@(Name _ name) (Flags (Enumeration _fields _ _)) = do
-  line $ "-- flags " ++ name
-  name' <- upperName n
-  -- XXX: Generate code for fields.
-  -- XXX: We should generate code for converting to/from lists.
-  line $ "type " ++ name' ++ " = Word"
 
 genCallback :: Name -> Callback -> CodeGen ()
 genCallback n _ = do
@@ -223,7 +244,7 @@ genMethod cn mn (Function {
     name' <- upperName cn
     returnsGObject <- isGObject (returnType c)
     line $ "-- method " ++ name' ++ "::" ++ (name mn)
-    line $ "-- flags : " ++ show fs
+    line $ "-- method flags : " ++ show fs
     let -- Mangle the name to namespace it to the class.
         mn' = mn { name = name cn ++ "_" ++ name mn }
     let c'  = if FunctionIsConstructor `elem` fs

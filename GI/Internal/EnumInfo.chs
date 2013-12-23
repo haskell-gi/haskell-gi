@@ -2,6 +2,7 @@
 module GI.Internal.EnumInfo
     ( enumInfoValues
     , enumInfoErrorDomain
+    , enumInfoStorageType
     , valueInfoValue
     ) where
 
@@ -12,7 +13,8 @@ import System.IO.Unsafe (unsafePerformIO)
 
 import GI.Util (getList)
 
-{# import GI.Internal.Types #}
+import GI.Internal.Types
+import GI.Internal.TypeInfo
 
 #include <girepository.h>
 
@@ -40,3 +42,7 @@ enumInfoErrorDomain ei = unsafePerformIO $ do
 valueInfoValue :: ValueInfoClass val => val -> Word64
 valueInfoValue vi = unsafePerformIO $ fromIntegral <$>
     {# call g_value_info_get_value #} (stupidValueCast vi)
+
+enumInfoStorageType :: EnumInfoClass enum => enum -> TypeTag
+enumInfoStorageType ei = toEnum . fromIntegral . unsafePerformIO $
+                         {# call get_storage_type #} (stupidEnumCast ei)

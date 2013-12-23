@@ -157,7 +157,7 @@ hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
 hToF' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
-    | Just (APIFlags _) <- a = return "fromIntegral"
+    | Just (APIFlags _) <- a = return "gflagsToWord"
     | Just (APIObject _) <- a = hObjectToF t transfer
     | Just (APIInterface _) <- a = hObjectToF t transfer
     | Just (APIStruct s) <- a = hStructToF s transfer
@@ -308,7 +308,7 @@ fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
 fToH' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(toEnum . fromIntegral)"
-    | Just (APIFlags _) <- a = return "fromIntegral"
+    | Just (APIFlags _) <- a = return "wordToGFlags"
     | TError <- t = boxedForeignPtr "GI.GLib.Error" transfer
     | Just (APIStruct s) <- a = structForeignPtr s hType transfer
     | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
@@ -530,9 +530,13 @@ haskellType (TGHash a b) = do
   return $ "GHashTable" `con` [innerA, innerB]
 haskellType TError = return $ "Error" `con` []
 haskellType (TInterface "GObject" "Value") = return $ "GValue" `con` []
-haskellType (TInterface ns n) = do
+haskellType t@(TInterface ns n) = do
   prefix <- qualify ns
-  return $ (prefix ++ n) `con` []
+  api <- findAPI t
+  let tname = (prefix ++ n) `con` []
+  return $ case api of
+             Just (APIFlags _) -> "[]" `con` [tname]
+             _ -> tname
 
 foreignBasicType TVoid     = ptr (typeOf ())
 foreignBasicType TBoolean  = "CInt" `con` []

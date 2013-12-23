@@ -375,21 +375,23 @@ getObjectPropertyEnum obj propName = do
                     (\val -> toEnum . fromIntegral <$> get_enum val)
                     gtype
 
-setObjectPropertyFlags :: (ManagedPtr a, GObject a) =>
-                          a -> String -> Word -> IO ()
+setObjectPropertyFlags :: (IsGFlag b, ManagedPtr a, GObject a) =>
+                          a -> String -> [b] -> IO ()
 setObjectPropertyFlags obj propName flags =
-    let cFlags = fromIntegral flags
+    let cFlags = gflagsToWord flags
     in setObjectProperty obj propName cFlags set_flags #const G_TYPE_FLAGS
 
-constructObjectPropertyFlags :: String -> Word ->
+constructObjectPropertyFlags :: IsGFlag a => String -> [a] ->
                                 IO (String, GValue)
 constructObjectPropertyFlags propName flags =
-    let cFlags = fromIntegral flags
+    let cFlags = gflagsToWord flags
     in constructObjectProperty propName cFlags set_flags #const G_TYPE_FLAGS
 
-getObjectPropertyFlags :: (ManagedPtr a, GObject a) => a -> String -> IO Word
+getObjectPropertyFlags :: (ManagedPtr a, GObject a, IsGFlag b) =>
+                          a -> String -> IO [b]
 getObjectPropertyFlags obj propName =
-    getObjectProperty obj propName (\val -> fromIntegral <$> get_flags val)
+    getObjectProperty obj propName
+                          (\val -> wordToGFlags <$> get_flags val)
                           #const G_TYPE_FLAGS
 
 setObjectPropertyVariant :: (ManagedPtr a, GObject a) =>

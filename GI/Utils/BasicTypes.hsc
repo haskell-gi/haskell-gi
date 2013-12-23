@@ -15,6 +15,10 @@ module GI.Utils.BasicTypes
     , gtypeBoxed
     , gtypeObject
 
+    , IsGFlag
+    , gflagsToWord
+    , wordToGFlags
+
     , GArray(..)
     , GPtrArray(..)
     , GByteArray(..)
@@ -127,6 +131,25 @@ gtypeBoxed = #const G_TYPE_BOXED
 
 gtypeObject :: GType
 gtypeObject = #const G_TYPE_OBJECT
+
+class Enum a => IsGFlag a
+
+gflagsToWord :: (Num b, IsGFlag a) => [a] -> b
+gflagsToWord flags = fromIntegral (go flags)
+    where go (f:fs) = fromEnum f .|. go fs
+          go [] = 0
+
+wordToGFlags :: forall a b. (Storable a, Integral a, Bits a, IsGFlag b) =>
+                a -> [b]
+wordToGFlags w = go 0
+    where
+      nbits = (sizeOf (undefined :: a))*8
+      go k
+          | k == nbits = []
+          | otherwise = if mask .&. w /= 0
+                        then toEnum (fromIntegral mask) : go (k+1)
+                        else go (k+1)
+          where mask = shift 1 k
 
 data GArray a = GArray (Ptr (GArray a))
 data GPtrArray a = GPtrArray (Ptr (GPtrArray a))

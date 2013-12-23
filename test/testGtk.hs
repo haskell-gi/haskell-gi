@@ -8,6 +8,9 @@ import qualified GI.GLib as GLib
 
 import GI.Utils.Attributes
 import GI.Utils.Properties (new)
+import GI.Utils.BasicTypes
+
+import Foreign.C
 
 import qualified Data.ByteString.Char8 as B
 
@@ -161,6 +164,17 @@ testOutBlockPacks = do
     else putStrLn "+++ Out Block packs test done"
   else error $ "colorSelecionPaletteFromString failed!"
 
+testFlags :: IO ()
+testFlags = do
+  putStrLn "*** Flags test"
+  let w = gflagsToWord [DebugFlagUpdates, DebugFlagNoPixelCache]
+  when (w /= 65552) $
+       error $ "Flags -> Word failed, got " ++ show w
+  let fs = wordToGFlags (3072 :: CUInt)
+  when (fs /= [DebugFlagPrinting, DebugFlagBuilder]) $
+       error $ "Word -> Flags failed, got " ++ show fs
+  putStrLn "+++ Flags test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -224,6 +238,7 @@ main = do
         testImportedLenses
         testOutStructs
         testOutBlockPacks
+        testFlags
 
 	widgetShowAll win
 	Gtk.main

@@ -35,6 +35,7 @@ import GI.Internal.ObjectInfo
 import GI.Internal.PropertyInfo
 import GI.Internal.RegisteredTypeInfo
 import GI.Internal.StructInfo
+import GI.Internal.TypeInfo
 import GI.Internal.Typelib (getInfos, load)
 import GI.Internal.UnionInfo
 import GI.GType
@@ -69,7 +70,8 @@ toConstant ci =
 data Enumeration = Enumeration {
     enumValues :: [(String, Word64)],
     errorDomain :: Maybe String,
-    enumTypeInit :: Maybe String }
+    enumTypeInit :: Maybe String,
+    enumStorageType :: TypeTag }
     deriving Show
 
 toEnumeration :: EnumInfo -> Enumeration
@@ -78,6 +80,7 @@ toEnumeration ei = Enumeration
              (enumInfoValues ei))
     (enumInfoErrorDomain ei)
     (registeredTypeInfoTypeInit ei)
+    (enumInfoStorageType ei)
 
 data Flags = Flags Enumeration
     deriving Show
