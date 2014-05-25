@@ -14,5 +14,6 @@ This version adds support for:
 * Automatic conversion between array arguments and Haskell types.
 * Proper ownership transfer of function arguments.
 * Support for GObject properties using the gtk2hs notation.
+* Callback arguments.
 
 See `test/testGtk.hs` for a working usage example.
