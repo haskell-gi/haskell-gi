@@ -10,6 +10,8 @@ module GI.Internal.ArgInfo
     , argInfoMayBeNull
     , argInfoOwnershipTransfer
     , argInfoScope
+    , argInfoClosure
+    , argInfoDestroy
     , argInfoType
     ) where
 
@@ -61,13 +63,14 @@ argInfoScope :: ArgInfoClass arg => arg -> Scope
 argInfoScope ai = unsafePerformIO $ toEnum <$> fromIntegral <$>
     {# call get_scope #} (stupidCast ai)
 
-{-
-XXX
-argInfoClosure
-argInfoDestroy
--}
+argInfoClosure :: ArgInfoClass arg => arg -> Int
+argInfoClosure ai = unsafePerformIO $ fromIntegral <$>
+    {# call get_closure #} (stupidCast ai)
+
+argInfoDestroy :: ArgInfoClass arg => arg -> Int
+argInfoDestroy ai = unsafePerformIO $ fromIntegral <$>
+    {# call get_destroy #} (stupidCast ai)
 
 argInfoType :: ArgInfoClass arg => arg -> TypeInfo
 argInfoType ai = unsafePerformIO $ TypeInfo <$> castPtr <$>
     {# call get_type #} (stupidCast ai)
-

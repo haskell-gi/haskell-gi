@@ -17,7 +17,7 @@ import Foreign.Storable (sizeOf)
 import Foreign.C (CUInt)
 
 import GI.API
-import GI.Callable (genCallable)
+import GI.Callable (genCallable, genCallback)
 import GI.Conversions
 import GI.Code
 import GI.GObject
@@ -173,14 +173,6 @@ genErrorDomain name' domain = do
             line $ "IO a"
     line $ handler ++ " = handleGErrorJustDomain"
 
-genCallback :: Name -> Callback -> CodeGen ()
-genCallback n _ = do
-  name' <- upperName n
-  line $ "-- callback " ++ name' ++ " "
-  -- XXX
-  --line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr (IO ()))"
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (Ptr " ++ name' ++ ")"
-
 genUnion n u = do
   name' <- upperName n
   cfg <- config
@@ -203,26 +195,43 @@ genUnion n u = do
          when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
               genMethod n mn f
 
--- Add the implicit object argument to methods of an object.
+-- Add the implicit object argument to methods of an object.  Since we
+-- are prepending an argument we need to adjust the offset of the
+-- length arguments of CArrays, and closure and destroyer offsets.
 fixMethodArgs :: Name -> Callable -> Callable
 fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
     where
-      -- Since we are prepending an argument we need to adjust the
-      -- offset of the length arguments of CArrays.
       returnType' = fixCArrayLength $ returnType c
-      args' = objArg : map fixLengthArg (args c)
+      args' = objArg : map (fixDestroyers . fixClosures . fixLengthArg) (args c)
+
       fixLengthArg :: Arg -> Arg
       fixLengthArg arg = arg { argType = fixCArrayLength (argType arg)}
+
       fixCArrayLength :: Type -> Type
       fixCArrayLength (TCArray zt fixed length t) =
           TCArray zt fixed (length+1) t
       fixCArrayLength t = t
+
+      fixDestroyers :: Arg -> Arg
+      fixDestroyers arg = let destroy = argDestroy arg in
+                          if destroy > -1
+                          then arg {argDestroy = destroy + 1}
+                          else arg
+
+      fixClosures :: Arg -> Arg
+      fixClosures arg = let closure = argClosure arg in
+                        if closure > -1
+                        then arg {argClosure = closure + 1}
+                        else arg
+
       objArg = Arg {
                  argName = "_obj",
                  argType = TInterface (namespace cn) (name cn),
                  direction = DirectionIn,
                  mayBeNull = False,
-                 scope = ScopeTypeInvalid,
+                 argScope = ScopeTypeInvalid,
+                 argClosure = -1,
+                 argDestroy = -1,
                  transfer = TransferNothing }
 
 -- For constructors we want to return the actual type of the object,
@@ -549,12 +558,18 @@ genModule name apis modulePrefix = do
            -- Similar to base64_decode_step
            "base64_encode_step",
            "base64_encode_close",
-           -- g_ucs4_to_*, the first argument is marked as g_unichar, but it is really an array of g_unichar.
+           -- g_ucs4_to_*, the first argument is marked as g_unichar,
+           -- but it is really an array of g_unichar.
            "ucs4_to_utf16",
            "ucs4_to_utf8",
            -- g_regex_escape_string. Length can be -1, in which case
            -- it means zero terminated array of char.
            "regex_escape_string",
+           -- the test_data argument is not marked as a closure
+           "test_add_data_func_full",
+           -- The semantics for the DirectionIn pointer here are
+           -- somewhat ambiguous
+           "ClosureMarshal",
            -- g_signal_chain_from_overridden. Seems to be
            -- null-terminated, but it is not marked as such.
            "signal_chain_from_overridden",

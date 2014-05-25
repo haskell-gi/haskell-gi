@@ -131,6 +131,10 @@ processAPI options name = do
                            , "g_io_channel_read_line"
                            -- "line_number" is not marked as out.
                            , "g_markup_parse_context_get_position"
+                           -- The closure annotations on the closure
+                           -- themselves are wrong, they point to the
+                           -- callbacks.
+                           , "g_desktop_app_info_launch_uris_as_manager"
                            -- The length of the array is given by a
                            -- call to pango_tab_array_get_size(), not
                            -- an argument.

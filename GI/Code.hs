@@ -73,6 +73,7 @@ recurse cg = do
     return $ runCodeGen cfg cg
 
 findAPI :: Type -> CodeGen (Maybe API)
+findAPI TError = Just <$> findAPIByName (Name "GLib" "Error")
 findAPI (TInterface ns n) = Just <$> findAPIByName (Name ns n)
 findAPI _ = return Nothing
 

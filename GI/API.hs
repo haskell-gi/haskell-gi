@@ -16,6 +16,9 @@ module GI.API
     , Enumeration(..)
     , Flags (..)
     , Union (..)
+
+    , Scope(..) -- from GI.Internal.ArgInfo, for convenience
+
     , loadAPI
     ) where
 
@@ -94,7 +97,9 @@ data Arg = Arg {
     argType :: Type,
     direction :: Direction,
     mayBeNull :: Bool,
-    scope :: Scope,
+    argScope :: Scope,
+    argClosure :: Int,
+    argDestroy :: Int,
     transfer :: Transfer }
     deriving (Show, Eq)
 
@@ -105,6 +110,8 @@ toArg ai =
         (argInfoDirection ai)
         (argInfoMayBeNull ai)
         (argInfoScope ai)
+        (argInfoClosure ai)
+        (argInfoDestroy ai)
         (argInfoOwnershipTransfer ai)
 
 data Callable = Callable {

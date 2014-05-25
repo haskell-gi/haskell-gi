@@ -72,3 +72,6 @@ Executable haskell-gi
       GI.Utils.GError
       GI.Utils.BasicTypes
       GI.Utils.Utils
+
+  C-sources: test/hsgclosure.c
+

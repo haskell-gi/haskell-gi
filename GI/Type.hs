@@ -6,6 +6,7 @@ module GI.Type
     , io
     , ptr
     , con
+    , maybeT
     ) where
 
 import Data.Typeable
@@ -112,3 +113,6 @@ io t = "IO" `con` [t]
 
 ptr :: TypeRep -> TypeRep
 ptr t = "Ptr" `con` [t]
+
+maybeT :: TypeRep -> TypeRep
+maybeT t = "Maybe" `con` [t]

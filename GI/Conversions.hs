@@ -163,10 +163,9 @@ hToF' t a hType fType transfer
     | Just (APIStruct s) <- a = hStructToF s transfer
     | Just (APIUnion u) <- a = hUnionToF u transfer
     | TError <- t = hBoxedToF transfer
-    | Just (APICallback _) <- a = do
-        line $ "--- XXX Callback types are not properly supported yet"
-        let con = tyConName $ typeRepTyCon hType
-        return $ P $ toPtr con
+    -- Converting callback types requires more context, we leave that
+    -- as a special case to be implemented by the caller.
+    | Just (APICallback _) <- a = error "Cannot handle callback type here!! "
     | TByteArray <- t = return $ M "packGByteArray"
     | TCArray True _ _ (TBasicType TUTF8) <- t =
         return $ M "packZeroTerminatedUTF8CArray"
@@ -330,8 +329,7 @@ fToH' t a hType fType transfer
         return $ M "(unpackMapZeroTerminatedStorableArray realToFrac)"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "unpackZeroTerminatedStorableArray"
-    | TCArray _ _ _ _ <- t =
-                         error $
+    | TCArray _ _ _ _ <- t = return $ M $
                            "fToH' : Don't know how to unpack C array of type "
                            ++ show t
     | TByteArray <- t = return $ M "unpackGByteArray"
@@ -502,6 +500,8 @@ haskellBasicType TFileName = "ByteString" `con` []
 -- This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen TypeRep
 haskellType (TBasicType bt) = return $ haskellBasicType bt
+haskellType (TCArray False (-1) (-1) (TBasicType t)) =
+    return $ ptr $ foreignBasicType t
 haskellType (TCArray _ _ _ (TBasicType TUInt8)) =
     return $ "ByteString" `con` []
 haskellType (TCArray _ _ _ (TBasicType b)) =
@@ -550,6 +550,8 @@ foreignBasicType t         = haskellBasicType t
 -- This translates GI types to the types used in foreign function calls.
 foreignType :: Type -> CodeGen TypeRep
 foreignType (TBasicType t) = return $ foreignBasicType t
+foreignType (TCArray False (-1) (-1) (TBasicType t)) =
+    return $ ptr $ foreignBasicType t
 foreignType (TCArray zt _ _ t) = do
   api <- findAPI t
   let size = case api of
@@ -580,8 +582,12 @@ foreignType t@(TInterface ns n) = do
   if isScalar
   then return $ "CUInt" `con` []
   else do
+    api <- findAPI t
     prefix <- qualify ns
-    return $ ptr $ (prefix ++ n) `con` []
+    return $ case api of
+               Just (APICallback _) -> ("FunPtr " ++ prefix ++ n ++ "C")
+                                       `con` []
+               _ -> ptr $ (prefix ++ n) `con` []
 
 getIsScalar :: Type -> CodeGen Bool
 getIsScalar t = do

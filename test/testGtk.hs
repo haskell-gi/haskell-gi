@@ -175,6 +175,43 @@ testFlags = do
        error $ "Word -> Flags failed, got " ++ show fs
   putStrLn "+++ Flags test done"
 
+-- ScopeTypeNotify callback test
+testTimeout :: IO ()
+testTimeout = do
+  putStrLn "*** Timeout test"
+  now <- GLib.getMonotonicTime
+  putStrLn $ "Now is " ++ show now ++ " , adding timeout."
+  _ <- GLib.timeoutAdd GLib.g_PRIORITY_DEFAULT 500 $ do
+                now <- GLib.getMonotonicTime
+                putStrLn $ "Timeout called @ " ++ show now
+                return False
+  putStrLn "+++ Timeout test done"
+
+-- ScopeTypeAsync callback test
+testMenuPopup :: IO ()
+testMenuPopup = do
+  putStrLn "*** ScopeTypeAsync test"
+  menuitem <- new MenuItem [_label := "TestAsync"]
+  menu <- new Menu []
+  menuShellAppend menu menuitem
+  curtime <- getCurrentEventTime
+  widgetShowAll menu
+  menuPopup menu (Nothing :: Maybe Label) (Nothing :: Maybe Label) (Just positionFunc) 0 curtime
+  putStrLn "+++ ScopeTypeAsync test done"
+      where positionFunc _ = do
+                  posx <- GLib.randomIntRange 000 200
+                  posy <- GLib.randomIntRange 000 200
+                  return (posx, posy, False)
+
+-- ScopeTypeCall callback test
+testForeach :: ContainerK a => a -> IO ()
+testForeach container = do
+  putStrLn "*** ScopeTypeCall test"
+  containerForeach container $ \widget -> do
+           path <- widgetGetPath widget
+           putStrLn =<< widgetPathToString path
+  putStrLn "+++ ScopeTypeCall test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -213,7 +250,8 @@ main = do
           return True -- Link processed, do not open with the browser
         containerAdd grid label
 
-        button <- new Button [_label := "Click me!"]
+        button <- new Button [_label := "_Click me!",
+                              _useUnderline := True]
         button <!> onButtonClicked $ do
                 set label [_label := "This is <a href=\"http://www.gnome.org\">a test</a>",
                            _useMarkup := True ]
@@ -230,6 +268,11 @@ main = do
                              ++ " and sensitive is " ++ show sensitive
         containerAdd grid button
 
+        popupButton <- new Button [_label := "_Pop-up menu",
+                                   _useUnderline := True]
+        popupButton <!> onButtonClicked $ testMenuPopup
+        containerAdd grid popupButton
+
         testGio
         testExceptions
         testNullableArgs
@@ -239,6 +282,8 @@ main = do
         testOutStructs
         testOutBlockPacks
         testFlags
+        testTimeout
+        testForeach grid
 
 	widgetShowAll win
 	Gtk.main
