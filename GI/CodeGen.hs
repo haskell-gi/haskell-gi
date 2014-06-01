@@ -17,11 +17,11 @@ import Foreign.Storable (sizeOf)
 import Foreign.C (CUInt)
 
 import GI.API
-import GI.Callable (genCallable, genCallback)
+import GI.Callable (genCallable)
 import GI.Conversions
 import GI.Code
 import GI.GObject
-import GI.Signal (genSignal)
+import GI.Signal (genSignal, genCallback)
 import GI.SymbolNaming
 import GI.Type
 import GI.Util

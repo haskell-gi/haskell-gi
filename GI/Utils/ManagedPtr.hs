@@ -58,24 +58,24 @@ castTo constructor typeName obj =
       newObject constructor objPtr
 
 -- Connecting GObjects to signals
-foreign import ccall unsafe "gtk2hs_closure_new"
-  gtk2hs_closure_new :: StablePtr a -> IO (Ptr ())
-
-foreign import ccall "g_signal_connect_closure" g_signal_connect_closure' ::
-    Ptr a ->                                -- instance
-    CString ->                              -- detailed_signal
-    Ptr b ->                                -- closure
-    CInt ->                                 -- after
-    IO Word32
+foreign import ccall "g_signal_connect_data" g_signal_connect_data ::
+    Ptr a ->                            -- instance
+    CString ->                          -- detailed_signal
+    FunPtr b ->                         -- c_handler
+    Ptr () ->                           -- data
+    FunPtr c ->                         -- destroy_data
+    CUInt ->                            -- connect_flags
+    IO CULong
 
 connectSignal :: (GObject o, ManagedPtr o) =>
-                  o -> String -> a -> Bool -> IO Word32
+                  o -> String -> FunPtr a -> Bool -> IO CULong
 connectSignal object signal fn after = do
-      closure <- newStablePtr fn >>= gtk2hs_closure_new
-      signal' <- newCString signal
-      withManagedPtr object $ \objPtr ->
-          g_signal_connect_closure' objPtr signal' closure
-                      ((fromIntegral . fromEnum) after)
+  let flags = if after
+              then 1
+              else 0
+  withCString signal $ \csignal -> do
+    withManagedPtr object $ \objPtr ->
+        g_signal_connect_data objPtr csignal fn (castFunPtrToPtr fn) safeFreeFunPtrPtr flags
 
 -- Reference counting for constructors
 foreign import ccall unsafe "&g_object_unref"

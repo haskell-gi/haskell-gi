@@ -9,12 +9,18 @@ module GI.Util
   , prime
   , unprime
   , parenthesize
+
+  , padTo
+  , withComment
   ) where
 
 import Foreign
 import Foreign.C
 
 import Data.List (unfoldr)
+
+padTo n s = s ++ replicate (n - length s) ' '
+withComment a b = padTo 40 a ++ "-- " ++ b
 
 maybeWithCString :: Maybe String -> (CString -> IO a) -> IO a
 maybeWithCString = maybe ($ nullPtr) withCString
