@@ -244,7 +244,6 @@ main = do
         set win [_child := grid]
 
         label <- new Label [_label := "Test"]
-        widgetShow label
         label <!> onLabelActivateLink $ \uri -> do
           testPolymorphicLenses win "Link clicked, thanks!"
           return True -- Link processed, do not open with the browser
