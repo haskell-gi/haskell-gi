@@ -3,7 +3,7 @@ module GI.Internal.InterfaceInfo
     ( interfaceInfoPrerequisites
     , interfaceInfoProperties
     , interfaceInfoMethods
-    -- , interfaceInfoSignals
+    , interfaceInfoSignals
     -- , interfaceInfoVFuncs
     , interfaceInfoConstants
     )
@@ -72,13 +72,12 @@ interfaceInfoProperties ii = unsafePerformIO $
     getList {# call get_n_properties #} {# call get_property #}
         (stupidCast ii)
 
+interfaceInfoSignals :: InterfaceInfoClass oic => oic -> [SignalInfo]
+interfaceInfoSignals ii = unsafePerformIO $
+    map (SignalInfo <$> castPtr) <$>
+    getList {# call get_n_signals #} {# call get_signal #} (stupidCast ii)
+
 {-
-gint                g_interface_info_get_n_properties   (GIInterfaceInfo *info);
-GIPropertyInfo *    g_interface_info_get_property       (GIInterfaceInfo *info,
-                                                         gint n);
-gint                g_interface_info_get_n_signals      (GIInterfaceInfo *info);
-GISignalInfo *      g_interface_info_get_signal         (GIInterfaceInfo *info,
-                                                         gint n);
 gint                g_interface_info_get_n_vfuncs       (GIInterfaceInfo *info);
 GIVFuncInfo *       g_interface_info_get_vfunc          (GIInterfaceInfo *info,
                                                          gint n);

@@ -18,7 +18,7 @@ import GI.Conversions
 import GI.SymbolNaming
 import GI.Transfer (freeElements, freeContainer)
 import GI.Type
-import GI.Util (split, parenthesize, prime, withComment)
+import GI.Util (split, parenthesize, withComment)
 import GI.Internal.ArgInfo
 
 -- The prototype of the callback on the Haskell side (what users of
@@ -109,6 +109,41 @@ convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname = do
 convertCallbackInCArray _ t _ _ =
     error $ "convertOutCArray : unexpected " ++ show t
 
+-- Prepare an argument for passing into the Haskell side.
+prepareArgForCall :: Callable -> Arg -> CodeGen String
+prepareArgForCall cb arg = do
+  case direction arg of
+    DirectionIn -> prepareInArg cb arg
+    DirectionInout -> prepareInoutArg arg
+    DirectionOut -> error "Unexpected DirectionOut!"
+
+prepareInArg :: Callable -> Arg -> CodeGen String
+prepareInArg cb arg = do
+  let name = (escapeReserved . argName) arg
+  case argType arg of
+    t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
+    _ -> do
+      let c = convert name $ fToH (argType arg) (transfer arg)
+      if wrapMaybe arg
+      then convertNullable name c
+      else c
+
+prepareInoutArg :: Arg -> CodeGen String
+prepareInoutArg arg = do
+  let name = (escapeReserved . argName) arg
+  name' <- genConversion name $ apply $ M "peek"
+  convert name' $ fToH (argType arg) (transfer arg)
+
+saveOutArg :: Arg -> CodeGen ()
+saveOutArg arg = do
+  let name = (escapeReserved . argName) arg
+      name' = "out" ++ name
+  when (transfer arg /= TransferEverything) $
+       line $ "-- XXX Unexpected transfer type for \"" ++ name
+                ++ "\". Leak?"
+  name'' <- convert name' $ hToF (argType arg) TransferEverything
+  line $ "poke " ++ name ++ " " ++ name''
+
 -- The wrapper itself, marshalling to and from Haskell. The first
 -- argument is possibly a pointer to a FunPtr to free (via
 -- freeHaskellFunPtr) once the callback is run once, or Nothing if the
@@ -147,34 +182,20 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
                   else intercalate " " $ ["funptrptr", "_cb"] ++ cArgNames
     line $ lcFirst name' ++ "Wrapper " ++ allArgs ++ " = do"
     indent $ do
-      hInNames <- forM hInArgs $ \arg -> do
-                    let name = (escapeReserved . argName) arg
-                    case argType arg of
-                      t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
-                      _ -> do
-                        let c = convert name $ fToH (argType arg) (transfer arg)
-                        if wrapMaybe arg
-                           then convertNullable name c
-                           else c
+      hInNames <- forM hInArgs (prepareArgForCall cb)
 
       let maybeReturn = case returnType cb of
                           TBasicType TVoid -> []
                           _                -> ["result"]
-          returnVars = maybeReturn ++ (map (prime . escapeReserved . argName) hOutArgs)
+          argName' = escapeReserved . argName
+          returnVars = maybeReturn ++ (map (("out"++) . argName') hOutArgs)
           returnBind = case returnVars of
                          [] -> ""
                          r:[] -> r ++ " <- "
                          _ -> parenthesize (intercalate ", " returnVars) ++ " <- "
       line $ returnBind ++ "_cb " ++ concatMap (" " ++) hInNames
 
-      forM_ hOutArgs $ \arg -> do
-               let name = (escapeReserved . argName) arg
-                   name' = prime name
-               when (transfer arg /= TransferEverything) $
-                    line $ "-- XXX Unexpected transfer type for \"" ++ name
-                             ++ "\". Leak?"
-               name'' <- convert name' $ hToF (argType arg) TransferEverything
-               line $ "poke " ++ name ++ " " ++ name''
+      forM_ hOutArgs saveOutArg
 
       when (not isSignal) $ line "maybeReleaseFunPtr funptrptr"
 
@@ -208,8 +229,8 @@ genCallback n (Callback cb) = do
 
   genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False
 
-genSignal :: Name -> Signal -> Name -> Object -> CodeGen ()
-genSignal sn (Signal { sigCallable = cb }) on _o = do
+genSignal :: Name -> Signal -> Name -> CodeGen ()
+genSignal sn (Signal { sigCallable = cb }) on = do
   on' <- upperName on
   let (w:ws) = split '-' $ name sn
       sn' = w ++ concatMap ucFirst ws

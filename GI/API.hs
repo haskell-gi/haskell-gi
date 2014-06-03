@@ -235,6 +235,7 @@ toCallback = Callback . toCallable
 data Interface = Interface {
     ifConstants :: [(Name, Constant)],
     ifProperties :: [Property],
+    ifSignals :: [(Name, Signal)],
     ifPrerequisites :: [Name],
     ifTypeInit :: Maybe String,
     ifMethods :: [(Name, Function)] }
@@ -244,6 +245,7 @@ toInterface :: InterfaceInfo -> Interface
 toInterface ii = Interface {
     ifConstants = map (withName toConstant) (interfaceInfoConstants ii),
     ifProperties = map toProperty (interfaceInfoProperties ii),
+    ifSignals = map (withName toSignal) (interfaceInfoSignals ii),
     ifPrerequisites = map (fst . toAPI) (interfaceInfoPrerequisites ii),
     ifTypeInit = registeredTypeInfoTypeInit ii,
     ifMethods = map (withName toFunction) (interfaceInfoMethods ii) }

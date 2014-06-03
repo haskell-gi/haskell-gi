@@ -378,7 +378,7 @@ genObject n o = do
          genMethod n mn f
 
   -- And finally signals
-  forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n o
+  forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n
 
 genInterface n iface = do
   cfg <- config
@@ -438,6 +438,9 @@ genInterface n iface = do
     isFunction <- symbolFromFunction (fnSymbol f)
     when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
        genMethod n mn f
+
+  -- And finally signals
+  forM_ (ifSignals iface) $ \(sn, s) -> genSignal sn s n
 
 -- Some type libraries seem to include spurious interface/struct
 -- methods, where a method Mod.Foo::func also appears as an ordinary
