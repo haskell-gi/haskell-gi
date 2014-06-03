@@ -76,6 +76,18 @@ generate \
     -i Atk \
     -m GI.Gtk \
     Gtk
+generate \
+    -i GLib \
+    -i GObject \
+    -i Gio \
+    -i cairo \
+    -i GdkPixbuf \
+    -i Gdk \
+    -i Pango \
+    -i Atk \
+    -i Gtk \
+    -m GI.Vte \
+    Vte
 
 mkdir -p GI/Utils
 
