@@ -51,20 +51,8 @@ foreign import ccall unsafe "safeFreeFunPtr" safeFreeFunPtr ::
 foreign import ccall unsafe "& safeFreeFunPtr" safeFreeFunPtrPtr ::
     FunPtr (Ptr a -> IO ())
 
--- We are not supposed to call freeHaskellFunPtr from the Haskell code
--- references by the FunPtr itself, but for callbacks of
--- ScopeTypeTypeAsync we only know that we can release the FunPtr from
--- _inside_ the FunPtr (the semantics is that the callback will be
--- called exactly once, and there's no associated GDestroyNotify to
--- separately free resources).
-
--- The following is a bit of hack, we create an idle function that
--- frees the resources when invoked.
-foreign import ccall unsafe "releaseFunPtr" releaseFunPtr ::
-    FunPtr a -> IO ()
-
 maybeReleaseFunPtr :: Maybe (Ptr (FunPtr a)) -> IO ()
 maybeReleaseFunPtr Nothing = return ()
 maybeReleaseFunPtr (Just f) = do
-  peek f >>= releaseFunPtr
+  peek f >>= freeHaskellFunPtr
   free f
