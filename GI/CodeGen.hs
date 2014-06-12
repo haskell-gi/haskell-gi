@@ -64,7 +64,7 @@ genBoxedObject n typeInit = do
   name' <- upperName n
 
   group $ do
-    line $ "foreign import ccall unsafe \"" ++ typeInit ++ "\" c_" ++
+    line $ "foreign import ccall \"" ++ typeInit ++ "\" c_" ++
             typeInit ++ " :: "
     indent $ line $ "IO GType"
   group $ do
@@ -306,7 +306,7 @@ genGObjectCasts n o = do
   let cn_ = objTypeInit o
 
   group $ do
-    line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
+    line $ "foreign import ccall \"" ++ cn_ ++ "\""
     indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
 
   group $ do
@@ -425,7 +425,7 @@ genInterface n iface = do
                 Nothing -> error $ "GObject derived interface without a type!"
 
     group $ do
-      line $ "foreign import ccall unsafe \"" ++ cn_ ++ "\""
+      line $ "foreign import ccall \"" ++ cn_ ++ "\""
       indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
 
     group $ do

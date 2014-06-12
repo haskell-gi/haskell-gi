@@ -161,7 +161,7 @@ handleGErrorJust code = flip (catchGErrorJust code)
 handleGErrorJustDomain :: GErrorClass err => (err -> GErrorMessage -> IO a) -> IO a -> IO a
 handleGErrorJustDomain = flip catchGErrorJustDomain
 
-foreign import ccall unsafe "g_error_free" g_error_free ::
+foreign import ccall "g_error_free" g_error_free ::
     Ptr () -> IO ()
 
 -- | Run the given function catching possible GErrors in its

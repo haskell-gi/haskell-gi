@@ -158,9 +158,9 @@ data GHashTable a b = GHashTable (Ptr (GHashTable a b))
 data GList a = GList (Ptr (GList a))
 data GSList a = GSList (Ptr (GSList a))
 
-foreign import ccall unsafe "g_list_prepend" g_list_prepend ::
+foreign import ccall "g_list_prepend" g_list_prepend ::
     Ptr (GList (Ptr a)) -> Ptr a -> IO (Ptr (GList (Ptr a)))
-foreign import ccall unsafe "g_list_free" g_list_free ::
+foreign import ccall "g_list_free" g_list_free ::
     Ptr (GList a) -> IO ()
 
 -- Given a Haskell list of items, construct a GList with those values.
@@ -179,9 +179,9 @@ unpackGList gsl
 
 -- Same thing for singly linked lists
 
-foreign import ccall unsafe "g_slist_prepend" g_slist_prepend ::
+foreign import ccall "g_slist_prepend" g_slist_prepend ::
     Ptr (GSList (Ptr a)) -> Ptr a -> IO (Ptr (GSList (Ptr a)))
-foreign import ccall unsafe "g_slist_free" g_slist_free ::
+foreign import ccall "g_slist_free" g_slist_free ::
     Ptr (GSList a) -> IO ()
 
 -- Given a Haskell list of items, construct a GSList with those values.
@@ -192,11 +192,11 @@ packGSList l = foldM g_slist_prepend nullPtr $ reverse l
 unpackGSList   :: Ptr (GSList (Ptr a)) -> IO [Ptr a]
 unpackGSList gsl = unpackGList (castPtr gsl)
 
-foreign import ccall unsafe "g_array_new" g_array_new ::
+foreign import ccall "g_array_new" g_array_new ::
    CInt -> CInt -> CUInt -> IO (Ptr (GArray ()))
-foreign import ccall unsafe "g_array_set_size" g_array_set_size ::
+foreign import ccall "g_array_set_size" g_array_set_size ::
     Ptr (GArray ()) -> CUInt -> IO (Ptr (GArray ()))
-foreign import ccall unsafe "g_array_unref" unrefGArray ::
+foreign import ccall "g_array_unref" unrefGArray ::
    Ptr (GArray a) -> IO ()
 
 packGArray :: forall a. Storable a => [a] -> IO (Ptr (GArray a))
@@ -225,11 +225,11 @@ unpackGArray array = do
             x <- peek ptr
             (x:) <$> go (ptr `plusPtr` sizeOf x) (n-1)
 
-foreign import ccall unsafe "g_ptr_array_new" g_ptr_array_new ::
+foreign import ccall "g_ptr_array_new" g_ptr_array_new ::
     IO (Ptr (GPtrArray ()))
-foreign import ccall unsafe "g_ptr_array_set_size" g_ptr_array_set_size ::
+foreign import ccall "g_ptr_array_set_size" g_ptr_array_set_size ::
     Ptr (GPtrArray ()) -> CUInt -> IO (Ptr (GPtrArray ()))
-foreign import ccall unsafe "g_ptr_array_unref" unrefPtrArray ::
+foreign import ccall "g_ptr_array_unref" unrefPtrArray ::
    Ptr (GPtrArray a) -> IO ()
 
 packGPtrArray :: [Ptr a] -> IO (Ptr (GPtrArray (Ptr a)))
@@ -257,11 +257,11 @@ unpackGPtrArray array = do
             x <- peek ptr
             (x:) <$> go (ptr `plusPtr` sizeOf x) (n-1)
 
-foreign import ccall unsafe "g_byte_array_new" g_byte_array_new ::
+foreign import ccall "g_byte_array_new" g_byte_array_new ::
     IO (Ptr GByteArray)
-foreign import ccall unsafe "g_byte_array_append" g_byte_array_append ::
+foreign import ccall "g_byte_array_append" g_byte_array_append ::
     Ptr GByteArray -> Ptr a -> CUInt -> IO (Ptr GByteArray)
-foreign import ccall unsafe "g_byte_array_unref" unrefGByteArray ::
+foreign import ccall "g_byte_array_unref" unrefGByteArray ::
    Ptr GByteArray -> IO ()
 
 packGByteArray :: ByteString -> IO (Ptr GByteArray)

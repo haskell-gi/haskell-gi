@@ -77,7 +77,7 @@ import Foreign.C
 #literal g_type_init();
 #endif
 
-foreign import ccall unsafe "g_object_newv" g_object_newv ::
+foreign import ccall "g_object_newv" g_object_newv ::
     GType -> CUInt -> Ptr a -> IO (Ptr b)
 
 -- | Construct a GObject given the constructor and a list of settable
@@ -124,7 +124,7 @@ new constructor attrs = do
            free cstr
            freeStrings (n-1) (dataPtr `plusPtr` gparameterSize)
 
-foreign import ccall unsafe "g_object_set_property" g_object_set_property ::
+foreign import ccall "g_object_set_property" g_object_set_property ::
     Ptr a -> CString -> Ptr GValue -> IO ()
 
 setObjectProperty :: (ManagedPtr a, GObject a) => a -> String -> b ->
@@ -136,7 +136,7 @@ setObjectProperty obj propName propValue setter gtype = do
           withManagedPtr gvalue $ \gvalueptr ->
               g_object_set_property objPtr cPropName gvalueptr
 
-foreign import ccall unsafe "g_object_get_property" g_object_get_property ::
+foreign import ccall "g_object_get_property" g_object_get_property ::
     Ptr a -> CString -> Ptr GValue -> IO ()
 
 getObjectProperty :: (GObject a, ManagedPtr a) => a -> String ->

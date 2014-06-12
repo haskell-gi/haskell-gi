@@ -45,10 +45,10 @@ memcpy dest src n = void $ _memcpy dest src (fromIntegral n)
 
 -- Same as freeHaskellFunPtr, but it does nothing when given a
 -- nullPtr.
-foreign import ccall unsafe "safeFreeFunPtr" safeFreeFunPtr ::
+foreign import ccall "safeFreeFunPtr" safeFreeFunPtr ::
     Ptr a -> IO ()
 
-foreign import ccall unsafe "& safeFreeFunPtr" safeFreeFunPtrPtr ::
+foreign import ccall "& safeFreeFunPtr" safeFreeFunPtrPtr ::
     FunPtr (Ptr a -> IO ())
 
 maybeReleaseFunPtr :: Maybe (Ptr (FunPtr a)) -> IO ()

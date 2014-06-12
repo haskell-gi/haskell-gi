@@ -64,11 +64,11 @@ foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::
 instance BoxedObject GValue where
     boxedType _ = c_g_value_get_type
 
-foreign import ccall unsafe "g_value_init" g_value_init ::
+foreign import ccall "g_value_init" g_value_init ::
     Ptr GValue -> GType -> IO (Ptr GValue)
-foreign import ccall unsafe "g_value_unset" g_value_unset ::
+foreign import ccall "g_value_unset" g_value_unset ::
     Ptr GValue -> IO ()
-foreign import ccall unsafe "g_malloc0" g_malloc0 ::
+foreign import ccall "g_malloc0" g_malloc0 ::
     #{type gsize} -> IO (Ptr a)
 
 -- It is important to use g_malloc0 here, and not callocBytes, since
@@ -122,7 +122,7 @@ instance IsGValue Double where
 instance IsGValue Bool where
     toGValue = buildGValue gtypeBoolean set_boolean
 
-foreign import ccall unsafe "g_value_set_string" _set_string ::
+foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
 foreign import ccall unsafe "g_value_get_string" _get_string ::
     Ptr GValue -> IO CString
@@ -224,9 +224,9 @@ set_boolean gv b = withManagedPtr gv $ \ptr ->
 get_boolean :: GValue -> IO Bool
 get_boolean gv = withManagedPtr gv $ \ptr -> (/= 0) <$> _get_boolean ptr
 
-foreign import ccall unsafe "g_value_set_object" _set_object ::
+foreign import ccall "g_value_set_object" _set_object ::
     Ptr GValue -> Ptr a -> IO ()
-foreign import ccall unsafe "g_value_get_object" _get_object ::
+foreign import ccall "g_value_get_object" _get_object ::
     Ptr GValue -> IO (Ptr a)
 
 set_object :: GObject a => GValue -> Ptr a -> IO ()
@@ -235,9 +235,9 @@ set_object gv o = withManagedPtr gv $ flip _set_object o
 get_object :: GObject b => GValue -> IO (Ptr b)
 get_object gv = withManagedPtr gv _get_object
 
-foreign import ccall unsafe "g_value_set_boxed" _set_boxed ::
+foreign import ccall "g_value_set_boxed" _set_boxed ::
     Ptr GValue -> Ptr a -> IO ()
-foreign import ccall unsafe "g_value_get_boxed" _get_boxed ::
+foreign import ccall "g_value_get_boxed" _get_boxed ::
     Ptr GValue -> IO (Ptr b)
 
 set_boxed :: GValue -> Ptr a -> IO ()

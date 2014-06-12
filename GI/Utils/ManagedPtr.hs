@@ -78,7 +78,7 @@ connectSignal object signal fn after = do
         g_signal_connect_data objPtr csignal fn (castFunPtrToPtr fn) safeFreeFunPtrPtr flags
 
 -- Reference counting for constructors
-foreign import ccall unsafe "&g_object_unref"
+foreign import ccall "&g_object_unref"
     ptr_to_g_object_unref :: FunPtr (Ptr a -> IO ())
 
 foreign import ccall "g_object_ref" g_object_ref ::
@@ -118,10 +118,10 @@ unrefObject obj = do
   g_object_unref ptr
   touchManagedPtr obj
 
-foreign import ccall unsafe "& boxed_free_helper" boxed_free_helper ::
+foreign import ccall "& boxed_free_helper" boxed_free_helper ::
     FunPtr (Ptr env -> Ptr a -> IO ())
 
-foreign import ccall unsafe "g_boxed_copy" g_boxed_copy ::
+foreign import ccall "g_boxed_copy" g_boxed_copy ::
     GType -> Ptr a -> IO (Ptr a)
 
 -- Construct a Haskell wrapper for the given boxed object. We make a
