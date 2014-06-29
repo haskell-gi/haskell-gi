@@ -7,11 +7,13 @@ module GI.CodeGen
     ) where
 
 import Control.Monad (forM, forM_, when)
+import Control.Applicative ((<$>))
 import Control.Monad.Writer (tell)
 import Data.List (intercalate)
 import Data.Tuple (swap)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CUInt)
@@ -359,7 +361,9 @@ genObject n o = do
 
   -- Instances and type conversions
   if isGO
-  then genGObjectType (instanceTree (instances cfg) n) n
+  then do
+    iT <- instanceTree n
+    genGObjectType iT n
   else manageUnManagedPtr n
 
   -- Implemented interfaces
@@ -381,8 +385,6 @@ genObject n o = do
   forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n
 
 genInterface n iface = do
-  cfg <- config
-
   -- For each interface, we generate a class IFoo and a data structure
   -- Foo. We only really need a separate Foo so that we can return
   -- them from bound functions. In principle we might be able to do
@@ -413,7 +415,8 @@ genInterface n iface = do
         Just (APIObject _) -> do
             line $ "instance " ++ prefix ++ klass n ++ " " ++ name'
             -- We are also instances of the parents of the object
-            forM_ (instanceTree (instances cfg) pName) $ \ancestor -> do
+            iT <- instanceTree pName
+            forM_ iT $ \ancestor -> do
                   ancestor' <- upperName ancestor
                   line $ "instance " ++ (klass ancestor') ++ " " ++ name'
         _ -> error $ "Prerequisite is neither an object or an interface!? : "
@@ -442,35 +445,35 @@ genInterface n iface = do
   -- And finally signals
   forM_ (ifSignals iface) $ \(sn, s) -> genSignal sn s n
 
--- Some type libraries seem to include spurious interface/struct
--- methods, where a method Mod.Foo::func also appears as an ordinary
--- function in the list of APIs. If we find a matching function, we
--- don't generate the method.
+-- Some type libraries include spurious interface/struct methods,
+-- where a method Mod.Foo::func also appears as an ordinary function
+-- in the list of APIs. If we find a matching function, we don't
+-- generate the method.
 --
 -- It may be more expedient to keep a map of symbol -> function.
 symbolFromFunction :: String -> CodeGen Bool
 symbolFromFunction sym = do
-  cfg <- config
-  return $ any (hasSymbol sym . snd) $ M.toList $ input cfg
+  apis <- getAPIs
+  return $ any (hasSymbol sym . snd) $ M.toList apis
     where
       hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2 })) = sym1 == sym2
       hasSymbol _ _ = False
 
-genCode :: Name -> API -> CodeGen ()
-genCode n (APIConst c) = genConstant n c
-genCode n (APIFunction f) = genFunction n f
-genCode n (APIEnum e) = genEnum n e
-genCode n (APIFlags f) = genFlags n f
-genCode n (APICallback c) = genCallback n c
-genCode n (APIStruct s) = genStruct n s
-genCode n (APIUnion u) = genUnion n u
-genCode n (APIObject o) = genObject n o
-genCode n (APIInterface i) = genInterface n i
-genCode _ (APIBoxed _) = return ()
+genAPI :: Name -> API -> CodeGen ()
+genAPI n (APIConst c) = genConstant n c
+genAPI n (APIFunction f) = genFunction n f
+genAPI n (APIEnum e) = genEnum n e
+genAPI n (APIFlags f) = genFlags n f
+genAPI n (APICallback c) = genCallback n c
+genAPI n (APIStruct s) = genStruct n s
+genAPI n (APIUnion u) = genUnion n u
+genAPI n (APIObject o) = genObject n o
+genAPI n (APIInterface i) = genInterface n i
+genAPI _ (APIBoxed _) = return ()
 
 genPrelude :: String -> String -> CodeGen ()
 genPrelude name modulePrefix = do
-    cfg <- config
+    let mp = (modulePrefix ++)
 
     line $ "-- Generated code."
     blank
@@ -478,7 +481,6 @@ genPrelude name modulePrefix = do
     line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
     line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
     blank
-    let mp = (modulePrefix ++)
     -- XXX: Generate export list.
     line $ "module " ++ mp name ++ " where"
     blank
@@ -508,25 +510,33 @@ genPrelude name modulePrefix = do
     line $ "import " ++ mp "Utils.Properties"
     line $ "import " ++ mp "Utils.Utils"
     line $ "import " ++ mp "Utils.GValue"
-    blank
-
-    forM_ (imports cfg) $ \i -> do
-      line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
-      line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
-               ++ ucFirst i ++ "A"
-
+    line $ "import " ++ mp "Properties"
     blank
 
 genModule :: String -> [(Name, API)] -> String -> CodeGen ()
 genModule name apis modulePrefix = do
-  cfg <- config
+  let mp = (modulePrefix ++)
+      name' = ucFirst name
 
-  genPrelude name modulePrefix
+  -- Any module depends on itself, load the information onto the state
+  -- of the monad. This has to be done early, so symbolFromFunction
+  -- above has access to it. It would probably be better to prune the
+  -- duplicated method/functions in advance, and get rid of
+  -- symbolFromFunction and this loadDependency altogether.
+  loadDependency name
 
-  let code = codeToList $ runCodeGen' cfg $
-             forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
-                       (uncurry genCode)
-  mapM_ (\c -> tell c >> blank) code
+  code <- recurse' $ forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
+                        (uncurry genAPI)
+
+  genPrelude name' modulePrefix
+  deps <- S.toList <$> getDeps
+  forM_ deps $ \i -> when (i /= name) $ do
+    line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
+    line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
+             ++ ucFirst i ++ "A"
+  blank
+
+  mapM_ (\c -> tell c >> blank) $ codeToList code
 
     where ignore = [
            "dummy_decl",

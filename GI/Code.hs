@@ -3,10 +3,14 @@ module GI.Code
     ( Code(..)
     , CodeGen
     , Config(..)
-    , runCodeGen
-    , runCodeGen'
+    , genCode
     , codeToString
     , codeToList
+    , loadDependency
+    , getDeps
+    , getAPIs
+    , recurse
+    , recurse'
     , indent
     , line
     , blank
@@ -17,16 +21,16 @@ module GI.Code
     , config
     ) where
 
-import Control.Monad.Reader
-import Control.Monad.Writer
+import Control.Monad.RWS
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
 import qualified Data.Foldable as F
 import qualified Data.Map as M
 import qualified Data.Sequence as S
+import qualified Data.Set as Set
 
 import Control.Applicative ((<$>))
 
-import GI.API (API, Name(..))
+import GI.API (API, Name(..), loadAPI)
 import GI.Type (Type(..))
 
 data Code
@@ -50,27 +54,66 @@ instance Monoid Code where
     a `mappend` b = Sequence (a <| b <| S.empty)
 
 data Config = Config {
-  imports :: [String],
-  prefixes :: M.Map String String,
-  names :: M.Map String String,
-  modName :: String,
-  instances :: M.Map Name Name,
-  ignoredMethods :: [String],
-  -- XXX: Blegh.
-  input :: M.Map Name API }
+      prefixes :: M.Map String String,
+      names :: M.Map String String,
+      modName :: String,
+      ignoredMethods :: [String]
+    }
 
-type CodeGen = WriterT Code (Reader Config)
+type Deps = Set.Set String
+data CodeGenState = CodeGenState {
+      moduleDeps :: Deps,
+      loadedAPIs :: M.Map Name API }
+type CodeGen = RWST Config Code CodeGenState IO
 
-runCodeGen :: Config -> CodeGen a -> (a, Code)
-runCodeGen config = flip runReader config . runWriterT
+emptyState :: CodeGenState
+emptyState = CodeGenState {moduleDeps = Set.empty, loadedAPIs = M.empty}
 
-runCodeGen' :: Config -> CodeGen () -> Code
-runCodeGen' cfg = snd . runCodeGen cfg
+getDeps :: CodeGen Deps
+getDeps = moduleDeps <$> get
+
+getAPIs :: CodeGen (M.Map Name API)
+getAPIs = loadedAPIs <$> get
+
+mergeState :: CodeGenState -> CodeGen ()
+mergeState newState = do
+  oldState <- get
+  -- If no dependencies were added we do not need to merge, this saves
+  -- quite a bit of work.
+  when (Set.size (moduleDeps oldState) /= Set.size (moduleDeps newState)) $ do
+    let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
+        newAPIs = M.union (loadedAPIs oldState) (loadedAPIs newState)
+    put $ CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
+
+runCodeGen :: Config -> CodeGenState -> CodeGen a -> IO (a, CodeGenState, Code)
+runCodeGen cfg state f = runRWST f cfg state
+
+genCode :: Config -> CodeGen () -> IO (Deps, Code)
+genCode cfg f = do
+  (_, st, code) <- runCodeGen cfg emptyState f
+  return (moduleDeps st, code)
 
 recurse :: CodeGen a -> CodeGen (a, Code)
 recurse cg = do
     cfg <- config
-    return $ runCodeGen cfg cg
+    state <- get
+    (result, st, code) <- liftIO $ runCodeGen cfg state cg
+    mergeState st
+    return (result, code)
+
+recurse' :: CodeGen () -> CodeGen Code
+recurse' cg = snd <$> recurse cg
+
+loadDependency :: String -> CodeGen ()
+loadDependency name = do
+  deps <- getDeps
+  when (not $ Set.member name deps) $
+       do
+         apis <- getAPIs
+         imported <- M.fromList <$> liftIO (loadAPI name)
+         let newDeps = Set.insert name deps
+             newAPIs = M.union apis imported
+         put $ CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
 
 findAPI :: Type -> CodeGen (Maybe API)
 findAPI TError = Just <$> findAPIByName (Name "GLib" "Error")
@@ -78,12 +121,19 @@ findAPI (TInterface ns n) = Just <$> findAPIByName (Name ns n)
 findAPI _ = return Nothing
 
 findAPIByName :: Name -> CodeGen API
-findAPIByName n = do
-    cfg <- config
-    case M.lookup n (input cfg) of
-      Just api -> return api
-      Nothing -> error $ "couldn't find API description for "
-                                ++ namespace n ++ "." ++ name n
+findAPIByName n@(Name ns _) = do
+  apis <- getAPIs
+  case M.lookup n apis of
+    Just api -> return api
+    Nothing -> do
+      deps <- getDeps
+      if not (Set.member ns deps)
+      -- If we get asked for a module not yet loaded, load it and retry.
+      then do
+        loadDependency ns
+        findAPIByName n
+      else error $ "couldn't find API description for "
+                       ++ ns ++ "." ++ name n
 
 line :: String -> CodeGen ()
 line = tell . Line
@@ -91,19 +141,19 @@ line = tell . Line
 blank = line ""
 
 config :: CodeGen Config
-config = lift ask
+config = ask
 
 indent :: CodeGen a -> CodeGen a
 indent cg = do
-    (x, code) <- recurse cg
-    tell $ Indent code
-    return x
+  (x, code) <- recurse cg
+  tell $ Indent code
+  return x
 
 group :: CodeGen a -> CodeGen a
 group cg = do
-     (x, code) <- recurse cg
-     tell $ Group code
-     return x
+  (x, code) <- recurse cg
+  tell $ Group code
+  return x
 
 codeToString c = concatMap (++ "\n") $ str 0 c []
     where str _ NoCode cont = cont
@@ -127,4 +177,3 @@ foreignImport cg = do
   (a, c) <- recurse cg
   tell $ ForeignImport c
   return a
-

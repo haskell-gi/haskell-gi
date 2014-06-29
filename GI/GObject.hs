@@ -1,14 +1,11 @@
 module GI.GObject
     ( klass
     , goConstraint
-    , parseObjectHierarchy
     , instanceTree
     , isGObject
     , apiIsGObject
     ) where
 
-import Data.Map (Map)
-import qualified Data.Map as M
 import Control.Applicative ((<$>))
 
 import GI.API
@@ -19,11 +16,12 @@ klass n = n ++ "Klass"
 goConstraint n = n ++ "K"
 
 -- Compute the (ordered) list of parents of the current object.
-instanceTree :: Map Name Name -> Name -> [Name]
-instanceTree ih n = case M.lookup n ih of
-                         Just p -> do
-                              p : (instanceTree ih p)
-                         Nothing -> []
+instanceTree :: Name -> CodeGen [Name]
+instanceTree n = do
+  api <- findAPIByName n
+  case getParent api of
+    Just p -> (p :) <$> instanceTree p
+    Nothing -> return []
 
 -- Returns whether the given object instance name is a descendant of
 -- GObject.
@@ -34,11 +32,10 @@ isGObject _ = return False
 
 apiIsGObject :: Name -> API -> CodeGen Bool
 apiIsGObject (Name "GObject" "Object") _ = return True
-apiIsGObject n api = do
-  cfg <- config
+apiIsGObject _ api = do
   case api of
     APIObject _ ->
-        case M.lookup n (instances cfg) of
+        case getParent api of
           Just (Name pns pn) -> isGObject (TInterface pns pn)
           Nothing -> return False
     APIInterface iface ->
@@ -47,18 +44,14 @@ apiIsGObject n api = do
            or <$> mapM (uncurry apiIsGObject) prereqs
     _ -> return False
 
--- Construct the hierarchy of object instances. Also transform
--- GObject.InitiallyUnowned to GObject.Object (the only difference
--- is in the treatment of the floating reference, but we do not
--- want to expose that in the API).
-parseObjectHierarchy :: Map Name API -> Map Name Name
-parseObjectHierarchy input = M.mapMaybe (rename . readParent) input
-                     where
-                     readParent :: API -> Maybe Name
-                     readParent (APIObject o) = objParent o
-                     readParent _ = Nothing
-
-                     rename :: Maybe Name -> Maybe Name
-                     rename (Just (Name "GObject" "InitiallyUnowned")) =
-                              Just (Name "GObject" "Object")
-                     rename x = x
+-- Find the parent of a given object. For the purposes of the binding
+-- we do not need to distinguish between GObject.Object and
+-- GObject.InitiallyUnowned.
+getParent :: API -> Maybe Name
+getParent (APIObject o) = rename $ objParent o
+    where
+      rename :: Maybe Name -> Maybe Name
+      rename (Just (Name "GObject" "InitiallyUnowned")) =
+          Just (Name "GObject" "Object")
+      rename x = x
+getParent _ = Nothing

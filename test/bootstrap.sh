@@ -23,71 +23,7 @@ generate()
 
 mkdir -p GI
 
-generate \
-    -m GI.GLib \
-    GLib
-generate \
-    -i GLib \
-    -m GI.GObject \
-    GObject
-generate \
-    -i GLib \
-    -i GObject \
-    -m GI.Cairo \
-    cairo
-generate \
-    -i GLib \
-    -i GObject \
-    -m GI.Gio \
-    Gio
-generate \
-    -i GLib \
-    -i GObject \
-    -m GI.Pango \
-    Pango
-generate \
-    -i GLib \
-    -i GObject \
-    -m GI.Atk \
-    Atk
-generate \
-    -i GLib \
-    -i GObject \
-    -i Gio \
-    -m GI.GdkPixbuf \
-    GdkPixbuf
-generate \
-    -i GLib \
-    -i GObject \
-    -i Gio \
-    -i cairo \
-    -i GdkPixbuf \
-    -i Pango \
-    -m GI.Gdk \
-    Gdk
-generate \
-    -i GLib \
-    -i GObject \
-    -i Gio \
-    -i cairo \
-    -i GdkPixbuf \
-    -i Gdk \
-    -i Pango \
-    -i Atk \
-    -m GI.Gtk \
-    Gtk
-generate \
-    -i GLib \
-    -i GObject \
-    -i Gio \
-    -i cairo \
-    -i GdkPixbuf \
-    -i Gdk \
-    -i Pango \
-    -i Atk \
-    -i Gtk \
-    -m GI.Vte \
-    Vte
+generate Gtk Vte
 
 mkdir -p GI/Utils
 

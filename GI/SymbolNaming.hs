@@ -75,10 +75,12 @@ upperName (Name ns s) = do
 qualifyWithSuffix :: String -> String -> CodeGen String
 qualifyWithSuffix suffix ns = do
      cfg <- config
-     return $ if modName cfg == ns then
-                ""
-              else
-                ucFirst ns ++ suffix
+     if modName cfg == ns then
+         return ""
+     else do
+       loadDependency ns -- Make sure that the given namespace is listed
+                         -- as a dependency of this module.
+       return $ ucFirst ns ++ suffix
 
 qualify:: String -> CodeGen String
 qualify = qualifyWithSuffix "."

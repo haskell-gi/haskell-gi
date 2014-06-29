@@ -3,8 +3,8 @@ import GI.Gtk hiding (main)
 import GI.GtkAttributes
 import qualified GI.Gtk as Gtk
 import qualified GI.Gio as Gio
-import qualified GI.GioAttributes as GioA
 import qualified GI.GLib as GLib
+import GI.Properties
 
 import GI.Utils.Attributes
 import GI.Utils.Properties (new)
@@ -92,7 +92,7 @@ testImportedLenses :: IO ()
 testImportedLenses = do
   putStrLn "*** Imported lenses test"
   address <- Gio.inetAddressNewFromString "173.194.40.51"
-  print =<< address `get` GioA._family
+  print =<< address `get` _family
   putStrLn "+++ Imported lenses test done"
 
 testPolymorphicLenses :: Window -> String -> IO ()

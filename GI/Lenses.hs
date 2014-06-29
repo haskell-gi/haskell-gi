@@ -1,9 +1,10 @@
 module GI.Lenses
-    (genLenses
+    ( genLenses
+    , genAllLenses
     ) where
 
 import Control.Applicative ((<$>))
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Control.Monad.Writer (tell)
 import qualified Data.Set as S
 
@@ -48,14 +49,29 @@ genProps (n, APIObject o) = genObjectProperties n o
 genProps (n, APIInterface i) = genInterfaceProperties n i
 genProps _ = return ()
 
-genLenses :: String -> [(Name, API)] -> [(Name, API)] -> String -> CodeGen ()
-genLenses name apis allApis modulePrefix = do
-  cfg <- config
-
-  genPrelude (name ++ "Attributes") modulePrefix
-
-  line $ "import " ++ modulePrefix ++ name
+genAllLenses :: [(Name, API)] -> String -> CodeGen ()
+genAllLenses allAPIs modulePrefix = do
+  line $ "-- Generated code."
   blank
+  line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
+  line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
+  line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
+  blank
+
+  line $ "module " ++ modulePrefix ++ "Properties where"
+  blank
+  line $ "import " ++ modulePrefix ++ "Utils.Attributes"
+  blank
+
+  propNames <- findObjectPropNames allAPIs
+  forM_ propNames $ \name -> do
+      genPropertyLens name
+      blank
+
+genLenses :: String -> [(Name, API)] -> String -> CodeGen ()
+genLenses name apis modulePrefix = do
+  let mp = (modulePrefix ++)
+      nm = ucFirst name
 
   -- We generate polymorphic lenses for all properties appearing in
   -- the current module and its dependencies. The reason for
@@ -63,10 +79,18 @@ genLenses name apis allApis modulePrefix = do
   -- this way one can just import the top module (Gtk, say)
   -- unqualified, and obtain access to all the necessary
   -- lenses.
-  propNames <- findObjectPropNames allApis
-  forM_ propNames $ \name -> do
-      genPropertyLens name
-      blank
 
-  let code = codeToList $ runCodeGen' cfg $ forM_ apis genProps
-  mapM_ (\c -> tell c >> blank) code
+  code <- recurse' $ forM_ apis genProps
+
+  genPrelude (nm ++ "Attributes") modulePrefix
+
+  deps <- S.toList <$> getDeps
+  forM_ deps $ \i -> when (i /= name) $ do
+    line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
+    line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
+             ++ ucFirst i ++ "A"
+
+  line $ "import " ++ modulePrefix ++ nm
+  blank
+
+  mapM_ (\c -> tell c >> blank) $ codeToList code

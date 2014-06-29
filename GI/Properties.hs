@@ -139,8 +139,8 @@ fullAPIPropertyList n = do
 
 fullObjectPropertyList :: Name -> Object -> CodeGen [(Name, Property)]
 fullObjectPropertyList n obj = do
-  cfg <- config
-  (++) <$> (concat <$> (mapM apiProps $ [n] ++ instanceTree (instances cfg) n))
+  iT <- instanceTree n
+  (++) <$> (concat <$> (mapM apiProps $ [n] ++ iT))
        <*> (concat <$> (mapM apiProps $ objInterfaces obj))
 
 fullInterfacePropertyList :: Name -> Interface -> CodeGen [(Name, Property)]
