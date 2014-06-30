@@ -40,9 +40,8 @@ genPropertyLens :: String -> CodeGen ()
 genPropertyLens pName = group $ do
   line $ "-- Property \"" ++ pName ++ "\""
   let name = hyphensToCamelCase pName
-  line $ "class HasProperty" ++ name ++ " o w where"
-  indent $ do
-    line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ name ++ "\" o w"
+  line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ name ++ "\" o"
+  line $ "_" ++ lcFirst name ++ " = undefined"
 
 genProps :: (Name, API) -> CodeGen ()
 genProps (n, APIObject o) = genObjectProperties n o

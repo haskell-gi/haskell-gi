@@ -107,10 +107,10 @@ testPolymorphicLenses parent message = do
 
   -- This should fail to compile with
 {-
-    Couldn't match type `AttrIsConstructible "Buttons" String'
-                  with 'True
-    Expected type: 'True
-      Actual type: AttrIsConstructible "Buttons" String
+    No instance for (HasAttr "Buttons" String)
+      arising from a use of `:='
+    ...
+    (among others)
 -}
   -- set message [ _buttons := ButtonsTypeOk ]
 
@@ -118,11 +118,18 @@ testPolymorphicLenses parent message = do
 
   -- Should fail to compile, with
 {-
-    Couldn't match type 'False with 'True
-    Expected type: 'True
-      Actual type: AttrIsConstructible "MessageArea" MessageDialog
+    No instance for (ReadOnlyAttr 'AttrSet) arising from a use of `:='
+    ...
 -}
   -- set messageBox [_messageArea := undefined]
+
+  -- Should fail to compile, with
+{-
+    No instance for (ConstructOnlyAttr 'AttrSet)
+      arising from a use of `:='
+    ...
+-}
+  -- set messageBox [_buttons := ButtonsTypeYesNo]
 
   -- This should fail to compile with
 {-

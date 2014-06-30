@@ -84,7 +84,7 @@ foreign import ccall "g_object_newv" g_object_newv ::
 -- attributes. AttrOps are always constructible, so we don't need to
 -- enforce constraints here.
 new :: forall o. GObject o => (ForeignPtr o -> o) ->
-       [AttrOp SetAndConstructOp o NonWritableAttr] -> IO o
+       [AttrOp SetAndConstructOp o AttrNew] -> IO o
 new constructor attrs = do
   props <- mapM construct attrs
   let nprops = length props
@@ -96,7 +96,7 @@ new constructor attrs = do
   free params
   wrapObject constructor (result :: Ptr o)
   where
-    construct :: AttrOp SetAndConstructOp o NonWritableAttr ->
+    construct :: AttrOp SetAndConstructOp o AttrNew ->
                  IO (String, GValue)
     construct (attr := x) = attrConstruct attr x
     construct (attr :=> x) = x >>= attrConstruct attr

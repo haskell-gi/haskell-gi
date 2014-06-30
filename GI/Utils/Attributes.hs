@@ -28,9 +28,6 @@
 --  Lesser General Public License for more details.
 --
 -- |
--- Maintainer  : gtk2hs-users@lists.sourceforge.net
--- Stability   : experimental
--- Portability : portable
 --
 -- Attributes interface
 --
@@ -67,7 +64,11 @@ module GI.Utils.Attributes (
   Attr,
   HasAttr(..),
 
-  WritableTag(..),
+  AttrSetOpTag(..),
+  SettableAndConstructibleAttr,
+  ConstructOnlyAttr,
+  SetOnlyAttr,
+  ReadOnlyAttr,
 
   -- * Interface for getting, setting and updating attributes
   AttrOp(..),
@@ -91,88 +92,101 @@ infixr 0 :=,:~,:=>,:~>,::=,::~
 -- the type so that the readability/writability/constructibility
 -- constraints are enforced.
 
--- The case of NonWritableAttr is somewhat special. Attributes which
--- are really non-writable will have the Writable tag set to
--- NonWritableAttr, but writable attributes will be abstract on that
--- type. Functions that don't care whether the attribute is writable
--- or not (such as "get" and "new") will then specialize to
--- NonWritableAttr, which lets them accept both writable and
--- non-writable attrs. "set", which needs the argument to be writable,
--- will specialize to WritableAttr and in this way give an error if a
--- non-writable attr is passed to it.
-
-data WritableTag = WritableAttr | NonWritableAttr
-
-data Attr (attr :: Symbol) o (w :: WritableTag)
+data Attr (attr :: Symbol) o
 
 class HasAttr (attr :: Symbol) o where
     type AttrIsReadable attr o :: Bool
-    type AttrIsConstructible attr o :: Bool
+    type AttrSettableConstraint attr o :: AttrSetOpTag -> Constraint
+    type AttrSetTypeConstraint attr o :: * -> Constraint
     type AttrGetType attr o
-    type AttrSetConstraint attr o :: * -> Constraint
-    attrLabel :: o -> Attr attr o w -> String
-    attrGet :: Attr attr o w -> o -> IO (AttrGetType attr o)
-    attrSet :: (AttrSetConstraint attr o) b =>
-               Attr attr o w -> o -> b -> IO ()
-    attrConstruct :: (AttrSetConstraint attr o) b =>
-                     Attr attr o w -> b -> IO (String, GValue)
+    attrLabel :: o -> Attr attr o -> String
+    attrGet :: Attr attr o -> o -> IO (AttrGetType attr o)
+    attrSet :: (AttrSetTypeConstraint attr o) b =>
+               Attr attr o -> o -> b -> IO ()
+    attrConstruct :: (AttrSetTypeConstraint attr o) b =>
+                     Attr attr o -> b -> IO (String, GValue)
 
-instance HasAttr attr o => Show (Attr attr o w) where
+instance HasAttr attr o => Show (Attr attr o) where
   show a = attrLabel (undefined :: o) a
 
--- Similar to the WritableTag type. We want to accept some
--- constructors both for "set" and "new", but some only for "set" (the
--- ones that require the object to exist do not make sense in
--- "new"). We filter things using the same trick: AttrOps that make
--- sense for both "set" and "new" are abstract in AttrOpType, and can
--- specialize to either case, and those specific to "set" are of type
--- "SetOnlyAttrOp". "set" and "new" specialize then as they should.
+-- The following classes, in combination with the
+-- "AttrSettableConstraint" constraint, will enforce that one does not
+-- pass a construct only argument to "set", while passing it to "new"
+-- is allowed, and disallows "set" and "new" on ReadOnly
+-- attributes. The idea is that the corresponding constraint
+-- (SettableAndConstructibleAttr, ConstructOnlyAttr, ...) can only
+-- succeed when doing the appropriate set/new operation, depending on
+-- whether the appropriate instances exist.
+
+data AttrSetOpTag = AttrSet | AttrNew
+
+class SettableAndConstructibleAttr (a :: AttrSetOpTag)
+instance SettableAndConstructibleAttr AttrSet
+instance SettableAndConstructibleAttr AttrNew
+
+class ConstructOnlyAttr (a :: AttrSetOpTag)
+instance ConstructOnlyAttr AttrNew
+
+class SetOnlyAttr (a :: AttrSetOpTag)
+instance SetOnlyAttr AttrSet
+
+class ReadOnlyAttr (a :: AttrSetOpTag)
+
+-- We want to accept some AttrOp constructors both for "set" and
+-- "new", but some only for "set" (the ones that require the object to
+-- exist do not make sense in "new"). We filter things using the
+-- following trick: AttrOps that make sense for both "set" and "new"
+-- are abstract in AttrOpType, and can specialize to either case, and
+-- those specific to "set" are of type "SetOnlyAttrOp". "set" and
+-- "new" specialize then as they should.
 data AttrOpType = SetOnlyAttrOp | SetAndConstructOp
 
 -- Notice that Writable implies Constructible, so here we just require
 -- constructible. "set" will then specialize on w to enforce that the
 -- parameter is writable.
-data AttrOp (s :: AttrOpType) o (w :: WritableTag) where
+data AttrOp (s :: AttrOpType) o (w :: AttrSetOpTag) where
     -- ^ Assign a value to an attribute
-    (:=)  :: (HasAttr attr o, (AttrSetConstraint attr o) b,
-              AttrIsConstructible attr o ~ True) =>
-             Attr attr o w -> b -> AttrOp s o w
+    (:=)  :: (HasAttr attr o, (AttrSetTypeConstraint attr o) b,
+              (AttrSettableConstraint attr o) w) =>
+             Attr attr o -> b -> AttrOp s o w
     -- ^ Assign the result of an IO action to an attribute
-    (:=>) :: (HasAttr attr o, (AttrSetConstraint attr o) b,
-              AttrIsConstructible attr o ~ True) =>
-             Attr attr o w -> IO b -> AttrOp s o w
+    (:=>) :: (HasAttr attr o,
+              (AttrSettableConstraint attr o) w,
+              (AttrSetTypeConstraint attr o) b) =>
+             Attr attr o -> IO b -> AttrOp s o w
     -- ^ Apply an update function to an attribute
     (:~)  :: (HasAttr attr o,
+              (AttrSettableConstraint attr o) w,
+              (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
-              (AttrSetConstraint attr o) b,
-              AttrIsConstructible attr o ~ True,
               AttrIsReadable attr o ~ True) =>
-             Attr attr o w -> (a -> b) -> AttrOp SetOnlyAttrOp o w
+             Attr attr o -> (a -> b) -> AttrOp SetOnlyAttrOp o w
     -- ^ Apply an IO update function to an attribute
     (:~>) :: (HasAttr attr o,
+              (AttrSettableConstraint attr o) w,
+              (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
-              (AttrSetConstraint attr o) b,
-              AttrIsConstructible attr o ~ True,
               AttrIsReadable attr o ~ True) =>
-             Attr attr o w -> (a -> IO b) -> AttrOp SetOnlyAttrOp o w
+             Attr attr o -> (a -> IO b) -> AttrOp SetOnlyAttrOp o w
     -- ^ Assign a value to an attribute with the object as an argument
-    (::=) :: (HasAttr attr o, (AttrSetConstraint attr o) b,
-              AttrIsConstructible attr o ~ True) =>
-             Attr attr o w -> (o -> b) -> AttrOp SetOnlyAttrOp o w
+    (::=) :: (HasAttr attr o,
+              (AttrSettableConstraint attr o) w,
+              (AttrSetTypeConstraint attr o) b) =>
+             Attr attr o -> (o -> b) -> AttrOp SetOnlyAttrOp o w
     -- ^ Apply an update function to an attribute with the object as
     -- an argument
     (::~) :: (HasAttr attr o,
+              (AttrSettableConstraint attr o) w,
+              (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
-              (AttrSetConstraint attr o) b,
-              AttrIsConstructible attr o ~ True,
               AttrIsReadable attr o ~ True) =>
-             Attr attr o w -> (o -> a -> b) -> AttrOp SetOnlyAttrOp o w
+             Attr attr o -> (o -> a -> b) -> AttrOp SetOnlyAttrOp o w
 
 -- | Set a number of properties for some object.
-set :: forall o. o -> [AttrOp SetOnlyAttrOp o WritableAttr] -> IO ()
+set :: forall o. o -> [AttrOp SetOnlyAttrOp o AttrSet] -> IO ()
 set obj = mapM_ app
  where
-   app :: AttrOp SetOnlyAttrOp o WritableAttr -> IO ()
+   app :: AttrOp SetOnlyAttrOp o AttrSet -> IO ()
    app (attr :=  x) = attrSet attr obj x
    app (attr :=> x) = x >>= attrSet attr obj
    app (attr :~  f) = attrGet attr obj >>= \v -> attrSet attr obj (f v)
@@ -182,5 +196,5 @@ set obj = mapM_ app
 
 -- | Get an Attr of an object.
 get :: (HasAttr attr o, AttrIsReadable attr o ~ True) =>
-        o -> Attr attr o NonWritableAttr -> IO (AttrGetType attr o)
+        o -> Attr attr o -> IO (AttrGetType attr o)
 get = flip attrGet

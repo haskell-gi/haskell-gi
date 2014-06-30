@@ -264,7 +264,7 @@ genProperties n props = do
     when owned $ group $ do
       line $ qualifiedLens ++ " :: "
                ++ parenthesize (goConstraint name ++ " o")
-               ++ " => Attr \"" ++ cName ++ "\" o w"
+               ++ " => Attr \"" ++ cName ++ "\" o"
       line $ qualifiedLens ++ " = undefined"
 
     -- Polymorphic _label style lens
@@ -278,29 +278,24 @@ genProperties n props = do
                                              then parenthesize hInType
                                              else hInType
                          else "(~) ()"
-          instanceVars = "\"" ++ cName ++ "\" " ++ name
           attrWriteType = if writable
-                          then "w"
-                          else "NonWritableAttr"
+                          then "SettableAndConstructibleAttr"
+                          else if constructOnly
+                               then "ConstructOnlyAttr"
+                               else "ReadOnlyAttr"
+          instanceVars = "\"" ++ cName ++ "\" " ++ name
 
       line $ "instance HasAttr " ++ instanceVars ++ " where"
       indent $ do
               line $ "type AttrIsReadable " ++ instanceVars
                        ++ " = " ++ show readable
-              line $ "type AttrIsConstructible " ++ instanceVars
-                       ++ " = " ++ show (writable || constructOnly)
+              line $ "type " ++ "AttrSetTypeConstraint " ++ instanceVars
+                       ++ " = " ++ inConstraint
+              line $ "type " ++ "AttrSettableConstraint " ++ instanceVars
+                       ++ " = " ++ attrWriteType
               line $ "type AttrGetType " ++ instanceVars
                        ++ " = " ++ outType
-              line $ "type " ++ "AttrSetConstraint " ++ instanceVars
-                       ++ " = " ++ inConstraint
               line $ "attrLabel _ _ = \"" ++ name ++ ":" ++ cName ++ "\""
               line $ "attrGet _ = " ++ getter
               line $ "attrSet _ = " ++ setter
               line $ "attrConstruct _ = " ++ constructor
-
-      blank
-
-      line $ "instance HasProperty"
-               ++ cName ++ " " ++ name ++ " " ++ attrWriteType ++ " where"
-      indent $ do
-              line $ "_" ++ lcFirst cName ++ " = " ++ qualifiedLens

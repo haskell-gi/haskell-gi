@@ -510,7 +510,6 @@ genPrelude name modulePrefix = do
     line $ "import " ++ mp "Utils.Properties"
     line $ "import " ++ mp "Utils.Utils"
     line $ "import " ++ mp "Utils.GValue"
-    line $ "import " ++ mp "Properties"
     blank
 
 genModule :: String -> [(Name, API)] -> String -> CodeGen ()
