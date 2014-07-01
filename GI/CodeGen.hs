@@ -9,7 +9,7 @@ module GI.CodeGen
 import Control.Monad (forM, forM_, when)
 import Control.Applicative ((<$>))
 import Control.Monad.Writer (tell)
-import Data.List (intercalate)
+import Data.List (intercalate, isSuffixOf)
 import Data.Tuple (swap)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as M
@@ -74,7 +74,8 @@ genBoxedObject n typeInit = do
        indent $ line $ "boxedType _ = c_" ++ typeInit
 
 genStruct :: Name -> Struct -> CodeGen ()
-genStruct n@(Name _ name) s = when (not $ isGTypeStruct s) $ do
+genStruct n@(Name _ name) s = when (not (isGTypeStruct s)
+                                   && not ("Private" `isSuffixOf` name)) $ do
       cfg <- config
 
       line $ "-- struct " ++ name
