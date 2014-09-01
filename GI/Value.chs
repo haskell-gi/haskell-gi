@@ -69,6 +69,9 @@ fromArgument ti (Argument arg) =
     basic TUInt32 = VUInt32 <$> fromIntegral <$> {# get GIArgument->v_uint32 #} arg
     basic TInt64 = VInt64 <$> fromIntegral <$> {# get GIArgument->v_int64 #} arg
     basic TUInt64 = VUInt64 <$> fromIntegral <$> {# get GIArgument->v_uint64 #} arg
+    basic TBoolean = VBoolean <$> (/= 0) <$> {# get GIArgument->v_boolean #} arg
+    -- XXX: Loss of precision?
+    basic TFloat = VFloat <$> fromRational <$> toRational <$>  {# get GIArgument->v_float #} arg
     -- XXX: Loss of precision?
     basic TDouble = VDouble <$> fromRational <$> toRational <$>  {# get GIArgument->v_double #} arg
     basic TUTF8 = VUTF8 <$> (peekCString =<< {# get GIArgument->v_string #} arg)
