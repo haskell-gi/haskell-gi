@@ -235,6 +235,9 @@ ignore = ["atk_editable_text_set_run_attributes"
          -- call to pango_tab_array_get_size(), not
          -- an argument.
          , "pango_tab_array_get_tabs"
+         -- In some versions of GLib the array is not properly marked
+         -- as zero-terminated.
+         , "g_option_context_parse_strv"
          -- Length of log_attrs is not given
          , "pango_glyph_item_letter_space"
          -- The length of logical_widths is not
