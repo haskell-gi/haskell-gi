@@ -301,6 +301,8 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
          mapM_ line =<< freeContainer t aname
     return unpacked
   else do
+    when (length == -1) $
+         error $ "Unknown length for \"" ++ aname ++ "\", aborting."
     let lname = escapeReserved $ argName $ (args callable)!!length
         lname' = case Map.lookup lname nameMap of
                    Just n -> n

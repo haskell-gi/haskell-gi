@@ -212,7 +212,9 @@ fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
 
       fixCArrayLength :: Type -> Type
       fixCArrayLength (TCArray zt fixed length t) =
-          TCArray zt fixed (length+1) t
+          if length > -1
+          then TCArray zt fixed (length+1) t
+          else TCArray zt fixed length t
       fixCArrayLength t = t
 
       fixDestroyers :: Arg -> Arg
