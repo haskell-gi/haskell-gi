@@ -94,6 +94,7 @@ escapeReserved "in" = "in_"
 escapeReserved "data" = "data_"
 escapeReserved "instance" = "instance_"
 escapeReserved "where" = "where_"
+escapeReserved "module" = "module_"
 -- Reserved because we generate code that uses these names.
 escapeReserved "result" = "result_"
 escapeReserved "length" = "length_"
