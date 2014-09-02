@@ -197,6 +197,9 @@ ignore = ["atk_editable_text_set_run_attributes"
          -- strings, but it is not marked as such in
          -- the bindings.
          , "g_file_info_set_attribute_stringv"
+         -- It returns an array of arrays of strings, we do not
+         -- support this yet.
+         , "g_desktop_app_info_search"
          -- The size of the array depends on the
          -- second argument in a nontrivial way.
          , "g_inet_address_new_from_bytes"
