@@ -1,5 +1,6 @@
 module GI.Internal.Typelib
   ( getSearchPath
+  , prependSearchPath
   , getLoadedNamespaces
   , getInfos
   , getSharedLibraries
@@ -32,6 +33,13 @@ unTypelib (Typelib p) = p
 {# pointer *GIRepository as Repository newtype #}
 
 nullRepository = Repository nullPtr
+
+prependSearchPath :: FilePath -> IO ()
+prependSearchPath path = do
+  withCString path $ \pathPtr ->
+      {# call prepend_search_path #} pathPtr
+  newSearchPath <- getSearchPath
+  putStrLn $ "New search path: " ++ show newSearchPath
 
 getSearchPath :: IO [FilePath]
 getSearchPath = do

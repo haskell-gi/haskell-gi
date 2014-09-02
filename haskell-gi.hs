@@ -24,6 +24,7 @@ import GI.CodeGen (genModule)
 import GI.Lenses (genLenses, genAllLenses)
 import GI.SymbolNaming (ucFirst)
 import GI.Shlib (typelibSymbols, strip)
+import GI.Internal.Typelib (prependSearchPath)
 
 data Mode = GenerateCode | Dump | Help
   deriving Show
@@ -33,6 +34,7 @@ data Options = Options {
   optMode :: Mode,
   optOutput :: Maybe String,
   optRenames :: [(String, String)],
+  optSearchPaths :: [String],
   optPrefixes :: [(String, String)] }
     deriving Show
 
@@ -41,6 +43,7 @@ defaultOptions = Options {
   optMode = GenerateCode,
   optOutput = Just "GI",
   optRenames = [],
+  optSearchPaths = [],
   optPrefixes = [] }
 
 parseKeyValue s =
@@ -64,6 +67,9 @@ optDescrs = [
       let (a, b) = parseKeyValue arg
        in opt { optPrefixes = (a, b) : optPrefixes opt }) "A=B")
      "specify the prefix for a particular namespace",
+  Option "s" ["search"] (ReqArg
+    (\arg opt -> opt { optSearchPaths = arg : optSearchPaths opt }) "PATH")
+    "prepend a directory to the typelib search path",
   Option "r" ["rename"] (ReqArg
     (\arg opt ->
       let (a, b) = parseKeyValue arg
@@ -150,8 +156,9 @@ dump modules =
       mapM_ (putStrLn . ppShow) apis >> return Set.empty
 
 process :: Options -> [String] -> IO ()
-process options modules =
-    case optMode options of
+process options modules = do
+  mapM_ prependSearchPath $ optSearchPaths options
+  case optMode options of
       GenerateCode -> generateModules options (Set.fromList modules) Set.empty
       Dump -> dump modules
       Help -> putStr showHelp
