@@ -1,6 +1,6 @@
-module GI.Lenses
-    ( genLenses
-    , genAllLenses
+module GI.Attributes
+    ( genAttributes
+    , genAllAttributes
     ) where
 
 import Control.Applicative ((<$>))
@@ -36,8 +36,8 @@ findObjectPropNames apis = S.toList <$> go apis S.empty
       insertProps :: [Property] -> S.Set String -> S.Set String
       insertProps props set = foldr (S.insert . propName) set props
 
-genPropertyLens :: String -> CodeGen ()
-genPropertyLens pName = group $ do
+genPropertyAttr :: String -> CodeGen ()
+genPropertyAttr pName = group $ do
   line $ "-- Property \"" ++ pName ++ "\""
   let name = hyphensToCamelCase pName
   line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ name ++ "\" o"
@@ -48,8 +48,8 @@ genProps (n, APIObject o) = genObjectProperties n o
 genProps (n, APIInterface i) = genInterfaceProperties n i
 genProps _ = return ()
 
-genAllLenses :: [(Name, API)] -> String -> CodeGen ()
-genAllLenses allAPIs modulePrefix = do
+genAllAttributes :: [(Name, API)] -> String -> CodeGen ()
+genAllAttributes allAPIs modulePrefix = do
   line $ "-- Generated code."
   blank
   line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
@@ -64,11 +64,11 @@ genAllLenses allAPIs modulePrefix = do
 
   propNames <- findObjectPropNames allAPIs
   forM_ propNames $ \name -> do
-      genPropertyLens name
+      genPropertyAttr name
       blank
 
-genLenses :: String -> [(Name, API)] -> String -> CodeGen ()
-genLenses name apis modulePrefix = do
+genAttributes :: String -> [(Name, API)] -> String -> CodeGen ()
+genAttributes name apis modulePrefix = do
   let mp = (modulePrefix ++)
       nm = ucFirst name
 

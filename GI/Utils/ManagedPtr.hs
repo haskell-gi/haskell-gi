@@ -5,7 +5,6 @@ module GI.Utils.ManagedPtr
     , BoxedObject(..)
     , GObject(..)
     , castTo
-    , connectSignal
     , newObject
     , wrapObject
     , refObject
@@ -56,26 +55,6 @@ castTo constructor typeName obj =
       when (c_check_object_type objPtr t /= 1) $
          error $ "Cannot cast object to " ++ typeName
       newObject constructor objPtr
-
--- Connecting GObjects to signals
-foreign import ccall "g_signal_connect_data" g_signal_connect_data ::
-    Ptr a ->                            -- instance
-    CString ->                          -- detailed_signal
-    FunPtr b ->                         -- c_handler
-    Ptr () ->                           -- data
-    FunPtr c ->                         -- destroy_data
-    CUInt ->                            -- connect_flags
-    IO CULong
-
-connectSignal :: (GObject o, ManagedPtr o) =>
-                  o -> String -> FunPtr a -> Bool -> IO CULong
-connectSignal object signal fn after = do
-  let flags = if after
-              then 1
-              else 0
-  withCString signal $ \csignal -> do
-    withManagedPtr object $ \objPtr ->
-        g_signal_connect_data objPtr csignal fn (castFunPtrToPtr fn) safeFreeFunPtrPtr flags
 
 -- Reference counting for constructors
 foreign import ccall "&g_object_unref"

@@ -21,7 +21,7 @@ import Text.Show.Pretty (ppShow)
 import GI.API (loadAPI, API(..), Name(..))
 import GI.Code (Config(..), codeToString, genCode)
 import GI.CodeGen (genModule)
-import GI.Lenses (genLenses, genAllLenses)
+import GI.Attributes (genAttributes, genAllAttributes)
 import GI.SymbolNaming (ucFirst)
 import GI.Shlib (typelibSymbols, strip)
 import GI.Internal.Typelib (prependSearchPath)
@@ -115,14 +115,14 @@ genGenericAttrs options modules = do
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
   (_, code) <- genCode (moduleConfig "Properties" options) $
-                                  genAllLenses allAPIs modPrefix
+                                  genAllAttributes allAPIs modPrefix
   writeFile (joinPath [dirPrefix,  "Properties.hs"]) $ codeToString code
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
 processMod :: Options -> String -> IO (Set.Set String)
 processMod options name = do
-  apis <- loadAPI' name
+  apis <- loadAPI name
 
   let cfg = moduleConfig name options
       nm = ucFirst name
@@ -130,14 +130,18 @@ processMod options name = do
   (modPrefix, dirPrefix) <- outputPath options
 
   putStrLn $ "\t* Generating " ++ modPrefix ++ nm
-
   (deps, code) <- genCode cfg $ genModule name apis modPrefix
   writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
              codeToString code
-  (lensDeps, lensCode) <- genCode cfg $ genLenses name apis modPrefix
+
+  putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Attributes"
+  (attrDeps, attrCode) <- genCode cfg $ genAttributes name apis modPrefix
   writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
-            codeToString lensCode
-  return $ name `Set.delete` (Set.union deps lensDeps)
+            codeToString attrCode
+
+  putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
+
+  return $ name `Set.delete` (Set.union deps attrDeps)
 
 generateModules :: Options -> Set.Set String -> Set.Set String -> IO ()
 generateModules options targets done
@@ -152,7 +156,7 @@ generateModules options targets done
 dump :: [String] -> IO ()
 dump modules =
     forM_ modules $ \name -> do
-      apis <- loadAPI' name
+      apis <- loadAPI name
       mapM_ (putStrLn . ppShow) apis >> return Set.empty
 
 process :: Options -> [String] -> IO ()

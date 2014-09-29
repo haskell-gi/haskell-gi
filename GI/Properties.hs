@@ -3,10 +3,9 @@ module GI.Properties
     , genObjectProperties
     ) where
 
-import Control.Monad (forM_, when, foldM)
-import Control.Applicative ((<$>), (<*>))
+import Control.Monad (forM_, when)
+import Control.Applicative ((<$>))
 import Data.List (intercalate)
-import qualified Data.Map as M
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CInt, CUInt)
@@ -15,6 +14,7 @@ import GI.API
 import GI.Conversions
 import GI.Code
 import GI.GObject
+import GI.Inheritable
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
@@ -118,36 +118,6 @@ genPropertyConstructor pName prop = group $ do
   line $ "construct" ++ pName ++ " val = constructObjectProperty" ++ tStr
            ++ " \"" ++ propName prop ++ "\" val"
 
--- Returns a list of all properties defined for this object (including
--- those defined by its ancestors and the interfaces it implements),
--- together with the name of the interface defining the property.
-apiProps :: Name -> CodeGen [(Name, Property)]
-apiProps n = do
-  api <- findAPIByName n
-  case api of
-    APIInterface iface -> return $ map ((,) n) (ifProperties iface)
-    APIObject object -> return $ map ((,) n) (objProperties object)
-    _ -> error $ "apiProps : Unexpected API : " ++ show n
-
-fullAPIPropertyList :: Name -> CodeGen [(Name, Property)]
-fullAPIPropertyList n = do
-  api <- findAPIByName n
-  case api of
-    APIInterface iface -> fullInterfacePropertyList n iface
-    APIObject object -> fullObjectPropertyList n object
-    _ -> error $ "FullAPIPropertyList : Unexpected API : " ++ show n
-
-fullObjectPropertyList :: Name -> Object -> CodeGen [(Name, Property)]
-fullObjectPropertyList n obj = do
-  iT <- instanceTree n
-  (++) <$> (concat <$> (mapM apiProps $ [n] ++ iT))
-       <*> (concat <$> (mapM apiProps $ objInterfaces obj))
-
-fullInterfacePropertyList :: Name -> Interface -> CodeGen [(Name, Property)]
-fullInterfacePropertyList n iface =
-    ((++) $ map ((,) n) (ifProperties iface))
-       <$> (concat <$> (mapM fullAPIPropertyList $ ifPrerequisites iface))
-
 genObjectProperties :: Name -> Object -> CodeGen ()
 genObjectProperties n o = do
   isGO <- apiIsGObject n (APIObject o)
@@ -159,36 +129,6 @@ genInterfaceProperties n iface = do
   isGO <- apiIsGObject n (APIInterface iface)
   when isGO $
        fullInterfacePropertyList n iface >>= genProperties n
-
--- It is sometimes the case that a property name is defined both in an
--- object and in one of its ancestors/implemented interfaces. This is
--- harmless if the properties are isomorphic (there will be more than
--- one qualified set of property setters/getters that we can call, but
--- they are all isomorphi). If they are not isomorphic we refuse to
--- set either, and print a warning in the generated code.
-removeDuplicateProps :: [(Name, Property)] -> CodeGen [(Name, Property)]
-removeDuplicateProps props =
-    (filterTainted . M.toList) <$> foldM filterDups M.empty props
-    where
-      filterDups :: M.Map String (Bool, Name, Property) -> (Name, Property) ->
-                    CodeGen (M.Map String (Bool, Name, Property))
-      filterDups m (name, prop) =
-        case M.lookup (propName prop) m of
-          Just (tainted, n, p) ->
-              if tainted
-              then return m
-              else if p == prop
-                   then return m -- Duplicated, but isomorphic property
-                   else do
-                     line $ "--- XXX Property duplicated with different types:"
-                     line $ "  --- " ++ show n ++ " -> " ++ show p
-                     line $ "  --- " ++ show name ++ " -> " ++ show prop
-                     -- Tainted property
-                     return $ M.insert (propName prop) (True, n, p) m
-          Nothing -> return $ M.insert (propName prop) (False, name, prop) m
-      filterTainted :: [(String, (Bool, Name, Property))] -> [(Name, Property)]
-      filterTainted xs =
-          [(name, prop) | (_, (tainted, name, prop)) <- xs, not tainted]
 
 -- If the given accesor is available (indicated by available == True),
 -- generate a fully qualified accesor name, otherwise just return
@@ -205,9 +145,7 @@ genProperties :: Name -> [(Name, Property)] -> CodeGen ()
 genProperties n props = do
   name <- upperName n
 
-  props' <- removeDuplicateProps props
-
-  forM_ props' $ \(propOwner@(Name ons on), prop) -> do
+  forM_ props $ \(propOwner@(Name ons on), prop) -> do
     propOwnerName <- upperName propOwner
     let cName = hyphensToCamelCase $ propName prop
         pName = propOwnerName ++ cName

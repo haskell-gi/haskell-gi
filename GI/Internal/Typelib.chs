@@ -102,6 +102,9 @@ load namespace version =
     propagateGError $ \gError -> do
         typelib <- require namespace version gError
         when (unTypelib typelib /= nullPtr) $ do
+            path <- peekCString =<< (withCString namespace $ \nsPtr ->
+                    {# call get_typelib_path #} nullRepository nsPtr)
+            putStrLn $ "Loaded typelib: " ++ path
             _ <- {# call unsafe load_typelib #} nullRepository typelib 0 gError
             return ()
         return typelib

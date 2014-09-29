@@ -121,7 +121,7 @@ data Callable = Callable {
     returnAttributes :: [(String, String)],
     args :: [Arg],
     skipReturn :: Bool }
-    deriving Show
+    deriving (Show, Eq)
 
 toCallable :: CallableInfo -> Callable
 toCallable ci =
@@ -150,11 +150,13 @@ toFunction fi =
          (functionInfoFlags fi)
 
 data Signal = Signal {
+    sigName :: String,
     sigCallable :: Callable }
-    deriving Show
+    deriving (Show, Eq)
 
 toSignal :: SignalInfo -> Signal
 toSignal si = Signal {
+    sigName = baseInfoName $ baseInfo si,
     sigCallable = toCallable $ callableInfo si }
 
 data Property = Property {
@@ -235,7 +237,7 @@ toCallback = Callback . toCallable
 data Interface = Interface {
     ifConstants :: [(Name, Constant)],
     ifProperties :: [Property],
-    ifSignals :: [(Name, Signal)],
+    ifSignals :: [Signal],
     ifPrerequisites :: [Name],
     ifTypeInit :: Maybe String,
     ifMethods :: [(Name, Function)] }
@@ -245,7 +247,7 @@ toInterface :: InterfaceInfo -> Interface
 toInterface ii = Interface {
     ifConstants = map (withName toConstant) (interfaceInfoConstants ii),
     ifProperties = map toProperty (interfaceInfoProperties ii),
-    ifSignals = map (withName toSignal) (interfaceInfoSignals ii),
+    ifSignals = map toSignal (interfaceInfoSignals ii),
     ifPrerequisites = map (fst . toAPI) (interfaceInfoPrerequisites ii),
     ifTypeInit = registeredTypeInfoTypeInit ii,
     ifMethods = map (withName toFunction) (interfaceInfoMethods ii) }
@@ -254,7 +256,7 @@ data Object = Object {
     objFields :: [Field],
     objMethods :: [(Name, Function)],
     objProperties :: [Property],
-    objSignals :: [(Name, Signal)],
+    objSignals :: [Signal],
     objInterfaces :: [Name],
     objConstants :: [Constant],
     objParent :: Maybe Name,
@@ -269,7 +271,7 @@ toObject oi = Object {
     objFields = map toField $ objectInfoFields oi,
     objMethods = map (withName toFunction) (objectInfoMethods oi),
     objProperties = map toProperty $ objectInfoProperties oi,
-    objSignals = map (withName toSignal) (objectInfoSignals oi),
+    objSignals = map toSignal (objectInfoSignals oi),
     objInterfaces = map getName $ objectInfoInterfaces oi,
     objConstants = map toConstant $ objectInfoConstants oi,
     objParent = getName <$> objectInfoParent oi,

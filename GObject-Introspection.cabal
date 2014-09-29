@@ -16,6 +16,7 @@ Extra-source-files: GI/Utils/ManagedPtr.hs
 		    GI/Utils/Properties.hsc
 		    GI/Utils/GValue.hsc
 		    GI/Utils/Attributes.hs
+		    GI/Utils/Signals.hs
 
 source-repository head
   type: git
@@ -56,13 +57,14 @@ Executable haskell-gi
       GI.Internal.TypeInfo,
       GI.Internal.UnionInfo,
       GI.API,
+      GI.Attributes,
       GI.Callable,
       GI.Code,
       GI.Conversions,
       GI.GObject,
       GI.GType,
+      GI.Inheritable,
       GI.Properties,
-      GI.Lenses,
       GI.Signal,
       GI.SymbolNaming,
       GI.Transfer,

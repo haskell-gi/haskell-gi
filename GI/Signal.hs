@@ -229,12 +229,12 @@ genCallback n (Callback cb) = do
 
   genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False
 
-genSignal :: Name -> Signal -> Name -> CodeGen ()
-genSignal sn (Signal { sigCallable = cb }) on = do
+genSignal :: Signal -> Name -> CodeGen ()
+genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   on' <- upperName on
-  let (w:ws) = split '-' $ name sn
+  let (w:ws) = split '-' sn
       sn' = w ++ concatMap ucFirst ws
-  line $ "-- signal " ++ on' ++ "::" ++ name sn
+  line $ "-- signal " ++ on' ++ "::" ++ sn
 
   let inArgs = filter ((/= DirectionOut) . direction) $ args cb
       hInArgs = filter (not . (`elem` (arrayLengths cb))) inArgs
@@ -271,4 +271,4 @@ genSignal sn (Signal { sigCallable = cb }) on = do
     line $ fullName ++ " obj cb after = do"
     indent $ do
         line $ "cb' <- mk" ++ cbType ++ " (" ++ lcFirst cbType ++ "Wrapper cb)"
-        line $ "connectSignal obj \"" ++ (name sn) ++ "\" cb' after"
+        line $ "connectSignalFunPtr obj \"" ++ sn ++ "\" cb' after"

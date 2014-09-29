@@ -385,7 +385,7 @@ genObject n o = do
          genMethod n mn f
 
   -- And finally signals
-  forM_ (objSignals o) $ \(sn, s) -> genSignal sn s n
+  forM_ (objSignals o) $ \s -> genSignal s n
 
 genInterface n iface = do
   -- For each interface, we generate a class IFoo and a data structure
@@ -446,7 +446,7 @@ genInterface n iface = do
        genMethod n mn f
 
   -- And finally signals
-  forM_ (ifSignals iface) $ \(sn, s) -> genSignal sn s n
+  forM_ (ifSignals iface) $ \s -> genSignal s n
 
 -- Some type libraries include spurious interface/struct methods,
 -- where a method Mod.Foo::func also appears as an ordinary function
@@ -513,6 +513,7 @@ genPrelude name modulePrefix = do
     line $ "import " ++ mp "Utils.Properties"
     line $ "import " ++ mp "Utils.Utils"
     line $ "import " ++ mp "Utils.GValue"
+    line $ "import " ++ mp "Utils.Signals"
     blank
 
 genModule :: String -> [(Name, API)] -> String -> CodeGen ()
