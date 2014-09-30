@@ -37,10 +37,6 @@ module GI.Utils.GValue
 
 #include <glib-object.h>
 
-#if !defined(GLIB_VERSION_2_36)
-#literal g_type_init();
-#endif
-
 import Control.Applicative ((<$>))
 
 import Foreign.C
@@ -67,8 +63,6 @@ instance BoxedObject GValue where
 
 foreign import ccall "g_value_init" g_value_init ::
     Ptr GValue -> GType -> IO (Ptr GValue)
-foreign import ccall "g_value_unset" g_value_unset ::
-    Ptr GValue -> IO ()
 
 newGValue :: GType -> IO GValue
 newGValue gtype = do

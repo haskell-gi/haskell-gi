@@ -25,11 +25,4 @@ mkdir -p GI
 
 generate Gtk Vte
 
-mkdir -p GI/Utils
-
-if [ x"$HASKELL_GI_BUILD_DIR" = x ]; then
-    HASKELL_GI_BUILD_DIR=".."
-fi
-cp "$HASKELL_GI_BUILD_DIR"/GI/Utils/* GI/Utils
-
 bash build.sh

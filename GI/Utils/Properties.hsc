@@ -74,10 +74,6 @@ import Foreign.C
 
 #include <glib-object.h>
 
-#if !defined(GLIB_VERSION_2_36)
-#literal g_type_init();
-#endif
-
 foreign import ccall "g_object_newv" g_object_newv ::
     GType -> CUInt -> Ptr a -> IO (Ptr b)
 

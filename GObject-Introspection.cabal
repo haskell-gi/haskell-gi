@@ -11,13 +11,7 @@ Maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
 Stability:           Experimental
 Category:            Development
 Build-type:          Simple
-Cabal-version:       >=1.6
-Extra-source-files: GI/Utils/ManagedPtr.hs
-		    GI/Utils/Properties.hsc
-		    GI/Utils/GValue.hsc
-		    GI/Utils/Utils.hsc
-		    GI/Utils/Attributes.hs
-		    GI/Utils/Signals.hs
+Cabal-version:       >=1.8
 
 source-repository head
   type: git
@@ -25,7 +19,7 @@ source-repository head
 
 Executable haskell-gi
   main-is: haskell-gi.hs
-  pkgconfig-depends: gobject-introspection-1.0
+  pkgconfig-depends: gobject-introspection-1.0, gobject-2.0 >= 2.36
   build-depends:
       base >= 4 && < 5,
       containers,
@@ -35,6 +29,7 @@ Executable haskell-gi
       pretty-show,
       process,
       bytestring,
+      GObject-Introspection,
       free
   build-tools: hsc2hs, c2hs
   extensions: ForeignFunctionInterface, DoAndIfThenElse
@@ -71,11 +66,28 @@ Executable haskell-gi
       GI.Transfer,
       GI.Type,
       GI.Value,
-      GI.Util,
+      GI.Util
+
+  C-sources: c/hsgclosure.c
+
+Library
+  exposed-modules:
+      GI.Utils.Attributes,
       GI.Utils.BasicConversions,
       GI.Utils.BasicTypes,
       GI.Utils.GError,
+      GI.Utils.GValue,
+      GI.Utils.ManagedPtr,
+      GI.Utils.Properties,
+      GI.Utils.Signals,
       GI.Utils.Utils
+  pkgconfig-depends: gobject-introspection-1.0, gobject-2.0 >= 2.36
+  build-depends:
+      base >= 4 && < 5,
+      bytestring,
+      text
+  build-tools: hsc2hs
+  extensions: ForeignFunctionInterface, DoAndIfThenElse
+  ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
 
-  C-sources: test/hsgclosure.c
-
+  C-sources: c/hsgclosure.c
