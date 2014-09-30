@@ -487,15 +487,17 @@ genPrelude name modulePrefix = do
     -- XXX: Generate export list.
     line $ "module " ++ mp name ++ " where"
     blank
-    -- String and IOError also appear in GLib.
-    line $ "import Prelude hiding (String, IOError)"
+    -- The Prelude functions often clash with variable names or
+    -- functions defined in the bindings, so we only import the
+    -- necessary minimum into our namespace.
+    line $ "import Prelude ()"
+    line $ "import GI.Utils.ShortPrelude"
     -- Error types come from GLib.
     when (name /= "GLib") $
          line $ "import " ++ mp "GLib (Error(..))"
     line $ "import Data.Char"
     line $ "import Data.Int"
     line $ "import Data.Word"
-    line $ "import Data.Array (Array(..))"
     line $ "import qualified Data.ByteString.Char8 as B"
     line $ "import Data.ByteString.Char8 (ByteString)"
     line $ "import Foreign.C"
@@ -504,17 +506,16 @@ genPrelude name modulePrefix = do
     line $ "import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)"
     line $ "import Foreign.Storable"
     line $ "import Control.Applicative ((<$>))"
-    line $ "import Control.Monad (when)"
     line $ "import Control.Exception (onException)"
     blank
     line $ "import " ++ mp "Utils.Attributes"
     line $ "import " ++ mp "Utils.BasicTypes"
     line $ "import " ++ mp "Utils.BasicConversions"
     line $ "import " ++ mp "Utils.GError"
+    line $ "import " ++ mp "Utils.GValue"
     line $ "import " ++ mp "Utils.ManagedPtr"
     line $ "import " ++ mp "Utils.Properties"
     line $ "import " ++ mp "Utils.Utils"
-    line $ "import " ++ mp "Utils.GValue"
     line $ "import " ++ mp "Utils.Signals"
     blank
 

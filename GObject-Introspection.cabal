@@ -79,6 +79,7 @@ Library
       GI.Utils.GValue,
       GI.Utils.ManagedPtr,
       GI.Utils.Properties,
+      GI.Utils.ShortPrelude,
       GI.Utils.Signals,
       GI.Utils.Utils
   pkgconfig-depends: gobject-introspection-1.0, gobject-2.0 >= 2.36
