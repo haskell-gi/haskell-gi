@@ -51,6 +51,7 @@ import qualified Data.Text as T
 
 import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr
+import GI.Utils.Utils (callocBytes)
 
 data GValue = GValue (ForeignPtr GValue)
 
@@ -68,16 +69,10 @@ foreign import ccall "g_value_init" g_value_init ::
     Ptr GValue -> GType -> IO (Ptr GValue)
 foreign import ccall "g_value_unset" g_value_unset ::
     Ptr GValue -> IO ()
-foreign import ccall "g_malloc0" g_malloc0 ::
-    #{type gsize} -> IO (Ptr a)
 
--- It is important to use g_malloc0 here, and not callocBytes, since
--- it will be glib freeing our memory via g_free, and the
--- malloc/g_malloc memory pools may differ. See the note at
--- https://developer.gnome.org/glib/2.28/glib-Memory-Allocation.html
 newGValue :: GType -> IO GValue
 newGValue gtype = do
-  gvptr <- g_malloc0 #size GValue
+  gvptr <- callocBytes #size GValue
   _ <- g_value_init gvptr gtype
   gv <- wrapBoxed GValue gvptr
   return $! gv

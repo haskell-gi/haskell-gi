@@ -15,6 +15,7 @@ Cabal-version:       >=1.6
 Extra-source-files: GI/Utils/ManagedPtr.hs
 		    GI/Utils/Properties.hsc
 		    GI/Utils/GValue.hsc
+		    GI/Utils/Utils.hsc
 		    GI/Utils/Attributes.hs
 		    GI/Utils/Signals.hs
 
@@ -70,9 +71,10 @@ Executable haskell-gi
       GI.Transfer,
       GI.Type,
       GI.Value,
-      GI.Util
-      GI.Utils.GError
-      GI.Utils.BasicTypes
+      GI.Util,
+      GI.Utils.BasicConversions,
+      GI.Utils.BasicTypes,
+      GI.Utils.GError,
       GI.Utils.Utils
 
   C-sources: test/hsgclosure.c

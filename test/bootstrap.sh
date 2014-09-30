@@ -32,10 +32,4 @@ if [ x"$HASKELL_GI_BUILD_DIR" = x ]; then
 fi
 cp "$HASKELL_GI_BUILD_DIR"/GI/Utils/* GI/Utils
 
-LDFLAGS=$(echo $(pkg-config --libs gobject-2.0) | sed -e "s/-l/--lflag=-l/g")
-
-ghc -c hsgclosure.c $(pkg-config --cflags gobject-2.0)
-hsc2hs GI/Utils/BasicTypes.hsc $(pkg-config --cflags gobject-2.0) $LDFLAGS -t $PWD/template-hsc.h
-hsc2hs GI/Utils/Properties.hsc $(pkg-config --cflags gobject-2.0) $LDFLAGS -t $PWD/template-hsc.h
-hsc2hs GI/Utils/GValue.hsc $(pkg-config --cflags gobject-2.0) $LDFLAGS -t $PWD/template-hsc.h
-ghc --make testGtk.hs hsgclosure.o $(pkg-config --libs gtk+-3.0)
+bash build.sh

@@ -28,7 +28,7 @@ int check_object_type(void *instance, GType type)
 void boxed_free_helper (GType *gtype, void *boxed)
 {
   g_boxed_free (*gtype, boxed);
-  free (gtype);
+  g_free (gtype);
 }
 
 /* Same as freeHaskellFunctionPtr, but it does nothing when given a

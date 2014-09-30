@@ -20,7 +20,7 @@ import GI.Util
 import GI.GType (GType)
 
 import GI.Utils.GError
-import GI.Utils.BasicTypes (unpackGSList)
+import GI.Utils.BasicConversions (unpackGSList)
 
 #include <girepository.h>
 

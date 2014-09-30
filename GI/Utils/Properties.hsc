@@ -64,6 +64,7 @@ import Control.Applicative ((<$>))
 import qualified Data.ByteString.Char8 as B
 
 import GI.Utils.BasicTypes
+import GI.Utils.BasicConversions
 import GI.Utils.ManagedPtr
 import GI.Utils.Attributes
 import GI.Utils.GValue

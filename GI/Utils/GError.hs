@@ -56,6 +56,8 @@ import Foreign.C
 import Control.Exception
 import Data.Typeable
 
+import GI.Utils.Utils (allocMem)
+
 -- | A GError consists of a domain, code and a human readable message.
 data GError = GError !GErrorDomain !GErrorCode !GErrorMessage
   deriving Typeable
@@ -174,7 +176,7 @@ propagateGError f = checkGError f throw
 -- instead of just throwing the exception.
 checkGError :: (Ptr (Ptr ()) -> IO a) -> (GError -> IO a) -> IO a
 checkGError f handler = do
-  gerrorPtr <- malloc :: IO (Ptr (Ptr ()))
+  gerrorPtr <- allocMem :: IO (Ptr (Ptr ()))
   poke gerrorPtr nullPtr
   result <- f gerrorPtr
   gerror <- peek gerrorPtr

@@ -203,7 +203,7 @@ hToF' t a hType fType transfer
         let con = tyConName $ typeRepTyCon hType
         return $ P $ toPtr con
     | otherwise = return $ case (show hType, show fType) of
-               ("[Char]", "CString") -> M "newCString"
+               ("[Char]", "CString") -> M "stringToCString"
                ("ByteString", "CString") -> M "byteStringToCString"
                ("Char", "CInt")      -> "(fromIntegral . ord)"
                ("Bool", "CInt")      -> "(fromIntegral . fromEnum)"
@@ -399,15 +399,17 @@ unpackCArray length (TCArray False _ _ t) transfer =
            hType <- haskellType t
            fType <- foreignType t
            innerConstructor <- fToH' t a hType fType transfer
-           let size = case a of
-                        Just (APIStruct s) -> structSize s
-                        Just (APIUnion u) -> unionSize u
-                        _ -> 0
+           let (boxed, size) = case a of
+                        Just (APIStruct s) -> (structIsBoxed s, structSize s)
+                        Just (APIUnion u) -> (unionIsBoxed u, unionSize u)
+                        _ -> (False, 0)
            let unpacker = if isScalar
                           then "unpackStorableArrayWithLength"
                           else if size == 0
                                then "unpackPtrArrayWithLength"
-                               else "unpackBlockArrayWithLength " ++ show size
+                               else if boxed
+                                    then "unpackBoxedArrayWithLength " ++ show size
+                                    else "unpackBlockArrayWithLength " ++ show size
            return $ do
              apply $ M $ parenthesize $ unpacker ++ " " ++ length
              mapC innerConstructor
@@ -600,14 +602,14 @@ getIsScalar t = do
 
 -- Whether the given type corresponds to a struct we allocate
 -- ourselves. If we need to allocate the struct we return its size in
--- bytes, otherwise we return Nothing.
-requiresAlloc :: Type -> CodeGen (Maybe Int)
+-- bytes and whether the type is boxed, otherwise we return Nothing.
+requiresAlloc :: Type -> CodeGen (Maybe (Bool, Int))
 requiresAlloc t = do
   api <- findAPI t
   case api of
     Just (APIStruct s) -> case structSize s of
                             0 -> return Nothing
-                            n -> return (Just n)
+                            n -> return (Just (structIsBoxed s, n))
     _ -> return Nothing
 
 -- Returns whether the given type corresponds to a ManagedPtr

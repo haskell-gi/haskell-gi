@@ -23,11 +23,11 @@ import GI.Internal.ArgInfo
 -- is only for freeing the container itself, freeing the elements is
 -- done separately.
 basicFreeFn :: Type -> Maybe String
-basicFreeFn (TBasicType TUTF8) = Just "F.free"
-basicFreeFn (TBasicType TFileName) = Just "F.free"
+basicFreeFn (TBasicType TUTF8) = Just "freeMem"
+basicFreeFn (TBasicType TFileName) = Just "freeMem"
 basicFreeFn (TBasicType _) = Nothing
 basicFreeFn (TInterface _ _) = Nothing
-basicFreeFn (TCArray _ _ _ _) = Just "F.free"
+basicFreeFn (TCArray _ _ _ _) = Just "freeMem"
 basicFreeFn (TGArray _) = Just "unrefGArray"
 basicFreeFn (TPtrArray _) = Just "unrefPtrArray"
 basicFreeFn (TByteArray) = Just "unrefGByteArray"
@@ -38,8 +38,8 @@ basicFreeFn (TError) = Nothing
 
 -- Basic free primitives in the case that an error occured.
 basicFreeFnOnError :: Type -> Transfer -> CodeGen (Maybe String)
-basicFreeFnOnError (TBasicType TUTF8) _ = return $ Just "F.free"
-basicFreeFnOnError (TBasicType TFileName) _ = return $ Just "F.free"
+basicFreeFnOnError (TBasicType TUTF8) _ = return $ Just "freeMem"
+basicFreeFnOnError (TBasicType TFileName) _ = return $ Just "freeMem"
 basicFreeFnOnError (TBasicType _) _ = return Nothing
 basicFreeFnOnError t@(TInterface _ _) transfer = do
   api <- findAPI t
@@ -77,7 +77,7 @@ basicFreeFnOnError t@(TInterface _ _) transfer = do
                                  return Nothing
                           else return Nothing
     _ -> return Nothing
-basicFreeFnOnError (TCArray _ _ _ _) _ = return $ Just "F.free"
+basicFreeFnOnError (TCArray _ _ _ _) _ = return $ Just "freeMem"
 basicFreeFnOnError (TGArray _) _ = return $ Just "unrefGArray"
 basicFreeFnOnError (TPtrArray _) _ = return $ Just "unrefPtrArray"
 basicFreeFnOnError (TByteArray) _ = return $ Just "unrefGByteArray"
@@ -143,7 +143,7 @@ freeInOnError arg label len =
     (++) <$> freeElementsOnError arg label len
              <*> freeContainer (argType arg) label
 
-freeOut label = return ["F.free " ++ label]
+freeOut label = return ["freeMem " ++ label]
 
 -- Given an input argument to a C callable, and its label in the code,
 -- return the list of actions relevant to freeing the memory allocated

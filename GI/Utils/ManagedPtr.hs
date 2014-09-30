@@ -1,9 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module GI.Utils.ManagedPtr
-    ( ManagedPtr(..)
-    , withManagedPtr
-    , BoxedObject(..)
-    , GObject(..)
+    ( withManagedPtr
     , castTo
     , newObject
     , wrapObject
@@ -12,6 +9,7 @@ module GI.Utils.ManagedPtr
     , newBoxed
     , wrapBoxed
     , copyBoxed
+    , copyBoxedPtr
     , freeBoxed
     , wrapPtr
     , newPtr
@@ -21,12 +19,8 @@ import Foreign.Safe
 import Foreign.C
 import Control.Monad (when)
 
-import GI.Utils.BasicTypes (GType)
+import GI.Utils.BasicTypes
 import GI.Utils.Utils
-
-class ManagedPtr a where
-    unsafeManagedPtrGetPtr :: a -> Ptr b
-    touchManagedPtr        :: a -> IO ()
 
 withManagedPtr :: ManagedPtr a => a -> (Ptr a -> IO c) -> IO c
 withManagedPtr managed action = do
@@ -34,14 +28,6 @@ withManagedPtr managed action = do
   result <- action ptr
   touchManagedPtr managed
   return result
-
-class BoxedObject a where
-    boxedType :: a -> IO GType -- This should not use the value of its
-                               -- argument.
-
-class GObject a where
-    gobjectType :: a -> IO GType -- This should not use the value of
-                                 -- its argument.
 
 -- Safe casting machinery
 foreign import ccall unsafe "check_object_type"
@@ -108,7 +94,7 @@ foreign import ccall "g_boxed_copy" g_boxed_copy ::
 newBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 newBoxed constructor ptr = do
   gtype <- boxedType (undefined :: a)
-  env <- malloc :: IO (Ptr GType)   -- Will be freed by boxed_free_helper
+  env <- allocMem :: IO (Ptr GType)   -- Will be freed by boxed_free_helper
   poke env gtype
   ptr' <- g_boxed_copy gtype ptr
   fPtr <- newForeignPtrEnv boxed_free_helper env ptr'
@@ -119,19 +105,19 @@ newBoxed constructor ptr = do
 wrapBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapBoxed constructor ptr = do
   gtype <- boxedType (undefined :: a)
-  env <- malloc :: IO (Ptr GType)   -- Will be freed by boxed_free_helper
+  env <- allocMem :: IO (Ptr GType)   -- Will be freed by boxed_free_helper
   poke env gtype
   fPtr <- newForeignPtrEnv boxed_free_helper env ptr
   return $! constructor fPtr
 
 -- Make a copy of the given boxed object.
-copyBoxed :: forall a b. (BoxedObject a, ManagedPtr a) => a -> IO (Ptr b)
-copyBoxed boxed = do
+copyBoxed :: forall a. (BoxedObject a, ManagedPtr a) => a -> IO (Ptr a)
+copyBoxed boxed = withManagedPtr boxed copyBoxedPtr
+
+copyBoxedPtr :: forall a. BoxedObject a => Ptr a -> IO (Ptr a)
+copyBoxedPtr ptr = do
   gtype <- boxedType (undefined :: a)
-  let ptr = unsafeManagedPtrGetPtr boxed
-  ptr' <- g_boxed_copy gtype ptr
-  touchManagedPtr boxed
-  return $ castPtr ptr'
+  g_boxed_copy gtype ptr
 
 foreign import ccall "g_boxed_free" g_boxed_free ::
     GType -> Ptr a -> IO ()

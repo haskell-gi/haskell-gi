@@ -17,7 +17,8 @@ import Foreign.Safe
 import Foreign.C
 import GHC.TypeLits
 
-import GI.Utils.ManagedPtr (GObject(..), ManagedPtr(..), withManagedPtr)
+import GI.Utils.BasicTypes
+import GI.Utils.ManagedPtr (withManagedPtr)
 import GI.Utils.Utils (safeFreeFunPtrPtr)
 
 data Signal (signal :: Symbol)

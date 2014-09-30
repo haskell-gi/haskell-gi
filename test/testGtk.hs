@@ -2,19 +2,20 @@
 import GI.Gtk hiding (main)
 import GI.GtkAttributes
 import qualified GI.Gtk as Gtk
+import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
 import qualified GI.GLib as GLib
 import GI.Properties
 
 import GI.Utils.Attributes
 import GI.Utils.Properties (new)
-import GI.Utils.BasicTypes
+import GI.Utils.BasicConversions (gflagsToWord, wordToGFlags)
 
 import Foreign.C
 
 import qualified Data.ByteString.Char8 as B
 
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, replicateM_, when)
 
 import System.Environment (getProgName)
 import System.Random (randomRIO)
@@ -23,6 +24,18 @@ import System.Random (randomRIO)
 -- a bit easier to read.
 (<!>) :: a -> (a -> b) -> b
 (<!>) obj cb = cb obj
+
+testBoxedOutArgs :: IO ()
+testBoxedOutArgs = do
+  putStrLn "*** Boxed out args test"
+  replicateM_ 100 $ do
+    (success, color) <- Gdk.colorParse "green"
+    when (success /= True) $
+         error $ "Color parsing failed"
+    colorString <- Gdk.colorToString color
+    when (colorString /= "#000080800000") $
+         error $ "Unexpected result from parsing : " ++ colorString
+  putStrLn "+++ Boxed out args test done"
 
 testGio :: IO ()
 testGio = do
@@ -149,37 +162,40 @@ testPolymorphicLenses parent message = do
 testOutStructs :: IO ()
 testOutStructs = do
   putStrLn "*** Out Structs test"
-  (result, timeval) <- GLib.timeValFromIso8601 "2013-12-15T11:11:07Z"
-  if result == True
-  then do
-    GLib.timeValAdd timeval (60*1000000)
-    timevalStr <- GLib.timeValToIso8601 timeval
-    if timevalStr /= "2013-12-15T11:12:07Z"
-    then error $ "Time conversion failed, got " ++ timevalStr
-    else putStrLn "+++ Out Structs test done"
-  else error $ "timeValFromIso8601 failed!"
+  replicateM_ 100 $ do
+      (result, timeval) <- GLib.timeValFromIso8601 "2013-12-15T11:11:07Z"
+      if result == True
+      then do
+        GLib.timeValAdd timeval (60*1000000)
+        timevalStr <- GLib.timeValToIso8601 timeval
+        when (timevalStr /= "2013-12-15T11:12:07Z") $
+             error $ "Time conversion failed, got " ++ timevalStr
+      else error $ "timeValFromIso8601 failed!"
+  putStrLn "+++ Out Structs test done"
 
 testOutBlockPacks :: IO ()
 testOutBlockPacks = do
   putStrLn "*** Out Block packs test"
-  (result, palette) <- colorSelectionPaletteFromString "BlanchedAlmond:RoyalBlue:#ffccaa"
-  if result == True
-  then do
-    paletteStr <- colorSelectionPaletteToString palette
-    if paletteStr /= "#FFEBCD:#4169E1:#FFCCAA"
-    then error $ "Color conversion failed, got " ++ paletteStr
-    else putStrLn "+++ Out Block packs test done"
-  else error $ "colorSelecionPaletteFromString failed!"
+  replicateM_ 100 $ do
+    (result, palette) <- colorSelectionPaletteFromString "BlanchedAlmond:RoyalBlue:#ffccaa"
+    if result == True
+    then do
+      paletteStr <- colorSelectionPaletteToString palette
+      when (paletteStr /= "#FFEBCD:#4169E1:#FFCCAA") $
+           error $ "Color conversion failed, got " ++ paletteStr
+    else error $ "colorSelecionPaletteFromString failed!"
+  putStrLn "+++ Out Block packs test done"
 
 testFlags :: IO ()
 testFlags = do
   putStrLn "*** Flags test"
-  let w = gflagsToWord [DebugFlagUpdates, DebugFlagNoPixelCache]
-  when (w /= 65552) $
-       error $ "Flags -> Word failed, got " ++ show w
-  let fs = wordToGFlags (3072 :: CUInt)
-  when (fs /= [DebugFlagPrinting, DebugFlagBuilder]) $
-       error $ "Word -> Flags failed, got " ++ show fs
+  replicateM_ 100 $ do
+     let w = gflagsToWord [DebugFlagUpdates, DebugFlagNoPixelCache]
+     when (w /= 65552) $
+          error $ "Flags -> Word failed, got " ++ show w
+     let fs = wordToGFlags (3072 :: CUInt)
+     when (fs /= [DebugFlagPrinting, DebugFlagBuilder]) $
+          error $ "Word -> Flags failed, got " ++ show fs
   putStrLn "+++ Flags test done"
 
 -- ScopeTypeNotify callback test
@@ -201,13 +217,16 @@ testMenuPopup = do
   menuitem <- new MenuItem [_label := "TestAsync"]
   menu <- new Menu []
   menuShellAppend menu menuitem
-  curtime <- getCurrentEventTime
   widgetShowAll menu
+  putStrLn "*** Menu constructed"
+  curtime <- getCurrentEventTime
   menuPopup menu (Nothing :: Maybe Label) (Nothing :: Maybe Label) (Just positionFunc) 0 curtime
   putStrLn "+++ ScopeTypeAsync test done"
       where positionFunc _ = do
+                  putStrLn "+++ Pos func"
                   posx <- GLib.randomIntRange 000 200
                   posy <- GLib.randomIntRange 000 200
+                  putStrLn "+++ Pos func done"
                   return (posx, posy, False)
 
 -- ScopeTypeCall callback test
@@ -279,6 +298,7 @@ main = do
         popupButton <!> onButtonClicked $ testMenuPopup
         containerAdd grid popupButton
 
+        testBoxedOutArgs
         testGio
         testExceptions
         testNullableArgs

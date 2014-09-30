@@ -257,17 +257,20 @@ prepareInoutArg arg = do
   let name = escapeReserved $ argName arg
   ft <- foreignType $ argType arg
   name' <- convert name $ hToF (argType arg) (transfer arg)
-  allocSize <- requiresAlloc (argType arg)
-  case allocSize of
-    Just n -> do
+  allocInfo <- requiresAlloc (argType arg)
+  case allocInfo of
+    Just (isBoxed, n) -> do
+        let allocator = if isBoxed
+                        then "callocBoxedBytes"
+                        else "callocBytes"
         name'' <- genConversion (prime name') $
-                     literal $ M $ "callocBytes " ++ show n ++
+                     literal $ M $ allocator ++ " " ++ show n ++
                                  " :: " ++ show (io ft)
         line $ "memcpy " ++ name'' ++ " " ++ name' ++ " " ++ show n
         return name''
     Nothing -> do
         name'' <- genConversion (prime name') $
-                     literal $ M $ "malloc :: " ++
+                     literal $ M $ "allocMem :: " ++
                              show (io $ ptr ft)
         line $ "poke " ++ name'' ++ " " ++ name'
         return name''
@@ -276,14 +279,17 @@ prepareOutArg :: Arg -> CodeGen String
 prepareOutArg arg = do
   let name = escapeReserved $ argName arg
   ft <- foreignType $ argType arg
-  allocSize <- requiresAlloc (argType arg)
-  case allocSize of
-    Just n ->
-        genConversion name $ literal $ M $ "callocBytes " ++ show n ++
+  allocInfo <- requiresAlloc (argType arg)
+  case allocInfo of
+    Just (isBoxed, n) -> do
+        let allocator = if isBoxed
+                        then "callocBoxedBytes"
+                        else "callocBytes"
+        genConversion name $ literal $ M $ allocator ++ " " ++ show n ++
                                       " :: " ++ show (io ft)
     Nothing ->
         genConversion name $
-                  literal $ M $ "malloc :: " ++ show (io $ ptr ft)
+                  literal $ M $ "allocMem :: " ++ show (io $ ptr ft)
 
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
