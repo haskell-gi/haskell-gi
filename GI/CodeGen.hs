@@ -127,9 +127,10 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
       line $ "fromEnum " ++ n ++ " = " ++ show v
     let valueNames = M.toList . M.fromListWith (curry snd) $ map swap fields'
     blank
-    indent $ forM_ valueNames $ \(v, n) ->
-      line $ "toEnum " ++ show v ++ " = " ++ n
-
+    indent $ do
+            forM_ valueNames $ \(v, n) ->
+                line $ "toEnum " ++ show v ++ " = " ++ n
+            line $ "toEnum v = error $ \"Don't know how to convert \" ++ show v ++ \" to " ++ name' ++ ".\""
   when (isJust eDomain) $ genErrorDomain name' (fromJust eDomain)
 
   when (isJust maybeTypeInit) $ genBoxedObject n (fromJust maybeTypeInit)
@@ -480,6 +481,8 @@ genPrelude name modulePrefix = do
 
     line $ "-- Generated code."
     blank
+    line $ "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
+    blank
     line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
     line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
     line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
@@ -504,19 +507,11 @@ genPrelude name modulePrefix = do
     line $ "import Foreign.Ptr"
     line $ "import Foreign.ForeignPtr.Safe"
     line $ "import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)"
-    line $ "import Foreign.Storable"
+    line $ "import Foreign.Storable (peek, poke, sizeOf)"
     line $ "import Control.Applicative ((<$>))"
     line $ "import Control.Exception (onException)"
     blank
-    line $ "import " ++ mp "Utils.Attributes"
-    line $ "import " ++ mp "Utils.BasicTypes"
-    line $ "import " ++ mp "Utils.BasicConversions"
-    line $ "import " ++ mp "Utils.GError"
-    line $ "import " ++ mp "Utils.GValue"
-    line $ "import " ++ mp "Utils.ManagedPtr"
-    line $ "import " ++ mp "Utils.Properties"
-    line $ "import " ++ mp "Utils.Utils"
-    line $ "import " ++ mp "Utils.Signals"
+    line $ "import " ++ mp "Utils.Base"
     blank
 
 genModule :: String -> [(Name, API)] -> String -> CodeGen ()

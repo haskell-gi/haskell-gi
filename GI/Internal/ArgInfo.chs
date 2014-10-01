@@ -27,9 +27,9 @@ import Control.Applicative ((<$>))
 
 {# context prefix="g_arg_info" #}
 
-{# enum GIDirection as Direction {underscoreToCase} with prefix="GI" deriving (Show, Eq) #}
-{# enum GIScopeType as Scope {underscoreToCase} with prefix="GI" deriving (Show, Eq) #}
-{# enum GITransfer as Transfer {underscoreToCase} with prefix="GI" deriving (Show, Eq) #}
+{# enum GIDirection as Direction {underscoreToCase} with prefix="GI" deriving (Show, Eq, Ord) #}
+{# enum GIScopeType as Scope {underscoreToCase} with prefix="GI" deriving (Show, Eq, Ord) #}
+{# enum GITransfer as Transfer {underscoreToCase} with prefix="GI" deriving (Show, Eq, Ord) #}
 
 stupidCast :: ArgInfoClass arg => arg -> Ptr ()
 stupidCast arg = castPtr p

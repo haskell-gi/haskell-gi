@@ -101,7 +101,7 @@ data Arg = Arg {
     argClosure :: Int,
     argDestroy :: Int,
     transfer :: Transfer }
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 toArg :: ArgInfo -> Arg
 toArg ai =

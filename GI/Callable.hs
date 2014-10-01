@@ -12,7 +12,7 @@ module GI.Callable
 
 import Control.Applicative ((<$>))
 import Control.Monad (forM, forM_, when)
-import Data.List (intercalate)
+import Data.List (intercalate, nub)
 import Data.Maybe (isJust)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import qualified Data.Map as Map
@@ -127,6 +127,72 @@ arrayLengths callable = map snd (arrayLengthsMap callable) ++
                      else []
                  _ -> []
 
+-- This goes through a list of [(a,b)], and tags every entry where the
+-- "b" field has occurred before with the value of "a" for which it
+-- occurred. (The first appearance is not tagged.)
+classifyDuplicates :: Ord b => [(a, b)] -> [(a, b, Maybe a)]
+classifyDuplicates args = doClassify Map.empty args
+    where doClassify :: Ord b => Map.Map b a -> [(a, b)] -> [(a, b, Maybe a)]
+          doClassify _ [] = []
+          doClassify found ((value, key):args) =
+              (value, key, Map.lookup key found) :
+                doClassify (Map.insert key value found) args
+
+-- Read the length of in array arguments from the corresponding
+-- Haskell objects. A subtlety is that sometimes a single length
+-- argument is expected from the C side to encode the length of
+-- various lists. Ideally we would encode this in the types, but the
+-- resulting API would be rather cumbersome. We insted perform runtime
+-- checks to make sure that the given lists have the same length.
+readInArrayLengths :: Name -> Callable -> [Arg] -> CodeGen ()
+readInArrayLengths name callable hInArgs = do
+  let lengthMaps = classifyDuplicates $ arrayLengthsMap callable
+  forM_ lengthMaps $ \(array, length, duplicate) ->
+      when (array `elem` hInArgs) $
+        case duplicate of
+        Nothing -> readInArrayLength array length
+        Just previous -> checkInArrayLength name array length previous
+
+-- Read the length of an array into the corresponding variable.
+readInArrayLength :: Arg -> Arg -> CodeGen ()
+readInArrayLength array length = do
+  let lvar = escapeReserved $ argName length
+      avar = escapeReserved $ argName array
+  if wrapMaybe array
+  then do
+    line $ "let " ++ lvar ++ " = case " ++ avar ++ " of"
+    indent $ indent $ do
+         line $ "Nothing -> 0"
+         let jarray = "j" ++ ucFirst avar
+         line $ "Just " ++ jarray ++ " -> " ++
+              computeArrayLength jarray (argType array)
+  else line $ "let " ++ lvar ++ " = " ++
+                     computeArrayLength avar (argType array)
+
+-- Check that the given array has a length equal to the given length
+-- variable.
+checkInArrayLength :: Name -> Arg -> Arg -> Arg -> CodeGen ()
+checkInArrayLength n array length previous = do
+  name <- lowerName n
+  let funcName = namespace n ++ "." ++ name
+      lvar = escapeReserved $ argName length
+      avar = escapeReserved $ argName array
+      expectedLength = avar ++ "_expected_length_"
+      pvar = escapeReserved $ argName previous
+  if wrapMaybe array
+  then do
+    line $ "let " ++ expectedLength ++ " = case " ++ avar ++ " of"
+    indent $ indent $ do
+         line $ "Nothing -> 0"
+         let jarray = "j" ++ ucFirst avar
+         line $ "Just " ++ jarray ++ " -> " ++
+              computeArrayLength jarray (argType array)
+  else line $ "let " ++ expectedLength ++ " = " ++
+                     computeArrayLength avar (argType array)
+  line $ "when (" ++ expectedLength ++ " /= " ++ lvar ++ ") $"
+  indent $ line $ "error \"" ++ funcName ++ " : length of '" ++ avar ++
+                    "' does not agree with that of '" ++ pvar ++ "'.\""
+
 -- Whether to skip the return value in the generated bindings. The
 -- C convention is that functions throwing an error and returning
 -- a gboolean set the boolean to TRUE iff there is no error, so
@@ -230,16 +296,17 @@ prepareInCallback arg = do
     indent $ do
          line $ "Nothing -> return (castPtrToFunPtr nullPtr)"
          let jName = "j" ++ ucFirst name
+             jName' = prime jName
          line $ "Just " ++ jName ++ " -> do"
          indent $ do
                let p = if (scope == ScopeTypeAsync)
                        then parenthesize $ "Just " ++ ptrName
                        else "Nothing"
-               line $ jName ++ " <- " ++ maker ++ " "
+               line $ jName' ++ " <- " ++ maker ++ " "
                         ++ parenthesize (wrapper ++ " " ++ p ++ " " ++ jName)
                when (scope == ScopeTypeAsync) $
-                    line $ "poke " ++ ptrName ++ " " ++ jName
-               line $ "return " ++ jName
+                    line $ "poke " ++ ptrName ++ " " ++ jName'
+               line $ "return " ++ jName'
     return maybeName
   else do
     let name' = prime name
@@ -314,7 +381,7 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
                    Just n -> n
                    Nothing -> error $ "Couldn't find out array length " ++
                                                lname
-    lname'' <- genConversion lname' $ apply $ M "peek"
+        lname'' = prime lname'
     unpacked <- convert aname $ unpackCArray lname'' t transfer
     -- Free the memory associated with the array
     when (transfer == TransferEverything) $
@@ -326,6 +393,19 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
 -- Remove the warning, this should never be reached.
 convertOutCArray _ t _ _ _ =
     error $ "convertOutCArray : unexpected " ++ show t
+
+-- Read the array lengths for out arguments.
+readOutArrayLengths :: Callable -> Map.Map String String -> CodeGen ()
+readOutArrayLengths callable nameMap = do
+  let lNames = nub $ map (escapeReserved . argName) $
+               filter ((/= DirectionIn) . direction) $
+               arrayLengths callable
+  forM_ lNames $ \lname -> do
+    let lname' = case Map.lookup lname nameMap of
+                   Just n -> n
+                   Nothing -> error $ "Couldn't find out array length " ++
+                                               lname
+    genConversion lname' $ apply $ M "peek"
 
 -- Touch DirectionIn arguments so we are sure that they exist when the
 -- C function was called.
@@ -469,7 +549,7 @@ genCallable n symbol callable throwsGError = do
           intercalate " " (map argName' hInArgs) ++
           " = do"
       indent $ do
-        readInArrayLengths
+        readInArrayLengths n callable hInArgs
         inArgNames <- forM (args callable) $ \arg ->
                       prepareArgForCall omitted arg
         -- Map from argument names to names passed to the C function
@@ -481,6 +561,7 @@ genCallable n symbol callable throwsGError = do
           line "onException (do"
           indent $ do
             invokeCFunction inArgNames
+            readOutArrayLengths callable nameMap
             result <- convertResult nameMap
             pps <- convertOut nameMap
             freeCallCallbacks callable nameMap
@@ -497,29 +578,13 @@ genCallable n symbol callable throwsGError = do
           line " )"
         else do
           invokeCFunction inArgNames
+          readOutArrayLengths callable nameMap
           result <- convertResult nameMap
           pps <- convertOut nameMap
           freeCallCallbacks callable nameMap
           forM_ (args callable) touchInArg
           mapM_ line =<< freeInArgs callable nameMap
           returnResult result pps
-
-  -- Read the length of in array arguments from the corresponding
-  -- Haskell objects.
-  readInArrayLengths = forM_ (arrayLengthsMap callable) $ \(array, length) ->
-     when (array `elem` hInArgs) $
-          do let lvar = escapeReserved $ argName length
-                 avar = escapeReserved $ argName array
-             if wrapMaybe array
-             then do
-               line $ "let " ++ lvar ++ " = case " ++ avar ++ " of"
-               indent $ indent $ do
-                    line $ "Nothing -> 0"
-                    let jarray = "j" ++ ucFirst avar
-                    line $ "Just " ++ jarray ++ " -> " ++
-                         computeArrayLength jarray (argType array)
-             else line $ "let " ++ lvar ++ " = " ++
-                       computeArrayLength avar (argType array)
 
   invokeCFunction argNames = do
     let returnBind = case returnType callable of

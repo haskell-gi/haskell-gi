@@ -12,6 +12,7 @@ module GI.SymbolNaming
     ) where
 
 import Data.Char (toLower, toUpper)
+import Data.List (isPrefixOf)
 import qualified Data.Map as M
 
 import GI.API
@@ -97,5 +98,25 @@ escapeReserved "where" = "where_"
 escapeReserved "module" = "module_"
 -- Reserved because we generate code that uses these names.
 escapeReserved "result" = "result_"
+escapeReserved "return" = "return_"
+escapeReserved "show" = "show_"
+escapeReserved "fromEnum" = "fromEnum_"
+escapeReserved "toEnum" = "toEnum_"
+escapeReserved "undefined" = "undefined_"
+escapeReserved "error" = "error_"
+escapeReserved "map" = "map_"
 escapeReserved "length" = "length_"
-escapeReserved s = s
+escapeReserved "mapM" = "mapM__"
+escapeReserved "mapM_" = "mapM___"
+escapeReserved "fromIntegral" = "fromIntegral_"
+escapeReserved "realToFrac" = "realToFrac_"
+escapeReserved "peek" = "peek_"
+escapeReserved "poke" = "poke_"
+escapeReserved "sizeOf" = "sizeOf_"
+escapeReserved "when" = "when_"
+escapeReserved "new" = "new_"
+escapeReserved "set" = "set_"
+escapeReserved s
+    | "set_" `isPrefixOf` s = s ++ "_"
+    | "get_" `isPrefixOf` s = s ++ "_"
+    | otherwise = s

@@ -33,7 +33,7 @@ data BasicType
      | TGType
      | TUTF8
      | TFileName
-    deriving (Eq, Enum, Show)
+    deriving (Eq, Enum, Show, Ord)
 
 -- This type represents the types found in GObject-Introspection
 -- interfaces: the types of constants, arguments, etc.
@@ -49,7 +49,7 @@ data Type
     | TGSList Type
     | TGHash Type Type
     | TError
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 
 basicTypeFromTypeTag TypeTagVoid = Just TVoid
 basicTypeFromTypeTag TypeTagBoolean = Just TBoolean

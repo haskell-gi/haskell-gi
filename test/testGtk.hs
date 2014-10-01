@@ -1,15 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import GI.Gtk hiding (main)
-import GI.GtkAttributes
+import GI.GtkAttributes () -- For various attribute instances
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
 import qualified GI.GLib as GLib
 import GI.Properties
 
-import GI.Utils.Attributes
-import GI.Utils.Properties (new)
-import GI.Utils.BasicConversions (gflagsToWord, wordToGFlags)
+import GI.Utils.Base
 
 import Foreign.C
 
@@ -190,7 +189,7 @@ testFlags :: IO ()
 testFlags = do
   putStrLn "*** Flags test"
   replicateM_ 100 $ do
-     let w = gflagsToWord [DebugFlagUpdates, DebugFlagNoPixelCache]
+     let w = gflagsToWord [DebugFlagUpdates, DebugFlagNoPixelCache] :: Integer
      when (w /= 65552) $
           error $ "Flags -> Word failed, got " ++ show w
      let fs = wordToGFlags (3072 :: CUInt)
@@ -205,8 +204,8 @@ testTimeout = do
   now <- GLib.getMonotonicTime
   putStrLn $ "Now is " ++ show now ++ " , adding timeout."
   _ <- GLib.timeoutAdd GLib.g_PRIORITY_DEFAULT 500 $ do
-                now <- GLib.getMonotonicTime
-                putStrLn $ "Timeout called @ " ++ show now
+                andNow <- GLib.getMonotonicTime
+                putStrLn $ "Timeout called @ " ++ show andNow
                 return False
   putStrLn "+++ Timeout test done"
 
@@ -271,7 +270,7 @@ main = do
 
         label <- new Label [_label := "Test"]
         label <!> onLabelActivateLink $ \uri -> do
-          testPolymorphicLenses win "Link clicked, thanks!"
+          testPolymorphicLenses win ("Link " ++ uri ++ " clicked, thanks!")
           return True -- Link processed, do not open with the browser
         containerAdd grid label
 
@@ -287,9 +286,9 @@ main = do
                             _relief := ReliefStyleNone,
                             _label := "Thanks for clicking!"]
                 sensitive <- get button _sensitive
-                label <- get button _label
+                newLabel <- get button _label
                 putStrLn $ "New button text is "
-                             ++ show label
+                             ++ show newLabel
                              ++ " and sensitive is " ++ show sensitive
         containerAdd grid button
 

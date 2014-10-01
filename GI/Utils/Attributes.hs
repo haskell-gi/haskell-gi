@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs, EmptyDataDecls, ScopedTypeVariables, DataKinds,
   KindSignatures, TypeFamilies, MultiParamTypeClasses, ConstraintKinds #-}
-{-# OPTIONS_GHC -Wall #-}
 
 -- -*-haskell-*-
 

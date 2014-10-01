@@ -3,7 +3,7 @@
 -- requires just a small subset of the functions in the Prelude, which
 -- we reexport explicitly here.
 module GI.Utils.ShortPrelude
-    ( Enum(..)
+    ( Enum(fromEnum, toEnum)
     , Show(..)
     , Eq(..)
     , IO
@@ -11,15 +11,19 @@ module GI.Utils.ShortPrelude
     , Maybe(..)
     , (.)
     , ($)
+    , (++)
     , Bool(..)
     , Float
     , Double
     , undefined
+    , error
     , map
     , length
     , mapM
     , mapM_
+    , when
     , fromIntegral
     , realToFrac
     ) where
 
+import Control.Monad (when)

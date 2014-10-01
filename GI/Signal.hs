@@ -256,9 +256,17 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   -- ("on...") or after the default handler runs (after...). We
   -- provide convenient wrappers for both cases.
   group $ do
-    line $ "on" ++ signalConnectorName ++ " obj cb = connect"
+    let signatureConstraints =
+          "(ManagedPtr a, GObject a) =>"
+        signatureArgs = "a -> " ++ cbType ++ " -> IO CULong"
+        signature = " :: " ++ signatureConstraints ++ " " ++ signatureArgs
+        onName = "on" ++ signalConnectorName
+        afterName = "after" ++ signalConnectorName
+    line $ onName ++ signature
+    line $ onName ++ " obj cb = connect"
              ++ signalConnectorName ++ " obj cb False"
-    line $ "after" ++ signalConnectorName ++ " obj cb = connect"
+    line $ afterName ++ signature
+    line $ afterName ++ " obj cb = connect"
              ++ signalConnectorName ++ " obj cb True"
 
   group $ do

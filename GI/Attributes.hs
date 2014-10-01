@@ -81,6 +81,11 @@ genAttributes name apis modulePrefix = do
 
   code <- recurse' $ forM_ apis genProps
 
+  -- Providing orphan instances is the whole point of these modules,
+  -- tell GHC that this is fine.
+  line $ "{-# OPTIONS_GHC -fno-warn-orphans #-}"
+  blank
+
   genPrelude (nm ++ "Attributes") modulePrefix
 
   deps <- S.toList <$> getDeps
