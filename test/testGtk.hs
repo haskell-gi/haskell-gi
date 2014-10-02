@@ -219,7 +219,7 @@ testMenuPopup = do
   widgetShowAll menu
   putStrLn "*** Menu constructed"
   curtime <- getCurrentEventTime
-  menuPopup menu (Nothing :: Maybe Label) (Nothing :: Maybe Label) (Just positionFunc) 0 curtime
+  menuPopup menu noWidget noWidget (Just positionFunc) 0 curtime
   putStrLn "+++ ScopeTypeAsync test done"
       where positionFunc _ = do
                   putStrLn "+++ Pos func"

@@ -25,7 +25,7 @@ import GI.Internal.ArgInfo
 -- the binding will see)
 genHaskellCallbackPrototype :: Callable -> String -> [Arg] -> [Arg] ->
                                CodeGen ()
-genHaskellCallbackPrototype cb name' hInArgs hOutArgs =
+genHaskellCallbackPrototype cb name' hInArgs hOutArgs = do
   group $ do
     line $ "type " ++ name' ++ " ="
     indent $ do
@@ -38,6 +38,11 @@ genHaskellCallbackPrototype cb name' hInArgs hOutArgs =
       line $ show $ io $ if returnMayBeNull cb
                          then maybeT ret
                          else ret
+
+  -- For optional parameters, in case we want to pass Nothing.
+  group $ do
+    line $ "no" ++ name' ++ " :: Maybe " ++ name'
+    line $ "no" ++ name' ++ " = Nothing"
 
 -- Prototype of the callback on the C side
 genCCallbackPrototype :: Callable -> String -> Bool -> CodeGen ()

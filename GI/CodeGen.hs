@@ -48,6 +48,13 @@ valueStr (VGType x)    = show x
 valueStr (VUTF8 x)     = show x
 valueStr (VFileName x) = show x
 
+-- Save a bit of typing for optional arguments in the case that we
+-- want to pass Nothing.
+noName :: String -> CodeGen ()
+noName name' = group $ do
+                 line $ "no" ++ name' ++ " :: Maybe " ++ name'
+                 line $ "no" ++ name' ++ " = Nothing"
+
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant n@(Name _ name) (Constant value) = do
     name' <- literalName n
@@ -82,6 +89,8 @@ genStruct n@(Name _ name) s = when (not (isGTypeStruct s)
       name' <- upperName n
 
       line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+
+      noName name'
 
       if structIsBoxed s
       then do
@@ -184,6 +193,8 @@ genUnion n u = do
   line $ "-- union " ++ name' ++ " "
 
   line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+
+  noName name'
 
   if unionIsBoxed u
   then do
@@ -350,6 +361,8 @@ manageUnManagedPtr n = do
             line $ "touchManagedPtr      _ = return ()"
 
 genObject n o = do
+  cfg <- config
+
   name' <- upperName n
 
   line $ "-- object " ++ name' ++ " "
@@ -361,7 +374,8 @@ genObject n o = do
            "\" does not descend from GObject."
 
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
-  cfg <- config
+
+  noName name'
 
   -- Instances and type conversions
   if isGO
@@ -399,6 +413,8 @@ genInterface n iface = do
   line $ "-- interface " ++ name' ++ " "
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
   line $ "class " ++ cls ++ " a"
+
+  noName name'
 
   isGO <- apiIsGObject n (APIInterface iface)
   if isGO
