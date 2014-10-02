@@ -2,6 +2,7 @@ module GI.Utils.Base
     ( module GI.Utils.Attributes
     , module GI.Utils.BasicConversions
     , module GI.Utils.BasicTypes
+    , module GI.Utils.Closure
     , module GI.Utils.GError
     , module GI.Utils.GValue
     , module GI.Utils.ManagedPtr
@@ -13,6 +14,7 @@ module GI.Utils.Base
 import GI.Utils.Attributes
 import GI.Utils.BasicConversions
 import GI.Utils.BasicTypes
+import GI.Utils.Closure
 import GI.Utils.GError
 import GI.Utils.GValue
 import GI.Utils.ManagedPtr

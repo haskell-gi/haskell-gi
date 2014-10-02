@@ -12,6 +12,7 @@ module GI.Utils.ShortPrelude
     , (.)
     , ($)
     , (++)
+    , (=<<)
     , Bool(..)
     , Float
     , Double

@@ -100,7 +100,7 @@ newBoxed constructor ptr = do
   fPtr <- newForeignPtrEnv boxed_free_helper env ptr'
   return $! constructor fPtr
 
--- Like makeNewBoxed, but we do not make a copy (we "steal" the passed
+-- Like newBoxed, but we do not make a copy (we "steal" the passed
 -- object, so now it is managed by the Haskell GC).
 wrapBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapBoxed constructor ptr = do

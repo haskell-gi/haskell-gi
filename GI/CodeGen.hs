@@ -542,8 +542,13 @@ genModule name apis modulePrefix = do
   -- symbolFromFunction and this loadDependency altogether.
   loadDependency name
 
-  code <- recurse' $ forM_ (filter (not . (`elem` ignore) . GI.API.name . fst) apis)
-                        (uncurry genAPI)
+  code <- recurse' $ mapM_ (uncurry genAPI) $
+          -- We provide these ourselves
+          filter (not . (== Name "GObject" "Value") . fst) $
+          filter (not . (== Name "GObject" "Closure") . fst) $
+          -- User provided list of ignores
+          filter (not . (`elem` ignore) . GI.API.name . fst) $
+                 apis
 
   genPrelude name' modulePrefix
   deps <- S.toList <$> getDeps

@@ -532,6 +532,7 @@ haskellType (TGHash a b) = do
   return $ "GHashTable" `con` [innerA, innerB]
 haskellType TError = return $ "Error" `con` []
 haskellType (TInterface "GObject" "Value") = return $ "GValue" `con` []
+haskellType (TInterface "GObject" "Closure") = return $ "Closure" `con` []
 haskellType t@(TInterface ns n) = do
   prefix <- qualify ns
   api <- findAPI t
@@ -579,6 +580,8 @@ foreignType (TGSList a) = do
 foreignType t@(TGHash _ _) = ptr <$> haskellType t
 foreignType t@TError = ptr <$> haskellType t
 foreignType (TInterface "GObject" "Value") = return $ ptr $ "GValue" `con` []
+foreignType (TInterface "GObject" "Closure") =
+    return $ ptr $ "Closure" `con` []
 foreignType t@(TInterface ns n) = do
   isScalar <- getIsScalar t
   if isScalar

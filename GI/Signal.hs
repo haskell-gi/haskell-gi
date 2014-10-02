@@ -71,6 +71,18 @@ genCallbackWrapperFactory name' =
     indent $ line $ "mk" ++ name' ++ " :: "
                ++ name' ++ "C -> IO (FunPtr " ++ name' ++ "C)"
 
+-- Generator of closures
+genClosure :: String -> String -> Bool -> CodeGen ()
+genClosure callback closure isSignal =
+    group $ do
+      line $ closure ++ " :: " ++ callback ++ " -> IO Closure"
+      line $ closure ++ " cb = newCClosure =<< mk" ++ callback ++ " wrapped"
+      indent $
+         line $ "where wrapped = " ++ lcFirst callback ++ "Wrapper " ++
+              if isSignal
+              then "cb"
+              else "Nothing cb"
+
 -- Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.
 convertNullable :: String -> CodeGen String -> CodeGen String
@@ -232,6 +244,9 @@ genCallback n (Callback cb) = do
 
   genCallbackWrapperFactory name'
 
+  let closure = lcFirst name' ++ "Closure"
+  genClosure name' closure False
+
   genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False
 
 genSignal :: Signal -> Name -> CodeGen ()
@@ -253,6 +268,9 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   genCCallbackPrototype cb cbType True
 
   genCallbackWrapperFactory cbType
+
+  let closure = lcFirst signalConnectorName ++ "Closure"
+  genClosure cbType closure True
 
   genCallbackWrapper cb cbType [] hInArgs hOutArgs True
 

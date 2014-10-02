@@ -76,6 +76,7 @@ Library
       GI.Utils.Base,
       GI.Utils.BasicConversions,
       GI.Utils.BasicTypes,
+      GI.Utils.Closure,
       GI.Utils.GError,
       GI.Utils.GValue,
       GI.Utils.ManagedPtr,
