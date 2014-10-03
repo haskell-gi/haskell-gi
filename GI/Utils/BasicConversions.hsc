@@ -45,7 +45,9 @@ module GI.Utils.BasicConversions
     , unpackBoxedArrayWithLength
 
     , stringToCString
-    , byteStringToCString
+    , cstringToString
+    , textToCString
+    , cstringToText
 
     , mapZeroTerminatedCArray
     , mapCArrayWithLength
@@ -63,6 +65,8 @@ import Control.Applicative ((<$>), (<*>))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
+import Data.Text (Text)
+import qualified Data.Text.Foreign as TF
 
 import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr (copyBoxedPtr)
@@ -287,8 +291,52 @@ unpackMapZeroTerminatedStorableArray fn ptr = map fn <$> go ptr
             then return []
             else (x:) <$> go (ptr `plusPtr` sizeOf x)
 
-packUTF8CArray :: [String] -> IO (Ptr CString)
+packUTF8CArray :: [Text] -> IO (Ptr CString)
 packUTF8CArray items = do
+  let nitems = length items
+  mem <- allocBytes $ nitems * (sizeOf (nullPtr :: CString))
+  fill mem items
+  return mem
+    where fill            :: Ptr CString -> [Text] -> IO ()
+          fill _ []       = return ()
+          fill ptr (x:xs) =
+              do cstring <- textToCString x
+                 poke ptr cstring
+                 fill (ptr `plusPtr` sizeOf cstring) xs
+
+packZeroTerminatedUTF8CArray :: [Text] -> IO (Ptr CString)
+packZeroTerminatedUTF8CArray items = do
+    let nitems = length items
+    mem <- allocBytes $ (sizeOf (nullPtr :: CString)) * (nitems+1)
+    fill mem items
+    return mem
+    where fill :: Ptr CString -> [Text] -> IO ()
+          fill ptr [] = poke ptr nullPtr
+          fill ptr (x:xs) = do cstring <- textToCString x
+                               poke ptr cstring
+                               fill (ptr `plusPtr` sizeOf cstring) xs
+
+unpackZeroTerminatedUTF8CArray :: Ptr CString -> IO [Text]
+unpackZeroTerminatedUTF8CArray listPtr = go listPtr
+    where go :: Ptr CString -> IO [Text]
+          go ptr = do
+            cstring <- peek ptr
+            if cstring == nullPtr
+               then return []
+               else (:) <$> cstringToText cstring
+                        <*> go (ptr `plusPtr` sizeOf cstring)
+
+unpackUTF8CArrayWithLength :: Integral a => a -> Ptr CString -> IO [Text]
+unpackUTF8CArrayWithLength n ptr = go (fromIntegral n) ptr
+    where go       :: Int -> Ptr CString -> IO [Text]
+          go 0 _   = return []
+          go n ptr = do
+            cstring <- peek ptr
+            (:) <$> cstringToText cstring
+                    <*> go (n-1) (ptr `plusPtr` sizeOf cstring)
+
+packFileNameArray :: [String] -> IO (Ptr CString)
+packFileNameArray items = do
   let nitems = length items
   mem <- allocBytes $ nitems * (sizeOf (nullPtr :: CString))
   fill mem items
@@ -300,8 +348,8 @@ packUTF8CArray items = do
                  poke ptr cstring
                  fill (ptr `plusPtr` sizeOf cstring) xs
 
-packZeroTerminatedUTF8CArray :: [String] -> IO (Ptr CString)
-packZeroTerminatedUTF8CArray items = do
+packZeroTerminatedFileNameArray :: [String] -> IO (Ptr CString)
+packZeroTerminatedFileNameArray items = do
     let nitems = length items
     mem <- allocBytes $ (sizeOf (nullPtr :: CString)) * (nitems+1)
     fill mem items
@@ -312,80 +360,52 @@ packZeroTerminatedUTF8CArray items = do
                                poke ptr cstring
                                fill (ptr `plusPtr` sizeOf cstring) xs
 
-unpackZeroTerminatedUTF8CArray :: Ptr CString -> IO [String]
-unpackZeroTerminatedUTF8CArray listPtr = go listPtr
+unpackZeroTerminatedFileNameArray :: Ptr CString -> IO [String]
+unpackZeroTerminatedFileNameArray listPtr = go listPtr
     where go :: Ptr CString -> IO [String]
           go ptr = do
             cstring <- peek ptr
             if cstring == nullPtr
                then return []
-               else (:) <$> peekCString cstring
+               else (:) <$> cstringToString cstring
                         <*> go (ptr `plusPtr` sizeOf cstring)
 
-unpackUTF8CArrayWithLength :: Integral a => a -> Ptr CString -> IO [String]
-unpackUTF8CArrayWithLength n ptr = go (fromIntegral n) ptr
+unpackFileNameArrayWithLength :: Integral a =>
+                                 a -> Ptr CString -> IO [String]
+unpackFileNameArrayWithLength n ptr = go (fromIntegral n) ptr
     where go       :: Int -> Ptr CString -> IO [String]
           go 0 _   = return []
           go n ptr = do
             cstring <- peek ptr
-            (:) <$> peekCString cstring
-                    <*> go (n-1) (ptr `plusPtr` sizeOf cstring)
-
-packFileNameArray :: [ByteString] -> IO (Ptr CString)
-packFileNameArray items = do
-  let nitems = length items
-  mem <- allocBytes $ nitems * (sizeOf (nullPtr :: CString))
-  fill mem items
-  return mem
-    where fill            :: Ptr CString -> [ByteString] -> IO ()
-          fill _ []       = return ()
-          fill ptr (x:xs) =
-              do cstring <- byteStringToCString x
-                 poke ptr cstring
-                 fill (ptr `plusPtr` sizeOf cstring) xs
-
-packZeroTerminatedFileNameArray :: [ByteString] -> IO (Ptr CString)
-packZeroTerminatedFileNameArray items = do
-    let nitems = length items
-    mem <- allocBytes $ (sizeOf (nullPtr :: CString)) * (nitems+1)
-    fill mem items
-    return mem
-    where fill :: Ptr CString -> [ByteString] -> IO ()
-          fill ptr [] = poke ptr nullPtr
-          fill ptr (x:xs) = do cstring <- byteStringToCString x
-                               poke ptr cstring
-                               fill (ptr `plusPtr` sizeOf cstring) xs
-
-unpackZeroTerminatedFileNameArray :: Ptr CString -> IO [ByteString]
-unpackZeroTerminatedFileNameArray listPtr = go listPtr
-    where go :: Ptr CString -> IO [ByteString]
-          go ptr = do
-            cstring <- peek ptr
-            if cstring == nullPtr
-               then return []
-               else (:) <$> B.packCString cstring
-                        <*> go (ptr `plusPtr` sizeOf cstring)
-
-unpackFileNameArrayWithLength :: Integral a =>
-                                 a -> Ptr CString -> IO [ByteString]
-unpackFileNameArrayWithLength n ptr = go (fromIntegral n) ptr
-    where go       :: Int -> Ptr CString -> IO [ByteString]
-          go 0 _   = return []
-          go n ptr = do
-            cstring <- peek ptr
-            (:) <$> B.packCString cstring
+            (:) <$> cstringToString cstring
                     <*> go (n-1) (ptr `plusPtr` sizeOf cstring)
 
 foreign import ccall "g_strdup" g_strdup :: CString -> IO CString
 
--- We need to use the GLib allocator for this, since the ownership
--- of the string may be transferred to the GLib side, which will
--- free it with g_free.
+-- We need to use the GLib allocator for constructing CStrings, since
+-- the ownership of the string may be transferred to the GLib side,
+-- which will free it with g_free.
 stringToCString :: String -> IO CString
 stringToCString str = withCString str g_strdup
 
-byteStringToCString :: ByteString -> IO CString
-byteStringToCString bs = castPtr <$> packZeroTerminatedByteString bs
+cstringToString :: CString -> IO String
+cstringToString = peekCString
+
+foreign import ccall "g_strndup" g_strndup ::
+    CString -> #{type gsize} -> IO CString
+
+textToCString :: Text -> IO CString
+textToCString str = TF.withCStringLen str $
+                      \(cstr, len) -> g_strndup cstr (fromIntegral len)
+
+foreign import ccall "strlen" c_strlen ::
+    CString -> IO (CSize)
+
+cstringToText :: CString -> IO Text
+cstringToText cstr = do
+  len <- c_strlen cstr
+  let cstrlen = (cstr, fromIntegral len)
+  TF.peekCStringLen cstrlen
 
 packPtrArray :: [Ptr a] -> IO (Ptr (Ptr a))
 packPtrArray items = do

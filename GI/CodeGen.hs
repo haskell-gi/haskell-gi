@@ -508,7 +508,8 @@ genPrelude name modulePrefix = do
     blank
     line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
     line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
-    line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
+    line $ "    FlexibleInstances, UndecidableInstances, DataKinds,"
+    line $ "    OverloadedStrings #-}"
     blank
     -- XXX: Generate export list.
     line $ "module " ++ mp name ++ " where"
@@ -533,6 +534,7 @@ genPrelude name modulePrefix = do
     line $ "import Foreign.Storable (peek, poke, sizeOf)"
     line $ "import Control.Applicative ((<$>))"
     line $ "import Control.Exception (onException)"
+    line $ "import qualified Data.Text as T"
     blank
     line $ "import " ++ mp "Utils.Base"
     blank

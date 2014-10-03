@@ -51,19 +51,24 @@ module GI.Utils.GError
 
     ) where
 
-import Foreign.Safe
+import Foreign.Safe (poke, peek, sizeOf)
+import Foreign.Ptr
 import Foreign.C
 import Control.Exception
 import Data.Typeable
+import Data.Word
 
-import GI.Utils.Utils (allocMem)
+import Data.Text (Text, unpack)
+
+import GI.Utils.BasicConversions (textToCString, cstringToText)
+import GI.Utils.Utils (allocMem, freeMem)
 
 -- | A GError consists of a domain, code and a human readable message.
 data GError = GError !GErrorDomain !GErrorCode !GErrorMessage
   deriving Typeable
 
 instance Show GError where
-  show (GError _ _ msg) = msg
+  show (GError _ _ msg) = unpack msg
 
 instance Exception GError
 
@@ -84,7 +89,7 @@ type GErrorDomain  = GQuark
 type GErrorCode = CInt
 
 -- | A human readable error message.
-type GErrorMessage = String
+type GErrorMessage = Text
 
 -- | Each error domain's error enumeration type should be an instance of this
 --   class. This class helps to hide the raw error and domain codes from the
@@ -96,7 +101,7 @@ type GErrorMessage = String
 -- >   gerrorDomain _ = "gdk-pixbuf-error-quark"
 --
 class Enum err => GErrorClass err where
-  gerrorDomain :: err -> String -- ^ This must not use the value of its
+  gerrorDomain :: err -> Text   -- ^ This must not use the value of its
                                 -- parameter so that it is safe to pass
 				-- 'undefined'.
 
@@ -105,9 +110,12 @@ foreign import ccall unsafe "g_quark_try_string" g_quark_try_string ::
 
 -- | Given the string representation of an error domain returns the
 --   corresponding error quark.
-gErrorQuarkFromDomain :: String -> IO GQuark
-gErrorQuarkFromDomain domain = withCString domain $ \cstring ->
-                               g_quark_try_string cstring
+gErrorQuarkFromDomain :: Text -> IO GQuark
+gErrorQuarkFromDomain domain = do
+  cstring <- textToCString domain
+  result <- g_quark_try_string cstring
+  freeMem cstring
+  return result
 
 -- | This will catch just a specific GError exception. If you need to catch a
 --   range of related errors, 'catchGErrorJustDomain' is probably more
@@ -184,7 +192,7 @@ checkGError f handler = do
   then do domain <- peek (castPtr gerror) :: IO GErrorDomain
           code <- peek (gerror `plusPtr` sizeOf domain) :: IO GErrorCode
           c_msg <- peek (gerror `plusPtr` sizeOf domain `plusPtr` sizeOf code) :: IO CString
-          msg <- peekCString c_msg
+          msg <- cstringToText c_msg
           g_error_free gerror
           handler $ GError domain code msg
   else return result

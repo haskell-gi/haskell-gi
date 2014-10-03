@@ -46,11 +46,12 @@ import Foreign.C
 import Foreign.Safe
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
-import qualified Data.Text as T
+import Data.Text (Text, pack)
 
 import GI.Utils.BasicTypes
+import GI.Utils.BasicConversions (cstringToText, textToCString)
 import GI.Utils.ManagedPtr
-import GI.Utils.Utils (callocBytes)
+import GI.Utils.Utils (callocBytes, freeMem)
 
 data GValue = GValue (ForeignPtr GValue)
 
@@ -88,10 +89,10 @@ class IsGValue a where
     toGValue :: a -> IO GValue
 
 instance IsGValue String where
-    toGValue = buildGValue gtypeString set_string
+    toGValue = (buildGValue gtypeString set_string) . pack
 
-instance IsGValue T.Text where
-    toGValue = (buildGValue gtypeString set_string) . T.unpack
+instance IsGValue Text where
+    toGValue = buildGValue gtypeString set_string
 
 instance IsGValue (Ptr a) where
     toGValue = buildGValue gtypePointer set_pointer
@@ -122,13 +123,15 @@ foreign import ccall "g_value_set_string" _set_string ::
 foreign import ccall "g_value_get_string" _get_string ::
     Ptr GValue -> IO CString
 
-set_string :: GValue -> String -> IO ()
-set_string gv str = withManagedPtr gv $ \ptr ->
-                    withCString str $ \cstr -> _set_string ptr cstr
+set_string :: GValue -> Text -> IO ()
+set_string gv str = withManagedPtr gv $ \ptr -> do
+                      cstr <- textToCString str
+                      _set_string ptr cstr
+                      freeMem cstr
 
-get_string :: GValue -> IO String
+get_string :: GValue -> IO Text
 get_string gv = withManagedPtr gv $ \ptr ->
-                _get_string ptr >>= peekCString
+                _get_string ptr >>= cstringToText
 
 foreign import ccall unsafe "g_value_set_pointer" _set_pointer ::
     Ptr GValue -> Ptr a -> IO ()

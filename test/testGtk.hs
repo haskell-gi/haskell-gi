@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+import BasicPrelude hiding (error)
+import qualified BasicPrelude as BP
 import GI.Gtk hiding (main)
 import GI.GtkAttributes () -- For various attribute instances
 import qualified GI.Gtk as Gtk
@@ -13,8 +16,7 @@ import GI.Utils.Base
 import Foreign.C
 
 import qualified Data.ByteString.Char8 as B
-
-import Control.Monad (forM_, replicateM_, when)
+import Data.Text (pack, unpack)
 
 import System.Environment (getProgName)
 import System.Random (randomRIO)
@@ -23,6 +25,9 @@ import System.Random (randomRIO)
 -- a bit easier to read.
 (<!>) :: a -> (a -> b) -> b
 (<!>) obj cb = cb obj
+
+error :: Text -> a
+error = BP.error . unpack
 
 testBoxedOutArgs :: IO ()
 testBoxedOutArgs = do
@@ -121,7 +126,7 @@ testImportedLenses = do
   print =<< address `get` _family
   putStrLn "+++ Imported lenses test done"
 
-testPolymorphicLenses :: Window -> String -> IO ()
+testPolymorphicLenses :: Window -> Text -> IO ()
 testPolymorphicLenses parent message = do
   putStrLn "*** Polymorphic lenses test"
   messageBox <- new MessageDialog
@@ -262,7 +267,7 @@ main = do
         --
         -- Here we use synthetic arguments to test that we are
         -- handling InOut arguments properly.
-        progName <- getProgName
+        progName <- pack <$> getProgName
 	restArgs <- Gtk.init $ progName:["--g-fatal-warnings"]
         when (restArgs /= [progName]) $
              error "gtk_init did not process --g-fatal-warnings"

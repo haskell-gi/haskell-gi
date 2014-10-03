@@ -5,6 +5,7 @@ import Control.Exception (handle)
 import Control.Monad (forM_)
 import Data.Maybe (mapMaybe)
 import Data.List (intercalate)
+import Data.Text (unpack)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (splitPath, joinPath)
 import System.Console.GetOpt
@@ -81,7 +82,7 @@ showHelp = concat $ map optAsLine optDescrs
           "  -" ++ flag ++ "|--" ++ long ++ "\t" ++ desc ++ "\n"
         optAsLine _ = error "showHelp"
 
-printGError = handle (\(GError _dom _code msg) -> putStrLn msg)
+printGError = handle (\(GError _dom _code msg) -> putStrLn (unpack msg))
 
 loadAPI' :: String -> IO [(Name, API)]
 loadAPI' name = do

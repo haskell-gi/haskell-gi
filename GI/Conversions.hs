@@ -207,8 +207,8 @@ hToF' t a hType fType transfer
         let con = tyConName $ typeRepTyCon hType
         return $ P $ toPtr con
     | otherwise = return $ case (show hType, show fType) of
+               ("T.Text", "CString") -> M "textToCString"
                ("[Char]", "CString") -> M "stringToCString"
-               ("ByteString", "CString") -> M "byteStringToCString"
                ("Char", "CInt")      -> "(fromIntegral . ord)"
                ("Bool", "CInt")      -> "(fromIntegral . fromEnum)"
                ("Float", "CFloat")   -> "realToFrac"
@@ -345,8 +345,8 @@ fToH' t a hType fType transfer
                            ++ show t
     | TByteArray <- t = return $ M "unpackGByteArray"
     | otherwise = return $ case (show fType, show hType) of
-               ("CString", "[Char]") -> M "peekCString"
-               ("CString", "ByteString") -> M "B.packCString"
+               ("CString", "T.Text") -> M "cstringToText"
+               ("CString", "[Char]") -> M "cstringToString"
                ("CInt", "Char")      -> "(chr . fromIntegral)"
                ("CInt", "Bool")      -> "(/= 0)"
                ("CFloat", "Float")   -> "realToFrac"
@@ -472,12 +472,11 @@ haskellBasicType TUInt32   = typeOf (0 :: Word32)
 haskellBasicType TInt64    = typeOf (0 :: Int64)
 haskellBasicType TUInt64   = typeOf (0 :: Word64)
 haskellBasicType TGType    = "GType" `con` []
- -- XXX Text may be more appropriate
-haskellBasicType TUTF8     = typeOf ("" :: String)
+haskellBasicType TUTF8     = "T.Text" `con` []
 haskellBasicType TFloat    = typeOf (0 :: Float)
 haskellBasicType TDouble   = typeOf (0 :: Double)
 haskellBasicType TUniChar  = typeOf ('\0' :: Char)
-haskellBasicType TFileName = "ByteString" `con` []
+haskellBasicType TFileName = "[Char]" `con` []
 
 -- This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen TypeRep

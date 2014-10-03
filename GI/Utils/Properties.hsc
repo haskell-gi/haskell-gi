@@ -62,6 +62,7 @@ module GI.Utils.Properties
 import Control.Monad ((>=>))
 import Control.Applicative ((<$>))
 import qualified Data.ByteString.Char8 as B
+import Data.Text (Text)
 
 import GI.Utils.BasicTypes
 import GI.Utils.BasicConversions
@@ -154,17 +155,17 @@ constructObjectProperty propName propValue setter gtype = do
   return (propName, gvalue)
 
 setObjectPropertyString :: (GObject a, ManagedPtr a) =>
-                           a -> String -> String -> IO ()
+                           a -> String -> Text -> IO ()
 setObjectPropertyString obj propName str =
     setObjectProperty obj propName str set_string #const G_TYPE_STRING
 
-constructObjectPropertyString :: String -> String ->
+constructObjectPropertyString :: String -> Text ->
                                  IO (String, GValue)
 constructObjectPropertyString propName str =
     constructObjectProperty propName str set_string #const G_TYPE_STRING
 
 getObjectPropertyString :: (ManagedPtr a, GObject a) =>
-                           a -> String -> IO String
+                           a -> String -> IO Text
 getObjectPropertyString obj propName =
     getObjectProperty obj propName get_string #const G_TYPE_STRING
 
@@ -327,14 +328,14 @@ getObjectPropertyBoxed obj propName constructor = do
   getObjectProperty obj propName (get_boxed >=> newBoxed constructor) gtype
 
 setObjectPropertyStringArray :: (ManagedPtr a, GObject a) =>
-                                a -> String -> [String] -> IO ()
+                                a -> String -> [Text] -> IO ()
 setObjectPropertyStringArray obj propName strv = do
   cStrv <- packZeroTerminatedUTF8CArray strv
   setObjectProperty obj propName cStrv set_boxed #const G_TYPE_STRV
   mapZeroTerminatedCArray free cStrv
   free cStrv
 
-constructObjectPropertyStringArray :: String -> [String] ->
+constructObjectPropertyStringArray :: String -> [Text] ->
                                       IO (String, GValue)
 constructObjectPropertyStringArray propName strv = do
   cStrv <- packZeroTerminatedUTF8CArray strv
@@ -344,7 +345,7 @@ constructObjectPropertyStringArray propName strv = do
   return result
 
 getObjectPropertyStringArray :: (ManagedPtr a, GObject a) =>
-                                a -> String -> IO [String]
+                                a -> String -> IO [Text]
 getObjectPropertyStringArray obj propName =
     getObjectProperty obj propName
                       (get_boxed >=> unpackZeroTerminatedUTF8CArray . castPtr)
