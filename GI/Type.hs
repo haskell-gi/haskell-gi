@@ -49,6 +49,7 @@ data Type
     | TGSList Type
     | TGHash Type Type
     | TError
+    | TVariant
     deriving (Eq, Show, Ord)
 
 basicTypeFromTypeTag TypeTagVoid = Just TVoid
@@ -86,9 +87,9 @@ typeFromTypeInfo ti =
            -- TypeTagInterface -> TInterface (typeTagToString . typeInfoTag $ ti)
            TypeTagInterface ->
                let bi = baseInfo . typeInfoInterface $ ti
-                   namespace = baseInfoNamespace bi
-                   name = baseInfoName bi
-                in TInterface namespace name
+               in case (baseInfoNamespace bi, baseInfoName bi) of
+                    ("GLib", "Variant") -> TVariant
+                    (ns, n) -> TInterface ns n
            TypeTagGlist -> TGList p1
            TypeTagGslist -> TGSList p1
            TypeTagGhash -> TGHash p1 p2

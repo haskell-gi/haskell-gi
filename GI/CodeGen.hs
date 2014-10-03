@@ -544,6 +544,7 @@ genModule name apis modulePrefix = do
 
   code <- recurse' $ mapM_ (uncurry genAPI) $
           -- We provide these ourselves
+          filter (not . (== Name "GLib" "Variant") . fst) $
           filter (not . (== Name "GObject" "Value") . fst) $
           filter (not . (== Name "GObject" "Closure") . fst) $
           -- User provided list of ignores

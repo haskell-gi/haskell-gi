@@ -16,6 +16,7 @@ module GI.Utils.BasicTypes
     , ManagedPtr(..)
     , BoxedObject(..)
     , GObject(..)
+    , GVariant(..)
 
     , IsGFlag
 
@@ -30,7 +31,9 @@ module GI.Utils.BasicTypes
     ) where
 
 import Data.Word
-import Foreign.Ptr
+import Foreign.Ptr (Ptr, castPtr)
+import Foreign.ForeignPtr.Safe (ForeignPtr, touchForeignPtr)
+import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 #include <glib-object.h>
 
@@ -83,6 +86,12 @@ class BoxedObject a where
 class GObject a where
     gobjectType :: a -> IO GType -- This should not use the value of
                                  -- its argument.
+
+data GVariant = GVariant (ForeignPtr GVariant)
+
+instance ManagedPtr GVariant where
+    unsafeManagedPtrGetPtr = (\(GVariant x) -> castPtr $ unsafeForeignPtrToPtr x)
+    touchManagedPtr        = (\(GVariant x) -> touchForeignPtr x)
 
 class Enum a => IsGFlag a
 

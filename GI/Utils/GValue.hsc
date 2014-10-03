@@ -6,6 +6,7 @@ module GI.Utils.GValue
 
     , newGValue         -- Build a new, empty, GValue of the given type
     , buildGValue       -- Build a new GValue and initialize to the given value
+    , noGValue
 
     , set_string
     , get_string
@@ -29,6 +30,8 @@ module GI.Utils.GValue
     , get_object
     , set_boxed
     , get_boxed
+    , set_variant
+    , get_variant
     , set_enum
     , get_enum
     , set_flags
@@ -50,6 +53,9 @@ import GI.Utils.ManagedPtr
 import GI.Utils.Utils (callocBytes)
 
 data GValue = GValue (ForeignPtr GValue)
+
+noGValue :: Maybe GValue
+noGValue = Nothing
 
 instance ManagedPtr GValue where
     unsafeManagedPtrGetPtr = (\(GValue x) -> castPtr $ unsafeForeignPtrToPtr x)
@@ -113,7 +119,7 @@ instance IsGValue Bool where
 
 foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
-foreign import ccall unsafe "g_value_get_string" _get_string ::
+foreign import ccall "g_value_get_string" _get_string ::
     Ptr GValue -> IO CString
 
 set_string :: GValue -> String -> IO ()
@@ -234,6 +240,17 @@ set_boxed gv b = withManagedPtr gv $ flip _set_boxed b
 
 get_boxed :: GValue -> IO (Ptr b)
 get_boxed gv = withManagedPtr gv _get_boxed
+
+foreign import ccall "g_value_set_variant" _set_variant ::
+    Ptr GValue -> Ptr GVariant -> IO ()
+foreign import ccall "g_value_get_variant" _get_variant ::
+    Ptr GValue -> IO (Ptr GVariant)
+
+set_variant :: GValue -> Ptr GVariant -> IO ()
+set_variant gv v = withManagedPtr gv $ flip _set_variant v
+
+get_variant :: GValue -> IO (Ptr GVariant)
+get_variant gv = withManagedPtr gv _get_variant
 
 foreign import ccall unsafe "g_value_set_enum" _set_enum ::
     Ptr GValue -> CUInt -> IO ()

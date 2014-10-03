@@ -27,7 +27,8 @@ propTypeStr t = case t of
    TBasicType TFileName -> return "String"
    TBasicType TVoid -> return "Ptr"
    TByteArray -> return "ByteArray"
-   TGHash _ _ -> return "Hash" 
+   TGHash _ _ -> return "Hash"
+   TVariant -> return "Variant"
    TBasicType TInt32 -> do
      -- This should work for all systems in common use, but rather
      -- than leaving the assumption implicit better double checking.
@@ -52,9 +53,7 @@ propTypeStr t = case t of
        APIFlags _ -> return "Flags"
        APIStruct s -> if structIsBoxed s
                       then return "Boxed"
-                      else if t == TInterface "GLib" "Variant"
-                           then return "Variant"
-                           else error $ "Unboxed struct property : " ++ show t
+                      else error $ "Unboxed struct property : " ++ show t
        APIUnion u -> if unionIsBoxed u
                      then return "Boxed"
                      else error $ "Unboxed union property : " ++ show t

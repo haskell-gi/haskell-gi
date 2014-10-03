@@ -19,9 +19,10 @@ import GI.Type
 import GI.Util
 import GI.Internal.ArgInfo
 
--- Basic primitives for freeing the given types. For containers this
--- is only for freeing the container itself, freeing the elements is
--- done separately.
+-- Basic primitives for freeing the given types. Types that point to
+-- Haskell objects with memory managed by the GC should not be freed
+-- here. For containers this is only for freeing the container itself,
+-- freeing the elements is done separately.
 basicFreeFn :: Type -> Maybe String
 basicFreeFn (TBasicType TUTF8) = Just "freeMem"
 basicFreeFn (TBasicType TFileName) = Just "freeMem"
@@ -35,12 +36,20 @@ basicFreeFn (TGList _) = Just "g_list_free"
 basicFreeFn (TGSList _) = Just "g_slist_free"
 basicFreeFn (TGHash _ _) = Nothing
 basicFreeFn (TError) = Nothing
+basicFreeFn (TVariant) = Nothing
 
--- Basic free primitives in the case that an error occured.
+-- Basic free primitives in the case that an error occured. This is
+-- run in the exception handler, so any type which we ref/allocate
+-- with the expectation that the called function will consume it (on
+-- TransferEverything) should be freed here.
 basicFreeFnOnError :: Type -> Transfer -> CodeGen (Maybe String)
 basicFreeFnOnError (TBasicType TUTF8) _ = return $ Just "freeMem"
 basicFreeFnOnError (TBasicType TFileName) _ = return $ Just "freeMem"
 basicFreeFnOnError (TBasicType _) _ = return Nothing
+basicFreeFnOnError TVariant transfer =
+    return $ if transfer == TransferEverything
+             then Just "unrefGVariant"
+             else Nothing
 basicFreeFnOnError t@(TInterface _ _) transfer = do
   api <- findAPI t
   case api of

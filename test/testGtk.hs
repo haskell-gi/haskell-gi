@@ -311,4 +311,5 @@ main = do
         testForeach grid
 
 	widgetShowAll win
+
 	Gtk.main

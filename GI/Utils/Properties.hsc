@@ -68,6 +68,7 @@ import GI.Utils.BasicConversions
 import GI.Utils.ManagedPtr
 import GI.Utils.Attributes
 import GI.Utils.GValue
+import GI.Utils.GVariant (newGVariantFromPtr)
 
 import Foreign.Safe hiding (new)
 import Foreign.C
@@ -392,15 +393,23 @@ getObjectPropertyFlags obj propName =
                           #const G_TYPE_FLAGS
 
 setObjectPropertyVariant :: (ManagedPtr a, GObject a) =>
-                            a -> String -> b -> IO ()
-setObjectPropertyVariant = error $ "Setting variant types not supported yet."
+                            a -> String -> GVariant -> IO ()
+setObjectPropertyVariant obj propName variant =
+    withManagedPtr variant $ \variantPtr ->
+        setObjectProperty obj propName variantPtr set_variant
+                              #const G_TYPE_VARIANT
 
-constructObjectPropertyVariant :: String -> b -> IO (String, GValue)
-constructObjectPropertyVariant =
-    error $ "Constructing variant types not supported yet."
+constructObjectPropertyVariant :: String -> GVariant -> IO (String, GValue)
+constructObjectPropertyVariant propName obj =
+    withManagedPtr obj $ \objPtr ->
+        constructObjectProperty propName objPtr set_variant
+                                    #const G_TYPE_VARIANT
 
-getObjectPropertyVariant :: (ManagedPtr a, GObject a) => a -> String -> IO b
-getObjectPropertyVariant = error $ "Getting variant types not supported yet."
+getObjectPropertyVariant :: (ManagedPtr a, GObject a) => a -> String ->
+                            IO GVariant
+getObjectPropertyVariant obj propName =
+    getObjectProperty obj propName (get_variant >=> newGVariantFromPtr)
+                      #const G_TYPE_VARIANT
 
 setObjectPropertyByteArray :: (ManagedPtr a, GObject a) =>
                               a -> String -> B.ByteString -> IO ()

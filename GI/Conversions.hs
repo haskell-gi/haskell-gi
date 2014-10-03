@@ -126,6 +126,12 @@ hObjectToF t transfer = do
       return "unsafeManagedPtrGetPtr"
   else return "unsafeManagedPtrGetPtr"
 
+hVariantToF :: Transfer -> CodeGen Constructor
+hVariantToF transfer = do
+  if transfer == TransferEverything
+  then return $ M "refGVariant"
+  else return "unsafeManagedPtrGetPtr"
+
 hBoxedToF :: Transfer -> CodeGen Constructor
 hBoxedToF transfer = do
   if transfer == TransferEverything
@@ -163,6 +169,7 @@ hToF' t a hType fType transfer
     | Just (APIStruct s) <- a = hStructToF s transfer
     | Just (APIUnion u) <- a = hUnionToF u transfer
     | TError <- t = hBoxedToF transfer
+    | TVariant <- t = hVariantToF transfer
     -- Converting callback types requires more context, we leave that
     -- as a special case to be implemented by the caller.
     | Just (APICallback _) <- a = error "Cannot handle callback type here!! "
@@ -302,6 +309,12 @@ fObjectToH t hType transfer = do
           return $ M $ parenthesize $
            "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
 
+fVariantToH :: Transfer -> CodeGen Constructor
+fVariantToH transfer =
+  return $ M $ case transfer of
+                  TransferEverything -> "wrapGVariantPtr"
+                  _ -> "newGVariantFromPtr"
+
 fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
          -> CodeGen Constructor
 fToH' t a hType fType transfer
@@ -309,6 +322,7 @@ fToH' t a hType fType transfer
     | Just (APIEnum _) <- a = return "(toEnum . fromIntegral)"
     | Just (APIFlags _) <- a = return "wordToGFlags"
     | TError <- t = boxedForeignPtr "GI.GLib.Error" transfer
+    | TVariant <- t = fVariantToH transfer
     | Just (APIStruct s) <- a = structForeignPtr s hType transfer
     | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
     | Just (APIObject _) <- a = fObjectToH t hType transfer
@@ -531,6 +545,7 @@ haskellType (TGHash a b) = do
   innerB <- haskellType b
   return $ "GHashTable" `con` [innerA, innerB]
 haskellType TError = return $ "Error" `con` []
+haskellType TVariant = return $ "GVariant" `con` []
 haskellType (TInterface "GObject" "Value") = return $ "GValue" `con` []
 haskellType (TInterface "GObject" "Closure") = return $ "Closure" `con` []
 haskellType t@(TInterface ns n) = do
@@ -579,6 +594,7 @@ foreignType (TGSList a) = do
   return $ ptr ("GSList" `con` [inner])
 foreignType t@(TGHash _ _) = ptr <$> haskellType t
 foreignType t@TError = ptr <$> haskellType t
+foreignType t@TVariant = ptr <$> haskellType t
 foreignType (TInterface "GObject" "Value") = return $ ptr $ "GValue" `con` []
 foreignType (TInterface "GObject" "Closure") =
     return $ ptr $ "Closure" `con` []

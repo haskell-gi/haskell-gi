@@ -15,9 +15,12 @@ module GI.Utils.ManagedPtr
     , newPtr
     ) where
 
-import Foreign.Safe
+import Foreign.Safe (finalizerFree, poke)
+import Foreign.Ptr
+import Foreign.ForeignPtr
 import Foreign.C
-import Control.Monad (when)
+import Control.Monad (when, void)
+import Control.Applicative ((<$>))
 
 import GI.Utils.BasicTypes
 import GI.Utils.Utils
@@ -52,36 +55,41 @@ foreign import ccall "g_object_ref" g_object_ref ::
 -- Construct a Haskell wrapper for a GObject, making a copy.
 newObject :: (GObject a, GObject b) => (ForeignPtr a -> a) -> Ptr b -> IO a
 newObject constructor ptr = do
-  _ <- g_object_ref ptr
+  void $ g_object_ref ptr
   fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
     Ptr a -> IO (Ptr a)
 
--- Same as newObject, but we take ownership of the object (which
--- is typically floating), so we use g_object_ref_sink.
-wrapObject :: (GObject a, GObject b) => (ForeignPtr a -> a) -> Ptr b -> IO a
+-- Same as newObject, but we take ownership of the object, which is
+-- typically floating, so we use g_object_ref_sink. Notice that the
+-- semantics here are a little bit funky: some objects (such as
+-- GtkWindow, see the code about "user_ref_count" in gtkwindow.c in
+-- the gtk+ distribution) are created _without_ the floating flag,
+-- since they own a reference to themselves. So, wrapping them is
+-- really about adding a ref. If we add the ref, when Haskell drops
+-- the last ref to the GObject it will g_object_unref, and the window
+-- will g_object_unref itself upon destruction, so by the end we don't
+-- leak memory. If we don't add the ref, there will be two
+-- g_object_unrefs acting on the object (one from Haskell and one from
+-- the GtkWindow destroy) when the object is destroyed and the second
+-- one will give a segfault.
+wrapObject :: forall a b. (GObject a, GObject b) =>
+              (ForeignPtr a -> a) -> Ptr b -> IO a
 wrapObject constructor ptr = do
-  _ <- g_object_ref_sink $ castPtr ptr
+  void $ g_object_ref_sink ptr
   fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 refObject :: (ManagedPtr a, GObject a, GObject b) => a -> IO (Ptr b)
-refObject obj = do
-  let ptr = unsafeManagedPtrGetPtr obj
-  _ <- g_object_ref ptr
-  touchManagedPtr obj
-  return $ castPtr ptr
+refObject obj = castPtr <$> withManagedPtr obj g_object_ref
 
 foreign import ccall "g_object_unref" g_object_unref ::
     Ptr a -> IO ()
 
 unrefObject :: (ManagedPtr a, GObject a) => a -> IO ()
-unrefObject obj = do
-  let ptr = unsafeManagedPtrGetPtr obj
-  g_object_unref ptr
-  touchManagedPtr obj
+unrefObject obj = withManagedPtr obj g_object_unref
 
 foreign import ccall "& boxed_free_helper" boxed_free_helper ::
     FunPtr (Ptr env -> Ptr a -> IO ())

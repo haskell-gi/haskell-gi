@@ -79,6 +79,7 @@ Library
       GI.Utils.Closure,
       GI.Utils.GError,
       GI.Utils.GValue,
+      GI.Utils.GVariant,
       GI.Utils.ManagedPtr,
       GI.Utils.Properties,
       GI.Utils.ShortPrelude,
