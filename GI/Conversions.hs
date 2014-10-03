@@ -6,9 +6,6 @@ module GI.Conversions
     , unpackCArray
     , computeArrayLength
 
-    , marshallFType
-    , convertFMarshall
-    , convertHMarshall
     , hToF
     , fToH
     , haskellType
@@ -463,37 +460,6 @@ argumentType letters@(l:ls) t   = do
         then return (ls, [l], [goConstraint s ++ " " ++ [l]])
         else return (letters, s, [])
     _ -> return (letters, s, [])
-
--- The signal marshaller C code has some built in support for basic
--- types, so we only generate conversions for things that the
--- marshaller cannot do itself. (This list should be kept in sync with
--- hsgclosure.c)
-
--- Marshaller to haskell types.
--- There is no support in the marshaller for converting Haskell
--- strings into C strings directly.
-marshallFType :: Type -> CodeGen TypeRep
-marshallFType t@(TBasicType TUTF8) = foreignType t
-marshallFType t@(TBasicType TFileName) = foreignType t
-marshallFType t@(TBasicType _) = haskellType t
-marshallFType a = foreignType a
-
-convertFMarshall :: String -> Type -> Transfer -> CodeGen String
-convertFMarshall name t@(TBasicType TUTF8) transfer =
-    convert name $ fToH t transfer
-convertFMarshall name t@(TBasicType TFileName) transfer =
-    convert name $ fToH t transfer
-convertFMarshall name (TBasicType _ ) _ = return name
-convertFMarshall name t transfer = convert name $ fToH t transfer
-
-convertHMarshall :: String -> Type -> Transfer -> CodeGen String
-convertHMarshall name t@(TBasicType TUTF8) transfer =
-    convert name $ hToF t transfer
-convertHMarshall name t@(TBasicType TFileName) transfer =
-    convert name $ hToF t transfer
-convertHMarshall name (TBasicType _) _ = return name
-convertHMarshall name t transfer =
-    convert name $ hToF t transfer
 
 haskellBasicType TVoid     = (ptr (typeOf ()))
 haskellBasicType TBoolean  = typeOf True
