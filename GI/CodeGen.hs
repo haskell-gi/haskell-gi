@@ -317,7 +317,7 @@ genGObjectType iT n = do
           line $ "instance " ++ (klass ancestor') ++ " " ++ name'
 
 -- Type casting with type checking
-genGObjectCasts n o = do
+genGObjectCasts isIU n o = do
   name' <- upperName n
 
   let cn_ = objTypeInit o
@@ -328,7 +328,9 @@ genGObjectCasts n o = do
 
   group $ do
     line $ "instance GObject " ++ name' ++ " where"
-    indent $ line $ "gobjectType _ = c_" ++ cn_
+    indent $ group $ do
+            line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
+            line $ "gobjectType _ = c_" ++ cn_
 
   group $ do
     line $ "castTo" ++ name' ++ " :: " ++
@@ -392,7 +394,8 @@ genObject n o = do
     line $ "instance " ++ ifClass ++ " " ++ name'
 
   -- Type safe casting
-  when isGO $ genGObjectCasts n o
+  isIU <- isInitiallyUnowned t
+  when isGO $ genGObjectCasts isIU n o
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
@@ -451,9 +454,13 @@ genInterface n iface = do
       line $ "foreign import ccall \"" ++ cn_ ++ "\""
       indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
 
+    isIU <- apiIsInitiallyUnowned n (APIInterface iface)
+
     group $ do
       line $ "instance GObject " ++ name' ++ " where"
-      indent $ line $ "gobjectType _ = c_" ++ cn_
+      indent $ group $ do
+                line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
+                line $ "gobjectType _ = c_" ++ cn_
 
   -- Methods
   cfg <- config

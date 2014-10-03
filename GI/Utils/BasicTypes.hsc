@@ -83,9 +83,10 @@ class BoxedObject a where
     boxedType :: a -> IO GType -- This should not use the value of its
                                -- argument.
 
+-- These class methods should not use the value of their argument.
 class GObject a where
-    gobjectType :: a -> IO GType -- This should not use the value of
-                                 -- its argument.
+    gobjectIsInitiallyUnowned :: a -> Bool
+    gobjectType :: a -> IO GType
 
 data GVariant = GVariant (ForeignPtr GVariant)
 

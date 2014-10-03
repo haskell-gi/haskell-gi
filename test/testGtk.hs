@@ -36,6 +36,20 @@ testBoxedOutArgs = do
          error $ "Unexpected result from parsing : " ++ colorString
   putStrLn "+++ Boxed out args test done"
 
+-- The allocation strategy is slightly different with GObjects which
+-- are not initiallyUnowned, since we simply steal the memory (without
+-- a g_object_ref_sink). Make sure that that there is no problem with
+-- this.
+testInitiallyOwned :: IO ()
+testInitiallyOwned = do
+  putStrLn "*** Initially owned allocation test"
+  replicateM_ 100 $ do
+    eb <- new EntryBuffer [_text := "Hello, this is a test"]
+    t <- eb `get` _text
+    when (t /= "Hello, this is a test") $
+         error "Test text did not match!"
+  putStrLn "*** Initially owned allocation test done"
+
 testGio :: IO ()
 testGio = do
   putStrLn "*** Gio test"
@@ -309,6 +323,7 @@ main = do
         testFlags
         testTimeout
         testForeach grid
+        testInitiallyOwned
 
 	widgetShowAll win
 

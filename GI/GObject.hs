@@ -4,6 +4,8 @@ module GI.GObject
     , instanceTree
     , isGObject
     , apiIsGObject
+    , isInitiallyUnowned
+    , apiIsInitiallyUnowned
     ) where
 
 import Control.Applicative ((<$>))
@@ -15,38 +17,9 @@ import GI.Type
 klass n = n ++ "Klass"
 goConstraint n = n ++ "K"
 
--- Compute the (ordered) list of parents of the current object.
-instanceTree :: Name -> CodeGen [Name]
-instanceTree n = do
-  api <- findAPIByName n
-  case getParent api of
-    Just p -> (p :) <$> instanceTree p
-    Nothing -> return []
-
--- Returns whether the given object instance name is a descendant of
--- GObject.
-isGObject :: Type -> CodeGen Bool
-isGObject (TInterface ns n) = findAPIByName name >>= apiIsGObject name
-                              where name = Name ns n
-isGObject _ = return False
-
-apiIsGObject :: Name -> API -> CodeGen Bool
-apiIsGObject (Name "GObject" "Object") _ = return True
-apiIsGObject _ api = do
-  case api of
-    APIObject _ ->
-        case getParent api of
-          Just (Name pns pn) -> isGObject (TInterface pns pn)
-          Nothing -> return False
-    APIInterface iface ->
-        do let prs = ifPrerequisites iface
-           prereqs <- (zip prs) <$> mapM findAPIByName prs
-           or <$> mapM (uncurry apiIsGObject) prereqs
-    _ -> return False
-
--- Find the parent of a given object. For the purposes of the binding
--- we do not need to distinguish between GObject.Object and
--- GObject.InitiallyUnowned.
+-- Find the parent of a given object when building the
+-- instanceTree. For the purposes of the binding we do not need to
+-- distinguish between GObject.Object and GObject.InitiallyUnowned.
 getParent :: API -> Maybe Name
 getParent (APIObject o) = rename $ objParent o
     where
@@ -55,3 +28,45 @@ getParent (APIObject o) = rename $ objParent o
           Just (Name "GObject" "Object")
       rename x = x
 getParent _ = Nothing
+
+-- Compute the (ordered) list of parents of the current object.
+instanceTree :: Name -> CodeGen [Name]
+instanceTree n = do
+  api <- findAPIByName n
+  case getParent api of
+    Just p -> (p :) <$> instanceTree p
+    Nothing -> return []
+
+-- Returns whether the given type is a descendant of the given parent.
+typeDoParentSearch :: Name -> Type -> CodeGen Bool
+typeDoParentSearch parent (TInterface ns n) = findAPIByName name >>=
+                                              apiDoParentSearch parent name
+                                                  where name = Name ns n
+typeDoParentSearch _ _ = return False
+
+apiDoParentSearch :: Name -> Name -> API -> CodeGen Bool
+apiDoParentSearch parent n api
+    | parent == n = return True
+    | otherwise = do
+  case api of
+    APIObject o ->
+        case objParent o of
+          Just (Name pns pn) -> typeDoParentSearch parent (TInterface pns pn)
+          Nothing -> return False
+    APIInterface iface ->
+        do let prs = ifPrerequisites iface
+           prereqs <- (zip prs) <$> mapM findAPIByName prs
+           or <$> mapM (uncurry (apiDoParentSearch parent)) prereqs
+    _ -> return False
+
+isGObject :: Type -> CodeGen Bool
+isGObject = typeDoParentSearch $ Name "GObject" "Object"
+
+apiIsGObject :: Name -> API -> CodeGen Bool
+apiIsGObject = apiDoParentSearch $ Name "GObject" "Object"
+
+isInitiallyUnowned :: Type -> CodeGen Bool
+isInitiallyUnowned = typeDoParentSearch $ Name "GObject" "InitiallyUnowned"
+
+apiIsInitiallyUnowned :: Name -> API -> CodeGen Bool
+apiIsInitiallyUnowned = apiDoParentSearch $ Name "GObject" "InitiallyUnowned"

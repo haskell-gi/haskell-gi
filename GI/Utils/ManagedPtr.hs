@@ -75,10 +75,16 @@ foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
 -- g_object_unrefs acting on the object (one from Haskell and one from
 -- the GtkWindow destroy) when the object is destroyed and the second
 -- one will give a segfault.
+--
+-- This is the story for GInitiallyUnowned objects (e.g. anything that
+-- is a descendant from GtkWidget). For objects that are not initially
+-- floating (i.e. not descendents of GInitiallyUnowned) we simply take
+-- control of the reference.
 wrapObject :: forall a b. (GObject a, GObject b) =>
               (ForeignPtr a -> a) -> Ptr b -> IO a
 wrapObject constructor ptr = do
-  void $ g_object_ref_sink ptr
+  when (gobjectIsInitiallyUnowned (undefined :: a)) $
+       void $ g_object_ref_sink ptr
   fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
