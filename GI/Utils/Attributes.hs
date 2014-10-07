@@ -31,7 +31,7 @@
 -- Attributes interface
 --
 -- Attributes of an object can be get and set. Getting the value of an
--- object's attribute is straingtforward. As an example consider a @button@
+-- object's attribute is straightforward. As an example consider a @button@
 -- widget and an attribute called @buttonLabel@.
 --
 -- > value <- get button buttonLabel
@@ -144,35 +144,35 @@ data AttrOpType = SetOnlyAttrOp | SetAndConstructOp
 -- constructible. "set" will then specialize on w to enforce that the
 -- parameter is writable.
 data AttrOp (s :: AttrOpType) o (w :: AttrSetOpTag) where
-    -- ^ Assign a value to an attribute
+    -- Assign a value to an attribute
     (:=)  :: (HasAttr attr o, (AttrSetTypeConstraint attr o) b,
               (AttrSettableConstraint attr o) w) =>
              Attr attr o -> b -> AttrOp s o w
-    -- ^ Assign the result of an IO action to an attribute
+    -- Assign the result of an IO action to an attribute
     (:=>) :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b) =>
              Attr attr o -> IO b -> AttrOp s o w
-    -- ^ Apply an update function to an attribute
+    -- Apply an update function to an attribute
     (:~)  :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
               AttrIsReadable attr o ~ True) =>
              Attr attr o -> (a -> b) -> AttrOp SetOnlyAttrOp o w
-    -- ^ Apply an IO update function to an attribute
+    -- Apply an IO update function to an attribute
     (:~>) :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
               AttrIsReadable attr o ~ True) =>
              Attr attr o -> (a -> IO b) -> AttrOp SetOnlyAttrOp o w
-    -- ^ Assign a value to an attribute with the object as an argument
+    -- Assign a value to an attribute with the object as an argument
     (::=) :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b) =>
              Attr attr o -> (o -> b) -> AttrOp SetOnlyAttrOp o w
-    -- ^ Apply an update function to an attribute with the object as
+    -- Apply an update function to an attribute with the object as
     -- an argument
     (::~) :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
