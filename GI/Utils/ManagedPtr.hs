@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module GI.Utils.ManagedPtr
     ( withManagedPtr
+    , withManagedPtrList
     , castTo
     , newObject
     , wrapObject
@@ -30,6 +31,13 @@ withManagedPtr managed action = do
   let ptr = unsafeManagedPtrGetPtr managed
   result <- action ptr
   touchManagedPtr managed
+  return result
+
+withManagedPtrList :: ManagedPtr a => [a] -> ([Ptr a] -> IO c) -> IO c
+withManagedPtrList managedList action = do
+  let ptrs = map unsafeManagedPtrGetPtr managedList
+  result <- action ptrs
+  mapM_ touchManagedPtr managedList
   return result
 
 -- Safe casting machinery

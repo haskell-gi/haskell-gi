@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import BasicPrelude hiding (error)
 import qualified BasicPrelude as BP
@@ -17,6 +18,9 @@ import Foreign.C
 
 import qualified Data.ByteString.Char8 as B
 import Data.Text (pack, unpack)
+import Data.Word
+import Data.Int
+import qualified Data.Map as M
 
 import System.Environment (getProgName)
 import System.Random (randomRIO)
@@ -60,13 +64,12 @@ testGio = do
   putStrLn "*** Gio test"
 
   infos <- Gio.appInfoGetAll
-  forM_ infos $ \info -> do
+  putStrLn $ "(" ++ show (length infos) ++ " entries total, showing first 5)"
+  forM_ (take 5 infos) $ \info -> do
             name <- Gio.appInfoGetName info
             exe <- Gio.appInfoGetExecutable info
             putStrLn $ "name: " ++ name
             putStrLn $ "exe: " ++ exe
-            putStrLn ""
-
   putStrLn "+++ Gio test done"
 
 testExceptions :: IO ()
@@ -74,7 +77,9 @@ testExceptions = do
   putStrLn "*** Exception test"
   -- This should work fine, without emitting any exception
   contents <- GLib.fileGetContents "testGtk.hs"
-  B.putStrLn contents
+  putStrLn $ "testGtk.hs is " ++ show (B.length contents)
+               ++ " bytes long. First 5 lines follow:"
+  forM_ ((take 5 . B.lines) contents) B.putStrLn
 
   -- Trying to read a file that does not exist should throw
   -- FileErrorNoent, in the FileError domain.
@@ -110,7 +115,7 @@ testOutArgs = do
 testBoxed :: IO ()
 testBoxed = do
   putStrLn "*** Boxed test"
-  forM_ [1..500::Int] $ \_ -> do
+  replicateM_ 500 $ do
     r <- randomRIO (0,6)
     let expected = toEnum $ r + fromEnum GLib.DateWeekdayMonday
     date <- GLib.dateNewDmy (fromIntegral $ 17 + r) GLib.DateMonthJune 2013
@@ -256,6 +261,59 @@ testForeach container = do
            putStrLn =<< widgetPathToString path
   putStrLn "+++ ScopeTypeCall test done"
 
+roundtrip :: (IsGVariant a, Eq a, Show a) => a -> IO ()
+roundtrip value =
+  toGVariant value >>= fromGVariant >>= \case
+    Nothing -> error $ "GVariant decoding for " ++ show value ++ " failed."
+    Just r -> when (r /= value) $
+              error $ "Got " ++ show r ++ " but expected "
+                        ++ show value ++ "."
+
+-- Test of proper marshalling of GVariants
+testGVariant :: IO ()
+testGVariant = do
+  putStrLn "*** GVariant test"
+  replicateM_ 100 $ do
+       roundtrip (True :: Bool)
+       roundtrip (11 :: Word8)
+       roundtrip (12 :: Int16)
+       roundtrip (13 :: Word16)
+       roundtrip (14 :: Int32)
+       roundtrip (15 :: Word32)
+       roundtrip (16 :: Int64)
+       roundtrip (17 :: Word64)
+       roundtrip (GVariantHandle 18)
+       roundtrip (1.23 :: Double)
+       roundtrip ("Hello" :: Text)
+       case newGVariantObjectPath "/org/testGtk/trial" of
+         Nothing -> error "Error parsing object path."
+         Just path -> roundtrip path
+       case newGVariantSignature "s(ss)ia{dh}" of
+         Nothing -> error "Error parsing signature."
+         Just signature -> roundtrip signature
+       let innerText = "Testing inner" :: Text
+       gv <- toGVariant innerText >>= toGVariant
+       fromGVariant gv >>= \case
+          Nothing -> error "Could not decode GVariant container"
+          Just innerGV -> fromGVariant innerGV >>= \case
+                            Nothing -> error "Could not decode inner GVariant."
+                            Just text -> when (text /= innerText) $
+                                         error $ "Got wrong text : " ++ text
+       roundtrip (Just (18 :: Word64))
+       roundtrip ("ByteString test" :: ByteString)
+       roundtrip (map Just [19..25 :: Int16])
+       roundtrip ()
+       roundtrip (GVariantSinglet (3.14 :: Double))
+       roundtrip (0.3 :: Double, "Two-tuple" :: Text)
+       roundtrip ("One" :: Text, "Two" :: ByteString, Just (3 :: Word32))
+       roundtrip ((), GVariantSinglet (), True, Just False)
+       roundtrip (21 :: Word8, 22 :: Word16, 23 :: Word32, 24 :: Word64,
+                        ((), ((), ())))
+       let dict :: M.Map Text Double
+           dict = M.fromList [("One", 1), ("Two", 2.001), ("Three", 3)]
+       roundtrip dict
+  putStrLn "+++ GVariant test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -329,6 +387,7 @@ main = do
         testTimeout
         testForeach grid
         testInitiallyOwned
+        testGVariant
 
 	widgetShowAll win
 

@@ -47,7 +47,10 @@ module GI.Utils.BasicConversions
     , stringToCString
     , cstringToString
     , textToCString
+    , withTextCString
     , cstringToText
+    , byteStringToCString
+    , cstringToByteString
 
     , mapZeroTerminatedCArray
     , mapCArrayWithLength
@@ -61,6 +64,7 @@ import Foreign
 import Foreign.C.Types
 import Foreign.C.String
 import Control.Monad (foldM)
+import Control.Exception.Base (bracket)
 import Control.Applicative ((<$>), (<*>))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -70,7 +74,7 @@ import qualified Data.Text.Foreign as TF
 
 import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr (copyBoxedPtr)
-import GI.Utils.Utils (allocBytes, memcpy)
+import GI.Utils.Utils (allocBytes, memcpy, freeMem)
 
 #include <glib-object.h>
 
@@ -398,6 +402,9 @@ textToCString :: Text -> IO CString
 textToCString str = TF.withCStringLen str $
                       \(cstr, len) -> g_strndup cstr (fromIntegral len)
 
+withTextCString :: Text -> (CString -> IO a) -> IO a
+withTextCString text action = bracket (textToCString text) freeMem action
+
 foreign import ccall "strlen" c_strlen ::
     CString -> IO (CSize)
 
@@ -406,6 +413,12 @@ cstringToText cstr = do
   len <- c_strlen cstr
   let cstrlen = (cstr, fromIntegral len)
   TF.peekCStringLen cstrlen
+
+byteStringToCString :: ByteString -> IO CString
+byteStringToCString bs = B.useAsCString bs g_strdup
+
+cstringToByteString :: CString -> IO ByteString
+cstringToByteString = B.packCString
 
 packPtrArray :: [Ptr a] -> IO (Ptr (Ptr a))
 packPtrArray items = do
