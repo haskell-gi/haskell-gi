@@ -46,7 +46,7 @@ import Foreign.C
 import Foreign.Safe
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
-import Data.Text (Text, pack)
+import Data.Text (Text, pack, unpack)
 
 import GI.Utils.BasicTypes
 import GI.Utils.BasicConversions (cstringToText, textToCString)
@@ -87,36 +87,47 @@ buildGValue gtype setter val = do
 
 class IsGValue a where
     toGValue :: a -> IO GValue
+    fromGValue :: GValue -> IO a
 
 instance IsGValue String where
     toGValue = (buildGValue gtypeString set_string) . pack
+    fromGValue v = unpack <$> get_string v
 
 instance IsGValue Text where
     toGValue = buildGValue gtypeString set_string
+    fromGValue = get_string
 
 instance IsGValue (Ptr a) where
     toGValue = buildGValue gtypePointer set_pointer
+    fromGValue = get_pointer
 
 instance IsGValue Int32 where
     toGValue = buildGValue gtypeInt32 set_int32
+    fromGValue = get_int32
 
 instance IsGValue Word32 where
     toGValue = buildGValue gtypeUInt32 set_uint32
+    fromGValue = get_uint32
 
 instance IsGValue Int64 where
     toGValue = buildGValue gtypeInt64 set_int64
+    fromGValue = get_int64
 
 instance IsGValue Word64 where
     toGValue = buildGValue gtypeUInt64 set_uint64
+    fromGValue = get_uint64
 
 instance IsGValue Float where
     toGValue = buildGValue gtypeFloat set_float
+    fromGValue = get_float
 
 instance IsGValue Double where
     toGValue = buildGValue gtypeDouble set_double
+    fromGValue = get_double
 
 instance IsGValue Bool where
     toGValue = buildGValue gtypeBoolean set_boolean
+    fromGValue = get_boolean
 
 foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
