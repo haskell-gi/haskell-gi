@@ -6,6 +6,7 @@ module GI.SymbolNaming
     , literalName
     , lowerName
     , upperName
+    , noName
     , escapeReserved
     , interfaceClassName
     , hyphensToCamelCase
@@ -85,6 +86,13 @@ qualifyWithSuffix suffix ns = do
 
 qualify:: String -> CodeGen String
 qualify = qualifyWithSuffix "."
+
+-- Save a bit of typing for optional arguments in the case that we
+-- want to pass Nothing.
+noName :: String -> CodeGen ()
+noName name' = group $ do
+                 line $ "no" ++ name' ++ " :: Maybe " ++ name'
+                 line $ "no" ++ name' ++ " = Nothing"
 
 -- For a string of the form "one-sample-string" return "OneSampleString"
 hyphensToCamelCase :: String -> String

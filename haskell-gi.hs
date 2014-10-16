@@ -107,7 +107,8 @@ moduleConfig name options = Config {
               prefixes = M.fromList (optPrefixes options),
               names = M.fromList (optRenames options),
               modName = name,
-              ignoredMethods = ignore }
+              ignoredMethods = ignore,
+              sealedStructs = map (uncurry Name) sealed }
 
 -- Generate all generic accessor functions ("_label", for example).
 genGenericAttrs :: Options -> [String] -> IO ()
@@ -268,3 +269,7 @@ ignore = ["atk_editable_text_set_run_attributes"
          -- complicated combination of the rest of
          -- the arguments.
          , "gdk_pixbuf_new_from_data"]
+
+-- List of structures for which we should not generate accesor
+-- functions.
+sealed = []

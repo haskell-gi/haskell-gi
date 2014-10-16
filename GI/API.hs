@@ -176,14 +176,31 @@ toProperty pi =
 data Field = Field {
     fieldName :: String,
     fieldType :: Type,
+    fieldCallback :: Maybe Callback,
+    fieldOffset :: Int,
     fieldFlags :: [FieldInfoFlag] }
     deriving Show
 
 toField :: FieldInfo -> Field
 toField fi =
-    Field (baseInfoName . baseInfo $ fi)
-        (typeFromTypeInfo $ fieldInfoType fi)
-        (fieldInfoFlags fi)
+    Field {fieldName = baseInfoName . baseInfo $ fi,
+           fieldType = typeFromTypeInfo $ fieldInfoType fi,
+           fieldOffset = fieldInfoOffset fi,
+           -- Fields with embedded "anonymous" callback interfaces.
+           fieldCallback =
+               case typeFromTypeInfo (fieldInfoType fi) of
+                 TInterface _ n ->
+                     if n /= (baseInfoName . baseInfo $ fi)
+                     then Nothing
+                     else let iface = baseInfo .
+                                      typeInfoInterface .
+                                      fieldInfoType $ fi
+                          in case baseInfoType iface of
+                               InfoTypeCallback ->
+                                   Just . toCallback . fromBaseInfo $ iface
+                               _ -> Nothing
+                 _ -> Nothing,
+           fieldFlags = fieldInfoFlags fi}
 
 data Struct = Struct {
     structIsBoxed :: Bool,

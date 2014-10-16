@@ -57,7 +57,8 @@ data Config = Config {
       prefixes :: M.Map String String,
       names :: M.Map String String,
       modName :: String,
-      ignoredMethods :: [String]
+      ignoredMethods :: [String],
+      sealedStructs :: [Name]
     }
 
 type Deps = Set.Set String

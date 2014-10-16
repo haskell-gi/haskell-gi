@@ -24,6 +24,7 @@ import GI.Conversions
 import GI.Code
 import GI.GObject
 import GI.Signal (genSignal, genCallback)
+import GI.Struct (genStructFields)
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
@@ -47,13 +48,6 @@ valueStr (VDouble x)   = show x
 valueStr (VGType x)    = show x
 valueStr (VUTF8 x)     = show x
 valueStr (VFileName x) = show x
-
--- Save a bit of typing for optional arguments in the case that we
--- want to pass Nothing.
-noName :: String -> CodeGen ()
-noName name' = group $ do
-                 line $ "no" ++ name' ++ " :: Maybe " ++ name'
-                 line $ "no" ++ name' ++ " = Nothing"
 
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant n@(Name _ name) (Constant value) = do
@@ -79,32 +73,6 @@ genBoxedObject n typeInit = do
   group $ do
        line $ "instance BoxedObject " ++ name' ++ " where"
        indent $ line $ "boxedType _ = c_" ++ typeInit
-
-genStruct :: Name -> Struct -> CodeGen ()
-genStruct n@(Name _ name) s = when (not (isGTypeStruct s)
-                                   && not ("Private" `isSuffixOf` name)) $ do
-      cfg <- config
-
-      line $ "-- struct " ++ name
-      name' <- upperName n
-
-      line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
-
-      noName name'
-
-      if structIsBoxed s
-      then do
-        manageManagedPtr n
-        genBoxedObject n $ fromJust (structTypeInit s)
-      else manageUnManagedPtr n
-
-    -- XXX: Generate code for fields.
-
-    -- Methods
-      forM_ (structMethods s) $ \(mn, f) ->
-          do isFunction <- symbolFromFunction (fnSymbol f)
-             when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
-                  genMethod n mn f
 
 genEnumOrFlags :: Name -> Enumeration -> CodeGen ()
 genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage) = do
@@ -185,6 +153,34 @@ genErrorDomain name' domain = do
             line $ "IO a ->"
             line $ "IO a"
     line $ handler ++ " = handleGErrorJustDomain"
+
+genStruct :: Name -> Struct -> CodeGen ()
+genStruct n@(Name _ name) s = when (not (isGTypeStruct s)
+                                   && not ("Private" `isSuffixOf` name)) $ do
+      cfg <- config
+
+      line $ "-- struct " ++ name
+      name' <- upperName n
+
+      line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+
+      noName name'
+
+      if structIsBoxed s
+      then do
+        manageManagedPtr n
+        genBoxedObject n $ fromJust (structTypeInit s)
+      else manageUnManagedPtr n
+
+      -- Generate code for fields.
+      when (not . elem n . sealedStructs $ cfg) $
+           genStructFields n s
+
+      -- Methods
+      forM_ (structMethods s) $ \(mn, f) ->
+          do isFunction <- symbolFromFunction (fnSymbol f)
+             when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+                  genMethod n mn f
 
 genUnion n u = do
   name' <- upperName n
@@ -578,6 +574,8 @@ genModule name apis modulePrefix = do
            "IOModule",
            "io_modules_load_all_in_directory",
            "io_modules_load_all_in_directory_with_scope",
+           -- Atk: Not marked properly as a GType struct (which we hide)
+           "_RegistryClass",
            -- We can skip in the bindings
            "signal_set_va_marshaller",
            -- These seem to have some issues in the introspection data

@@ -306,6 +306,11 @@ fObjectToH t hType transfer = do
           return $ M $ parenthesize $
            "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
 
+fCallbackToH :: Callback -> TypeRep -> Transfer -> CodeGen Constructor
+fCallbackToH c hType transfer = do
+  line $ "-- XXX wrapping foreign callbacks is not supported yet"
+  return $ "undefined"
+
 fVariantToH :: Transfer -> CodeGen Constructor
 fVariantToH transfer =
   return $ M $ case transfer of
@@ -324,6 +329,7 @@ fToH' t a hType fType transfer
     | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
     | Just (APIObject _) <- a = fObjectToH t hType transfer
     | Just (APIInterface _) <- a = fObjectToH t hType transfer
+    | Just (APICallback c) <- a = fCallbackToH c hType transfer
     | TCArray True _ _ (TBasicType TUTF8) <- t =
         return $ M "unpackZeroTerminatedUTF8CArray"
     | TCArray True _ _ (TBasicType TFileName) <- t =
@@ -340,10 +346,13 @@ fToH' t a hType fType transfer
         return $ M "(unpackMapZeroTerminatedStorableArray realToFrac)"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "unpackZeroTerminatedStorableArray"
-    | TCArray _ _ _ _ <- t = return $ M $
-                           "fToH' : Don't know how to unpack C array of type "
-                           ++ show t
+    | TCArray _ _ _ _ <- t = do
+                           line $ "-- XXX fToH' : Don't know how to unpack C array of type " ++ show t
+                           return "undefined"
     | TByteArray <- t = return $ M "unpackGByteArray"
+    | TGHash _ _ <- t = do
+                      line $ "-- XXX Foreign Hashes not supported yet"
+                      return "undefined"
     | otherwise = return $ case (show fType, show hType) of
                ("CString", "T.Text") -> M "cstringToText"
                ("CString", "[Char]") -> M "cstringToString"

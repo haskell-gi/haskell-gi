@@ -23,6 +23,6 @@ generate()
 
 mkdir -p GI
 
-generate Gtk Vte
+generate Gtk Vte Notify
 
 bash build.sh

@@ -320,7 +320,7 @@ main = do
         -- import System.Environment (getArgs, getProgName)
         -- ...
         -- args <- getArgs
-        -- progName <- getProgName
+        -- progName <- pack <$> getProgName
         -- restArgs <- Gtk.init $ progName:args
         --
         -- Here we use synthetic arguments to test that we are
