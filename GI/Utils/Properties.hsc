@@ -93,6 +93,14 @@ new constructor attrs = do
   result <- g_object_newv gtype (fromIntegral nprops) params
   freeStrings nprops params
   free params
+  -- Make sure that the GValues defining the GProperties are still
+  -- alive at this point (so, in particular, they are still alive when
+  -- g_object_newv is called). Without this the GHC garbage collector
+  -- may free the GValues before g_object_newv us called, which will
+  -- unref the referred to objects, which may drop the last reference
+  -- to the contained objects. g_object_newv then tries to access the
+  -- (now invalid) contents of the GValue, and mayhem ensues.
+  mapM_ (touchManagedPtr . snd) props
   wrapObject constructor (result :: Ptr o)
   where
     construct :: AttrOp SetAndConstructOp o AttrNew ->
