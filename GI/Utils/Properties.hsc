@@ -76,7 +76,7 @@ import Foreign.C
 
 #include <glib-object.h>
 
-foreign import ccall "g_object_newv" g_object_newv ::
+foreign import ccall "dbg_g_object_newv" g_object_newv ::
     GType -> CUInt -> Ptr a -> IO (Ptr b)
 
 -- | Construct a GObject given the constructor and a list of settable

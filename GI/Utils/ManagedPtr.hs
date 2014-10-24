@@ -54,7 +54,7 @@ castTo constructor typeName obj =
       newObject constructor objPtr
 
 -- Reference counting for constructors
-foreign import ccall "&g_object_unref"
+foreign import ccall "&dbg_g_object_unref"
     ptr_to_g_object_unref :: FunPtr (Ptr a -> IO ())
 
 foreign import ccall "g_object_ref" g_object_ref ::
