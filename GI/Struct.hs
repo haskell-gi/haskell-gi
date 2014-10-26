@@ -1,34 +1,77 @@
-module GI.Struct (genStructFields)
+module GI.Struct ( genStructFields
+                 , extractCallbacksInStruct
+                 , fixAPIStructs
+                 , ignoreStruct)
     where
 
-import Control.Monad (forM, forM_, when)
+import Control.Monad (forM_, when)
 import Control.Applicative ((<$>))
-import Control.Monad.Writer (tell)
-import Data.List (intercalate, isSuffixOf)
-import Data.Tuple (swap)
-import Data.Maybe (fromJust, isJust)
-import qualified Data.Map as M
-import qualified Data.Set as S
+import Data.List (isSuffixOf)
+import Data.Maybe (mapMaybe)
 
 import GI.API
 import GI.Conversions
 import GI.Code
-import GI.GObject
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
-import GI.Value
 import GI.Internal.ArgInfo
-import GI.Internal.FunctionInfo
-import GI.Internal.TypeInfo
+
+-- | Whether (not) to generate bindings for the given struct.
+ignoreStruct :: Name -> Struct -> Bool
+ignoreStruct (Name _ name) s = isGTypeStruct s ||
+                               "Private" `isSuffixOf` name
+
+-- | Canonical name for the type of a callback type embedded in a
+-- struct field.
+fieldCallbackType :: String -> Field -> String
+fieldCallbackType structName field = structName
+                                     ++ (underscoresToCamelCase .
+                                         fieldName) field
+                                     ++ "FieldCallback"
+
+-- | Fix the interface names of callback fields in the struct to
+-- correspond to the ones that we are going to generate.
+fixCallbackStructFields :: Name -> Struct -> Struct
+fixCallbackStructFields (Name ns structName) s = s {structFields = fixedFields}
+    where fixedFields :: [Field]
+          fixedFields = map fixField (structFields s)
+
+          fixField :: Field -> Field
+          fixField field =
+              case fieldCallback field of
+                Nothing -> field
+                Just _ -> let n' = fieldCallbackType structName field
+                          in field {fieldType = TInterface ns n'}
+
+-- | Fix the interface names of callback fields in an APIStruct to
+-- correspond to the ones that we are going to generate. If something
+-- other than an APIStruct is passed in we don't touch it.
+fixAPIStructs :: (Name, API) -> (Name, API)
+fixAPIStructs (n, APIStruct s) = (n, APIStruct $ fixCallbackStructFields n s)
+fixAPIStructs api = api
+
+-- | Extract the callback types embedded in the fields of structs, and
+-- at the same time fix the type of the corresponding fields. Returns
+-- the list of APIs associated to this struct, not including the
+-- struct itself.
+extractCallbacksInStruct :: (Name, API) -> [(Name, API)]
+extractCallbacksInStruct (n@(Name ns structName), APIStruct s)
+    | ignoreStruct n s = []
+    | otherwise =
+        mapMaybe callbackInField (structFields s)
+            where callbackInField :: Field -> Maybe (Name, API)
+                  callbackInField field = do
+                    callback <- fieldCallback field
+                    let n' = fieldCallbackType structName field
+                    return (Name ns n', APICallback callback)
+extractCallbacksInStruct _ = []
 
 genStructFields :: Name -> Struct -> CodeGen ()
 genStructFields n@(Name ns _) s = do
-  cfg <- config
   name' <- upperName n
 
   forM_ (structFields s) $ \field -> group $ do
-    when (not . isJust . fieldCallback $ field) $ do
      hType <- show <$> haskellType (fieldType field)
      fType <- show <$> foreignType (fieldType field)
      when (not $ "Private" `isSuffixOf` hType) $ do

@@ -9,7 +9,7 @@ module GI.CodeGen
 import Control.Monad (forM, forM_, when)
 import Control.Applicative ((<$>))
 import Control.Monad.Writer (tell)
-import Data.List (intercalate, isSuffixOf)
+import Data.List (intercalate)
 import Data.Tuple (swap)
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as M
@@ -24,7 +24,8 @@ import GI.Conversions
 import GI.Code
 import GI.GObject
 import GI.Signal (genSignal, genCallback)
-import GI.Struct (genStructFields)
+import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
+                  ignoreStruct)
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
@@ -155,8 +156,7 @@ genErrorDomain name' domain = do
     line $ handler ++ " = handleGErrorJustDomain"
 
 genStruct :: Name -> Struct -> CodeGen ()
-genStruct n@(Name _ name) s = when (not (isGTypeStruct s)
-                                   && not ("Private" `isSuffixOf` name)) $ do
+genStruct n@(Name _ name) s = when (not $ ignoreStruct n s) $ do
       cfg <- config
 
       line $ "-- struct " ++ name
@@ -173,7 +173,7 @@ genStruct n@(Name _ name) s = when (not (isGTypeStruct s)
       else manageUnManagedPtr n
 
       -- Generate code for fields.
-      when (not . elem n . sealedStructs $ cfg) $
+      when (not . elem n . sealedStructs $ cfg) $ do
            genStructFields n s
 
       -- Methods
@@ -547,6 +547,11 @@ genModule name apis modulePrefix = do
   -- symbolFromFunction and this loadDependency altogether.
   loadDependency name
 
+  -- Some API symbols are embedded into structures, extract these and
+  -- inject them into the set of APIs loaded and being generated.
+  let embeddedAPIs = concatMap extractCallbacksInStruct apis
+  injectAPIs embeddedAPIs
+
   code <- recurse' $ mapM_ (uncurry genAPI) $
           -- We provide these ourselves
           filter (not . (== Name "GLib" "Variant") . fst) $
@@ -554,6 +559,8 @@ genModule name apis modulePrefix = do
           filter (not . (== Name "GObject" "Closure") . fst) $
           -- User provided list of ignores
           filter (not . (`elem` ignore) . GI.API.name . fst) $
+          -- Some callback types are defined inside structs
+          map fixAPIStructs $ (++ embeddedAPIs) $
                  apis
 
   genPrelude name' modulePrefix

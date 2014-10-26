@@ -9,6 +9,7 @@ module GI.Code
     , loadDependency
     , getDeps
     , getAPIs
+    , injectAPIs
     , recurse
     , recurse'
     , indent
@@ -75,6 +76,13 @@ getDeps = moduleDeps <$> get
 
 getAPIs :: CodeGen (M.Map Name API)
 getAPIs = loadedAPIs <$> get
+
+-- | Inject the given APIs into loaded set.
+injectAPIs :: [(Name, API)] -> CodeGen()
+injectAPIs newAPIs = do
+  oldState <- get
+  put $ oldState {loadedAPIs =
+                      M.union (loadedAPIs oldState) (M.fromList newAPIs)}
 
 mergeState :: CodeGenState -> CodeGen ()
 mergeState newState = do
