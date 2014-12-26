@@ -1,7 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module GI.Utils.Utils
     ( whenJust
+    , maybeM
     , maybeFromPtr
+    , convertIfNonNull
     , callocBytes
     , callocBoxedBytes
     , allocBytes
@@ -21,6 +23,7 @@ import Data.Word
 import Foreign.Ptr
 import Foreign.C.Types (CSize(..))
 import Control.Monad (void)
+import Control.Applicative ((<$>))
 
 import GI.Utils.BasicTypes (GType, BoxedObject(..))
 
@@ -30,10 +33,23 @@ whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
 whenJust (Just v) f = f v
 whenJust Nothing _ = return ()
 
+-- | Like `Control.Monad.maybe`, but for actions on a monad, and with
+-- slightly different argument order.
+maybeM :: Monad m => b -> Maybe a -> (a -> m b) -> m b
+maybeM d Nothing _ = return d
+maybeM _ (Just v) action = action v
+
 maybeFromPtr :: Ptr a -> Maybe (Ptr a)
 maybeFromPtr ptr = if ptr == nullPtr
                    then Nothing
                    else Just ptr
+
+-- | Apply the given conversion action to the given pointer if it is
+-- non-NULL, otherwise return `Nothing`.
+convertIfNonNull :: Ptr a -> (Ptr a -> IO b) -> IO (Maybe b)
+convertIfNonNull ptr convert = if ptr == nullPtr
+                               then return Nothing
+                               else Just <$> convert ptr
 
 foreign import ccall "g_malloc0" g_malloc0 ::
     #{type gsize} -> IO (Ptr a)
@@ -45,7 +61,7 @@ callocBytes n =  g_malloc0 (fromIntegral n)
 foreign import ccall "g_boxed_copy" g_boxed_copy ::
     GType -> Ptr a -> IO (Ptr a)
 
--- Make a zero filled allocation of n bytes for a boxed object. The
+-- | Make a zero filled allocation of n bytes for a boxed object. The
 -- difference with a normal callocBytes is that the returned memory is
 -- allocated using whatever memory allocator g_boxed_copy uses, which
 -- in particular may well be different from a plain g_malloc. In

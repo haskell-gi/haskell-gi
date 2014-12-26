@@ -35,9 +35,7 @@ genHaskellCallbackPrototype cb name' hInArgs hOutArgs = do
                        then maybeT ht
                        else ht) ++ " ->"
       ret <- hOutType cb hOutArgs False
-      line $ show $ io $ if returnMayBeNull cb
-                         then maybeT ret
-                         else ret
+      line $ show $ io ret
 
   -- For optional parameters, in case we want to pass Nothing.
   group $ do
@@ -216,9 +214,16 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
 
       when (not isSignal) $ line "maybeReleaseFunPtr funptrptr"
 
-      when (returnType cb /= TBasicType TVoid) $ do
-           result' <- convert "result" $ hToF (returnType cb) (returnTransfer cb)
-           line $ "return " ++ result'
+      when (returnType cb /= TBasicType TVoid) $
+           if returnMayBeNull cb
+           then do
+             line $ "maybeM nullPtr result $ \\result' -> do"
+             indent $ unwrapped "result'"
+           else unwrapped "result"
+           where
+             unwrapped rname = do
+               result' <- convert rname $ hToF (returnType cb) (returnTransfer cb)
+               line $ "return " ++ result'
 
 genCallback :: Name -> Callback -> CodeGen ()
 genCallback n (Callback cb) = do

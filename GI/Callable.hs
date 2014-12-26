@@ -602,19 +602,30 @@ genCallable n symbol callable throwsGError = do
   convertResult nameMap =
       if ignoreReturn || returnType callable == TBasicType TVoid
       then return undefined
-      else case returnType callable of
+      else do
+        if returnMayBeNull callable
+        then do
+          line $ "maybeResult <- convertIfNonNull result $ \\result' -> do"
+          indent $ do
+               converted <- unwrappedConvertResult "result'"
+               line $ "return " ++ converted
+          return "maybeResult"
+        else unwrappedConvertResult "result"
+    where
+      unwrappedConvertResult rname =
+        case returnType callable of
              -- Non-zero terminated C arrays require knowledge of
              -- the length, so we deal with them directly.
              t@(TCArray False _ _ _) ->
-                 convertOutCArray callable t "result" nameMap
+                 convertOutCArray callable t rname nameMap
                                       (returnTransfer callable)
              t -> do
-               result <- convert "result" $ fToH (returnType callable)
+               result <- convert rname $ fToH (returnType callable)
                                                  (returnTransfer callable)
                when (returnTransfer callable == TransferEverything) $
-                    mapM_ line =<< freeElements t "result" undefined
+                    mapM_ line =<< freeElements t rname undefined
                when (returnTransfer callable /= TransferNothing) $
-                    mapM_ line =<< freeContainer t "result"
+                    mapM_ line =<< freeContainer t rname
                return result
 
   convertOut :: Map.Map String String -> CodeGen [String]
