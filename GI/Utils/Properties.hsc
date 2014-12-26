@@ -20,6 +20,7 @@ module GI.Utils.Properties
     , setObjectPropertyFlags
     , setObjectPropertyVariant
     , setObjectPropertyByteArray
+    , setObjectPropertyPtrGList
     , setObjectPropertyHash
 
     , getObjectPropertyString
@@ -38,6 +39,7 @@ module GI.Utils.Properties
     , getObjectPropertyFlags
     , getObjectPropertyVariant
     , getObjectPropertyByteArray
+    , getObjectPropertyPtrGList
     , getObjectPropertyHash
 
     , constructObjectPropertyString
@@ -56,6 +58,7 @@ module GI.Utils.Properties
     , constructObjectPropertyFlags
     , constructObjectPropertyVariant
     , constructObjectPropertyByteArray
+    , constructObjectPropertyPtrGList
     , constructObjectPropertyHash
     ) where
 
@@ -441,6 +444,28 @@ getObjectPropertyByteArray :: (ManagedPtr a, GObject a) =>
 getObjectPropertyByteArray obj propName =
     getObjectProperty obj propName (get_boxed >=> unpackGByteArray)
                       #const G_TYPE_BYTE_ARRAY
+
+setObjectPropertyPtrGList :: (ManagedPtr a, GObject a) =>
+                              a -> String -> [Ptr b] -> IO ()
+setObjectPropertyPtrGList obj propName ptrs = do
+  packed <- packGList ptrs
+  setObjectProperty obj propName packed set_boxed #const G_TYPE_POINTER
+  g_list_free packed
+
+constructObjectPropertyPtrGList :: String -> [Ptr a] ->
+                                    IO (String, GValue)
+constructObjectPropertyPtrGList propName ptrs = do
+  packed <- packGList ptrs
+  result <- constructObjectProperty propName packed
+            set_boxed #const G_TYPE_POINTER
+  g_list_free packed
+  return result
+
+getObjectPropertyPtrGList :: (ManagedPtr a, GObject a) =>
+                              a -> String -> IO [Ptr b]
+getObjectPropertyPtrGList obj propName =
+    getObjectProperty obj propName (get_pointer >=> unpackGList)
+                      #const G_TYPE_POINTER
 
 setObjectPropertyHash :: (ManagedPtr a, GObject a) => a -> String -> b -> IO ()
 setObjectPropertyHash =

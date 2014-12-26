@@ -46,6 +46,7 @@ propTypeStr t = case t of
    TBasicType TDouble -> return "Double"
    TCArray True _ _ (TBasicType TUTF8) -> return "StringArray"
    TCArray True _ _ (TBasicType TFileName) -> return "StringArray"
+   TGList (TBasicType TVoid) -> return "PtrGList"
    t@(TInterface ns n) -> do
      api <- findAPIByName (Name ns n)
      case api of
