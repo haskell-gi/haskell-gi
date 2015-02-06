@@ -41,8 +41,6 @@ import GI.Util
 
 import GI.Internal.ArgInfo (Transfer(..))
 
-toPtr con = "(\\(" ++ con ++ " x) -> x)"
-
 -- String identifying a constructor in the generated code, which is
 -- either (by default) a pure function (indicated by the P
 -- constructor) or a function returning values on a monad (M
@@ -94,33 +92,34 @@ genConversion l (Free k) = do
 
 -- Given an array, together with its type, return the code for reading
 -- its length.
-computeArrayLength :: String -> Type -> String
-computeArrayLength array (TCArray _ _ _ t) =
-    "fromIntegral $ " ++ reader ++ " " ++ array
-    where reader = case t of
-                     TBasicType TUInt8 -> "B.length"
-                     TBasicType _ -> "length"
-                     TInterface _ _ -> "length"
-                     _ -> error $ "Don't know how to compute length of "
+computeArrayLength :: String -> Type -> ExcCodeGen String
+computeArrayLength array (TCArray _ _ _ t) = do
+  reader <- findReader
+  return $ "fromIntegral $ " ++ reader ++ " " ++ array
+    where findReader = case t of
+                     TBasicType TUInt8 -> return "B.length"
+                     TBasicType _ -> return "length"
+                     TInterface _ _ -> return "length"
+                     _ -> notImplementedError $
+                          "Don't know how to compute length of "
                           ++ show t
 computeArrayLength _ t =
-    error $ "computeArrayLength called on non-CArray type " ++ show t
+    notImplementedError $ "computeArrayLength called on non-CArray type "
+                            ++ show t
 
-convert :: String -> CodeGen Converter -> CodeGen String
+convert :: String -> BaseCodeGen e Converter -> BaseCodeGen e String
 convert l c = do
   c' <- c
   genConversion l c'
 
-hObjectToF :: Type -> Transfer -> CodeGen Constructor
+hObjectToF :: Type -> Transfer -> ExcCodeGen Constructor
 hObjectToF t transfer = do
   if transfer == TransferEverything
   then do
     isGO <- isGObject t
     if isGO
     then return $ M "refObject"
-    else do
-      line $ "-- XXX Transferring a non-GObject object!"
-      return "unsafeManagedPtrGetPtr"
+    else badIntroError "Transferring a non-GObject object"
   else return "unsafeManagedPtrGetPtr"
 
 hVariantToF :: Transfer -> CodeGen Constructor
@@ -135,28 +134,28 @@ hBoxedToF transfer = do
   then return $ M "copyBoxed"
   else return "unsafeManagedPtrGetPtr"
 
-hStructToF :: Struct -> Transfer -> CodeGen Constructor
+hStructToF :: Struct -> Transfer -> ExcCodeGen Constructor
 hStructToF s transfer =
     if transfer /= TransferEverything || structIsBoxed s then
         hBoxedToF transfer
     else do
         when (structSize s == 0) $
-             line $ "-- XXX Transferring a non-boxed struct with unknown size!"
+             badIntroError "Transferring a non-boxed struct with unknown size!"
         return "unsafeManagedPtrGetPtr"
 
-hUnionToF :: Union -> Transfer -> CodeGen Constructor
+hUnionToF :: Union -> Transfer -> ExcCodeGen Constructor
 hUnionToF u transfer =
     if transfer /= TransferEverything || unionIsBoxed u then
         hBoxedToF transfer
     else do
         when (unionSize u == 0) $
-             line $ "-- XXX Transferring a non-boxed union with unknown size!"
+             badIntroError "Transferring a non-boxed union with unknown size!"
         return "unsafeManagedPtrGetPtr"
 
 -- Given the Haskell and Foreign types, returns the name of the
 -- function marshalling between both.
 hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
-            -> CodeGen Constructor
+            -> ExcCodeGen Constructor
 hToF' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
@@ -199,25 +198,23 @@ hToF' t a hType fType transfer
         return $ M "(packMapStorableArray realToFrac)"
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
-    | TCArray _ _ _ _ <- t =
-                         error $ "Don't know how to pack C array of type "
-                                   ++ show t
-    | TGHash _ _ <- t = do
-        line $ "-- XXX Hash tables are not properly supported yet"
-        let con = tyConName $ typeRepTyCon hType
-        return $ P $ toPtr con
-    | otherwise = return $ case (show hType, show fType) of
-               ("T.Text", "CString") -> M "textToCString"
-               ("[Char]", "CString") -> M "stringToCString"
-               ("Char", "CInt")      -> "(fromIntegral . ord)"
-               ("Bool", "CInt")      -> "(fromIntegral . fromEnum)"
-               ("Float", "CFloat")   -> "realToFrac"
-               ("Double", "CDouble") -> "realToFrac"
-               _                     -> error $ "don't know how to convert "
-                                        ++ show hType ++ " into "
-                                        ++ show fType ++ ".\n"
-                                        ++ "Internal type: "
-                                        ++ show t
+    | TCArray _ _ _ _ <- t = notImplementedError
+                         $ "Don't know how to pack C array of type " ++ show t
+    | TGHash _ _ <- t = notImplementedError
+                    "Hash tables are not properly supported yet"
+    | otherwise = case (show hType, show fType) of
+               ("T.Text", "CString") -> return $ M "textToCString"
+               ("[Char]", "CString") -> return $ M "stringToCString"
+               ("Char", "CInt")      -> return "(fromIntegral . ord)"
+               ("Bool", "CInt")      -> return "(fromIntegral . fromEnum)"
+               ("Float", "CFloat")   -> return "realToFrac"
+               ("Double", "CDouble") -> return "realToFrac"
+               _                     ->
+                   notImplementedError $ "Don't know how to convert "
+                                           ++ show hType ++ " into "
+                                           ++ show fType ++ ".\n"
+                                           ++ "Internal type: "
+                                           ++ show t
 
 hToF_PackedType t packer transfer = do
   a <- findAPI t
@@ -228,7 +225,7 @@ hToF_PackedType t packer transfer = do
     mapC innerConstructor
     apply (M packer)
 
-hToF :: Type -> Transfer -> CodeGen Converter
+hToF :: Type -> Transfer -> ExcCodeGen Converter
 hToF (TGList t) transfer = hToF_PackedType t "packGList" transfer
 hToF (TGSList t) transfer = hToF_PackedType t "packGSList" transfer
 hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
@@ -270,7 +267,7 @@ suForeignPtr isBoxed size hType transfer = do
       boxedForeignPtr constructor transfer
   else case size of
          0 -> do
-           line $ "-- XXX Wrapping a foreign union with no known destructor, leak?"
+           line "-- XXX Wrapping a foreign struct/union with no known destructor, leak?"
            return $ M $ parenthesize $
                       "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
          n -> return $ M $ parenthesize $
@@ -286,7 +283,7 @@ unionForeignPtr :: Union -> TypeRep -> Transfer -> CodeGen Constructor
 unionForeignPtr u hType transfer =
     suForeignPtr (unionIsBoxed u) (unionSize u) hType transfer
 
-fObjectToH :: Type -> TypeRep -> Transfer -> CodeGen Constructor
+fObjectToH :: Type -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fObjectToH t hType transfer = do
   let constructor = tyConName $ typeRepTyCon hType
   isGO <- isGObject t
@@ -297,19 +294,18 @@ fObjectToH t hType transfer = do
         else do
           line $ "-- XXX (Leak) Got a transfer of something not a GObject"
           return $ M $ parenthesize $
-           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+                "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
     _ ->
         if isGO
         then return $ M $ parenthesize $ "newObject " ++ constructor
         else do
-          line $ "-- XXX Wrapping not a GObject with no copy..."
-          return $ M $ parenthesize $
-           "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+           line $ "-- XXX Wrapping not a GObject with no copy..."
+           return $ M $ parenthesize $
+                      "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
 
-fCallbackToH :: Callback -> TypeRep -> Transfer -> CodeGen Constructor
-fCallbackToH c hType transfer = do
-  line $ "-- XXX wrapping foreign callbacks is not supported yet"
-  return $ "undefined"
+fCallbackToH :: Callback -> TypeRep -> Transfer -> ExcCodeGen Constructor
+fCallbackToH _ _ _ =
+  notImplementedError "Wrapping foreign callbacks is not supported yet"
 
 fVariantToH :: Transfer -> CodeGen Constructor
 fVariantToH transfer =
@@ -318,7 +314,7 @@ fVariantToH transfer =
                   _ -> "newGVariantFromPtr"
 
 fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
-         -> CodeGen Constructor
+         -> ExcCodeGen Constructor
 fToH' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(toEnum . fromIntegral)"
@@ -346,25 +342,23 @@ fToH' t a hType fType transfer
         return $ M "(unpackMapZeroTerminatedStorableArray realToFrac)"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "unpackZeroTerminatedStorableArray"
-    | TCArray _ _ _ _ <- t = do
-                           line $ "-- XXX fToH' : Don't know how to unpack C array of type " ++ show t
-                           return "undefined"
+    | TCArray _ _ _ _ <- t =
+      notImplementedError $ "Don't know how to unpack C array of type " ++ show t
     | TByteArray <- t = return $ M "unpackGByteArray"
-    | TGHash _ _ <- t = do
-                      line $ "-- XXX Foreign Hashes not supported yet"
-                      return "undefined"
-    | otherwise = return $ case (show fType, show hType) of
-               ("CString", "T.Text") -> M "cstringToText"
-               ("CString", "[Char]") -> M "cstringToString"
-               ("CInt", "Char")      -> "(chr . fromIntegral)"
-               ("CInt", "Bool")      -> "(/= 0)"
-               ("CFloat", "Float")   -> "realToFrac"
-               ("CDouble", "Double") -> "realToFrac"
-               _                     -> error $ "don't know how to convert "
-                                        ++ show fType ++ " into "
-                                        ++ show hType ++ ".\n"
-                                        ++ "Internal type: "
-                                        ++ show t
+    | TGHash _ _ <- t = notImplementedError "Foreign Hashes not supported yet"
+    | otherwise = case (show fType, show hType) of
+               ("CString", "T.Text") -> return $ M "cstringToText"
+               ("CString", "[Char]") -> return $ M "cstringToString"
+               ("CInt", "Char")      -> return "(chr . fromIntegral)"
+               ("CInt", "Bool")      -> return "(/= 0)"
+               ("CFloat", "Float")   -> return "realToFrac"
+               ("CDouble", "Double") -> return "realToFrac"
+               _                     ->
+                   notImplementedError $ "Don't know how to convert "
+                                           ++ show fType ++ " into "
+                                           ++ show hType ++ ".\n"
+                                           ++ "Internal type: "
+                                           ++ show t
 
 fToH_PackedType t unpacker transfer = do
   a <- findAPI t
@@ -375,7 +369,7 @@ fToH_PackedType t unpacker transfer = do
     apply (M unpacker)
     mapC innerConstructor
 
-fToH :: Type -> Transfer -> CodeGen Converter
+fToH :: Type -> Transfer -> ExcCodeGen Converter
 
 fToH (TGList t) transfer = fToH_PackedType t "unpackGList" transfer
 fToH (TGSList t) transfer = fToH_PackedType t "unpackGSList" transfer
@@ -394,7 +388,7 @@ fToH t transfer = do
   constructor <- fToH' t a hType fType transfer
   return $ apply constructor
 
-unpackCArray :: String -> Type -> Transfer -> CodeGen Converter
+unpackCArray :: String -> Type -> Transfer -> ExcCodeGen Converter
 unpackCArray length (TCArray False _ _ t) transfer =
   case t of
     TBasicType TUTF8 -> return $ apply $ M $ parenthesize $
@@ -433,10 +427,11 @@ unpackCArray length (TCArray False _ _ t) transfer =
            return $ do
              apply $ M $ parenthesize $ unpacker ++ " " ++ length
              mapC innerConstructor
-    _ -> error $ "unpackCArray : Don't know how to unpack C Array of type "
-                 ++ show t
+    _ -> notImplementedError $
+         "unpackCArray : Don't know how to unpack C Array of type " ++ show t
 
-unpackCArray _ _ _ = error $ "unpackCArray : unexpected array type."
+unpackCArray _ _ _ =
+    notImplementedError $ "unpackCArray : unexpected array type."
 
 -- Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
@@ -494,13 +489,9 @@ haskellType (TCArray False (-1) (-1) (TBasicType t)) =
     return $ ptr $ foreignBasicType t
 haskellType (TCArray _ _ _ (TBasicType TUInt8)) =
     return $ "ByteString" `con` []
-haskellType (TCArray _ _ _ (TBasicType b)) =
-    return $ "[]" `con` [haskellBasicType b]
-haskellType (TCArray _ _ _ a@(TInterface _ _)) = do
+haskellType (TCArray _ _ _ a) = do
   inner <- haskellType a
   return $ "[]" `con` [inner]
-haskellType (TCArray _ _ _ a) =
-    error $ "haskellType : Don't recognize CArray of type " ++ show a
 haskellType (TGArray a) = do
   inner <- haskellType a
   return $ "[]" `con` [inner]

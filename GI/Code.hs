@@ -1,8 +1,10 @@
-
 module GI.Code
     ( Code(..)
+    , BaseCodeGen
     , CodeGen
+    , ExcCodeGen
     , Config(..)
+    , CGError(..)
     , genCode
     , codeToString
     , codeToList
@@ -12,6 +14,10 @@ module GI.Code
     , injectAPIs
     , recurse
     , recurse'
+    , handleCGExc
+    , describeCGError
+    , notImplementedError
+    , badIntroError
     , indent
     , line
     , blank
@@ -23,6 +29,7 @@ module GI.Code
     ) where
 
 import Control.Monad.RWS
+import Control.Monad.Except
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
 import qualified Data.Foldable as F
 import qualified Data.Map as M
@@ -66,7 +73,62 @@ type Deps = Set.Set String
 data CodeGenState = CodeGenState {
       moduleDeps :: Deps,
       loadedAPIs :: M.Map Name API }
-type CodeGen = RWST Config Code CodeGenState IO
+
+data CGError = CGErrorNotImplemented String
+             | CGErrorBadIntrospectionInfo String
+               deriving (Show)
+
+type BaseCodeGen excType a =
+    RWST Config Code CodeGenState (ExceptT excType IO) a
+
+-- | The code generator monad, for generators that cannot throw
+-- errors. The fact that they cannot throw errors is encoded in the
+-- forall, which disallows any operation on the error, except
+-- discarding it or passing it along without inspecting. This last
+-- operation is useful in order to allow embedding `CodeGen`
+-- computations inside `ExcCodeGen` computations, while disallowing
+-- the opposite embedding without explicit error handling.
+type CodeGen a = forall e. BaseCodeGen e a
+
+-- | Code generators that can throw errors.
+type ExcCodeGen a = BaseCodeGen CGError a
+
+-- | Due to the `forall` in the definition of `CodeGen`, if we want to
+-- run the monad transformer stack until we get an `IO` action, our
+-- only option is ignoring the possible error code from
+-- `runExceptT`. This is perfectly safe, since there is no way to
+-- construct a computation in the `CodeGen` monad that throws an
+-- exception, due to the higher rank type.
+unwrapCodeGen :: Config -> CodeGenState -> CodeGen a ->
+                 IO (a, CodeGenState, Code)
+unwrapCodeGen cfg state cg =
+    runExceptT (runRWST cg cfg state) >>= \case
+               Left _ -> error "unwrapCodeGen:: The impossible happened!"
+               Right (r, s, c) -> return (r, s, c)
+
+-- | Run the given code generator, merging its resulting state into
+-- the ambient state, and turning its output into a value.
+recurse :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
+recurse cg = do
+  cfg <- config
+  oldState <- get
+  (liftIO $ runExceptT $ runRWST cg cfg oldState) >>= \case
+             Left e -> throwError e
+             Right (r, st, c) -> put (mergeState oldState st)
+                                 >> return (r, c)
+
+-- | Try running the given `action`, and if it fails run `fallback`
+-- instead.
+handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
+handleCGExc fallback action = do
+  cfg <- config
+  oldState <- get
+  (liftIO $ runExceptT $ runRWST action cfg oldState) >>= \case
+             Left e -> fallback e
+             Right (r, s, c) -> do
+                                put $ mergeState oldState s
+                                tell c
+                                return r
 
 emptyState :: CodeGenState
 emptyState = CodeGenState {moduleDeps = Set.empty, loadedAPIs = M.empty}
@@ -84,32 +146,24 @@ injectAPIs newAPIs = do
   put $ oldState {loadedAPIs =
                       M.union (loadedAPIs oldState) (M.fromList newAPIs)}
 
-mergeState :: CodeGenState -> CodeGen ()
-mergeState newState = do
-  oldState <- get
+-- | Merge two states of a code generator.
+mergeState :: CodeGenState -> CodeGenState -> CodeGenState
+mergeState oldState newState =
   -- If no dependencies were added we do not need to merge, this saves
   -- quite a bit of work.
-  when (Set.size (moduleDeps oldState) /= Set.size (moduleDeps newState)) $ do
-    let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
-        newAPIs = M.union (loadedAPIs oldState) (loadedAPIs newState)
-    put $ CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
-
-runCodeGen :: Config -> CodeGenState -> CodeGen a -> IO (a, CodeGenState, Code)
-runCodeGen cfg state f = runRWST f cfg state
+  if Set.size (moduleDeps oldState) /= Set.size (moduleDeps newState)
+  then let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
+           newAPIs = M.union (loadedAPIs oldState) (loadedAPIs newState)
+       in CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
+  else oldState
 
 genCode :: Config -> CodeGen () -> IO (Deps, Code)
-genCode cfg f = do
-  (_, st, code) <- runCodeGen cfg emptyState f
+genCode cfg cg = do
+  (_, st, code) <- unwrapCodeGen cfg emptyState cg
   return (moduleDeps st, code)
 
-recurse :: CodeGen a -> CodeGen (a, Code)
-recurse cg = do
-    cfg <- config
-    state <- get
-    (result, st, code) <- liftIO $ runCodeGen cfg state cg
-    mergeState st
-    return (result, code)
-
+-- | Like `recurse`, but for generators returning a unit value, where
+-- we can just drop the result.
 recurse' :: CodeGen () -> CodeGen Code
 recurse' cg = snd <$> recurse cg
 
@@ -123,6 +177,17 @@ loadDependency name = do
          let newDeps = Set.insert name deps
              newAPIs = M.union apis imported
          put $ CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
+
+-- | Give a friendly textual description of the error for presenting
+-- to the user.
+describeCGError :: CGError -> String
+describeCGError = show
+
+notImplementedError :: String -> ExcCodeGen a
+notImplementedError s = throwError $ CGErrorNotImplemented s
+
+badIntroError :: String -> ExcCodeGen a
+badIntroError s = throwError $ CGErrorBadIntrospectionInfo s
 
 findAPI :: Type -> CodeGen (Maybe API)
 findAPI TError = Just <$> findAPIByName (Name "GLib" "Error")
@@ -147,22 +212,29 @@ findAPIByName n@(Name ns _) = do
 line :: String -> CodeGen ()
 line = tell . Line
 
+blank :: CodeGen ()
 blank = line ""
 
 config :: CodeGen Config
 config = ask
 
-indent :: CodeGen a -> CodeGen a
+indent :: BaseCodeGen e a -> BaseCodeGen e a
 indent cg = do
   (x, code) <- recurse cg
   tell $ Indent code
   return x
 
-group :: CodeGen a -> CodeGen a
+group :: BaseCodeGen e a -> BaseCodeGen e a
 group cg = do
   (x, code) <- recurse cg
   tell $ Group code
   return x
+
+foreignImport :: BaseCodeGen e a -> BaseCodeGen e a
+foreignImport cg = do
+  (a, c) <- recurse cg
+  tell $ ForeignImport c
+  return a
 
 codeToString c = concatMap (++ "\n") $ str 0 c []
     where str _ NoCode cont = cont
@@ -180,9 +252,3 @@ codeToList c = list c []
     where list NoCode cont = cont
           list (Sequence s) cont = F.foldr (:) cont s
           list c cont = c : cont
-
-foreignImport :: CodeGen a -> CodeGen a
-foreignImport cg = do
-  (a, c) <- recurse cg
-  tell $ ForeignImport c
-  return a

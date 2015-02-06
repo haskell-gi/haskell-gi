@@ -116,9 +116,9 @@ genGenericAttrs options modules = do
   allAPIs <- (M.toList . M.unions . (map M.fromList)) <$> mapM loadAPI modules
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
-  (_, code) <- genCode (moduleConfig "Properties" options) $
-                                  genAllAttributes allAPIs modPrefix
-  writeFile (joinPath [dirPrefix,  "Properties.hs"]) $ codeToString code
+  (_, code) <- genCode (moduleConfig "Properties" options)
+               (genAllAttributes allAPIs modPrefix)
+  writeFile (joinPath [dirPrefix, "Properties.hs"]) $ codeToString code
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
@@ -132,12 +132,12 @@ processMod options name = do
   (modPrefix, dirPrefix) <- outputPath options
 
   putStrLn $ "\t* Generating " ++ modPrefix ++ nm
-  (deps, code) <- genCode cfg $ genModule name apis modPrefix
+  (deps, code) <- genCode cfg (genModule name apis modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
              codeToString code
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Attributes"
-  (attrDeps, attrCode) <- genCode cfg $ genAttributes name apis modPrefix
+  (attrDeps, attrCode) <- genCode cfg (genAttributes name apis modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
             codeToString attrCode
 
@@ -194,7 +194,7 @@ main = printGError $ do
 
 -- XXX We should read this from an external file, specified
 -- from the command line.
-ignore = ["atk_editable_text_set_run_attributes"
+ignore = [ "atk_editable_text_set_run_attributes"
          , "atk_text_get_run_attributes"
          , "atk_text_get_default_attributes"
          , "atk_object_get_attributes"
@@ -203,9 +203,6 @@ ignore = ["atk_editable_text_set_run_attributes"
          -- strings, but it is not marked as such in
          -- the bindings.
          , "g_file_info_set_attribute_stringv"
-         -- It returns an array of arrays of strings, we do not
-         -- support this yet.
-         , "g_desktop_app_info_search"
          -- The size of the array depends on the
          -- second argument in a nontrivial way.
          , "g_inet_address_new_from_bytes"
@@ -268,7 +265,10 @@ ignore = ["atk_editable_text_set_run_attributes"
          -- The size of the array depends on a
          -- complicated combination of the rest of
          -- the arguments.
-         , "gdk_pixbuf_new_from_data"]
+         , "gdk_pixbuf_new_from_data"
+         -- We do not generate wrappers for GtkTreeModelModifyFunc,
+         -- since it has fairly weird semantics.
+         , "gtk_tree_model_filter_set_modify_func"]
 
 -- List of structures for which we should not generate accesor
 -- functions.

@@ -144,7 +144,7 @@ classifyDuplicates args = doClassify Map.empty args
 -- various lists. Ideally we would encode this in the types, but the
 -- resulting API would be rather cumbersome. We insted perform runtime
 -- checks to make sure that the given lists have the same length.
-readInArrayLengths :: Name -> Callable -> [Arg] -> CodeGen ()
+readInArrayLengths :: Name -> Callable -> [Arg] -> ExcCodeGen ()
 readInArrayLengths name callable hInArgs = do
   let lengthMaps = classifyDuplicates $ arrayLengthsMap callable
   forM_ lengthMaps $ \(array, length, duplicate) ->
@@ -154,7 +154,7 @@ readInArrayLengths name callable hInArgs = do
         Just previous -> checkInArrayLength name array length previous
 
 -- Read the length of an array into the corresponding variable.
-readInArrayLength :: Arg -> Arg -> CodeGen ()
+readInArrayLength :: Arg -> Arg -> ExcCodeGen ()
 readInArrayLength array length = do
   let lvar = escapeReserved $ argName length
       avar = escapeReserved $ argName array
@@ -164,14 +164,15 @@ readInArrayLength array length = do
     indent $ indent $ do
          line $ "Nothing -> 0"
          let jarray = "j" ++ ucFirst avar
-         line $ "Just " ++ jarray ++ " -> " ++
-              computeArrayLength jarray (argType array)
-  else line $ "let " ++ lvar ++ " = " ++
-                     computeArrayLength avar (argType array)
+         al <- computeArrayLength jarray (argType array)
+         line $ "Just " ++ jarray ++ " -> " ++ al
+  else do
+    al <- computeArrayLength avar (argType array)
+    line $ "let " ++ lvar ++ " = " ++ al
 
 -- Check that the given array has a length equal to the given length
 -- variable.
-checkInArrayLength :: Name -> Arg -> Arg -> Arg -> CodeGen ()
+checkInArrayLength :: Name -> Arg -> Arg -> Arg -> ExcCodeGen ()
 checkInArrayLength n array length previous = do
   name <- lowerName n
   let funcName = namespace n ++ "." ++ name
@@ -185,10 +186,11 @@ checkInArrayLength n array length previous = do
     indent $ indent $ do
          line $ "Nothing -> 0"
          let jarray = "j" ++ ucFirst avar
-         line $ "Just " ++ jarray ++ " -> " ++
-              computeArrayLength jarray (argType array)
-  else line $ "let " ++ expectedLength ++ " = " ++
-                     computeArrayLength avar (argType array)
+         al <- computeArrayLength jarray (argType array)
+         line $ "Just " ++ jarray ++ " -> " ++ al
+  else do
+    al <- computeArrayLength avar (argType array)
+    line $ "let " ++ expectedLength ++ " = " ++ al
   line $ "when (" ++ expectedLength ++ " /= " ++ lvar ++ ") $"
   indent $ line $ "error \"" ++ funcName ++ " : length of '" ++ avar ++
                     "' does not agree with that of '" ++ pvar ++ "'.\""
@@ -207,10 +209,10 @@ skipRetVal callable throwsGError =
          (throwsGError && returnType callable == TBasicType TBoolean)
 
 freeInArgs' :: (Arg -> String -> String -> CodeGen [String]) ->
-               Callable -> Map.Map String String -> CodeGen [String]
+               Callable -> Map.Map String String -> ExcCodeGen [String]
 freeInArgs' freeFn callable nameMap = concat <$> actions
     where
-      actions :: CodeGen [[String]]
+      actions :: ExcCodeGen [[String]]
       actions = forM (args callable) $ \arg ->
         case Map.lookup (escapeReserved $ argName arg) nameMap of
           Just name -> freeFn arg name $
@@ -219,7 +221,7 @@ freeInArgs' freeFn callable nameMap = concat <$> actions
                          TCArray False (-1) length _ ->
                              escapeReserved $ argName $ (args callable)!!length
                          _ -> undefined
-          Nothing -> error $ "freeInArgs: do not understand " ++ show arg
+          Nothing -> badIntroError $ "freeInArgs: do not understand " ++ show arg
 
 -- Return the list of actions freeing the memory associated with the
 -- callable variables. This is run if the call to the C function
@@ -235,13 +237,13 @@ freeInArgsOnError = freeInArgs' freeInArgOnError
 -- Marshall the haskell arguments into their corresponding C
 -- equivalents. omitted gives a list of DirectionIn arguments that
 -- should be ignored, as they will be dealt with separately.
-prepareArgForCall :: [Arg] -> Arg -> CodeGen String
+prepareArgForCall :: [Arg] -> Arg -> ExcCodeGen String
 prepareArgForCall omitted arg = do
   isCallback <- findAPI (argType arg) >>=
                 \case Just (APICallback _) -> return True
                       _ -> return False
   when (isCallback && direction arg /= DirectionIn) $
-       error $ "Only callbacks with DirectionIn are supported!!"
+       notImplementedError "Only callbacks with DirectionIn are supported"
 
   case direction arg of
     DirectionIn -> if arg `elem` omitted
@@ -252,7 +254,7 @@ prepareArgForCall omitted arg = do
     DirectionInout -> prepareInoutArg arg
     DirectionOut -> prepareOutArg arg
 
-prepareInArg :: Arg -> CodeGen String
+prepareInArg :: Arg -> ExcCodeGen String
 prepareInArg arg = do
   let name = escapeReserved $ argName arg
   if wrapMaybe arg
@@ -283,7 +285,7 @@ prepareInCallback arg = do
                               prefix <- qualify ns
                               return $ (prefix ++ "mk" ++ n,
                                         prefix ++ lcFirst n ++ "Wrapper")
-                        _ -> error $ "Not an interface! " ++ ppShow arg
+                        _ -> error $ "prepareInCallback : Not an interface! " ++ ppShow arg
 
   fC <- tyConName <$> typeRepTyCon <$> foreignType (argType arg)
 
@@ -319,7 +321,7 @@ prepareInCallback arg = do
          line $ "poke " ++ ptrName ++ " " ++ name'
     return name'
 
-prepareInoutArg :: Arg -> CodeGen String
+prepareInoutArg :: Arg -> ExcCodeGen String
 prepareInoutArg arg = do
   let name = escapeReserved $ argName arg
   ft <- foreignType $ argType arg
@@ -361,7 +363,7 @@ prepareOutArg arg = do
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
 convertOutCArray :: Callable -> Type -> String -> Map.Map String String ->
-                    Transfer -> CodeGen String
+                    Transfer -> ExcCodeGen String
 convertOutCArray callable t@(TCArray False fixed length _) aname
                  nameMap transfer = do
   if fixed > -1
@@ -375,13 +377,14 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
     return unpacked
   else do
     when (length == -1) $
-         error $ "Unknown length for \"" ++ aname ++ "\", aborting."
+         badIntroError $ "Unknown length for \"" ++ aname ++ "\""
     let lname = escapeReserved $ argName $ (args callable)!!length
-        lname' = case Map.lookup lname nameMap of
-                   Just n -> n
-                   Nothing -> error $ "Couldn't find out array length " ++
-                                               lname
-        lname'' = prime lname'
+    lname' <- case Map.lookup lname nameMap of
+                Just n -> return n
+                Nothing ->
+                    badIntroError $ "Couldn't find out array length " ++
+                                            lname
+    let lname'' = prime lname'
     unpacked <- convert aname $ unpackCArray lname'' t transfer
     -- Free the memory associated with the array
     when (transfer == TransferEverything) $
@@ -395,15 +398,16 @@ convertOutCArray _ t _ _ _ =
     error $ "convertOutCArray : unexpected " ++ show t
 
 -- Read the array lengths for out arguments.
-readOutArrayLengths :: Callable -> Map.Map String String -> CodeGen ()
+readOutArrayLengths :: Callable -> Map.Map String String -> ExcCodeGen ()
 readOutArrayLengths callable nameMap = do
   let lNames = nub $ map (escapeReserved . argName) $
                filter ((/= DirectionIn) . direction) $
                arrayLengths callable
   forM_ lNames $ \lname -> do
-    let lname' = case Map.lookup lname nameMap of
-                   Just n -> n
-                   Nothing -> error $ "Couldn't find out array length " ++
+    lname' <- case Map.lookup lname nameMap of
+                   Just n -> return n
+                   Nothing ->
+                       badIntroError $ "Couldn't find out array length " ++
                                                lname
     genConversion lname' $ apply $ M "peek"
 
@@ -427,7 +431,7 @@ touchInArg arg = when (direction arg /= DirectionOut) $ do
 
 -- Find the association between closure arguments and their
 -- corresponding callback.
-closureToCallbackMap :: Callable -> Map.Map Int Arg
+closureToCallbackMap :: Callable -> ExcCodeGen (Map.Map Int Arg)
 closureToCallbackMap callable =
     -- The introspection info does not specify the closure for destroy
     -- notify's associated with a callback, since it is implicitly the
@@ -438,28 +442,25 @@ closureToCallbackMap callable =
     where destroyers = map (args callable!!) . filter (/= -1) . map argDestroy
                        $ args callable
 
-          go :: [Arg] -> Map.Map Int Arg -> Map.Map Int Arg
-          go [] m = m
+          go :: [Arg] -> Map.Map Int Arg -> ExcCodeGen (Map.Map Int Arg)
+          go [] m = return m
           go (arg:as) m =
               if argScope arg == ScopeTypeInvalid
               then go as m
-              else let closure = case argClosure arg of
-                                   (-1) -> error $ "Callback without closure! "
-                                           ++ ppShow arg ++ "\n"
-                                           ++ ppShow callable
-                                   c -> c
-                   in case Map.lookup closure m of
-                        Just _ ->
-                            error $ "Closure for multiple callbacks unsupported"
-                                      ++ ppShow arg ++ "\n"
-                                      ++ ppShow callable
-                        Nothing -> go as $ Map.insert closure arg m
+              else case argClosure arg of
+                     (-1) -> go as m
+                     c -> case Map.lookup c m of
+                            Just _ ->
+                                notImplementedError $ "Closure for multiple callbacks unsupported"
+                                                        ++ ppShow arg ++ "\n"
+                                                        ++ ppShow callable
+                            Nothing -> go as $ Map.insert c arg m
 
 -- user_data style arguments.
-prepareClosures :: Callable -> Map.Map String String -> CodeGen ()
+prepareClosures :: Callable -> Map.Map String String -> ExcCodeGen ()
 prepareClosures callable nameMap = do
-  let m = closureToCallbackMap callable
-      closures = filter (/= -1) . map argClosure $ args callable
+  m <- closureToCallbackMap callable
+  let closures = filter (/= -1) . map argClosure $ args callable
   forM_ closures $ \closure ->
       case Map.lookup closure m of
         Nothing -> error $ "Closure not found! "
@@ -469,19 +470,20 @@ prepareClosures callable nameMap = do
         Just cb -> do
           let closureName = escapeReserved $ argName $ (args callable)!!closure
               n = escapeReserved $ argName cb
-              n' = case Map.lookup n nameMap of
-                     Just n -> n
-                     Nothing -> error $ "Cannot find closure name!! "
-                                ++ ppShow callable ++ "\n"
-                                ++ ppShow nameMap
+          n' <- case Map.lookup n nameMap of
+                  Just n -> return n
+                  Nothing -> badIntroError $ "Cannot find closure name!! "
+                                           ++ ppShow callable ++ "\n"
+                                           ++ ppShow nameMap
           case argScope cb of
-            ScopeTypeInvalid -> error $ "Invalid scope! "
+            ScopeTypeInvalid -> badIntroError $ "Invalid scope! "
                                 ++ ppShow callable
             ScopeTypeNotified -> do
                 line $ "let " ++ closureName ++ " = castFunPtrToPtr " ++ n'
                 case argDestroy cb of
-                  (-1) -> error $ "ScopeTypeNotified without destructor! "
-                          ++ ppShow callable
+                  (-1) -> badIntroError $
+                          "ScopeTypeNotified without destructor! "
+                           ++ ppShow callable
                   k -> let destroyName =
                             escapeReserved . argName $ (args callable)!!k in
                        line $ "let " ++ destroyName ++ " = safeFreeFunPtrPtr"
@@ -489,14 +491,14 @@ prepareClosures callable nameMap = do
                 line $ "let " ++ closureName ++ " = nullPtr"
             ScopeTypeCall -> line $ "let " ++ closureName ++ " = nullPtr"
 
-freeCallCallbacks :: Callable -> Map.Map String String -> CodeGen ()
+freeCallCallbacks :: Callable -> Map.Map String String -> ExcCodeGen ()
 freeCallCallbacks callable nameMap =
     forM_ (args callable) $ \arg -> do
        let name = escapeReserved $ argName arg
-           name' = case Map.lookup name nameMap of
-                     Just n -> n
-                     Nothing -> error $ "Could not find " ++ name ++ " in "
-                                ++ ppShow callable ++ "\n"
+       name' <- case Map.lookup name nameMap of
+                  Just n -> return n
+                  Nothing -> badIntroError $ "Could not find " ++ name
+                                ++ " in " ++ ppShow callable ++ "\n"
                                 ++ ppShow nameMap
        when (argScope arg == ScopeTypeCall) $
             line $ "safeFreeFunPtr $ castFunPtrToPtr " ++ name'
@@ -511,7 +513,7 @@ hSignature hInArgs retType = do
            line $ withComment (t ++ " ->") $ argName a
       line $ show $ io $ retType
 
-genCallable :: Name -> String -> Callable -> Bool -> CodeGen ()
+genCallable :: Name -> String -> Callable -> Bool -> ExcCodeGen ()
 genCallable n symbol callable throwsGError = do
   group $ do
     line $ "-- Args : " ++ (show $ args callable)
@@ -598,7 +600,7 @@ genCallable n symbol callable throwsGError = do
     line $ returnBind ++ maybeCatchGErrors
                  ++ symbol ++ concatMap (" " ++) argNames
 
-  convertResult :: Map.Map String String -> CodeGen String
+  convertResult :: Map.Map String String -> ExcCodeGen String
   convertResult nameMap =
       if ignoreReturn || returnType callable == TBasicType TVoid
       then return undefined
@@ -628,15 +630,15 @@ genCallable n symbol callable throwsGError = do
                     mapM_ line =<< freeContainer t rname
                return result
 
-  convertOut :: Map.Map String String -> CodeGen [String]
+  convertOut :: Map.Map String String -> ExcCodeGen [String]
   convertOut nameMap = do
     -- Convert out parameters and result
     forM hOutArgs $ \arg -> do
        let name = escapeReserved $ argName arg
-           inName = case Map.lookup name nameMap of
-                      Just name' -> name'
-                      Nothing -> error $ "Parameter " ++
-                                    name ++ " not found!"
+       inName <- case Map.lookup name nameMap of
+                   Just name' -> return name'
+                   Nothing -> badIntroError $ "Parameter " ++
+                                              name ++ " not found!"
        case argType arg of
          t@(TCArray False _ _ _) ->
              do aname' <- genConversion inName $ apply $ M "peek"

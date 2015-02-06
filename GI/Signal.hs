@@ -83,7 +83,7 @@ genClosure callback closure isSignal =
 
 -- Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.
-convertNullable :: String -> CodeGen String -> CodeGen String
+convertNullable :: String -> BaseCodeGen e String -> BaseCodeGen e String
 convertNullable aname c = do
   line $ "maybe" ++ ucFirst aname ++ " <-"
   indent $ do
@@ -97,7 +97,7 @@ convertNullable aname c = do
 
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
-convertCallbackInCArray :: Callable -> Arg -> Type -> String -> CodeGen String
+convertCallbackInCArray :: Callable -> Arg -> Type -> String -> ExcCodeGen String
 convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname = do
   if length > -1 then do
           if wrapMaybe arg
@@ -110,7 +110,7 @@ convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname = do
   where
     lname = escapeReserved $ argName $ (args callable)!!length
 
-    convertAndFree :: CodeGen String
+    convertAndFree :: ExcCodeGen String
     convertAndFree = do
       unpacked <- convert aname $ unpackCArray lname t (transfer arg)
       -- Free the memory associated with the array
@@ -125,14 +125,14 @@ convertCallbackInCArray _ t _ _ =
     error $ "convertOutCArray : unexpected " ++ show t
 
 -- Prepare an argument for passing into the Haskell side.
-prepareArgForCall :: Callable -> Arg -> CodeGen String
+prepareArgForCall :: Callable -> Arg -> ExcCodeGen String
 prepareArgForCall cb arg = do
   case direction arg of
     DirectionIn -> prepareInArg cb arg
     DirectionInout -> prepareInoutArg arg
     DirectionOut -> error "Unexpected DirectionOut!"
 
-prepareInArg :: Callable -> Arg -> CodeGen String
+prepareInArg :: Callable -> Arg -> ExcCodeGen String
 prepareInArg cb arg = do
   let name = (escapeReserved . argName) arg
   case argType arg of
@@ -143,19 +143,18 @@ prepareInArg cb arg = do
       then convertNullable name c
       else c
 
-prepareInoutArg :: Arg -> CodeGen String
+prepareInoutArg :: Arg -> ExcCodeGen String
 prepareInoutArg arg = do
   let name = (escapeReserved . argName) arg
   name' <- genConversion name $ apply $ M "peek"
   convert name' $ fToH (argType arg) (transfer arg)
 
-saveOutArg :: Arg -> CodeGen ()
+saveOutArg :: Arg -> ExcCodeGen ()
 saveOutArg arg = do
   let name = (escapeReserved . argName) arg
       name' = "out" ++ name
   when (transfer arg /= TransferEverything) $
-       line $ "-- XXX Unexpected transfer type for \"" ++ name
-                ++ "\". Leak?"
+       notImplementedError $ "Unexpected transfer type for \"" ++ name ++ "\""
   name'' <- convert name' $ hToF (argType arg) TransferEverything
   line $ "poke " ++ name ++ " " ++ name''
 
@@ -166,7 +165,7 @@ saveOutArg arg = do
 -- callback for ScopeTypeCall, or a destroy notifier for
 -- ScopeTypeNotified).
 genCallbackWrapper :: Callable -> String -> [Arg] -> [Arg] -> [Arg] ->
-                      Bool -> CodeGen ()
+                      Bool -> ExcCodeGen ()
 genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
   let cName arg = if arg `elem` dataptrs
                   then "_"
@@ -239,22 +238,27 @@ genCallback n (Callback cb) = do
       outArgs = filter ((/= DirectionIn) . direction) $ args cb
       hOutArgs = filter (not . (`elem` hidden)) outArgs
 
-  when (skipReturn cb) $
-       error $ "Callbacks skipping return unsupported :\n"
-                 ++ ppShow n ++ "\n" ++ ppShow cb
+  if (skipReturn cb)
+  then group $ do
+    line $ "-- XXX Skipping callback " ++ name'
+    line $ "-- Callbacks skipping return unsupported :\n"
+             ++ ppShow n ++ "\n" ++ ppShow cb
+  else do
+    genHaskellCallbackPrototype cb name' hInArgs hOutArgs
 
-  genHaskellCallbackPrototype cb name' hInArgs hOutArgs
+    genCCallbackPrototype cb name' False
 
-  genCCallbackPrototype cb name' False
+    genCallbackWrapperFactory name'
 
-  genCallbackWrapperFactory name'
+    let closure = lcFirst name' ++ "Closure"
 
-  let closure = lcFirst name' ++ "Closure"
-  genClosure name' closure False
+    handleCGExc (\e -> line ("-- XXX Could not generate callback wrapper for "
+                             ++ name' ++
+                             "\n-- Error was : " ++ describeCGError e))
+                 (genClosure name' closure False >>
+                  genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False)
 
-  genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False
-
-genSignal :: Signal -> Name -> CodeGen ()
+genSignal :: Signal -> Name -> ExcCodeGen ()
 genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   on' <- upperName on
   let (w:ws) = split '-' sn

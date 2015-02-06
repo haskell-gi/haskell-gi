@@ -67,25 +67,34 @@ extractCallbacksInStruct (n@(Name ns structName), APIStruct s)
                     return (Name ns n', APICallback callback)
 extractCallbacksInStruct _ = []
 
-genStructFields :: Name -> Struct -> CodeGen ()
-genStructFields n@(Name ns _) s = do
+buildFieldGetter :: Name -> Field -> ExcCodeGen ()
+buildFieldGetter n@(Name ns _) field = do
   name' <- upperName n
 
-  forM_ (structFields s) $ \field -> group $ do
-     hType <- show <$> haskellType (fieldType field)
-     fType <- show <$> foreignType (fieldType field)
-     when (not $ "Private" `isSuffixOf` hType) $ do
-        fName <- upperName $ Name ns (fieldName field)
-        let getter = lcFirst name' ++ "Read" ++ fName
-        line $ getter ++ " :: " ++ name' ++ " -> IO " ++
-                    if ' ' `elem` hType
-                    then parenthesize hType
-                    else hType
-        line $ getter ++ " s = withManagedPtr s $ \\ptr -> do"
-        indent $ do
-          line $ "val <- peek (ptr `plusPtr` " ++ show (fieldOffset field)
-               ++ ") :: IO " ++ if ' ' `elem` fType
-                               then parenthesize fType
-                               else fType
-          result <- convert "val" $ fToH (fieldType field) TransferNothing
-          line $ "return " ++ result
+  hType <- show <$> haskellType (fieldType field)
+  fType <- show <$> foreignType (fieldType field)
+  when (not $ "Private" `isSuffixOf` hType) $ do
+     fName <- upperName $ Name ns (fieldName field)
+     let getter = lcFirst name' ++ "Read" ++ fName
+     line $ getter ++ " :: " ++ name' ++ " -> IO " ++
+                 if ' ' `elem` hType
+                 then parenthesize hType
+                 else hType
+     line $ getter ++ " s = withManagedPtr s $ \\ptr -> do"
+     indent $ do
+       line $ "val <- peek (ptr `plusPtr` " ++ show (fieldOffset field)
+            ++ ") :: IO " ++ if ' ' `elem` fType
+                            then parenthesize fType
+                            else fType
+       result <- convert "val" $ fToH (fieldType field) TransferNothing
+       line $ "return " ++ result
+
+genStructFields :: Name -> Struct -> CodeGen ()
+genStructFields n s = do
+  name' <- upperName n
+
+  forM_ (structFields s) $ \field -> group $
+      handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
+                               ":" ++ fieldName field ++ "\" :: " ++
+                               describeCGError e))
+                  (buildFieldGetter n field)

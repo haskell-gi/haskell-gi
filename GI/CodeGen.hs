@@ -1,7 +1,6 @@
 module GI.CodeGen
     ( genConstant
     , genFunction
-    , genCode
     , genPrelude
     , genModule
     ) where
@@ -61,7 +60,9 @@ genConstant n@(Name _ name) (Constant value) = do
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable flags) = do
   line $ "-- function " ++ symbol
-  genCallable n symbol callable (FunctionThrows `elem` flags)
+  handleCGExc (\e -> line ("-- XXX Could not generate function " ++ symbol
+                           ++ "\n-- Error was : " ++ describeCGError e))
+              (genCallable n symbol callable (FunctionThrows `elem` flags))
 
 genBoxedObject :: Name -> String -> CodeGen ()
 genBoxedObject n typeInit = do
@@ -156,11 +157,11 @@ genErrorDomain name' domain = do
     line $ handler ++ " = handleGErrorJustDomain"
 
 genStruct :: Name -> Struct -> CodeGen ()
-genStruct n@(Name _ name) s = when (not $ ignoreStruct n s) $ do
+genStruct n s = when (not $ ignoreStruct n s) $ do
       cfg <- config
 
-      line $ "-- struct " ++ name
       name' <- upperName n
+      line $ "-- struct " ++ name'
 
       line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
@@ -180,8 +181,13 @@ genStruct n@(Name _ name) s = when (not $ ignoreStruct n s) $ do
       forM_ (structMethods s) $ \(mn, f) ->
           do isFunction <- symbolFromFunction (fnSymbol f)
              when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
-                  genMethod n mn f
+                  handleCGExc
+                  (\e -> line ("-- XXX Could not generate method " ++ name mn
+                               ++ " for struct " ++ name' ++ "\n"
+                               ++ "-- Error was : " ++ describeCGError e))
+                  (genMethod n mn f)
 
+genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
   name' <- upperName n
   cfg <- config
@@ -204,7 +210,11 @@ genUnion n u = do
   forM_ (unionMethods u) $ \(mn, f) ->
       do isFunction <- symbolFromFunction (fnSymbol f)
          when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
-              genMethod n mn f
+              handleCGExc
+              (\e -> line ("-- XXX Could not generate method " ++ name mn
+                           ++ " for union " ++ name' ++ "\n"
+                           ++ "-- Error was : " ++ describeCGError e))
+              (genMethod n mn f)
 
 -- Add the implicit object argument to methods of an object.  Since we
 -- are prepending an argument we need to adjust the offset of the
@@ -258,7 +268,7 @@ fixConstructorReturnType returnsGObject cn c = c { returnType = returnType' }
                     else
                         returnType c
 
-genMethod :: Name -> Name -> Function -> CodeGen ()
+genMethod :: Name -> Name -> Function -> ExcCodeGen ()
 genMethod cn mn (Function {
                     fnSymbol = sym,
                     fnCallable = c,
@@ -358,6 +368,7 @@ manageUnManagedPtr n = do
                      " x) -> castPtr $ unsafeForeignPtrToPtr x)"
             line $ "touchManagedPtr      _ = return ()"
 
+genObject :: Name -> Object -> CodeGen ()
 genObject n o = do
   cfg <- config
 
@@ -396,11 +407,21 @@ genObject n o = do
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
     when (not $ fnSymbol f `elem` ignoredMethods cfg) $
-         genMethod n mn f
+         handleCGExc
+         (\e -> line ("-- XXX Could not generate method " ++ name mn
+                      ++ " for object " ++ name' ++ "\n"
+                      ++ "-- Error was : " ++ describeCGError e))
+         (genMethod n mn f)
 
   -- And finally signals
-  forM_ (objSignals o) $ \s -> genSignal s n
+  forM_ (objSignals o) $ \s ->
+      handleCGExc
+      (\e -> line ("-- XXX Could not generate signal " ++ sigName s
+                   ++ " for object " ++ name' ++ "\n"
+                   ++ "-- Error was : " ++ describeCGError e))
+      (genSignal s n)
 
+genInterface :: Name -> Interface -> CodeGen ()
 genInterface n iface = do
   -- For each interface, we generate a class IFoo and a data structure
   -- Foo. We only really need a separate Foo so that we can return
@@ -463,10 +484,19 @@ genInterface n iface = do
   forM_ (ifMethods iface) $ \(mn, f) -> do
     isFunction <- symbolFromFunction (fnSymbol f)
     when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
-       genMethod n mn f
+         handleCGExc
+         (\e -> line ("-- XXX Could not generate method " ++ name mn
+                      ++ " for interface " ++ name' ++ "\n"
+                      ++ "-- Error was : " ++ describeCGError e))
+         (genMethod n mn f)
 
   -- And finally signals
-  forM_ (ifSignals iface) $ \s -> genSignal s n
+  forM_ (ifSignals iface) $ \s ->
+      handleCGExc
+      (\e -> line ("-- XXX Could not generate signal " ++ sigName s
+                   ++ " for interface " ++ name' ++ "\n"
+                   ++ "-- Error was : " ++ describeCGError e))
+      (genSignal s n)
 
 -- Some type libraries include spurious interface/struct methods,
 -- where a method Mod.Foo::func also appears as an ordinary function
