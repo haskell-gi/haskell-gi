@@ -368,8 +368,13 @@ manageUnManagedPtr n = do
                      " x) -> castPtr $ unsafeForeignPtrToPtr x)"
             line $ "touchManagedPtr      _ = return ()"
 
+-- Wrap a given Object. We enforce that every Object that we wrap is a
+-- GObject. This is the case for everything expect the ParamSpec* set
+-- of objects, we deal with these separately. Notice that in the case
+-- that a non-GObject Object is passed, it is simply ignored silently
+-- by the handler in handleCGExc below.
 genObject :: Name -> Object -> CodeGen ()
-genObject n o = do
+genObject n o = handleCGExc (\_ -> return ()) $ do
   cfg <- config
 
   name' <- upperName n
@@ -378,20 +383,16 @@ genObject n o = do
 
   let t = (\(Name ns' n') -> TInterface ns' n') n
   isGO <- isGObject t
-
-  when (not isGO) $ line $ "-- XXX APIObject \"" ++ name' ++
-           "\" does not descend from GObject."
+  when (not isGO) $ notImplementedError $ "APIObject \"" ++ name' ++
+           "\" does not descend from GObject, it will be ignored."
 
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
   noName name'
 
   -- Instances and type conversions
-  if isGO
-  then do
-    iT <- instanceTree n
-    genGObjectType iT n
-  else manageUnManagedPtr n
+  iT <- instanceTree n
+  genGObjectType iT n
 
   -- Implemented interfaces
   let oIfs = objInterfaces o
@@ -402,7 +403,7 @@ genObject n o = do
 
   -- Type safe casting
   isIU <- isInitiallyUnowned t
-  when isGO $ genGObjectCasts isIU n o
+  genGObjectCasts isIU n o
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do

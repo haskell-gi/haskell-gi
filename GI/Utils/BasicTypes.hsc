@@ -17,6 +17,7 @@ module GI.Utils.BasicTypes
     , BoxedObject(..)
     , GObject(..)
     , GVariant(..)
+    , GParamSpec(..)
 
     , IsGFlag
 
@@ -93,6 +94,12 @@ data GVariant = GVariant (ForeignPtr GVariant)
 instance ManagedPtr GVariant where
     unsafeManagedPtrGetPtr = (\(GVariant x) -> castPtr $ unsafeForeignPtrToPtr x)
     touchManagedPtr        = (\(GVariant x) -> touchForeignPtr x)
+
+data GParamSpec = GParamSpec (ForeignPtr GParamSpec)
+
+instance ManagedPtr GParamSpec where
+    unsafeManagedPtrGetPtr = (\(GParamSpec x) -> castPtr $ unsafeForeignPtrToPtr x)
+    touchManagedPtr        = (\(GParamSpec x) -> touchForeignPtr x)
 
 class Enum a => IsGFlag a
 

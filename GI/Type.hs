@@ -50,6 +50,7 @@ data Type
     | TGHash Type Type
     | TError
     | TVariant
+    | TParamSpec
     deriving (Eq, Show, Ord)
 
 basicTypeFromTypeTag TypeTagVoid = Just TVoid
@@ -89,6 +90,7 @@ typeFromTypeInfo ti =
                let bi = baseInfo . typeInfoInterface $ ti
                in case (baseInfoNamespace bi, baseInfoName bi) of
                     ("GLib", "Variant") -> TVariant
+                    ("GObject", "ParamSpec") -> TParamSpec
                     (ns, n) -> TInterface ns n
            TypeTagGlist -> TGList p1
            TypeTagGslist -> TGSList p1

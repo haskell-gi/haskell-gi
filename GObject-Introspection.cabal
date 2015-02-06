@@ -83,6 +83,7 @@ Library
       GI.Utils.GValue,
       GI.Utils.GVariant,
       GI.Utils.ManagedPtr,
+      GI.Utils.GParamSpec,
       GI.Utils.Properties,
       GI.Utils.ShortPrelude,
       GI.Utils.Signals,

@@ -15,6 +15,6 @@ This version adds support for:
 * Proper ownership transfer of function arguments.
 * Support for GObject properties using the gtk2hs notation.
 * Callback and GClosure arguments.
-* Native support for GVariant types.
+* Native support for GVariant, GValue and GParamSpec types.
 
 See `test/testGtk.hs` for a working usage example.

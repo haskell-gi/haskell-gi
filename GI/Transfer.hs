@@ -37,6 +37,7 @@ basicFreeFn (TGSList _) = Just "g_slist_free"
 basicFreeFn (TGHash _ _) = Nothing
 basicFreeFn (TError) = Nothing
 basicFreeFn (TVariant) = Nothing
+basicFreeFn (TParamSpec) = Nothing
 
 -- Basic free primitives in the case that an error occured. This is
 -- run in the exception handler, so any type which we ref/allocate
@@ -49,6 +50,10 @@ basicFreeFnOnError (TBasicType _) _ = return Nothing
 basicFreeFnOnError TVariant transfer =
     return $ if transfer == TransferEverything
              then Just "unrefGVariant"
+             else Nothing
+basicFreeFnOnError TParamSpec transfer =
+    return $ if transfer == TransferEverything
+             then Just "unrefGParamSpec"
              else Nothing
 basicFreeFnOnError t@(TInterface _ _) transfer = do
   api <- findAPI t

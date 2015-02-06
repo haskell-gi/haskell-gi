@@ -29,6 +29,7 @@ propTypeStr t = case t of
    TByteArray -> return "ByteArray"
    TGHash _ _ -> return "Hash"
    TVariant -> return "Variant"
+   TParamSpec -> return "ParamSpec"
    TBasicType TInt32 -> do
      -- This should work for all systems in common use, but rather
      -- than leaving the assumption implicit better double checking.

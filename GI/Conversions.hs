@@ -128,6 +128,12 @@ hVariantToF transfer = do
   then return $ M "refGVariant"
   else return "unsafeManagedPtrGetPtr"
 
+hParamSpecToF :: Transfer -> CodeGen Constructor
+hParamSpecToF transfer = do
+  if transfer == TransferEverything
+  then return $ M "refGParamSpec"
+  else return "unsafeManagedPtrGetPtr"
+
 hBoxedToF :: Transfer -> CodeGen Constructor
 hBoxedToF transfer = do
   if transfer == TransferEverything
@@ -158,14 +164,15 @@ hToF' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
             -> ExcCodeGen Constructor
 hToF' t a hType fType transfer
     | ( hType == fType ) = return Id
+    | TError <- t = hBoxedToF transfer
+    | TVariant <- t = hVariantToF transfer
+    | TParamSpec <- t = hParamSpecToF transfer
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
     | Just (APIFlags _) <- a = return "gflagsToWord"
     | Just (APIObject _) <- a = hObjectToF t transfer
     | Just (APIInterface _) <- a = hObjectToF t transfer
     | Just (APIStruct s) <- a = hStructToF s transfer
     | Just (APIUnion u) <- a = hUnionToF u transfer
-    | TError <- t = hBoxedToF transfer
-    | TVariant <- t = hVariantToF transfer
     -- Converting callback types requires more context, we leave that
     -- as a special case to be implemented by the caller.
     | Just (APICallback _) <- a = error "Cannot handle callback type here!! "
@@ -291,17 +298,11 @@ fObjectToH t hType transfer = do
     TransferEverything ->
         if isGO
         then return $ M $ parenthesize $ "wrapObject " ++ constructor
-        else do
-          line $ "-- XXX (Leak) Got a transfer of something not a GObject"
-          return $ M $ parenthesize $
-                "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+        else badIntroError $ "Got a transfer of something not a GObject"
     _ ->
         if isGO
         then return $ M $ parenthesize $ "newObject " ++ constructor
-        else do
-           line $ "-- XXX Wrapping not a GObject with no copy..."
-           return $ M $ parenthesize $
-                      "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+        else badIntroError $ "Wrapping not a GObject with no copy..."
 
 fCallbackToH :: Callback -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fCallbackToH _ _ _ =
@@ -313,6 +314,12 @@ fVariantToH transfer =
                   TransferEverything -> "wrapGVariantPtr"
                   _ -> "newGVariantFromPtr"
 
+fParamSpecToH :: Transfer -> CodeGen Constructor
+fParamSpecToH transfer =
+  return $ M $ case transfer of
+                  TransferEverything -> "wrapGParamSpecPtr"
+                  _ -> "newGParamSpecFromPtr"
+
 fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
          -> ExcCodeGen Constructor
 fToH' t a hType fType transfer
@@ -321,6 +328,7 @@ fToH' t a hType fType transfer
     | Just (APIFlags _) <- a = return "wordToGFlags"
     | TError <- t = boxedForeignPtr "GI.GLib.Error" transfer
     | TVariant <- t = fVariantToH transfer
+    | TParamSpec <- t = fParamSpecToH transfer
     | Just (APIStruct s) <- a = structForeignPtr s hType transfer
     | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
     | Just (APIObject _) <- a = fObjectToH t hType transfer
@@ -511,6 +519,7 @@ haskellType (TGHash a b) = do
   return $ "GHashTable" `con` [innerA, innerB]
 haskellType TError = return $ "Error" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
+haskellType TParamSpec = return $ "GParamSpec" `con` []
 haskellType (TInterface "GObject" "Value") = return $ "GValue" `con` []
 haskellType (TInterface "GObject" "Closure") = return $ "Closure" `con` []
 haskellType t@(TInterface ns n) = do
@@ -560,6 +569,7 @@ foreignType (TGSList a) = do
 foreignType t@(TGHash _ _) = ptr <$> haskellType t
 foreignType t@TError = ptr <$> haskellType t
 foreignType t@TVariant = ptr <$> haskellType t
+foreignType t@TParamSpec = ptr <$> haskellType t
 foreignType (TInterface "GObject" "Value") = return $ ptr $ "GValue" `con` []
 foreignType (TInterface "GObject" "Closure") =
     return $ ptr $ "Closure" `con` []
