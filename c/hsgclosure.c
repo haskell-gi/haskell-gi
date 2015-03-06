@@ -13,13 +13,6 @@ int check_object_type(void *instance, GType type)
 
   if (instance != NULL) {
      result = !!G_TYPE_CHECK_INSTANCE_TYPE(instance, type);
-
-     if (result == 0) {
-       GType instance_type = G_TYPE_FROM_INSTANCE (instance);
-       fprintf(stderr, "Check failed: %s is not a %s\n",
-	       g_type_name (instance_type),
-	       g_type_name (type));
-     }
   } else {
     result = 0;
     fprintf(stderr, "Check failed: got a null pointer\n");

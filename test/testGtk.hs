@@ -150,7 +150,9 @@ testPolymorphicLenses parent message = do
 -}
   -- set message [ _buttons := ButtonsTypeOk ]
 
-  _ <- get messageBox _messageArea >>= castToBox
+  get messageBox _messageArea >>= castTo Box >>= \case
+    Just _ -> return ()
+    Nothing -> error "Could not convert message area to Box"
 
   -- Should fail to compile, with
 {-
@@ -314,6 +316,19 @@ testGVariant = do
        roundtrip dict
   putStrLn "+++ GVariant test done"
 
+testCast :: IO ()
+testCast =  do
+  putStrLn "*** castTo test"
+  label <- new Label []
+  castTo Widget label >>= \case
+    Just w -> castTo Button w >>= \case
+      Just _ -> error "Converted Label to Button successfully, this is an error!"
+      Nothing -> castTo Label w >>= \case
+        Just _ -> return ()
+        Nothing -> error "Could not upcast back to a Label!"
+    Nothing -> error "Downcast to Widget failed!"
+  putStrLn "+++ castTo test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -388,6 +403,7 @@ main = do
         testForeach grid
         testInitiallyOwned
         testGVariant
+        testCast
 
 	widgetShowAll win
 

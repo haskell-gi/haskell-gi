@@ -45,13 +45,13 @@ foreign import ccall unsafe "check_object_type"
     c_check_object_type :: Ptr o -> GType -> CInt
 
 castTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
-          (ForeignPtr o' -> o') -> String -> o -> IO o'
-castTo constructor typeName obj =
+          (ForeignPtr o' -> o') -> o -> IO (Maybe o')
+castTo constructor obj =
     withManagedPtr obj $ \objPtr -> do
       t <- gobjectType (undefined :: o')
-      when (c_check_object_type objPtr t /= 1) $
-         error $ "Cannot cast object to " ++ typeName
-      newObject constructor objPtr
+      if c_check_object_type objPtr t /= 1
+        then return Nothing
+        else Just <$> newObject constructor objPtr
 
 -- Reference counting for constructors
 foreign import ccall "&dbg_g_object_unref"

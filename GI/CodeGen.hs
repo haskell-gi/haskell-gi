@@ -338,13 +338,6 @@ genGObjectCasts isIU n o = do
             line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
             line $ "gobjectType _ = c_" ++ cn_
 
-  group $ do
-    line $ "castTo" ++ name' ++ " :: " ++
-           "(ManagedPtr o, GObject o) => " ++
-           "o -> IO " ++ name'
-    line $ "castTo" ++ name' ++ " = castTo " ++ name' ++
-           " \"" ++ name' ++ "\""
-
 -- ManagedPtr implementation, for types with real memory management.
 manageManagedPtr n = do
   name' <- upperName n
