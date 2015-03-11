@@ -57,6 +57,7 @@ Executable haskell-gi
       GI.Attributes,
       GI.Callable,
       GI.Code,
+      GI.Config,
       GI.Conversions,
       GI.GObject,
       GI.GType,

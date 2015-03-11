@@ -463,7 +463,7 @@ prepareClosures callable nameMap = do
   let closures = filter (/= -1) . map argClosure $ args callable
   forM_ closures $ \closure ->
       case Map.lookup closure m of
-        Nothing -> error $ "Closure not found! "
+        Nothing -> badIntroError $ "Closure not found! "
                                 ++ ppShow callable
                                 ++ "\n" ++ ppShow m
                                 ++ "\n" ++ show closure

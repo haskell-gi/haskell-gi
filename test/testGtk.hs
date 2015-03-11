@@ -229,7 +229,7 @@ testTimeout = do
   putStrLn "*** Timeout test"
   now <- GLib.getMonotonicTime
   putStrLn $ "Now is " ++ show now ++ " , adding timeout."
-  _ <- GLib.timeoutAdd GLib.g_PRIORITY_DEFAULT 500 $ do
+  _ <- GLib.timeoutAdd GLib._PRIORITY_DEFAULT 500 $ do
                 andNow <- GLib.getMonotonicTime
                 putStrLn $ "Timeout called @ " ++ show andNow
                 return False

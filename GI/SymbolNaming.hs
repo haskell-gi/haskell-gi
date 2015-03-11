@@ -3,7 +3,6 @@ module GI.SymbolNaming
     , qualifyWithSuffix
     , ucFirst
     , lcFirst
-    , literalName
     , lowerName
     , upperName
     , noName
@@ -19,6 +18,7 @@ import qualified Data.Map as M
 
 import GI.API
 import GI.Code
+import GI.Config (Config(renames, modName))
 import GI.Util (split)
 
 interfaceClassName = (++"Klass")
@@ -29,24 +29,12 @@ ucFirst "" = error "ucFirst: empty string"
 lcFirst (x:xs) = toLower x : xs
 lcFirst "" = error "lcFirst: empty string"
 
-getPrefix :: String -> CodeGen String
-getPrefix ns = do
-    cfg <- config
-    case M.lookup ns (prefixes cfg) of
-        Just p -> return p
-        Nothing -> return ns
-
 specifiedName s fallback = do
     cfg <- config
 
-    case M.lookup s (names cfg) of
+    case M.lookup s (renames cfg) of
         Just s' -> return s'
         Nothing -> fallback
-
-literalName (Name ns s) = specifiedName s lit
-    where lit = do
-              prefix <- getPrefix ns
-              return $ lcFirst prefix ++ "_" ++ s
 
 lowerName (Name _ s) = specifiedName s lowered
     where lowered = return $ concat . rename $ split '_' s
@@ -78,7 +66,7 @@ upperName (Name ns s) = do
 qualifyWithSuffix :: String -> String -> CodeGen String
 qualifyWithSuffix suffix ns = do
      cfg <- config
-     if modName cfg == ns then
+     if modName cfg == Just ns then
          return ""
      else do
        loadDependency ns -- Make sure that the given namespace is listed

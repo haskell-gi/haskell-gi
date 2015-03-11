@@ -10,7 +10,7 @@ import Control.Applicative ((<$>))
 import Control.Monad.Writer (tell)
 import Data.List (intercalate)
 import Data.Tuple (swap)
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, isJust, fromMaybe)
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -21,6 +21,7 @@ import GI.API
 import GI.Callable (genCallable)
 import GI.Conversions
 import GI.Code
+import GI.Config
 import GI.GObject
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
@@ -50,12 +51,13 @@ valueStr (VUTF8 x)     = show x
 valueStr (VFileName x) = show x
 
 genConstant :: Name -> Constant -> CodeGen ()
-genConstant n@(Name _ name) (Constant value) = do
-    name' <- literalName n
+genConstant (Name ns name) (Constant value) = do
     ht <- haskellType $ valueType value
+    cfg <- config
+    let prefix = fromMaybe "_" (M.lookup ns $ constantPrefix cfg)
     line $ "-- constant " ++ name
-    line $ name' ++ " :: " ++ show ht
-    line $ name' ++ " = " ++ valueStr value
+    line $ prefix ++ name ++ " :: " ++ show ht
+    line $ prefix ++ name ++ " = " ++ valueStr value
 
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable flags) = do
@@ -160,6 +162,8 @@ genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = when (not $ ignoreStruct n s) $ do
       cfg <- config
 
+      let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
+
       name' <- upperName n
       line $ "-- struct " ++ name'
 
@@ -174,13 +178,13 @@ genStruct n s = when (not $ ignoreStruct n s) $ do
       else manageUnManagedPtr n
 
       -- Generate code for fields.
-      when (not . elem n . sealedStructs $ cfg) $ do
+      when (S.notMember n $ sealedStructs cfg) $ do
            genStructFields n s
 
       -- Methods
       forM_ (structMethods s) $ \(mn, f) ->
           do isFunction <- symbolFromFunction (fnSymbol f)
-             when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+             when (not $ isFunction || name mn `S.member` ignored) $
                   handleCGExc
                   (\e -> line ("-- XXX Could not generate method " ++ name mn
                                ++ " for struct " ++ name' ++ "\n"
@@ -191,6 +195,7 @@ genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
   name' <- upperName n
   cfg <- config
+  let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
 
   line $ "-- union " ++ name' ++ " "
 
@@ -209,7 +214,7 @@ genUnion n u = do
   -- Methods
   forM_ (unionMethods u) $ \(mn, f) ->
       do isFunction <- symbolFromFunction (fnSymbol f)
-         when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+         when (not $ isFunction || name mn `S.member` ignored) $
               handleCGExc
               (\e -> line ("-- XXX Could not generate method " ++ name mn
                            ++ " for union " ++ name' ++ "\n"
@@ -369,6 +374,8 @@ manageUnManagedPtr n = do
 genObject :: Name -> Object -> CodeGen ()
 genObject n o = handleCGExc (\_ -> return ()) $ do
   cfg <- config
+  let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
+  line $ "-- ignored : " ++ show ignored
 
   name' <- upperName n
 
@@ -400,7 +407,7 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) -> do
-    when (not $ fnSymbol f `elem` ignoredMethods cfg) $
+    when (name mn `S.notMember` ignored) $
          handleCGExc
          (\e -> line ("-- XXX Could not generate method " ++ name mn
                       ++ " for object " ++ name' ++ "\n"
@@ -475,9 +482,11 @@ genInterface n iface = do
 
   -- Methods
   cfg <- config
+  let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
+
   forM_ (ifMethods iface) $ \(mn, f) -> do
     isFunction <- symbolFromFunction (fnSymbol f)
-    when (not $ isFunction || fnSymbol f `elem` ignoredMethods cfg) $
+    when (not $ isFunction || name mn `S.member` ignored) $
          handleCGExc
          (\e -> line ("-- XXX Could not generate method " ++ name mn
                       ++ " for interface " ++ name' ++ "\n"
@@ -576,13 +585,19 @@ genModule name apis modulePrefix = do
   let embeddedAPIs = concatMap extractCallbacksInStruct apis
   injectAPIs embeddedAPIs
 
+  cfg <- config
+
   code <- recurse' $ mapM_ (uncurry genAPI) $
           -- We provide these ourselves
+          filter (not . (== Name "GLib" "Array") . fst) $
+          filter (not . (== Name "GLib" "HashTable") . fst) $
+          filter (not . (== Name "GLib" "List") . fst) $
+          filter (not . (== Name "GLib" "SList") . fst) $
           filter (not . (== Name "GLib" "Variant") . fst) $
           filter (not . (== Name "GObject" "Value") . fst) $
           filter (not . (== Name "GObject" "Closure") . fst) $
           -- User provided list of ignores
-          filter (not . (`elem` ignore) . GI.API.name . fst) $
+          filter ((`S.notMember` (ignoredAPIs cfg)) . fst) $
           -- Some callback types are defined inside structs
           map fixAPIStructs $ (++ embeddedAPIs) $
                  apis
@@ -596,56 +611,3 @@ genModule name apis modulePrefix = do
   blank
 
   mapM_ (\c -> tell c >> blank) $ codeToList code
-
-    where ignore = [
-           "dummy_decl",
-           -- These API elements refer to symbols which are
-           -- dynamically loaded, which ghci has trouble with. Skip
-           -- them.
-           "IOModule",
-           "io_modules_load_all_in_directory",
-           "io_modules_load_all_in_directory_with_scope",
-           -- Atk: Not marked properly as a GType struct (which we hide)
-           "_RegistryClass",
-           -- We can skip in the bindings
-           "signal_set_va_marshaller",
-           -- These seem to have some issues in the introspection data
-           "attribute_set_free", -- atk_attribute_set_free
-           -- Accepts a NULL terminated array, but not
-           -- marked as such in the bindings.
-           "text_free_ranges", -- atk_text_free_ranges
-           -- g_unichar_fully_decompose. "result" parameter is an
-           -- array, but it is not marked as such.
-           "unichar_fully_decompose",
-           -- g_utf16_to_ucs4. "items_read" and "items_written" are
-           -- out parameters, but they are marked as in parameters
-           -- the introspection data.
-           "utf16_to_ucs4",
-           -- Same for the following functions
-           "utf16_to_utf8",
-           "utf8_to_ucs4",
-           "utf8_to_ucs4_fast",
-           "utf8_to_utf16",
-           -- g_base64_decode_step, missing array length argument,
-           -- requires more complex logic.
-           "base64_decode_step",
-           -- Similar to base64_decode_step
-           "base64_encode_step",
-           "base64_encode_close",
-           -- g_ucs4_to_*, the first argument is marked as g_unichar,
-           -- but it is really an array of g_unichar.
-           "ucs4_to_utf16",
-           "ucs4_to_utf8",
-           -- g_regex_escape_string. Length can be -1, in which case
-           -- it means zero terminated array of char.
-           "regex_escape_string",
-           -- the test_data argument is not marked as a closure
-           "test_add_data_func_full",
-           -- The semantics for the DirectionIn pointer here are
-           -- somewhat ambiguous
-           "ClosureMarshal",
-           -- g_signal_chain_from_overridden. Seems to be
-           -- null-terminated, but it is not marked as such.
-           "signal_chain_from_overridden",
-           -- g_signal_emitv, same as g_signal_chain_from_overridden
-           "signal_emitv" ]

@@ -3,7 +3,6 @@ module GI.Code
     , BaseCodeGen
     , CodeGen
     , ExcCodeGen
-    , Config(..)
     , CGError(..)
     , genCode
     , codeToString
@@ -39,6 +38,7 @@ import qualified Data.Set as Set
 import Control.Applicative ((<$>))
 
 import GI.API (API, Name(..), loadAPI)
+import GI.Config (Config(..))
 import GI.Type (Type(..))
 
 data Code
@@ -60,14 +60,6 @@ instance Monoid Code where
     (Sequence a) `mappend` b = Sequence (a |> b)
     a `mappend` (Sequence b) = Sequence (a <| b)
     a `mappend` b = Sequence (a <| b <| S.empty)
-
-data Config = Config {
-      prefixes :: M.Map String String,
-      names :: M.Map String String,
-      modName :: String,
-      ignoredMethods :: [String],
-      sealedStructs :: [Name]
-    }
 
 type Deps = Set.Set String
 data CodeGenState = CodeGenState {

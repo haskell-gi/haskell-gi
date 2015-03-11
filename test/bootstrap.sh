@@ -1,28 +1,23 @@
 #!/bin/bash
 
-prefixes="
- -pGLib=g
- -pGObject=g
- -pGio=g
- -pGdkPixbuf=gdk
- "
-renames="
- -r Array=GArray_
- -r HashTable=HashTable_
- -r List=List_
- -r SList=SList_
- "
-
 set -e
-set -x
 
 generate()
 {
-    haskell-gi $prefixes $renames "$@"
+    for mod in $@; do
+        if test -f $mod.config;
+        then
+            haskell-gi -c $mod.config $mod
+        else
+            haskell-gi $mod
+        fi
+    done
+
+    haskell-gi -a $@
 }
 
 mkdir -p GI
 
-generate Gtk Vte Notify
+generate Atk cairo Gdk GdkPixbuf Gio GLib GObject Gtk Notify Pango Vte
 
 bash build.sh
