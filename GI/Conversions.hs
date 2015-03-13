@@ -493,6 +493,8 @@ haskellBasicType TFileName = "[Char]" `con` []
 -- This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen TypeRep
 haskellType (TBasicType bt) = return $ haskellBasicType bt
+-- We cannot really do anything sensible for a foreign array of basic
+-- types with no length info, so just pass the pointer along.
 haskellType (TCArray False (-1) (-1) (TBasicType t)) =
     return $ ptr $ foreignBasicType t
 haskellType (TCArray _ _ _ (TBasicType TUInt8)) =
