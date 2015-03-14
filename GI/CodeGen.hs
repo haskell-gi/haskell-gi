@@ -186,8 +186,8 @@ genStruct n s = when (not $ ignoreStruct n s) $ do
           do isFunction <- symbolFromFunction (fnSymbol f)
              when (not $ isFunction || name mn `S.member` ignored) $
                   handleCGExc
-                  (\e -> line ("-- XXX Could not generate method " ++ name mn
-                               ++ " for struct " ++ name' ++ "\n"
+                  (\e -> line ("-- XXX Could not generate method "
+                               ++ name' ++ "::" ++ name mn ++ "\n"
                                ++ "-- Error was : " ++ describeCGError e))
                   (genMethod n mn f)
 
@@ -216,8 +216,8 @@ genUnion n u = do
       do isFunction <- symbolFromFunction (fnSymbol f)
          when (not $ isFunction || name mn `S.member` ignored) $
               handleCGExc
-              (\e -> line ("-- XXX Could not generate method " ++ name mn
-                           ++ " for union " ++ name' ++ "\n"
+              (\e -> line ("-- XXX Could not generate method "
+                           ++ name' ++ "::" ++ name mn ++ "\n"
                            ++ "-- Error was : " ++ describeCGError e))
               (genMethod n mn f)
 
@@ -409,16 +409,16 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
   forM_ (objMethods o) $ \(mn, f) -> do
     when (name mn `S.notMember` ignored) $
          handleCGExc
-         (\e -> line ("-- XXX Could not generate method " ++ name mn
-                      ++ " for object " ++ name' ++ "\n"
+         (\e -> line ("-- XXX Could not generate method "
+                      ++ name' ++ "::" ++ name mn ++ "\n"
                       ++ "-- Error was : " ++ describeCGError e))
          (genMethod n mn f)
 
   -- And finally signals
   forM_ (objSignals o) $ \s ->
       handleCGExc
-      (\e -> line ("-- XXX Could not generate signal " ++ sigName s
-                   ++ " for object " ++ name' ++ "\n"
+      (\e -> line ("-- XXX Could not generate signal "
+                   ++ name' ++ "::" ++ sigName s ++ "\n"
                    ++ "-- Error was : " ++ describeCGError e))
       (genSignal s n)
 
@@ -488,16 +488,16 @@ genInterface n iface = do
     isFunction <- symbolFromFunction (fnSymbol f)
     when (not $ isFunction || name mn `S.member` ignored) $
          handleCGExc
-         (\e -> line ("-- XXX Could not generate method " ++ name mn
-                      ++ " for interface " ++ name' ++ "\n"
+         (\e -> line ("-- XXX Could not generate method "
+                      ++ name' ++ "::" ++ name mn ++ "\n"
                       ++ "-- Error was : " ++ describeCGError e))
          (genMethod n mn f)
 
   -- And finally signals
   forM_ (ifSignals iface) $ \s ->
       handleCGExc
-      (\e -> line ("-- XXX Could not generate signal " ++ sigName s
-                   ++ " for interface " ++ name' ++ "\n"
+      (\e -> line ("-- XXX Could not generate signal "
+                   ++ name' ++ "::" ++ sigName s ++ "\n"
                    ++ "-- Error was : " ++ describeCGError e))
       (genSignal s n)
 
