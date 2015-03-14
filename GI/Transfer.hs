@@ -9,12 +9,13 @@ module GI.Transfer
     ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (isJust)
 
 import GI.API
 import GI.Code
 import GI.Conversions
 import GI.GObject
+import GI.SymbolNaming (ucFirst)
 import GI.Type
 import GI.Util
 import GI.Internal.ArgInfo
@@ -104,21 +105,6 @@ basicFreeFnOnError (TGSList _) _ = return $ Just "g_slist_free"
 basicFreeFnOnError (TGHash _ _) _ = return Nothing
 basicFreeFnOnError (TError) _ = return Nothing
 
--- Return the name of the function mapping over elements in a
--- container type.
-elementMap :: Type -> String -> Maybe String
-elementMap (TCArray _ _ _ (TBasicType TUInt8)) _ = Nothing -- ByteString
-elementMap (TCArray True _ _ _) _ = Just "mapZeroTerminatedCArray"
-elementMap (TCArray False fixed _ _) _
-    | fixed > (-1) = Just $ parenthesize $ "mapCArrayWithLength " ++ show fixed
-elementMap (TCArray False (-1) _ _) len
-    = Just $ parenthesize $ "mapCArrayWithLength " ++ len
-elementMap (TGArray _) _ = Just "mapGArray"
-elementMap (TPtrArray _) _ = Just "mapPtrArray"
-elementMap (TGList _) _ = Just "mapGList"
-elementMap (TGSList _) _ = Just "mapGSList"
-elementMap _ _ = Nothing
-
 -- Free just the container, but not the elements.
 freeContainer :: Type -> String -> CodeGen [String]
 freeContainer t label =
@@ -126,29 +112,61 @@ freeContainer t label =
       Nothing -> return []
       Just fn -> return [fn ++ " " ++ label]
 
+-- Free one element using the given free function.
+freeElem :: Type -> String -> String -> ExcCodeGen String
+freeElem t label free =
+    case elementTypeAndMap t undefined of
+      Nothing -> return free
+      Just (TCArray False _ _ _, _) ->
+          badIntroError $ "Element type in container \"" ++ label ++
+                            "\" is an array of unknown length."
+      Just (innerType, mapFn) -> do
+        let elemFree = "freeElemOf" ++ ucFirst label
+        fullyFree innerType (prime label) >>= \case
+                  Nothing -> return $ free ++ " e"
+                  Just elemInnerFree -> do
+                     line $ "let " ++ elemFree ++ " e = " ++ mapFn ++ " "
+                              ++ elemInnerFree ++ " e >> " ++ free ++ " e"
+                     return elemFree
+
+-- Construct a function to free the memory associated with a type, and
+-- recursively free any elements of this type in case that it is a
+-- container.
+fullyFree :: Type -> String -> ExcCodeGen (Maybe String)
+fullyFree t label = case basicFreeFn t of
+                      Nothing -> return Nothing
+                      Just free -> Just <$> freeElem t label free
+
+-- Like fullyFree, but free the toplevel element using basicFreeFnOnError.
+fullyFreeOnError :: Type -> String -> Transfer -> ExcCodeGen (Maybe String)
+fullyFreeOnError t label transfer =
+    basicFreeFnOnError t transfer >>= \case
+        Nothing -> return Nothing
+        Just free -> Just <$> freeElem t label free
+
 -- Free the elements in a container type.
-freeElements :: Type -> String -> String -> CodeGen [String]
-freeElements t label len = return $ fromMaybe [] $ do
-   inner <- elementType t
-   innerFree <- basicFreeFn inner
-   mapFn <- elementMap t len
-   return [mapFn ++ " " ++ innerFree ++ " " ++ label]
+freeElements :: Type -> String -> String -> ExcCodeGen [String]
+freeElements t label len =
+   case elementTypeAndMap t len of
+     Nothing -> return []
+     Just (inner, mapFn) ->
+         fullyFree inner label >>= \case
+                   Nothing -> return []
+                   Just innerFree ->
+                       return [mapFn ++ " " ++ innerFree ++ " " ++ label]
 
 -- Free the elements of a container type in the case an error ocurred,
 -- in particular args that should have been transferred did not get
 -- transfered.
-freeElementsOnError :: Arg -> String -> String -> CodeGen [String]
+freeElementsOnError :: Arg -> String -> String -> ExcCodeGen [String]
 freeElementsOnError arg label len =
-    case elementType (argType arg) of
+    case elementTypeAndMap (argType arg) len of
       Nothing -> return []
-      Just inner -> do
-        innerFree <- basicFreeFnOnError inner (transfer arg)
-        case innerFree of
-          Nothing -> return []
-          Just freeFn ->
-              case elementMap inner len of
-                Nothing -> return []
-                Just mapFn -> return [mapFn ++ " " ++ freeFn ++ " " ++ label]
+      Just (inner, mapFn) -> do
+         fullyFreeOnError inner label (transfer arg) >>= \case
+                   Nothing -> return []
+                   Just innerFree ->
+                       return [mapFn ++ " " ++ innerFree ++ " " ++ label]
 
 freeIn arg label len = do
     let t = argType arg
@@ -167,7 +185,7 @@ freeOut label = return ["freeMem " ++ label]
 -- return the list of actions relevant to freeing the memory allocated
 -- for the argument (if appropriate, depending on the ownership
 -- transfer semantics of the callable).
-freeInArg :: Arg -> String -> String -> CodeGen [String]
+freeInArg :: Arg -> String -> String -> ExcCodeGen [String]
 freeInArg arg label len = do
   weAlloc <- isJust <$> requiresAlloc (argType arg)
   -- Arguments that we alloc ourselves do not need to be freed, they
@@ -183,7 +201,7 @@ freeInArg arg label len = do
 -- Same thing as freeInArg, but called in case the call to C didn't
 -- succeed. We thus free everything we allocated in preparation for
 -- the call, including args that would have been transferred to C.
-freeInArgOnError :: Arg -> String -> String -> CodeGen [String]
+freeInArgOnError :: Arg -> String -> String -> ExcCodeGen [String]
 freeInArgOnError arg label len = case direction arg of
                             DirectionIn -> freeInOnError arg label len
                             DirectionOut -> freeOut label

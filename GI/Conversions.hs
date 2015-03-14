@@ -13,6 +13,8 @@ module GI.Conversions
 
     , argumentType
     , elementType
+    , elementMap
+    , elementTypeAndMap
     , isManaged
 
     , getIsScalar
@@ -100,6 +102,7 @@ computeArrayLength array (TCArray _ _ _ t) = do
                      TBasicType TUInt8 -> return "B.length"
                      TBasicType _ -> return "length"
                      TInterface _ _ -> return "length"
+                     TCArray _ _ _ _ -> return "length"
                      _ -> notImplementedError $
                           "Don't know how to compute length of "
                           ++ show t
@@ -237,6 +240,12 @@ hToF (TGList t) transfer = hToF_PackedType t "packGList" transfer
 hToF (TGSList t) transfer = hToF_PackedType t "packGSList" transfer
 hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
 hToF (TPtrArray t) transfer = hToF_PackedType t "packGPtrArray" transfer
+hToF (TCArray zt _ _ t@(TCArray _ _ _ _)) transfer = do
+  let packer = if zt
+               then "packZeroTerminated"
+               else "pack"
+  hToF_PackedType t (packer ++ "PtrArray") transfer
+
 hToF (TCArray zt _ _ t@(TInterface _ _)) transfer = do
   isScalar <- getIsScalar t
   let packer = if zt
@@ -383,6 +392,8 @@ fToH (TGList t) transfer = fToH_PackedType t "unpackGList" transfer
 fToH (TGSList t) transfer = fToH_PackedType t "unpackGSList" transfer
 fToH (TGArray t) transfer = fToH_PackedType t "unpackGArray" transfer
 fToH (TPtrArray t) transfer = fToH_PackedType t "unpackGPtrArray" transfer
+fToH (TCArray True _ _ t@(TCArray _ _ _ _)) transfer =
+  fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
 fToH (TCArray True _ _ t@(TInterface _ _)) transfer = do
   isScalar <- getIsScalar t
   if isScalar
@@ -621,12 +632,24 @@ isManaged t = do
     _                     -> return False
 
 -- If the given type maps to a list in Haskell, return the type of the
--- elements.
+-- elements, and the function that maps over them.
+elementTypeAndMap :: Type -> String -> Maybe (Type, String)
+elementTypeAndMap (TCArray _ _ _ (TBasicType TUInt8)) _ = Nothing -- ByteString
+elementTypeAndMap (TCArray True _ _ t) _ = Just (t, "mapZeroTerminatedCArray")
+elementTypeAndMap (TCArray False (-1) _ t) len =
+    Just (t, parenthesize $ "mapCArrayWithLength " ++ len)
+elementTypeAndMap (TCArray False fixed _ t) _ =
+    Just (t, parenthesize $ "mapCArrayWithLength " ++ show fixed)
+elementTypeAndMap (TGArray t) _ = Just (t, "mapGArray")
+elementTypeAndMap (TPtrArray t) _ = Just (t, "mapPtrArray")
+elementTypeAndMap (TGList t) _ = Just (t, "mapGList")
+elementTypeAndMap (TGSList t) _ = Just (t, "mapGSList")
+elementTypeAndMap _ _ = Nothing
+
+-- Return just the element type.
 elementType :: Type -> Maybe Type
-elementType (TCArray _ _ _ (TBasicType TUInt8)) = Nothing -- ByteString
-elementType (TCArray _ _ _ t) = Just t
-elementType (TGArray t) = Just t
-elementType (TPtrArray t) = Just t
-elementType (TGList t) = Just t
-elementType (TGSList t) = Just t
-elementType _ = Nothing
+elementType t = fst <$> elementTypeAndMap t undefined
+
+-- Return just the map.
+elementMap :: Type -> String -> Maybe String
+elementMap t len = snd <$> elementTypeAndMap t len

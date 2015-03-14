@@ -329,6 +329,12 @@ testCast =  do
     Nothing -> error "Downcast to Widget failed!"
   putStrLn "+++ castTo test done"
 
+testArrayOfArrays :: IO ()
+testArrayOfArrays = do
+  putStrLn "*** Array of array test"
+  Gio.desktopAppInfoSearch "text" >>= print
+  putStrLn "+++ Array of array test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -404,6 +410,7 @@ main = do
         testInitiallyOwned
         testGVariant
         testCast
+        testArrayOfArrays
 
 	widgetShowAll win
 

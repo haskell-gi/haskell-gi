@@ -208,7 +208,7 @@ skipRetVal callable throwsGError =
     (skipReturn callable) ||
          (throwsGError && returnType callable == TBasicType TBoolean)
 
-freeInArgs' :: (Arg -> String -> String -> CodeGen [String]) ->
+freeInArgs' :: (Arg -> String -> String -> ExcCodeGen [String]) ->
                Callable -> Map.Map String String -> ExcCodeGen [String]
 freeInArgs' freeFn callable nameMap = concat <$> actions
     where
