@@ -218,6 +218,7 @@ freeInArgs' freeFn callable nameMap = concat <$> actions
           Just name -> freeFn arg name $
                        -- Pass in the length argument in case it's needed.
                        case argType arg of
+                         TCArray False (-1) (-1) _ -> undefined
                          TCArray False (-1) length _ ->
                              escapeReserved $ argName $ (args callable)!!length
                          _ -> undefined
@@ -616,8 +617,11 @@ genCallable n symbol callable throwsGError = do
     where
       unwrappedConvertResult rname =
         case returnType callable of
-             -- Non-zero terminated C arrays require knowledge of
-             -- the length, so we deal with them directly.
+             -- Arrays without length information are just passed
+             -- along.
+             TCArray False (-1) (-1) _ -> return rname
+             -- Not zero-terminated C arrays require knowledge of the
+             -- length, so we deal with them directly.
              t@(TCArray False _ _ _) ->
                  convertOutCArray callable t rname nameMap
                                       (returnTransfer callable)
@@ -640,6 +644,8 @@ genCallable n symbol callable throwsGError = do
                    Nothing -> badIntroError $ "Parameter " ++
                                               name ++ " not found!"
        case argType arg of
+         -- Passed along as a raw pointer
+         TCArray False (-1) (-1) _ -> genConversion inName $ apply $ M "peek"
          t@(TCArray False _ _ _) ->
              do aname' <- genConversion inName $ apply $ M "peek"
                 convertOutCArray callable t aname' nameMap (transfer arg)

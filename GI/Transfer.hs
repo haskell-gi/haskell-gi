@@ -29,7 +29,7 @@ basicFreeFn (TBasicType TUTF8) = Just "freeMem"
 basicFreeFn (TBasicType TFileName) = Just "freeMem"
 basicFreeFn (TBasicType _) = Nothing
 basicFreeFn (TInterface _ _) = Nothing
-basicFreeFn (TCArray False (-1) (-1) (TBasicType _)) = Nothing -- Just passing it along
+basicFreeFn (TCArray False (-1) (-1) _) = Nothing -- Just passing it along
 basicFreeFn (TCArray _ _ _ _) = Just "freeMem"
 basicFreeFn (TGArray _) = Just "unrefGArray"
 basicFreeFn (TPtrArray _) = Just "unrefPtrArray"
@@ -93,9 +93,9 @@ basicFreeFnOnError t@(TInterface _ _) transfer = do
                                  return Nothing
                           else return Nothing
     _ -> return Nothing
--- Arrays without length info are just passed around, we do not need
--- to free them.
-basicFreeFnOnError (TCArray False (-1) (-1) (TBasicType _)) _ = return Nothing
+-- Arrays without length info are just passed along, we do not need to
+-- free them.
+basicFreeFnOnError (TCArray False (-1) (-1) _) _ = return Nothing
 basicFreeFnOnError (TCArray _ _ _ _) _ = return $ Just "freeMem"
 basicFreeFnOnError (TGArray _) _ = return $ Just "unrefGArray"
 basicFreeFnOnError (TPtrArray _) _ = return $ Just "unrefPtrArray"

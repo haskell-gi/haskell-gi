@@ -240,6 +240,8 @@ hToF (TGList t) transfer = hToF_PackedType t "packGList" transfer
 hToF (TGSList t) transfer = hToF_PackedType t "packGSList" transfer
 hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
 hToF (TPtrArray t) transfer = hToF_PackedType t "packGPtrArray" transfer
+-- Arrays without length info are just passed along.
+hToF (TCArray False (-1) (-1) _) _ = return $ Pure ()
 hToF (TCArray zt _ _ t@(TCArray _ _ _ _)) transfer = do
   let packer = if zt
                then "packZeroTerminated"
@@ -392,6 +394,8 @@ fToH (TGList t) transfer = fToH_PackedType t "unpackGList" transfer
 fToH (TGSList t) transfer = fToH_PackedType t "unpackGSList" transfer
 fToH (TGArray t) transfer = fToH_PackedType t "unpackGArray" transfer
 fToH (TPtrArray t) transfer = fToH_PackedType t "unpackGPtrArray" transfer
+-- Arrays without length info are just passed along.
+fToH (TCArray False (-1) (-1) _) _ = return $ Pure ()
 fToH (TCArray True _ _ t@(TCArray _ _ _ _)) transfer =
   fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
 fToH (TCArray True _ _ t@(TInterface _ _)) transfer = do
@@ -504,10 +508,10 @@ haskellBasicType TFileName = "[Char]" `con` []
 -- This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen TypeRep
 haskellType (TBasicType bt) = return $ haskellBasicType bt
--- We cannot really do anything sensible for a foreign array of basic
--- types with no length info, so just pass the pointer along.
-haskellType (TCArray False (-1) (-1) (TBasicType t)) =
-    return $ ptr $ foreignBasicType t
+-- We cannot really do anything sensible for a foreign array with no
+-- length info, so just pass the pointer along.
+haskellType (TCArray False (-1) (-1) t) =
+    ptr <$> foreignType t
 haskellType (TCArray _ _ _ (TBasicType TUInt8)) =
     return $ "ByteString" `con` []
 haskellType (TCArray _ _ _ a) = do
@@ -555,8 +559,8 @@ foreignBasicType t         = haskellBasicType t
 -- This translates GI types to the types used in foreign function calls.
 foreignType :: Type -> CodeGen TypeRep
 foreignType (TBasicType t) = return $ foreignBasicType t
-foreignType (TCArray False (-1) (-1) (TBasicType t)) =
-    return $ ptr $ foreignBasicType t
+foreignType (TCArray False (-1) (-1) t) =
+    ptr <$> foreignType t
 foreignType (TCArray zt _ _ t) = do
   api <- findAPI t
   let size = case api of
@@ -634,7 +638,10 @@ isManaged t = do
 -- If the given type maps to a list in Haskell, return the type of the
 -- elements, and the function that maps over them.
 elementTypeAndMap :: Type -> String -> Maybe (Type, String)
-elementTypeAndMap (TCArray _ _ _ (TBasicType TUInt8)) _ = Nothing -- ByteString
+-- Passed along as a raw pointer.
+elementTypeAndMap (TCArray False (-1) (-1) _) _ = Nothing
+-- ByteString
+elementTypeAndMap (TCArray _ _ _ (TBasicType TUInt8)) _ = Nothing
 elementTypeAndMap (TCArray True _ _ t) _ = Just (t, "mapZeroTerminatedCArray")
 elementTypeAndMap (TCArray False (-1) _ t) len =
     Just (t, parenthesize $ "mapCArrayWithLength " ++ len)
