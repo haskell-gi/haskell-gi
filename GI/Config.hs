@@ -4,6 +4,7 @@ module GI.Config
     , parseConfigFile
     ) where
 
+import Control.Applicative ((<$>))
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer
@@ -18,6 +19,8 @@ import GI.API (Name(..))
 data Config = Config {
       -- | Name of the module being generated.
       modName        :: Maybe String,
+      -- | Whether to print extra info.
+      verbose        :: Bool,
       -- | Symbols to be renamed.
       renames        :: M.Map String String,
       -- | Prefix for constants in a given namespace, if not given the
@@ -35,6 +38,7 @@ data Config = Config {
 defaultConfig :: Config
 defaultConfig = Config {
               modName        = Nothing,
+              verbose        = False,
               renames        = M.empty,
               constantPrefix = M.empty,
               ignoredElems   = M.empty,
@@ -48,6 +52,7 @@ instance Monoid Config where
     mempty = defaultConfig
     mappend a b = Config {
                          modName = modName a <> modName b,
+                         verbose = verbose a || verbose b,
                          renames = renames a <> renames b,
                          constantPrefix = constantPrefix a <> constantPrefix b,
                          ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
@@ -64,9 +69,12 @@ type Parser = WriterT Config (StateT (Maybe String) (Except Text)) ()
 -- introspection namespace, filling in the configuration as needed. In
 -- case the parsing fails we return a description of the error
 -- instead.
-parseConfigFile :: [Text] -> Either Text Config
-parseConfigFile ls = runExcept $ flip evalStateT Nothing $ execWriterT $
-                      mapM parseOneLine (map T.strip ls)
+parseConfigFile :: [Text] -> Bool -> Either Text Config
+parseConfigFile ls verb = setVerbosity <$>
+      (runExcept $ flip evalStateT Nothing $ execWriterT $
+                mapM parseOneLine (map T.strip ls))
+    where setVerbosity :: Config -> Config
+          setVerbosity cfg = cfg {verbose = verb}
 
 -- | Parse a single line of the config file, modifying the
 -- configuration as appropriate.

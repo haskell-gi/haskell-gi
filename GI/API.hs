@@ -339,8 +339,8 @@ toAPI i = (getName bi, toAPI' (baseInfoType i) bi)
 
     convert fa fb bi = fa $ fb $ fromBaseInfo bi
 
-loadAPI :: String -> IO [(Name, API)]
-loadAPI name = do
-    lib <- load name Nothing
+loadAPI :: Bool -> String -> IO [(Name, API)]
+loadAPI verbose name = do
+    lib <- load name Nothing verbose
     infos <- getInfos lib
     return $ map toAPI infos

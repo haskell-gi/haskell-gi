@@ -165,7 +165,8 @@ loadDependency name = do
   when (not $ Set.member name deps) $
        do
          apis <- getAPIs
-         imported <- M.fromList <$> liftIO (loadAPI name)
+         cfg <- config
+         imported <- M.fromList <$> liftIO (loadAPI (verbose cfg) name)
          let newDeps = Set.insert name deps
              newAPIs = M.union apis imported
          put $ CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}

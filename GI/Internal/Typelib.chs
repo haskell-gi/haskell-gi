@@ -97,14 +97,15 @@ getSharedLibraries name =
           then return Nothing
           else Just <$> split ',' <$> peekCString path
 
-load :: String -> Maybe String -> IO Typelib
-load namespace version =
+load :: String -> Maybe String -> Bool -> IO Typelib
+load namespace version verbose =
     propagateGError $ \gError -> do
         typelib <- require namespace version gError
         when (unTypelib typelib /= nullPtr) $ do
             path <- peekCString =<< (withCString namespace $ \nsPtr ->
                     {# call get_typelib_path #} nullRepository nsPtr)
-            putStrLn $ "Loaded typelib: " ++ path
+            when verbose $
+                 putStrLn $ "Loading typelib: " ++ path
             _ <- {# call unsafe load_typelib #} nullRepository typelib 0 gError
             return ()
         return typelib

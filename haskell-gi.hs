@@ -3,7 +3,6 @@ module Main where
 import Control.Applicative ((<$>))
 import Control.Monad (forM_)
 import Control.Exception (handle)
-import Data.Maybe (mapMaybe)
 import Data.List (intercalate)
 import Data.Text (unpack)
 import Data.Traversable (traverse)
@@ -21,13 +20,12 @@ import qualified Data.Text.IO as TIO
 import GI.Utils.GError
 import Text.Show.Pretty (ppShow)
 
-import GI.API (loadAPI, API(..), Name(..))
+import GI.API (loadAPI)
 import GI.Code (codeToString, genCode)
 import GI.Config (Config(..), parseConfigFile)
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
 import GI.SymbolNaming (ucFirst)
-import GI.Shlib (typelibSymbols, strip)
 import GI.Internal.Typelib (prependSearchPath)
 
 data Mode = GenerateCode | Dump | Attributes | Help
@@ -38,7 +36,8 @@ data Options = Options {
   optOutput :: Maybe String,
   optConfigFiles :: [String],
   optRenames :: [(String, String)],
-  optSearchPaths :: [String] }
+  optSearchPaths :: [String],
+  optVerbose :: Bool}
     deriving Show
 
 defaultOptions = Options {
@@ -46,7 +45,8 @@ defaultOptions = Options {
   optOutput = Just "GI",
   optConfigFiles = [],
   optRenames = [],
-  optSearchPaths = [] }
+  optSearchPaths = [],
+  optVerbose = False }
 
 parseKeyValue s =
   let (a, ('=':b)) = break (=='=') s
@@ -75,7 +75,9 @@ optDescrs = [
     "specify a Haskell name for a C name",
   Option "s" ["search"] (ReqArg
     (\arg opt -> opt { optSearchPaths = arg : optSearchPaths opt }) "PATH")
-    "prepend a directory to the typelib search path"]
+    "prepend a directory to the typelib search path",
+  Option "v" ["verbose"] (NoArg $ \opt -> opt { optVerbose = True })
+    "print extra info while processing"]
 
 showHelp = concat $ map optAsLine optDescrs
   where optAsLine (Option flag (long:_) _ desc) =
@@ -83,15 +85,6 @@ showHelp = concat $ map optAsLine optDescrs
         optAsLine _ = error "showHelp"
 
 printGError = handle (\(GError _dom _code msg) -> putStrLn (unpack msg))
-
-loadAPI' :: String -> IO [(Name, API)]
-loadAPI' name = do
-    syms <- typelibSymbols name
-    mapMaybe (\(n, a) ->
-              case strip syms a of
-                Nothing -> Nothing
-                Just a' -> Just (n, a')) <$>
-           loadAPI name
 
 outputPath :: Options -> IO (String, String) -- modPrefix, dirPrefix
 outputPath options =
@@ -105,7 +98,8 @@ outputPath options =
 -- Generate all generic accessor functions ("_label", for example).
 genGenericAttrs :: Options -> Config -> [String] -> IO ()
 genGenericAttrs options cfg modules = do
-  allAPIs <- (M.toList . M.unions . (map M.fromList)) <$> mapM loadAPI modules
+  allAPIs <- (M.toList . M.unions . (map M.fromList))
+             <$> mapM (loadAPI (optVerbose options)) modules
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
   (_, code) <- genCode cfg (genAllAttributes allAPIs modPrefix)
@@ -115,7 +109,7 @@ genGenericAttrs options cfg modules = do
 -- for this module.
 processMod :: Options -> Config -> String -> IO ()
 processMod options generalConfig name = do
-  apis <- loadAPI name
+  apis <- loadAPI (optVerbose options) name
 
   let cfg = generalConfig {modName = Just name}
       nm = ucFirst name
@@ -135,16 +129,16 @@ processMod options generalConfig name = do
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
   -- XXX overloaded signal handlers, to be done.
 
-dump :: String -> IO ()
-dump name = do
-  apis <- loadAPI name
+dump :: Options -> String -> IO ()
+dump options name = do
+  apis <- loadAPI (optVerbose options) name
   mapM_ (putStrLn . ppShow) apis
 
 process :: Options -> [String] -> IO ()
 process options names = do
   mapM_ prependSearchPath $ optSearchPaths options
   configs <- traverse TIO.readFile (optConfigFiles options)
-  case parseConfigFile (concatMap T.lines configs) of
+  case parseConfigFile (concatMap T.lines configs) (optVerbose options) of
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"
       hPutStr stderr (T.unpack errorMsg)
@@ -152,7 +146,7 @@ process options names = do
     Right cfg -> case optMode options of
                    GenerateCode -> forM_ names (processMod options cfg)
                    Attributes -> genGenericAttrs options cfg names
-                   Dump -> forM_ names dump
+                   Dump -> forM_ names (dump options)
                    Help -> putStr showHelp
 
 foreign import ccall "g_type.h g_type_init"
