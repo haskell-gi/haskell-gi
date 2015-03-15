@@ -6,7 +6,7 @@ module GI.Callable
     , arrayLengths
     , arrayLengthsMap
 
-    , wrapMaybe
+    , inWrapMaybe
     , inArgInterfaces
     ) where
 
@@ -35,7 +35,10 @@ hOutType callable outArgs ignoreReturn = do
                    _                -> if ignoreReturn
                                        then return $ typeOf ()
                                        else haskellType $ returnType callable
-  hOutArgTypes <- mapM (haskellType . argType) outArgs
+  hOutArgTypes <- forM outArgs $ \outarg ->
+                  if outWrapMaybe outarg
+                  then maybeT <$> haskellType (argType outarg)
+                  else haskellType (argType outarg)
   let maybeHReturnType = if returnMayBeNull callable && not ignoreReturn
                          then maybeT hReturnType
                          else hReturnType
@@ -71,9 +74,25 @@ mkForeignImport symbol callable throwsGError = foreignImport $ do
 
 -- Given an (in) argument to a function, return whether it should be
 -- wrapped in a maybe type (useful for nullable types).
-wrapMaybe :: Arg -> Bool
-wrapMaybe arg =
+inWrapMaybe :: Arg -> Bool
+inWrapMaybe arg =
     if direction arg == DirectionIn && mayBeNull arg
+    then case argType arg of
+           -- NULL GLists and GSLists are semantically the same as an
+           -- empty list, so they don't need a Maybe wrapper on their
+           -- type.
+           TGList _ -> False
+           TGSList _ -> False
+           _ -> True
+    else False
+
+-- Same for (out) arguments. Notice that (inout) arguments are never
+-- supposed to be nullable, since they have the same nullability
+-- properties as the in arg, and we always pass something non-NULL for
+-- that. See https://bugzilla.gnome.org/show_bug.cgi?id=660879#c61
+outWrapMaybe :: Arg -> Bool
+outWrapMaybe arg =
+    if direction arg == DirectionOut && mayBeNull arg
     then case argType arg of
            -- NULL GLists and GSLists are semantically the same as an
            -- empty list, so they don't need a Maybe wrapper on their
@@ -92,7 +111,7 @@ inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
     rec _ [] = return ([], [])
     rec letters (arg:args) = do
       (ls, t, cons) <- argumentType letters $ argType arg
-      let t' = if wrapMaybe arg
+      let t' = if inWrapMaybe arg
                then "Maybe (" ++ t ++ ")"
                else t
       (restCons, restTypes) <- rec ls args
@@ -158,7 +177,7 @@ readInArrayLength :: Arg -> Arg -> ExcCodeGen ()
 readInArrayLength array length = do
   let lvar = escapeReserved $ argName length
       avar = escapeReserved $ argName array
-  if wrapMaybe array
+  if inWrapMaybe array
   then do
     line $ "let " ++ lvar ++ " = case " ++ avar ++ " of"
     indent $ indent $ do
@@ -180,7 +199,7 @@ checkInArrayLength n array length previous = do
       avar = escapeReserved $ argName array
       expectedLength = avar ++ "_expected_length_"
       pvar = escapeReserved $ argName previous
-  if wrapMaybe array
+  if inWrapMaybe array
   then do
     line $ "let " ++ expectedLength ++ " = case " ++ avar ++ " of"
     indent $ indent $ do
@@ -258,7 +277,7 @@ prepareArgForCall omitted arg = do
 prepareInArg :: Arg -> ExcCodeGen String
 prepareInArg arg = do
   let name = escapeReserved $ argName arg
-  if wrapMaybe arg
+  if inWrapMaybe arg
   then do
     let maybeName = "maybe" ++ ucFirst name
     line $ maybeName ++ " <- case " ++ name ++ " of"
@@ -292,7 +311,7 @@ prepareInCallback arg = do
 
   when (scope == ScopeTypeAsync) $
        line $ ptrName ++ " <- callocBytes $ sizeOf (undefined :: " ++ fC ++ ")"
-  if wrapMaybe arg
+  if inWrapMaybe arg
   then do
     let maybeName = "maybe" ++ ucFirst name
     line $ maybeName ++ " <- case " ++ name ++ " of"
@@ -421,12 +440,12 @@ touchInArg arg = when (direction arg /= DirectionOut) $ do
     Just a -> do
       managed <- isManaged a
       when managed $ line $
-           if wrapMaybe arg
+           if inWrapMaybe arg
            then "whenJust " ++ name ++ " (mapM_ touchManagedPtr)"
            else "mapM_ touchManagedPtr " ++ name
     Nothing -> do
       managed <- isManaged (argType arg)
-      when managed $ line $ if wrapMaybe arg
+      when managed $ line $ if inWrapMaybe arg
            then "whenJust " ++ name ++ " touchManagedPtr"
            else "touchManagedPtr " ++ name
 
@@ -648,7 +667,18 @@ genCallable n symbol callable throwsGError = do
          TCArray False (-1) (-1) _ -> genConversion inName $ apply $ M "peek"
          t@(TCArray False _ _ _) ->
              do aname' <- genConversion inName $ apply $ M "peek"
-                convertOutCArray callable t aname' nameMap (transfer arg)
+                let wrapArray a = convertOutCArray callable t a
+                                             nameMap (transfer arg)
+                if outWrapMaybe arg
+                then do
+                  line $ "maybe" ++ ucFirst aname'
+                           ++ " <- convertIfNonNull " ++ aname'
+                           ++ " $ \\" ++ prime aname' ++ " -> do"
+                  indent $ do
+                          wrapped <- wrapArray (prime aname')
+                          line $ "return " ++ wrapped
+                  return $ "maybe" ++ ucFirst aname'
+                else wrapArray aname'
          t -> do
            weAlloc <- isJust <$> requiresAlloc t
            peeked <- if weAlloc
@@ -659,7 +689,18 @@ genCallable n symbol callable throwsGError = do
            let transfer' = if weAlloc
                            then TransferEverything
                            else transfer arg
-           result <- convert peeked $ fToH (argType arg) transfer'
+           result <- do
+                let wrap ptr = convert ptr $ fToH (argType arg) transfer'
+                if outWrapMaybe arg
+                then do
+                  line $ "maybe" ++ ucFirst peeked
+                           ++ " <- convertIfNonNull " ++ peeked
+                           ++ " $ \\" ++ prime peeked ++ " -> do"
+                  indent $ do
+                          wrapped <- wrap (prime peeked)
+                          line $ "return " ++ wrapped
+                  return $ "maybe" ++ ucFirst peeked
+                else wrap peeked
            -- Free the memory associated with the out argument
            when (transfer' == TransferEverything) $
                 mapM_ line =<< freeElements t peeked undefined

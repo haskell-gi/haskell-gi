@@ -12,7 +12,7 @@ import Data.Typeable (typeOf)
 import Text.Show.Pretty (ppShow)
 
 import GI.API
-import GI.Callable (hOutType, arrayLengths, wrapMaybe)
+import GI.Callable (hOutType, arrayLengths, inWrapMaybe)
 import GI.Code
 import GI.Conversions
 import GI.SymbolNaming
@@ -31,7 +31,7 @@ genHaskellCallbackPrototype cb name' hInArgs hOutArgs = do
     indent $ do
       forM_ hInArgs $ \arg -> do
         ht <- haskellType (argType arg)
-        line $ (show $ if wrapMaybe arg
+        line $ (show $ if inWrapMaybe arg
                        then maybeT ht
                        else ht) ++ " ->"
       ret <- hOutType cb hOutArgs False
@@ -100,7 +100,7 @@ convertNullable aname c = do
 convertCallbackInCArray :: Callable -> Arg -> Type -> String -> ExcCodeGen String
 convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname = do
   if length > -1 then do
-          if wrapMaybe arg
+          if inWrapMaybe arg
           then do convertNullable aname convertAndFree
           else convertAndFree
   else
@@ -139,7 +139,7 @@ prepareInArg cb arg = do
     t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
     _ -> do
       let c = convert name $ fToH (argType arg) (transfer arg)
-      if wrapMaybe arg
+      if inWrapMaybe arg
       then convertNullable name c
       else c
 
