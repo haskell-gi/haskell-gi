@@ -296,16 +296,17 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
         afterName = "after" ++ signalConnectorName
     line $ onName ++ signature
     line $ onName ++ " obj cb = connect"
-             ++ signalConnectorName ++ " obj cb False"
+             ++ signalConnectorName ++ " obj cb SignalConnectBefore"
     line $ afterName ++ signature
     line $ afterName ++ " obj cb = connect"
-             ++ signalConnectorName ++ " obj cb True"
+             ++ signalConnectorName ++ " obj cb SignalConnectAfter"
 
   group $ do
     let fullName = "connect" ++ signalConnectorName
         signatureConstraints =
           "(ManagedPtr a, GObject a) =>"
-        signatureArgs = "a -> " ++ cbType ++ " -> Bool -> IO CULong"
+        signatureArgs = "a -> " ++ cbType
+                        ++ " -> SignalConnectMode -> IO CULong"
     line $ fullName ++ " :: " ++ signatureConstraints
     line $ replicate (4 + length fullName) ' ' ++ signatureArgs
     line $ fullName ++ " obj cb after = do"

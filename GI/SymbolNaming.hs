@@ -115,8 +115,6 @@ escapeReserved "peek" = "peek_"
 escapeReserved "poke" = "poke_"
 escapeReserved "sizeOf" = "sizeOf_"
 escapeReserved "when" = "when_"
-escapeReserved "new" = "new_"
-escapeReserved "set" = "set_"
 escapeReserved s
     | "set_" `isPrefixOf` s = s ++ "_"
     | "get_" `isPrefixOf` s = s ++ "_"

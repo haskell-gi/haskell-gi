@@ -565,7 +565,18 @@ genPrelude name modulePrefix = do
     line $ "import Control.Exception (onException)"
     line $ "import qualified Data.Text as T"
     blank
-    line $ "import " ++ mp "Utils.Base"
+    line $ "import GI.Utils.Attributes hiding (get, set)"
+    line $ "import GI.Utils.BasicTypes"
+    line $ "import GI.Utils.BasicConversions"
+    line $ "import GI.Utils.Closure"
+    line $ "import GI.Utils.GError"
+    line $ "import GI.Utils.GParamSpec"
+    line $ "import GI.Utils.GVariant"
+    line $ "import GI.Utils.GValue"
+    line $ "import GI.Utils.ManagedPtr"
+    line $ "import GI.Utils.Properties hiding (new)"
+    line $ "import GI.Utils.Signals (SignalConnectMode(..), connectSignalFunPtr)"
+    line $ "import GI.Utils.Utils"
     blank
 
 genModule :: String -> [(Name, API)] -> String -> CodeGen ()
