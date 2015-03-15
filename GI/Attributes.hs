@@ -72,13 +72,6 @@ genAttributes name apis modulePrefix = do
   let mp = (modulePrefix ++)
       nm = ucFirst name
 
-  -- We generate polymorphic lenses for all properties appearing in
-  -- the current module and its dependencies. The reason for
-  -- including also properties for the dependencies too is that in
-  -- this way one can just import the top module (Gtk, say)
-  -- unqualified, and obtain access to all the necessary
-  -- lenses.
-
   code <- recurse' $ forM_ apis genProps
 
   -- Providing orphan instances is the whole point of these modules,
