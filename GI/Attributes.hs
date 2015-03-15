@@ -41,7 +41,7 @@ genPropertyAttr pName = group $ do
   line $ "-- Property \"" ++ pName ++ "\""
   let name = hyphensToCamelCase pName
   line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ name ++ "\" o"
-  line $ "_" ++ lcFirst name ++ " = undefined"
+  line $ "_" ++ lcFirst name ++ " = Attr"
 
 genProps :: (Name, API) -> CodeGen ()
 genProps (n, APIObject o) = genObjectProperties n o

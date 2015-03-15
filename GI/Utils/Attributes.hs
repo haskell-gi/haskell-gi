@@ -60,7 +60,7 @@
 -- Attributes can be read only, write only or both read\/write.
 --
 module GI.Utils.Attributes (
-  Attr,
+  Attr(..),
   HasAttr(..),
 
   AttrSetOpTag(..),
@@ -91,7 +91,7 @@ infixr 0 :=,:~,:=>,:~>,::=,::~
 -- the type so that the readability/writability/constructibility
 -- constraints are enforced.
 
-data Attr (attr :: Symbol) o
+data Attr (attr :: Symbol) o = Attr
 
 class HasAttr (attr :: Symbol) o where
     type AttrIsReadable attr o :: Bool
