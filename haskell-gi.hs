@@ -20,11 +20,12 @@ import qualified Data.Text.IO as TIO
 import GI.Utils.GError
 import Text.Show.Pretty (ppShow)
 
-import GI.API (loadAPI)
+import GI.API (loadAPI, Name, API)
 import GI.Code (codeToString, genCode)
-import GI.Config (Config(..), parseConfigFile)
+import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
+import GI.Overrides (Overrides, parseOverridesFile, filterAPIs)
 import GI.SymbolNaming (ucFirst)
 import GI.Internal.Typelib (prependSearchPath)
 
@@ -34,8 +35,7 @@ data Mode = GenerateCode | Dump | Attributes | Help
 data Options = Options {
   optMode :: Mode,
   optOutput :: Maybe String,
-  optConfigFiles :: [String],
-  optRenames :: [(String, String)],
+  optOverridesFiles :: [String],
   optSearchPaths :: [String],
   optVerbose :: Bool}
     deriving Show
@@ -43,8 +43,7 @@ data Options = Options {
 defaultOptions = Options {
   optMode = GenerateCode,
   optOutput = Just "GI",
-  optConfigFiles = [],
-  optRenames = [],
+  optOverridesFiles = [],
   optSearchPaths = [],
   optVerbose = False }
 
@@ -55,29 +54,24 @@ parseKeyValue s =
 optDescrs :: [OptDescr (Options -> Options)]
 optDescrs = [
   Option "h" ["help"] (NoArg $ \opt -> opt { optMode = Help })
-    "print this gentle help text",
+    "\tprint this gentle help text",
   Option "a" ["attributes"] (NoArg $ \opt -> opt {optMode = Attributes})
     "generate generic attribute accesors",
-  Option "c" ["config"] (ReqArg
-                           (\arg opt -> opt {optConfigFiles =
-                                                 arg : optConfigFiles opt})
-                          "CONFIG")
-    "specify a config file for the code generator",
   Option "d" ["dump"] (NoArg $ \opt -> opt { optMode = Dump })
-    "dump internal representation instead of generating code",
-  Option "o" ["output"] (ReqArg
-                         (\arg opt -> opt {optOutput = Just arg}) "OUTPUT")
-    "set the output directory",
-  Option "r" ["rename"] (ReqArg
-    (\arg opt ->
-      let (a, b) = parseKeyValue arg
-       in opt { optRenames = (a, b) : optRenames opt }) "A=B")
-    "specify a Haskell name for a C name",
+    "\tdump internal representation",
+  Option "o" ["overrides"] (ReqArg
+                           (\arg opt -> opt {optOverridesFiles =
+                                                 arg : optOverridesFiles opt})
+                          "OVERRIDES")
+    "specify a file with overrides info",
+  Option "O" ["output"] (ReqArg
+                         (\arg opt -> opt {optOutput = Just arg}) "DIR")
+    "\tset the output directory",
   Option "s" ["search"] (ReqArg
     (\arg opt -> opt { optSearchPaths = arg : optSearchPaths opt }) "PATH")
-    "prepend a directory to the typelib search path",
+    "\tprepend a directory to the typelib search path",
   Option "v" ["verbose"] (NoArg $ \opt -> opt { optVerbose = True })
-    "print extra info while processing"]
+    "\tprint extra info while processing"]
 
 showHelp = concat $ map optAsLine optDescrs
   where optAsLine (Option flag (long:_) _ desc) =
@@ -95,11 +89,17 @@ outputPath options =
         let prefix = intercalate "." (splitPath dir) ++ "."
         return (prefix, dir)
 
+-- | Load the given named API, and then filter using the given overrides.
+loadFiltered :: Bool -> Overrides -> String -> IO [(Name, API)]
+loadFiltered verbose ovs n = filterAPIs ovs <$> loadAPI verbose n
+
 -- Generate all generic accessor functions ("_label", for example).
-genGenericAttrs :: Options -> Config -> [String] -> IO ()
-genGenericAttrs options cfg modules = do
+genGenericAttrs :: Options -> Overrides -> [String] -> IO ()
+genGenericAttrs options ovs modules = do
   allAPIs <- (M.toList . M.unions . (map M.fromList))
-             <$> mapM (loadAPI (optVerbose options)) modules
+             <$> mapM (loadFiltered (optVerbose options) ovs) modules
+  let cfg = Config {modName = Nothing,
+                    verbose = optVerbose options}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
   (_, code) <- genCode cfg (genAllAttributes allAPIs modPrefix)
@@ -107,11 +107,12 @@ genGenericAttrs options cfg modules = do
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
-processMod :: Options -> Config -> String -> IO ()
-processMod options generalConfig name = do
-  apis <- loadAPI (optVerbose options) name
+processMod :: Options -> Overrides -> String -> IO ()
+processMod options ovs name = do
+  apis <- loadFiltered (optVerbose options) ovs name
 
-  let cfg = generalConfig {modName = Just name}
+  let cfg = Config {modName = Just name,
+                    verbose = optVerbose options}
       nm = ucFirst name
 
   (modPrefix, dirPrefix) <- outputPath options
@@ -137,15 +138,15 @@ dump options name = do
 process :: Options -> [String] -> IO ()
 process options names = do
   mapM_ prependSearchPath $ optSearchPaths options
-  configs <- traverse TIO.readFile (optConfigFiles options)
-  case parseConfigFile (concatMap T.lines configs) (optVerbose options) of
+  configs <- traverse TIO.readFile (optOverridesFiles options)
+  case parseOverridesFile (concatMap T.lines configs) of
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"
       hPutStr stderr (T.unpack errorMsg)
       exitFailure
-    Right cfg -> case optMode options of
-                   GenerateCode -> forM_ names (processMod options cfg)
-                   Attributes -> genGenericAttrs options cfg names
+    Right ovs -> case optMode options of
+                   GenerateCode -> forM_ names (processMod options ovs)
+                   Attributes -> genGenericAttrs options ovs names
                    Dump -> forM_ names (dump options)
                    Help -> putStr showHelp
 

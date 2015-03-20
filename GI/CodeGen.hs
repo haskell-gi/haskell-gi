@@ -10,7 +10,7 @@ import Control.Applicative ((<$>))
 import Control.Monad.Writer (tell)
 import Data.List (intercalate)
 import Data.Tuple (swap)
-import Data.Maybe (fromJust, isJust, fromMaybe)
+import Data.Maybe (fromJust, isJust)
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -21,7 +21,6 @@ import GI.API
 import GI.Callable (genCallable)
 import GI.Conversions
 import GI.Code
-import GI.Config
 import GI.GObject
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
@@ -51,13 +50,11 @@ valueStr (VUTF8 x)     = show x
 valueStr (VFileName x) = show x
 
 genConstant :: Name -> Constant -> CodeGen ()
-genConstant (Name ns name) (Constant value) = do
+genConstant (Name _ name) (Constant value) = do
     ht <- haskellType $ valueType value
-    cfg <- config
-    let prefix = fromMaybe "_" (M.lookup ns $ constantPrefix cfg)
     line $ "-- constant " ++ name
-    line $ prefix ++ name ++ " :: " ++ show ht
-    line $ prefix ++ name ++ " = " ++ valueStr value
+    line $ name ++ " :: " ++ show ht
+    line $ name ++ " = " ++ valueStr value
 
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable flags) = do
@@ -160,10 +157,6 @@ genErrorDomain name' domain = do
 
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = when (not $ ignoreStruct n s) $ do
-      cfg <- config
-
-      let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
-
       name' <- upperName n
       line $ "-- struct " ++ name'
 
@@ -178,13 +171,12 @@ genStruct n s = when (not $ ignoreStruct n s) $ do
       else manageUnManagedPtr n
 
       -- Generate code for fields.
-      when (S.notMember n $ sealedStructs cfg) $ do
-           genStructFields n s
+      genStructFields n s
 
       -- Methods
       forM_ (structMethods s) $ \(mn, f) ->
           do isFunction <- symbolFromFunction (fnSymbol f)
-             when (not $ isFunction || name mn `S.member` ignored) $
+             when (not isFunction) $
                   handleCGExc
                   (\e -> line ("-- XXX Could not generate method "
                                ++ name' ++ "::" ++ name mn ++ "\n"
@@ -194,8 +186,6 @@ genStruct n s = when (not $ ignoreStruct n s) $ do
 genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
   name' <- upperName n
-  cfg <- config
-  let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
 
   line $ "-- union " ++ name' ++ " "
 
@@ -214,7 +204,7 @@ genUnion n u = do
   -- Methods
   forM_ (unionMethods u) $ \(mn, f) ->
       do isFunction <- symbolFromFunction (fnSymbol f)
-         when (not $ isFunction || name mn `S.member` ignored) $
+         when (not isFunction) $
               handleCGExc
               (\e -> line ("-- XXX Could not generate method "
                            ++ name' ++ "::" ++ name mn ++ "\n"
@@ -373,10 +363,6 @@ manageUnManagedPtr n = do
 -- by the handler in handleCGExc below.
 genObject :: Name -> Object -> CodeGen ()
 genObject n o = handleCGExc (\_ -> return ()) $ do
-  cfg <- config
-  let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
-  line $ "-- ignored : " ++ show ignored
-
   name' <- upperName n
 
   line $ "-- object " ++ name' ++ " "
@@ -406,8 +392,7 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
   genGObjectCasts isIU n o
 
   -- Methods
-  forM_ (objMethods o) $ \(mn, f) -> do
-    when (name mn `S.notMember` ignored) $
+  forM_ (objMethods o) $ \(mn, f) ->
          handleCGExc
          (\e -> line ("-- XXX Could not generate method "
                       ++ name' ++ "::" ++ name mn ++ "\n"
@@ -481,12 +466,9 @@ genInterface n iface = do
                 line $ "gobjectType _ = c_" ++ cn_
 
   -- Methods
-  cfg <- config
-  let ignored = fromMaybe S.empty (M.lookup n $ ignoredElems cfg)
-
   forM_ (ifMethods iface) $ \(mn, f) -> do
     isFunction <- symbolFromFunction (fnSymbol f)
-    when (not $ isFunction || name mn `S.member` ignored) $
+    when (not isFunction) $
          handleCGExc
          (\e -> line ("-- XXX Could not generate method "
                       ++ name' ++ "::" ++ name mn ++ "\n"
@@ -596,8 +578,6 @@ genModule name apis modulePrefix = do
   let embeddedAPIs = concatMap extractCallbacksInStruct apis
   injectAPIs embeddedAPIs
 
-  cfg <- config
-
   code <- recurse' $ mapM_ (uncurry genAPI) $
           -- We provide these ourselves
           filter (not . (== Name "GLib" "Array") . fst) $
@@ -607,8 +587,6 @@ genModule name apis modulePrefix = do
           filter (not . (== Name "GLib" "Variant") . fst) $
           filter (not . (== Name "GObject" "Value") . fst) $
           filter (not . (== Name "GObject" "Closure") . fst) $
-          -- User provided list of ignores
-          filter ((`S.notMember` (ignoredAPIs cfg)) . fst) $
           -- Some callback types are defined inside structs
           map fixAPIStructs $ (++ embeddedAPIs) $
                  apis

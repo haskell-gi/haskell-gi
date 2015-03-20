@@ -5,9 +5,9 @@ set -e
 generate()
 {
     for mod in $@; do
-        if test -f $mod.config;
+        if test -f $mod.overrides;
         then
-            haskell-gi -c $mod.config $mod
+            haskell-gi -o $mod.overrides $mod
         else
             haskell-gi $mod
         fi

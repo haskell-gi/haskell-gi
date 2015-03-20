@@ -14,11 +14,10 @@ module GI.SymbolNaming
 
 import Data.Char (toLower, toUpper)
 import Data.List (isPrefixOf)
-import qualified Data.Map as M
 
 import GI.API
 import GI.Code
-import GI.Config (Config(renames, modName))
+import GI.Config (Config(modName))
 import GI.Util (split)
 
 interfaceClassName = (++"Klass")
@@ -29,28 +28,21 @@ ucFirst "" = error "ucFirst: empty string"
 lcFirst (x:xs) = toLower x : xs
 lcFirst "" = error "lcFirst: empty string"
 
-specifiedName s fallback = do
-    cfg <- config
+lowerName :: Name -> CodeGen String
+lowerName (Name _ s) = return $ concat . rename $ split '_' s
+    where
+      rename [w] = [lcFirst w]
+      rename (w:ws) = lcFirst w : map ucFirst' ws
+      rename [] = error "rename: empty list"
 
-    case M.lookup s (renames cfg) of
-        Just s' -> return s'
-        Nothing -> fallback
+      ucFirst' "" = "_"
+      ucFirst' x = ucFirst x
 
-lowerName (Name _ s) = specifiedName s lowered
-    where lowered = return $ concat . rename $ split '_' s
-
-          rename [w] = [lcFirst w]
-          rename (w:ws) = lcFirst w : map ucFirst' ws
-          rename [] = error "rename: empty list"
-
-          ucFirst' "" = "_"
-          ucFirst' x = ucFirst x
-
+upperName :: Name -> CodeGen String
 upperName (Name ns s) = do
-          name <- specifiedName s uppered
           prefix <- qualify ns
-          return $ prefix ++ name
-    where uppered = return $ concatMap ucFirst' $ split '_' $ sanitize s
+          return $ prefix ++ uppered
+    where uppered = concatMap ucFirst' $ split '_' $ sanitize s
           -- Move leading underscores to the end (for example in
           -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
           sanitize ('_':xs) = sanitize xs ++ "_"
