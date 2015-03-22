@@ -109,6 +109,8 @@ genSignalInstances name apis modulePrefix = do
   -- Providing orphan instances is the whole point of these modules,
   -- tell GHC that this is fine.
   line $ "{-# OPTIONS_GHC -fno-warn-orphans #-}"
+  line $ "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
+  blank
   line $ "{-# LANGUAGE DataKinds,    FlexibleInstances,"
   line $ "             TypeFamilies, MultiParamTypeClasses #-}"
   blank
