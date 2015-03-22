@@ -2,9 +2,10 @@
 module GI.Overrides
     ( Overrides -- ^ We export just the type, but no constructors.
     , parseOverridesFile
-    , filterAPIs
+    , loadFilteredAPI
     ) where
 
+import Control.Applicative ((<$>))
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer
@@ -125,9 +126,15 @@ filterOneAPI ovs (n, APIStruct s, maybeIgnores) =
 -- The rest only apply if there are ignores.
 filterOneAPI _ (n, api, Nothing) = (n, api)
 filterOneAPI _ (n, APIObject o, Just ignores) =
-    (n, APIObject o {objMethods = filterNamed (objMethods o) ignores})
+    (n, APIObject o {objMethods = filterNamed (objMethods o) ignores,
+                     objSignals = filter ((`S.notMember` ignores) . sigName)
+                                  (objSignals o)
+                    })
 filterOneAPI _ (n, APIInterface i, Just ignores) =
-    (n, APIInterface i {ifMethods = filterNamed (ifMethods i) ignores})
+    (n, APIInterface i {ifMethods = filterNamed (ifMethods i) ignores,
+                        ifSignals = filter ((`S.notMember` ignores) . sigName)
+                                    (ifSignals i)
+                       })
 filterOneAPI _ (n, APIUnion u, Just ignores) =
     (n, APIUnion u {unionMethods = filterNamed (unionMethods u) ignores})
 filterOneAPI _ (n, api, _) = (n, api)
@@ -137,3 +144,7 @@ filterAPIs :: Overrides -> [(Name, API)] -> [(Name, API)]
 filterAPIs ovs apis = map (filterOneAPI ovs . fetchIgnores) filtered
     where filtered = filter ((`S.notMember` ignoredAPIs ovs) . fst) apis
           fetchIgnores (n, api) = (n, api, M.lookup n (ignoredElems ovs))
+
+-- | Load the given API using the given list of overrides.
+loadFilteredAPI :: Bool -> Overrides -> String -> IO [(Name, API)]
+loadFilteredAPI verbose ovs name = filterAPIs ovs <$> loadAPI verbose name

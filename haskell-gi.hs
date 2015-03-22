@@ -20,17 +20,17 @@ import qualified Data.Text.IO as TIO
 import GI.Utils.GError
 import Text.Show.Pretty (ppShow)
 
-import GI.API (loadAPI, Name, API)
+import GI.API (loadAPI)
 import GI.Code (codeToString, genCode)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
-import GI.Overrides (Overrides, parseOverridesFile, filterAPIs)
+import GI.OverloadedSignals (genSignalInstances, genOverloadedSignalConnectors)
+import GI.Overrides (Overrides, parseOverridesFile, loadFilteredAPI)
 import GI.SymbolNaming (ucFirst)
 import GI.Internal.Typelib (prependSearchPath)
 
-data Mode = GenerateCode | Dump | Attributes | Help
-  deriving Show
+data Mode = GenerateCode | Dump | Attributes | Signals | Help
 
 data Options = Options {
   optMode :: Mode,
@@ -38,7 +38,6 @@ data Options = Options {
   optOverridesFiles :: [String],
   optSearchPaths :: [String],
   optVerbose :: Bool}
-    deriving Show
 
 defaultOptions = Options {
   optMode = GenerateCode,
@@ -57,6 +56,8 @@ optDescrs = [
     "\tprint this gentle help text",
   Option "a" ["attributes"] (NoArg $ \opt -> opt {optMode = Attributes})
     "generate generic attribute accesors",
+  Option "c" ["connectors"] (NoArg $ \opt -> opt {optMode = Signals})
+    "generate generic signal connectors",
   Option "d" ["dump"] (NoArg $ \opt -> opt { optMode = Dump })
     "\tdump internal representation",
   Option "o" ["overrides"] (ReqArg
@@ -89,30 +90,41 @@ outputPath options =
         let prefix = intercalate "." (splitPath dir) ++ "."
         return (prefix, dir)
 
--- | Load the given named API, and then filter using the given overrides.
-loadFiltered :: Bool -> Overrides -> String -> IO [(Name, API)]
-loadFiltered verbose ovs n = filterAPIs ovs <$> loadAPI verbose n
-
 -- Generate all generic accessor functions ("_label", for example).
 genGenericAttrs :: Options -> Overrides -> [String] -> IO ()
 genGenericAttrs options ovs modules = do
   allAPIs <- (M.toList . M.unions . (map M.fromList))
-             <$> mapM (loadFiltered (optVerbose options) ovs) modules
+             <$> mapM (loadFilteredAPI (optVerbose options) ovs) modules
   let cfg = Config {modName = Nothing,
-                    verbose = optVerbose options}
+                    verbose = optVerbose options,
+                    overrides = ovs}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
   (_, code) <- genCode cfg (genAllAttributes allAPIs modPrefix)
   writeFile (joinPath [dirPrefix, "Properties.hs"]) $ codeToString code
 
+-- Generate generic signal connectors ("Clicked", "Activate", ...)
+genGenericConnectors :: Options -> Overrides -> [String] -> IO ()
+genGenericConnectors options ovs modules = do
+  allAPIs <- (M.toList . M.unions . (map M.fromList))
+             <$> mapM (loadFilteredAPI (optVerbose options) ovs) modules
+  let cfg = Config {modName = Nothing,
+                    verbose = optVerbose options,
+                    overrides = ovs}
+  (modPrefix, dirPrefix) <- outputPath options
+  putStrLn $ "\t* Generating " ++ modPrefix ++ "Signals"
+  (_, code) <- genCode cfg (genOverloadedSignalConnectors allAPIs modPrefix)
+  writeFile (joinPath [dirPrefix, "Signals.hs"]) $ codeToString code
+
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
 processMod :: Options -> Overrides -> String -> IO ()
 processMod options ovs name = do
-  apis <- loadFiltered (optVerbose options) ovs name
+  apis <- loadFilteredAPI (optVerbose options) ovs name
 
   let cfg = Config {modName = Just name,
-                    verbose = optVerbose options}
+                    verbose = optVerbose options,
+                    overrides = ovs}
       nm = ucFirst name
 
   (modPrefix, dirPrefix) <- outputPath options
@@ -128,7 +140,9 @@ processMod options ovs name = do
             codeToString attrCode
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
-  -- XXX overloaded signal handlers, to be done.
+  (_, signalCode) <- genCode cfg (genSignalInstances name apis modPrefix)
+  writeFile (joinPath [dirPrefix, nm ++ "Signals.hs"]) $
+            codeToString signalCode
 
 dump :: Options -> String -> IO ()
 dump options name = do
@@ -147,6 +161,7 @@ process options names = do
     Right ovs -> case optMode options of
                    GenerateCode -> forM_ names (processMod options ovs)
                    Attributes -> genGenericAttrs options ovs names
+                   Signals -> genGenericConnectors options ovs names
                    Dump -> forM_ names (dump options)
                    Help -> putStr showHelp
 

@@ -1,6 +1,7 @@
 module GI.Signal
     ( genSignal
     , genCallback
+    , signalHaskellName
     ) where
 
 import Control.Applicative ((<$>))
@@ -258,17 +259,22 @@ genCallback n (Callback cb) = do
                  (genClosure name' closure False >>
                   genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False)
 
+-- | Return the name for the signal in Haskell CamelCase conventions.
+signalHaskellName :: String -> String
+signalHaskellName sn = let (w:ws) = split '-' sn
+                       in w ++ concatMap ucFirst ws
+
 genSignal :: Signal -> Name -> ExcCodeGen ()
 genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   on' <- upperName on
-  let (w:ws) = split '-' sn
-      sn' = w ++ concatMap ucFirst ws
+
   line $ "-- signal " ++ on' ++ "::" ++ sn
 
   let inArgs = filter ((/= DirectionOut) . direction) $ args cb
       hInArgs = filter (not . (`elem` (arrayLengths cb))) inArgs
       outArgs = filter ((/= DirectionIn) . direction) $ args cb
       hOutArgs = filter (not . (`elem` (arrayLengths cb))) outArgs
+      sn' = signalHaskellName sn
       signalConnectorName = on' ++ ucFirst sn'
       cbType = signalConnectorName ++ "Callback"
 

@@ -14,6 +14,7 @@ generate()
     done
 
     haskell-gi -a $@
+    haskell-gi -c $@
 }
 
 mkdir -p GI

@@ -339,6 +339,7 @@ toAPI i = (getName bi, toAPI' (baseInfoType i) bi)
 
     convert fa fb bi = fa $ fb $ fromBaseInfo bi
 
+-- | Load the APIs in the given namespace.
 loadAPI :: Bool -> String -> IO [(Name, API)]
 loadAPI verbose name = do
     lib <- load name Nothing verbose

@@ -1,16 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE LambdaCase #-}
+
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
-import BasicPrelude hiding (error)
+import BasicPrelude hiding (on, error)
 import qualified BasicPrelude as BP
 import GI.Gtk hiding (main)
 import GI.GtkAttributes () -- For various attribute instances
+import GI.GtkSignals () -- For signal instances
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
 import qualified GI.GLib as GLib
 import GI.Properties
+import GI.Signals
 
 import GI.Utils.Base
 
@@ -24,11 +27,6 @@ import qualified Data.Map as M
 
 import System.Environment (getProgName)
 import System.Random (randomRIO)
-
--- A fancy notation for reverse application, making signal connections
--- a bit easier to read.
-(<!>) :: a -> (a -> b) -> b
-(<!>) obj cb = cb obj
 
 error :: Text -> a
 error = BP.error . unpack
@@ -359,7 +357,7 @@ main = do
         -- something goes wrong easier to understand.
 	win <- new Window [_type := WindowTypeToplevel,
                            _iconName := "applications-haskell"]
-        win <!> onWidgetDestroy $ do
+        on win Destroy $ do
                   putStrLn "Closing the program"
                   mainQuit
 
@@ -367,14 +365,14 @@ main = do
         set win [_child := grid]
 
         label <- new Label [_label := "Test"]
-        label <!> onLabelActivateLink $ \uri -> do
+        on label ActivateLink $ \uri -> do
           testPolymorphicLenses win ("Link " ++ uri ++ " clicked, thanks!")
           return True -- Link processed, do not open with the browser
         containerAdd grid label
 
         button <- new Button [_label := "_Click me!",
                               _useUnderline := True]
-        button <!> onButtonClicked $ do
+        on button Clicked $ do
                 set label [_label := "This is <a href=\"http://www.gnome.org\">a test</a>",
                            _useMarkup := True ]
                 -- set button [widgetSensitive := False, ...] would be
@@ -392,7 +390,7 @@ main = do
 
         popupButton <- new Button [_label := "_Pop-up menu",
                                    _useUnderline := True]
-        popupButton <!> onButtonClicked $ testMenuPopup
+        on popupButton Clicked $ testMenuPopup
         containerAdd grid popupButton
 
         testBoxedOutArgs

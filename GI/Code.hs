@@ -37,8 +37,9 @@ import qualified Data.Set as Set
 
 import Control.Applicative ((<$>))
 
-import GI.API (API, Name(..), loadAPI)
+import GI.API (API, Name(..))
 import GI.Config (Config(..))
+import GI.Overrides (loadFilteredAPI)
 import GI.Type (Type(..))
 
 data Code
@@ -166,7 +167,8 @@ loadDependency name = do
        do
          apis <- getAPIs
          cfg <- config
-         imported <- M.fromList <$> liftIO (loadAPI (verbose cfg) name)
+         imported <- M.fromList <$>
+                     liftIO (loadFilteredAPI (verbose cfg) (overrides cfg) name)
          let newDeps = Set.insert name deps
              newAPIs = M.union apis imported
          put $ CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}

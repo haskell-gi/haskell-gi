@@ -62,6 +62,7 @@ Executable haskell-gi
       GI.GObject,
       GI.GType,
       GI.Inheritable,
+      GI.OverloadedSignals,
       GI.Overrides,
       GI.Properties,
       GI.Signal,
