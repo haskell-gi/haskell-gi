@@ -546,6 +546,7 @@ genCallable n symbol callable throwsGError = do
          do line "-- XXX return value ignored, but it is not a boolean."
             line "--     This may be a memory leak?"
   mkForeignImport symbol callable throwsGError
+  blank
   wrapper
 
   where

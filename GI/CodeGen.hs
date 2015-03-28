@@ -599,4 +599,4 @@ genModule name apis modulePrefix = do
              ++ ucFirst i ++ "A"
   blank
 
-  mapM_ (\c -> tell c >> blank) $ codeToList code
+  tell code

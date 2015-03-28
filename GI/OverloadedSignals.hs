@@ -129,4 +129,4 @@ genSignalInstances name apis modulePrefix = do
   line $ "import " ++ modulePrefix ++ nm
   blank
 
-  mapM_ (\c -> tell c >> blank) $ codeToList code
+  tell code

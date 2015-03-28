@@ -6,7 +6,6 @@ module GI.Code
     , CGError(..)
     , genCode
     , codeToString
-    , codeToList
     , loadDependency
     , getDeps
     , getAPIs
@@ -30,7 +29,6 @@ module GI.Code
 import Control.Monad.RWS
 import Control.Monad.Except
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
-import qualified Data.Foldable as F
 import qualified Data.Map as M
 import qualified Data.Sequence as S
 import qualified Data.Set as Set
@@ -204,14 +202,14 @@ findAPIByName n@(Name ns _) = do
       else error $ "couldn't find API description for "
                        ++ ns ++ "." ++ name n
 
+config :: CodeGen Config
+config = ask
+
 line :: String -> CodeGen ()
 line = tell . Line
 
 blank :: CodeGen ()
 blank = line ""
-
-config :: CodeGen Config
-config = ask
 
 indent :: BaseCodeGen e a -> BaseCodeGen e a
 indent cg = do
@@ -223,6 +221,7 @@ group :: BaseCodeGen e a -> BaseCodeGen e a
 group cg = do
   (x, code) <- recurse cg
   tell $ Group code
+  blank
   return x
 
 foreignImport :: BaseCodeGen e a -> BaseCodeGen e a
@@ -242,8 +241,3 @@ codeToString c = concatMap (++ "\n") $ str 0 c []
 
           deseq _ S.EmptyL cont = cont
           deseq n (c :< cs) cont = str n c (deseq n (S.viewl cs) cont)
-
-codeToList c = list c []
-    where list NoCode cont = cont
-          list (Sequence s) cont = F.foldr (:) cont s
-          list c cont = c : cont
