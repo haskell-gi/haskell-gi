@@ -5,7 +5,7 @@ module GI.Utils.Closure
     , noClosure
     ) where
 
-import Foreign.Safe
+import Foreign
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import GI.Utils.BasicTypes
@@ -21,7 +21,7 @@ instance ManagedPtr Closure where
     unsafeManagedPtrGetPtr = (\(Closure x) -> castPtr $ unsafeForeignPtrToPtr x)
     touchManagedPtr        = (\(Closure x) -> touchForeignPtr x)
 
-foreign import ccall "g_closure_get_type" c_g_closure_get_type :: 
+foreign import ccall "g_closure_get_type" c_g_closure_get_type ::
     IO GType
 
 instance BoxedObject Closure where
@@ -44,4 +44,3 @@ newCClosure ptr = do
   -- closure, so ref and sink to let GLib know this.
   g_closure_ref closure >>= g_closure_sink
   wrapBoxed Closure closure
-

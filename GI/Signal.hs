@@ -4,7 +4,9 @@ module GI.Signal
     , signalHaskellName
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad (when)
 import Control.Monad (forM, forM_)
 import Data.List (intercalate)

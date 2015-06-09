@@ -42,16 +42,18 @@ module GI.Utils.GValue
 
 #include <glib-object.h>
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
+
+import Data.Word
+import Data.Int
+import Data.Text (Text, pack, unpack)
 
 import Foreign.C
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
-import Data.Word
-import Data.Int
-
-import Data.Text (Text, pack, unpack)
 
 import GI.Utils.BasicTypes
 import GI.Utils.BasicConversions (cstringToText, textToCString)

@@ -131,14 +131,13 @@ module GI.Utils.GVariant
     , gvariantToTuple
     ) where
 
-import Foreign.Ptr
-import Foreign.ForeignPtr
-import Foreign.C
-import Control.Monad (when, void, (>=>))
-import Control.Applicative ((<$>), (<*>))
-import Control.Exception.Base (bracket)
+#include <glib-object.h>
 
-import System.IO.Unsafe (unsafePerformIO)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+import Control.Monad (when, void, (>=>))
+import Control.Exception.Base (bracket)
 
 import Data.Text (Text)
 import Data.ByteString (ByteString)
@@ -149,12 +148,15 @@ import Data.Monoid ((<>))
 import Data.Maybe (isJust, fromJust)
 import qualified Data.Map as M
 
+import System.IO.Unsafe (unsafePerformIO)
+import Foreign.C
+import Foreign.Ptr
+import Foreign.ForeignPtr
+
 import GI.Utils.BasicTypes (GVariant(..))
 import GI.Utils.BasicConversions
 import GI.Utils.ManagedPtr (withManagedPtr, withManagedPtrList)
 import GI.Utils.Utils (freeMem)
-
-#include <glib-object.h>
 
 -- | An alias for @Nothing :: Maybe GVariant@ to save some typing.
 noGVariant :: Maybe GVariant

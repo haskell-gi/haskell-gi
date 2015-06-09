@@ -17,13 +17,17 @@ module GI.Utils.Utils
 
 #include <glib-object.h>
 
-import Foreign (peek)
-import Foreign.Storable (Storable(..))
-import Data.Word
-import Foreign.Ptr
-import Foreign.C.Types (CSize(..))
-import Control.Monad (void)
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
+import Control.Monad (void)
+
+import Data.Word
+
+import Foreign (peek)
+import Foreign.C.Types (CSize(..))
+import Foreign.Ptr
+import Foreign.Storable (Storable(..))
 
 import GI.Utils.BasicTypes (GType(..), CGType, BoxedObject(..))
 

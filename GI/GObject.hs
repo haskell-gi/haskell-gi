@@ -8,7 +8,9 @@ module GI.GObject
     , apiIsInitiallyUnowned
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 
 import GI.API
 import GI.Code

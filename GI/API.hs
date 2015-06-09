@@ -22,6 +22,10 @@ module GI.API
     , loadAPI
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 import Data.Int
 import Data.Maybe (isJust)
 
@@ -44,8 +48,6 @@ import GI.Internal.UnionInfo
 import GI.GType
 import GI.Type
 import GI.Value
-
-import Control.Applicative ((<$>))
 
 data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)

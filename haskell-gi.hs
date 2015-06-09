@@ -1,11 +1,14 @@
 module Main where
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad (forM_)
 import Control.Exception (handle)
+
 import Data.List (intercalate)
 import Data.Text (unpack)
-import Data.Traversable (traverse)
+
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (splitPath, joinPath)
 import System.Console.GetOpt

@@ -65,8 +65,11 @@ module GI.Utils.Properties
     , constructObjectPropertyHash
     ) where
 
-import Control.Monad ((>=>))
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
+import Control.Monad ((>=>))
+
 import qualified Data.ByteString.Char8 as B
 import Data.Text (Text)
 
@@ -77,7 +80,7 @@ import GI.Utils.Attributes
 import GI.Utils.GValue
 import GI.Utils.GVariant (newGVariantFromPtr)
 
-import Foreign.Safe hiding (new)
+import Foreign hiding (new)
 import Foreign.C
 
 #include <glib-object.h>
@@ -89,7 +92,7 @@ foreign import ccall "dbg_g_object_newv" g_object_newv ::
 -- attributes. AttrOps are always constructible, so we don't need to
 -- enforce constraints here.
 new :: forall o. GObject o => (ForeignPtr o -> o) ->
-       [AttrOp SetAndConstructOp o AttrNew] -> IO o
+       [AttrOp 'SetAndConstructOp o 'AttrNew] -> IO o
 new constructor attrs = do
   props <- mapM construct attrs
   let nprops = length props
@@ -109,7 +112,7 @@ new constructor attrs = do
   mapM_ (touchManagedPtr . snd) props
   wrapObject constructor (result :: Ptr o)
   where
-    construct :: AttrOp SetAndConstructOp o AttrNew ->
+    construct :: AttrOp 'SetAndConstructOp o 'AttrNew ->
                  IO (String, GValue)
     construct (attr := x) = attrConstruct attr x
     construct (attr :=> x) = x >>= attrConstruct attr

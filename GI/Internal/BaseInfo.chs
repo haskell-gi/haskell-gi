@@ -8,11 +8,10 @@ module GI.Internal.BaseInfo
   )
 where
 
-import Foreign.Safe
+import Control.Applicative ((<$>))
+import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
-
-import Control.Applicative ((<$>))
 
 {# import GI.Internal.Types #}
 

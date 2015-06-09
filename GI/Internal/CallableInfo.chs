@@ -9,7 +9,7 @@ module GI.Internal.CallableInfo
     ) where
 
 import Control.Applicative ((<$>))
-import Foreign.Safe
+import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -69,4 +69,3 @@ callableInfoReturnAttributes ci = unsafePerformIO $ do
 callableInfoArgs :: CallableInfoClass call => call -> [ArgInfo]
 callableInfoArgs ci = unsafePerformIO $ map (ArgInfo <$> castPtr) <$>
     getList {# call get_n_args #} {# call get_arg #} (stupidCast ci)
-

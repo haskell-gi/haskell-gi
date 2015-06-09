@@ -26,14 +26,15 @@ module GI.Code
     , config
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
 import Control.Monad.RWS
 import Control.Monad.Except
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
 import qualified Data.Map as M
 import qualified Data.Sequence as S
 import qualified Data.Set as Set
-
-import Control.Applicative ((<$>))
 
 import GI.API (API, Name(..))
 import GI.Config (Config(..))

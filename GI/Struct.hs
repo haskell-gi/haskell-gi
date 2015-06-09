@@ -4,8 +4,10 @@ module GI.Struct ( genStructFields
                  , ignoreStruct)
     where
 
-import Control.Monad (forM_, when)
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
+import Control.Monad (forM_, when)
 import Data.List (isSuffixOf)
 import Data.Maybe (mapMaybe)
 

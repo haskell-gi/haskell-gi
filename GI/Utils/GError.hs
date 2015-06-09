@@ -51,7 +51,7 @@ module GI.Utils.GError
 
     ) where
 
-import Foreign.Safe (poke, peek, sizeOf)
+import Foreign (poke, peek, sizeOf)
 import Foreign.Ptr
 import Foreign.C
 import Control.Exception
@@ -103,7 +103,7 @@ type GErrorMessage = Text
 class Enum err => GErrorClass err where
   gerrorDomain :: err -> Text   -- ^ This must not use the value of its
                                 -- parameter so that it is safe to pass
-				-- 'undefined'.
+                                -- 'undefined'.
 
 foreign import ccall unsafe "g_quark_try_string" g_quark_try_string ::
     CString -> IO GQuark

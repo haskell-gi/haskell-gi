@@ -60,17 +60,21 @@ module GI.Utils.BasicConversions
     , mapGSList
     ) where
 
-import Foreign
-import Foreign.C.Types
-import Foreign.C.String
-import Control.Monad (foldM)
-import Control.Exception.Base (bracket)
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>))
+#endif
+import Control.Exception.Base (bracket)
+import Control.Monad (foldM)
+
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
 import Data.Text (Text)
 import qualified Data.Text.Foreign as TF
+
+import Foreign
+import Foreign.C.Types
+import Foreign.C.String
 
 import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr (copyBoxedPtr)

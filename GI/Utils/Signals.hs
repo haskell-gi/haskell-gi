@@ -14,7 +14,7 @@ module GI.Utils.Signals
      after
     ) where
 
-import Foreign.Safe
+import Foreign
 import Foreign.C
 import GHC.TypeLits
 
@@ -71,4 +71,3 @@ connectSignalFunPtr object signal fn mode = do
   withCString signal $ \csignal -> do
     withManagedPtr object $ \objPtr ->
         g_signal_connect_data objPtr csignal fn (castFunPtrToPtr fn) safeFreeFunPtrPtr flags
-

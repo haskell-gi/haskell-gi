@@ -6,7 +6,7 @@ module GI.Internal.UnionInfo
     ) where
 
 import Control.Applicative ((<$>))
-import Foreign.Safe
+import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 

@@ -5,7 +5,9 @@ module GI.Overrides
     , loadFilteredAPI
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer

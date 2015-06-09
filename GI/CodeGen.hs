@@ -5,8 +5,10 @@ module GI.CodeGen
     , genModule
     ) where
 
-import Control.Monad (forM, forM_, when)
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
+import Control.Monad (forM, forM_, when)
 import Control.Monad.Writer (tell)
 import Data.List (intercalate)
 import Data.Tuple (swap)

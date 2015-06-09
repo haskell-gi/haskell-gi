@@ -3,7 +3,9 @@ module GI.Attributes
     , genAllAttributes
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad (forM_, when)
 import Control.Monad.Writer (tell)
 import qualified Data.Set as S

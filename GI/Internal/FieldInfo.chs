@@ -7,7 +7,7 @@ module GI.Internal.FieldInfo
     ) where
 
 import Control.Applicative ((<$>))
-import Foreign.Safe
+import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -37,4 +37,3 @@ fieldInfoOffset fi = unsafePerformIO $ fromIntegral <$>
 fieldInfoType :: FieldInfoClass fic => fic -> TypeInfo
 fieldInfoType fi = unsafePerformIO $ TypeInfo <$> castPtr <$>
     {# call get_type #} (stupidCast fi)
-

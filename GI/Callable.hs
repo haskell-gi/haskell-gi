@@ -10,9 +10,11 @@ module GI.Callable
     , inArgInterfaces
     ) where
 
-import Data.Bool (bool)
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad (forM, forM_, when)
+import Data.Bool (bool)
 import Data.List (intercalate, nub)
 import Data.Maybe (isJust)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)

@@ -120,14 +120,14 @@ instance HasAttr attr o => Show (Attr attr o) where
 data AttrSetOpTag = AttrSet | AttrNew
 
 class SettableAndConstructibleAttr (a :: AttrSetOpTag)
-instance SettableAndConstructibleAttr AttrSet
-instance SettableAndConstructibleAttr AttrNew
+instance SettableAndConstructibleAttr 'AttrSet
+instance SettableAndConstructibleAttr 'AttrNew
 
 class ConstructOnlyAttr (a :: AttrSetOpTag)
-instance ConstructOnlyAttr AttrNew
+instance ConstructOnlyAttr 'AttrNew
 
 class SetOnlyAttr (a :: AttrSetOpTag)
-instance SetOnlyAttr AttrSet
+instance SetOnlyAttr 'AttrSet
 
 class ReadOnlyAttr (a :: AttrSetOpTag)
 
@@ -158,34 +158,34 @@ data AttrOp (s :: AttrOpType) o (w :: AttrSetOpTag) where
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
-              AttrIsReadable attr o ~ True) =>
-             Attr attr o -> (a -> b) -> AttrOp SetOnlyAttrOp o w
+              AttrIsReadable attr o ~ 'True) =>
+             Attr attr o -> (a -> b) -> AttrOp 'SetOnlyAttrOp o w
     -- Apply an IO update function to an attribute
     (:~>) :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
-              AttrIsReadable attr o ~ True) =>
-             Attr attr o -> (a -> IO b) -> AttrOp SetOnlyAttrOp o w
+              AttrIsReadable attr o ~ 'True) =>
+             Attr attr o -> (a -> IO b) -> AttrOp 'SetOnlyAttrOp o w
     -- Assign a value to an attribute with the object as an argument
     (::=) :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b) =>
-             Attr attr o -> (o -> b) -> AttrOp SetOnlyAttrOp o w
+             Attr attr o -> (o -> b) -> AttrOp 'SetOnlyAttrOp o w
     -- Apply an update function to an attribute with the object as
     -- an argument
     (::~) :: (HasAttr attr o,
               (AttrSettableConstraint attr o) w,
               (AttrSetTypeConstraint attr o) b,
               a ~ (AttrGetType attr o),
-              AttrIsReadable attr o ~ True) =>
-             Attr attr o -> (o -> a -> b) -> AttrOp SetOnlyAttrOp o w
+              AttrIsReadable attr o ~ 'True) =>
+             Attr attr o -> (o -> a -> b) -> AttrOp 'SetOnlyAttrOp o w
 
 -- | Set a number of properties for some object.
-set :: forall o. o -> [AttrOp SetOnlyAttrOp o AttrSet] -> IO ()
+set :: forall o. o -> [AttrOp 'SetOnlyAttrOp o 'AttrSet] -> IO ()
 set obj = mapM_ app
  where
-   app :: AttrOp SetOnlyAttrOp o AttrSet -> IO ()
+   app :: AttrOp 'SetOnlyAttrOp o 'AttrSet -> IO ()
    app (attr :=  x) = attrSet attr obj x
    app (attr :=> x) = x >>= attrSet attr obj
    app (attr :~  f) = attrGet attr obj >>= \v -> attrSet attr obj (f v)
@@ -194,6 +194,6 @@ set obj = mapM_ app
    app (attr ::~ f) = attrGet attr obj >>= \v -> attrSet attr obj (f obj v)
 
 -- | Get an Attr of an object.
-get :: (HasAttr attr o, AttrIsReadable attr o ~ True) =>
+get :: (HasAttr attr o, AttrIsReadable attr o ~ 'True) =>
         o -> Attr attr o -> IO (AttrGetType attr o)
 get = flip attrGet

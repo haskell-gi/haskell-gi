@@ -16,12 +16,15 @@ module GI.Utils.ManagedPtr
     , newPtr
     ) where
 
-import Foreign.Safe (finalizerFree, poke)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+import Control.Monad (when, void)
+
+import Foreign (finalizerFree, poke)
+import Foreign.C
 import Foreign.Ptr
 import Foreign.ForeignPtr
-import Foreign.C
-import Control.Monad (when, void)
-import Control.Applicative ((<$>))
 
 import GI.Utils.BasicTypes
 import GI.Utils.Utils

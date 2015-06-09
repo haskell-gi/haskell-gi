@@ -38,7 +38,7 @@ module GI.Utils.BasicTypes
 
 import Data.Word
 import Foreign.Ptr (Ptr, castPtr)
-import Foreign.ForeignPtr.Safe (ForeignPtr, touchForeignPtr)
+import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 import Foreign.C.String (CString, peekCString)
 

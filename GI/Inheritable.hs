@@ -6,7 +6,9 @@ module GI.Inheritable
     , fullInterfaceSignalList
     ) where
 
-import Control.Applicative ((<$>), (<*>))
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
 import Control.Monad (foldM)
 import qualified Data.Map as M
 

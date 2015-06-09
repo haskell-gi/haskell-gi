@@ -9,11 +9,11 @@ module GI.Internal.Typelib
   )
 where
 
-import Foreign.Safe
-import Foreign.C
-
 import Control.Applicative ((<$>))
 import Control.Monad (when)
+
+import Foreign
+import Foreign.C
 
 import GI.Internal.Types
 import GI.Util

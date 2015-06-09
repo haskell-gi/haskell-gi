@@ -28,13 +28,15 @@ module GI.Conversions
     , Constructor(..)
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad (when)
 import Control.Monad.Free (Free(..), liftF)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
-import GHC.Exts (IsString(..))
 import Data.Int
 import Data.Word
+import GHC.Exts (IsString(..))
 
 import GI.API
 import GI.Code
