@@ -1,0 +1,16 @@
+# compiled files
+
+testGtk
+*.hi
+*.o
+
+# cabal stuff
+
+dist/
+
+# folder for generated sources
+
+# all directories named GI
+GI/
+# except the one in the project root
+!/GI/
