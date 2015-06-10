@@ -33,7 +33,7 @@ basicFreeFn (TBasicType TFileName) = Just "freeMem"
 basicFreeFn (TBasicType _) = Nothing
 basicFreeFn (TInterface _ _) = Nothing
 basicFreeFn (TCArray False (-1) (-1) _) = Nothing -- Just passing it along
-basicFreeFn (TCArray _ _ _ _) = Just "freeMem"
+basicFreeFn (TCArray{}) = Just "freeMem"
 basicFreeFn (TGArray _) = Just "unrefGArray"
 basicFreeFn (TPtrArray _) = Just "unrefPtrArray"
 basicFreeFn (TByteArray) = Just "unrefGByteArray"
@@ -69,7 +69,7 @@ basicFreeFnOnError t@(TInterface _ _) transfer = do
                             if isGO
                             then return $ Just "unrefObject"
                             else do
-                              line $ "-- XXX Transfer a non-GObject object"
+                              line "-- XXX Transfer a non-GObject object"
                               return Nothing
                           else return Nothing
     Just (APIInterface _) -> if transfer == TransferEverything
@@ -78,28 +78,28 @@ basicFreeFnOnError t@(TInterface _ _) transfer = do
                                if isGO
                                then return $ Just "unrefObject"
                                else do
-                                 line $ "-- XXX Transfer a non-GObject object"
+                                 line "-- XXX Transfer a non-GObject object"
                                  return Nothing
                              else return Nothing
     Just (APIUnion u) -> if transfer == TransferEverything
                          then if unionIsBoxed u
                               then return $ Just "freeBoxed"
                               else do
-                                line $ "-- XXX Transfer a non-boxed union"
+                                line "-- XXX Transfer a non-boxed union"
                                 return Nothing
                          else return Nothing
     Just (APIStruct s) -> if transfer == TransferEverything
                           then if structIsBoxed s
                                then return $ Just "freeBoxed"
                                else do
-                                 line $ "-- XXX Transfer a non-boxed struct"
+                                 line "-- XXX Transfer a non-boxed struct"
                                  return Nothing
                           else return Nothing
     _ -> return Nothing
 -- Arrays without length info are just passed along, we do not need to
 -- free them.
 basicFreeFnOnError (TCArray False (-1) (-1) _) _ = return Nothing
-basicFreeFnOnError (TCArray _ _ _ _) _ = return $ Just "freeMem"
+basicFreeFnOnError (TCArray{}) _ = return $ Just "freeMem"
 basicFreeFnOnError (TGArray _) _ = return $ Just "unrefGArray"
 basicFreeFnOnError (TPtrArray _) _ = return $ Just "unrefPtrArray"
 basicFreeFnOnError (TByteArray) _ = return $ Just "unrefGByteArray"
@@ -165,7 +165,7 @@ freeElementsOnError :: Arg -> String -> String -> ExcCodeGen [String]
 freeElementsOnError arg label len =
     case elementTypeAndMap (argType arg) len of
       Nothing -> return []
-      Just (inner, mapFn) -> do
+      Just (inner, mapFn) ->
          fullyFreeOnError inner label (transfer arg) >>= \case
                    Nothing -> return []
                    Just innerFree ->

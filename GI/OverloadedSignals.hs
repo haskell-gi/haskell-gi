@@ -43,15 +43,15 @@ findSignalNames apis = S.toList <$> go apis S.empty
 -- | Generate the overloaded signal connectors: "Clicked", "ActivateLink", ...
 genOverloadedSignalConnectors :: [(Name, API)] -> String -> CodeGen ()
 genOverloadedSignalConnectors allAPIs modulePrefix = do
-  line $ "-- Generated code."
+  line   "-- Generated code."
   blank
-  line $ "{-# LANGUAGE DataKinds, GADTs, KindSignatures #-}"
+  line   "{-# LANGUAGE DataKinds, GADTs, KindSignatures #-}"
   blank
   line $ "module " ++ modulePrefix ++ "Signals where"
   blank
-  line $ "import GHC.TypeLits"
+  line   "import GHC.TypeLits"
   blank
-  line $ "data SignalProxy (a :: Symbol) where"
+  line   "data SignalProxy (a :: Symbol) where"
   indent $ do
     signalNames <- findSignalNames allAPIs
     let maxLength = maximum $ map (length . signalHaskellName) signalNames
@@ -105,26 +105,26 @@ genSignalInstances name apis modulePrefix = do
 
   code <- recurse' $ forM_ apis genSignals
 
-  line $ "-- Generated code."
+  line   "-- Generated code."
   blank
 
   -- Providing orphan instances is the whole point of these modules,
   -- tell GHC that this is fine.
-  line $ "{-# OPTIONS_GHC -fno-warn-orphans #-}"
-  line $ "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
+  line   "{-# OPTIONS_GHC -fno-warn-orphans #-}"
+  line   "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
   blank
-  line $ "{-# LANGUAGE DataKinds,    FlexibleInstances,"
-  line $ "             TypeFamilies, MultiParamTypeClasses #-}"
+  line   "{-# LANGUAGE DataKinds,    FlexibleInstances,"
+  line   "             TypeFamilies, MultiParamTypeClasses #-}"
   blank
 
   line $ "module " ++ mp nm ++ "Signals where"
   blank
 
-  line $ "import GI.Utils.Signals"
+  line   "import GI.Utils.Signals"
   blank
 
   deps <- S.toList <$> getDeps
-  forM_ deps $ \i -> when (i /= name) $ do
+  forM_ deps $ \i -> when (i /= name) $
     line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
   blank
 

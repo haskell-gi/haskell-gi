@@ -52,11 +52,11 @@ genProps _ = return ()
 
 genAllAttributes :: [(Name, API)] -> String -> CodeGen ()
 genAllAttributes allAPIs modulePrefix = do
-  line $ "-- Generated code."
+  line "-- Generated code."
   blank
-  line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
-  line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
-  line $ "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
+  line "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
+  line "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
+  line "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
   blank
 
   line $ "module " ++ modulePrefix ++ "Properties where"
@@ -78,7 +78,7 @@ genAttributes name apis modulePrefix = do
 
   -- Providing orphan instances is the whole point of these modules,
   -- tell GHC that this is fine.
-  line $ "{-# OPTIONS_GHC -fno-warn-orphans #-}"
+  line "{-# OPTIONS_GHC -fno-warn-orphans #-}"
   blank
 
   genPrelude (nm ++ "Attributes") modulePrefix

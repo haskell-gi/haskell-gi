@@ -49,17 +49,16 @@ typeDoParentSearch _ _ = return False
 apiDoParentSearch :: Name -> Name -> API -> CodeGen Bool
 apiDoParentSearch parent n api
     | parent == n = return True
-    | otherwise = do
-  case api of
-    APIObject o ->
+    | otherwise   = case api of
+      APIObject o ->
         case objParent o of
           Just (Name pns pn) -> typeDoParentSearch parent (TInterface pns pn)
           Nothing -> return False
-    APIInterface iface ->
+      APIInterface iface ->
         do let prs = ifPrerequisites iface
-           prereqs <- (zip prs) <$> mapM findAPIByName prs
+           prereqs <- zip prs <$> mapM findAPIByName prs
            or <$> mapM (uncurry (apiDoParentSearch parent)) prereqs
-    _ -> return False
+      _ -> return False
 
 isGObject :: Type -> CodeGen Bool
 isGObject = typeDoParentSearch $ Name "GObject" "Object"

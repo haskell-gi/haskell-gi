@@ -77,11 +77,11 @@ noName name' = group $ do
 
 -- For a string of the form "one-sample-string" return "OneSampleString"
 hyphensToCamelCase :: String -> String
-hyphensToCamelCase str = concat $ map ucFirst $ split '-' str
+hyphensToCamelCase str = concatMap ucFirst $ split '-' str
 
 -- | Similarly, turn a name separated_by_underscores into CamelCase.
 underscoresToCamelCase :: String -> String
-underscoresToCamelCase str = concat $ map ucFirst $ split '_' str
+underscoresToCamelCase str = concatMap ucFirst $ split '_' str
 
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"

@@ -31,7 +31,7 @@ getList getN getOne x = do
     mapM (getOne x) [0..n - 1]
 
 toFlags :: Enum a => CInt -> [a]
-toFlags n = loop n ((sizeOf n)*8 - 1) -- Number of bits in the argument
+toFlags n = loop n (sizeOf n * 8 - 1) -- Number of bits in the argument
     where loop _ (-1) = []
           loop n e =
               let rest = loop n (e - 1)
@@ -40,7 +40,7 @@ toFlags n = loop n ((sizeOf n)*8 - 1) -- Number of bits in the argument
 -- Splits a string separated by the given separator into a list of
 -- constituents. For example: split '.' "A.BC.D" = ["A", "BC", "D"]
 split :: Char -> String -> [String]
-split sep str = unfoldr span' str
+split sep = unfoldr span'
     where span' :: String -> Maybe (String, String)
           span' [] = Nothing
           span' s@(x:xs)

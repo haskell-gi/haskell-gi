@@ -1,5 +1,5 @@
-{-# LANGUAGE GADTs, EmptyDataDecls, ScopedTypeVariables, DataKinds,
-  KindSignatures, TypeFamilies, MultiParamTypeClasses, ConstraintKinds #-}
+{-# LANGUAGE GADTs, ScopedTypeVariables, DataKinds, KindSignatures,
+  TypeFamilies, MultiParamTypeClasses, ConstraintKinds #-}
 
 -- -*-haskell-*-
 
@@ -106,7 +106,7 @@ class HasAttr (attr :: Symbol) o where
                      Attr attr o -> b -> IO (String, GValue)
 
 instance HasAttr attr o => Show (Attr attr o) where
-  show a = attrLabel (undefined :: o) a
+  show = attrLabel (undefined :: o)
 
 -- The following classes, in combination with the
 -- "AttrSettableConstraint" constraint, will enforce that one does not

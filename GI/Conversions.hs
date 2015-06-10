@@ -54,7 +54,7 @@ import GI.Internal.ArgInfo (Transfer(..))
 data Constructor = P String | M String | Id
                    deriving (Eq,Show)
 instance IsString Constructor where
-    fromString cs = P cs
+    fromString = P
 
 data FExpr next = Apply Constructor next
                 | MapC Constructor next
@@ -109,12 +109,11 @@ computeArrayLength array (TCArray _ _ _ t) = do
   return $ "fromIntegral $ " ++ reader ++ " " ++ array
     where findReader = case t of
                      TBasicType TUInt8 -> return "B.length"
-                     TBasicType _ -> return "length"
-                     TInterface _ _ -> return "length"
-                     TCArray _ _ _ _ -> return "length"
+                     TBasicType _      -> return "length"
+                     TInterface _ _    -> return "length"
+                     TCArray{}         -> return "length"
                      _ -> notImplementedError $
-                          "Don't know how to compute length of "
-                          ++ show t
+                          "Don't know how to compute length of " ++ show t
 computeArrayLength _ t =
     notImplementedError $ "computeArrayLength called on non-CArray type "
                             ++ show t
@@ -125,7 +124,7 @@ convert l c = do
   genConversion l c'
 
 hObjectToF :: Type -> Transfer -> ExcCodeGen Constructor
-hObjectToF t transfer = do
+hObjectToF t transfer =
   if transfer == TransferEverything
   then do
     isGO <- isGObject t
@@ -135,19 +134,19 @@ hObjectToF t transfer = do
   else return "unsafeManagedPtrGetPtr"
 
 hVariantToF :: Transfer -> CodeGen Constructor
-hVariantToF transfer = do
+hVariantToF transfer =
   if transfer == TransferEverything
   then return $ M "refGVariant"
   else return "unsafeManagedPtrGetPtr"
 
 hParamSpecToF :: Transfer -> CodeGen Constructor
-hParamSpecToF transfer = do
+hParamSpecToF transfer =
   if transfer == TransferEverything
   then return $ M "refGParamSpec"
   else return "unsafeManagedPtrGetPtr"
 
 hBoxedToF :: Transfer -> CodeGen Constructor
-hBoxedToF transfer = do
+hBoxedToF transfer =
   if transfer == TransferEverything
   then return $ M "copyBoxed"
   else return "unsafeManagedPtrGetPtr"
@@ -221,10 +220,10 @@ hToF' t a hType fType transfer
         return $ M "(packMapStorableArray realToFrac)"
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
-    | TCArray _ _ _ _ <- t = notImplementedError
-                         $ "Don't know how to pack C array of type " ++ show t
+    | TCArray{}  <- t = notImplementedError $
+                   "Don't know how to pack C array of type " ++ show t
     | TGHash _ _ <- t = notImplementedError
-                    "Hash tables are not properly supported yet"
+                   "Hash tables are not properly supported yet"
     | otherwise = case (show hType, show fType) of
                ("T.Text", "CString") -> return $ M "textToCString"
                ("[Char]", "CString") -> return $ M "stringToCString"
@@ -233,12 +232,12 @@ hToF' t a hType fType transfer
                ("Float", "CFloat")   -> return "realToFrac"
                ("Double", "CDouble") -> return "realToFrac"
                ("GType", "CGType")   -> return "gtypeToCGType"
-               _                     ->
-                   notImplementedError $ "Don't know how to convert "
-                                           ++ show hType ++ " into "
-                                           ++ show fType ++ ".\n"
-                                           ++ "Internal type: "
-                                           ++ show t
+               _                     -> notImplementedError $
+                                        "Don't know how to convert "
+                                        ++ show hType ++ " into "
+                                        ++ show fType ++ ".\n"
+                                        ++ "Internal type: "
+                                        ++ show t
 
 hToF_PackedType t packer transfer = do
   a <- findAPI t
@@ -256,7 +255,7 @@ hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
 hToF (TPtrArray t) transfer = hToF_PackedType t "packGPtrArray" transfer
 -- Arrays without length info are just passed along.
 hToF (TCArray False (-1) (-1) _) _ = return $ Pure ()
-hToF (TCArray zt _ _ t@(TCArray _ _ _ _)) transfer = do
+hToF (TCArray zt _ _ t@(TCArray{})) transfer = do
   let packer = if zt
                then "packZeroTerminated"
                else "pack"
@@ -323,11 +322,11 @@ fObjectToH t hType transfer = do
     TransferEverything ->
         if isGO
         then return $ M $ parenthesize $ "wrapObject " ++ constructor
-        else badIntroError $ "Got a transfer of something not a GObject"
+        else badIntroError "Got a transfer of something not a GObject"
     _ ->
         if isGO
         then return $ M $ parenthesize $ "newObject " ++ constructor
-        else badIntroError $ "Wrapping not a GObject with no copy..."
+        else badIntroError "Wrapping not a GObject with no copy..."
 
 fCallbackToH :: Callback -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fCallbackToH _ _ _ =
@@ -377,8 +376,8 @@ fToH' t a hType fType transfer
         return $ M "(unpackMapZeroTerminatedStorableArray realToFrac)"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "unpackZeroTerminatedStorableArray"
-    | TCArray _ _ _ _ <- t =
-      notImplementedError $ "Don't know how to unpack C array of type " ++ show t
+    | TCArray{}  <- t = notImplementedError $
+                   "Don't know how to unpack C array of type " ++ show t
     | TByteArray <- t = return $ M "unpackGByteArray"
     | TGHash _ _ <- t = notImplementedError "Foreign Hashes not supported yet"
     | otherwise = case (show fType, show hType) of
@@ -413,7 +412,7 @@ fToH (TGArray t) transfer = fToH_PackedType t "unpackGArray" transfer
 fToH (TPtrArray t) transfer = fToH_PackedType t "unpackGPtrArray" transfer
 -- Arrays without length info are just passed along.
 fToH (TCArray False (-1) (-1) _) _ = return $ Pure ()
-fToH (TCArray True _ _ t@(TCArray _ _ _ _)) transfer =
+fToH (TCArray True _ _ t@(TCArray{})) transfer =
   fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
 fToH (TCArray True _ _ t@(TInterface _ _)) transfer = do
   isScalar <- getIsScalar t
@@ -459,21 +458,17 @@ unpackCArray length (TCArray False _ _ t) transfer =
                         Just (APIStruct s) -> (structIsBoxed s, structSize s)
                         Just (APIUnion u) -> (unionIsBoxed u, unionSize u)
                         _ -> (False, 0)
-           let unpacker = if isScalar
-                          then "unpackStorableArrayWithLength"
-                          else if size == 0
-                               then "unpackPtrArrayWithLength"
-                               else if boxed
-                                    then "unpackBoxedArrayWithLength " ++ show size
-                                    else "unpackBlockArrayWithLength " ++ show size
+           let unpacker | isScalar    = "unpackStorableArrayWithLength"
+                        | (size == 0) = "unpackPtrArrayWithLength"
+                        | boxed       = "unpackBoxedArrayWithLength " ++ show size
+                        | otherwise   = "unpackBlockArrayWithLength " ++ show size
            return $ do
              apply $ M $ parenthesize $ unpacker ++ " " ++ length
              mapC innerConstructor
     _ -> notImplementedError $
          "unpackCArray : Don't know how to unpack C Array of type " ++ show t
 
-unpackCArray _ _ _ =
-    notImplementedError $ "unpackCArray : unexpected array type."
+unpackCArray _ _ _ = notImplementedError "unpackCArray : unexpected array type."
 
 -- Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
@@ -507,7 +502,7 @@ argumentType letters@(l:ls) t   = do
         else return (letters, s, [])
     _ -> return (letters, s, [])
 
-haskellBasicType TVoid     = (ptr (typeOf ()))
+haskellBasicType TVoid     = ptr $ typeOf ()
 haskellBasicType TBoolean  = typeOf True
 haskellBasicType TInt8     = typeOf (0 :: Int8)
 haskellBasicType TUInt8    = typeOf (0 :: Word8)

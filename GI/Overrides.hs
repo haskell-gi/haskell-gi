@@ -62,8 +62,8 @@ type Parser = WriterT Overrides (StateT (Maybe String) (Except Text)) ()
 -- case the parsing fails we return a description of the error
 -- instead.
 parseOverridesFile :: [Text] -> Either Text Overrides
-parseOverridesFile ls = (runExcept $ flip evalStateT Nothing $ execWriterT $
-                                   mapM parseOneLine (map T.strip ls))
+parseOverridesFile ls = runExcept $ flip evalStateT Nothing $ execWriterT $
+                                    mapM (parseOneLine . T.strip) ls
 
 -- | Parse a single line of the config file, modifying the
 -- configuration as appropriate.
@@ -83,10 +83,10 @@ parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 parseIgnore :: Text -> Maybe String -> Parser
 parseIgnore _ Nothing =
     throwError "'ignore' requires a namespace to be defined first."
-parseIgnore (T.words -> (T.splitOn "." -> [api,elem]):[]) (Just ns) =
+parseIgnore (T.words -> [T.splitOn "." -> [api,elem]]) (Just ns) =
     tell $ defaultOverrides {ignoredElems = M.singleton (Name ns (T.unpack api))
                                          (S.singleton $ T.unpack elem)}
-parseIgnore (T.words -> (T.splitOn "." -> [api]):[]) (Just ns) =
+parseIgnore (T.words -> [T.splitOn "." -> [api]]) (Just ns) =
     tell $ defaultOverrides {ignoredAPIs = S.singleton (Name ns (T.unpack api))}
 parseIgnore ignore _ =
     throwError ("Ignore syntax is of the form \"ignore API.elem\" with '.elem' optional.\nGot \"ignore " <> ignore <> "\" instead.")
@@ -94,7 +94,7 @@ parseIgnore ignore _ =
 -- | Prefix for constants.
 parseConstP :: Text -> Maybe String -> Parser
 parseConstP _ Nothing = throwError "'constantPrefix' requires a namespace to be defined first. "
-parseConstP (T.words -> p:[]) (Just ns) = tell $
+parseConstP (T.words -> [p]) (Just ns) = tell $
     defaultOverrides {constantPrefix = M.singleton ns (T.unpack p)}
 parseConstP prefix _ =
     throwError ("constantPrefix syntax is of the form \"constantPrefix prefix\".\nGot \"constantPrefix " <> prefix <> "\" instead.")
@@ -102,7 +102,7 @@ parseConstP prefix _ =
 -- | Sealed structures.
 parseSeal :: Text -> Maybe String -> Parser
 parseSeal _ Nothing = throwError "'seal' requires a namespace to be defined first."
-parseSeal (T.words -> s:[]) (Just ns) = tell $
+parseSeal (T.words -> [s]) (Just ns) = tell $
     defaultOverrides {sealedStructs = S.singleton (Name ns (T.unpack s))}
 parseSeal seal _ =
     throwError ("seal syntax is of the form \"seal name\".\nGot \"seal "
@@ -122,7 +122,7 @@ filterOneAPI ovs (n, APIStruct s, maybeIgnores) =
     (n, APIStruct s {structMethods = maybe (structMethods s)
                                      (filterNamed (structMethods s))
                                      maybeIgnores,
-                     structFields = if n `S.member` (sealedStructs ovs)
+                     structFields = if n `S.member` sealedStructs ovs
                                     then []
                                     else structFields s})
 -- The rest only apply if there are ignores.

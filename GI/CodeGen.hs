@@ -8,7 +8,7 @@ module GI.CodeGen
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM, forM_, when)
+import Control.Monad (forM, forM_, when, unless)
 import Control.Monad.Writer (tell)
 import Data.List (intercalate)
 import Data.Tuple (swap)
@@ -72,7 +72,7 @@ genBoxedObject n typeInit = do
   group $ do
     line $ "foreign import ccall \"" ++ typeInit ++ "\" c_" ++
             typeInit ++ " :: "
-    indent $ line $ "IO GType"
+    indent $ line "IO GType"
   group $ do
        line $ "instance BoxedObject " ++ name' ++ " where"
        indent $ line $ "boxedType _ = c_" ++ typeInit
@@ -94,12 +94,12 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
       return (n, value)
   group $ do
     line $ "data " ++ name' ++ " = "
-    indent $ do
+    indent $
       case fields' of
         ((fieldName, _value):fs) -> do
           line $ "  " ++ fieldName
           forM_ fs $ \(n, _) -> line $ "| " ++ n
-          line $ "deriving (Show, Eq)"
+          line "deriving (Show, Eq)"
         _ -> return ()
   group $ do
     line $ "instance Enum " ++ name' ++ " where"
@@ -144,21 +144,21 @@ genErrorDomain name' domain = do
     let catcher = "catch" ++ name'
     line $ catcher ++ " ::"
     indent $ do
-            line $ "IO a ->"
+            line   "IO a ->"
             line $ "(" ++ name' ++ " -> GErrorMessage -> IO a) ->"
-            line $ "IO a"
+            line   "IO a"
     line $ catcher ++ " = catchGErrorJustDomain"
   group $ do
     let handler = "handle" ++ name'
     line $ handler ++ " ::"
     indent $ do
             line $ "(" ++ name' ++ " -> GErrorMessage -> IO a) ->"
-            line $ "IO a ->"
-            line $ "IO a"
+            line   "IO a ->"
+            line   "IO a"
     line $ handler ++ " = handleGErrorJustDomain"
 
 genStruct :: Name -> Struct -> CodeGen ()
-genStruct n s = when (not $ ignoreStruct n s) $ do
+genStruct n s = unless (ignoreStruct n s) $ do
       name' <- upperName n
       line $ "-- struct " ++ name'
 
@@ -178,7 +178,7 @@ genStruct n s = when (not $ ignoreStruct n s) $ do
       -- Methods
       forM_ (structMethods s) $ \(mn, f) ->
           do isFunction <- symbolFromFunction (fnSymbol f)
-             when (not isFunction) $
+             unless isFunction $
                   handleCGExc
                   (\e -> line ("-- XXX Could not generate method "
                                ++ name' ++ "::" ++ name mn ++ "\n"
@@ -206,7 +206,7 @@ genUnion n u = do
   -- Methods
   forM_ (unionMethods u) $ \(mn, f) ->
       do isFunction <- symbolFromFunction (fnSymbol f)
-         when (not isFunction) $
+         unless isFunction $
               handleCGExc
               (\e -> line ("-- XXX Could not generate method "
                            ++ name' ++ "::" ++ name mn ++ "\n"
@@ -272,7 +272,7 @@ genMethod cn mn (Function {
                     fnFlags = fs }) = do
     name' <- upperName cn
     returnsGObject <- isGObject (returnType c)
-    line $ "-- method " ++ name' ++ "::" ++ (name mn)
+    line $ "-- method " ++ name' ++ "::" ++ name mn
     line $ "-- method flags : " ++ show fs
     let -- Mangle the name to namespace it to the class.
         mn' = mn { name = name cn ++ "_" ++ name mn }
@@ -294,7 +294,7 @@ genMethod cn mn (Function {
 -- which plays well with the way we are implementing polymorphic
 -- lenses for GObject properties.
 genUnifiedConstraint name' = do
-  let unified = parenthesize (intercalate ", " $ [klass name' ++ " a",
+  let unified = parenthesize (intercalate ", " [klass name' ++ " a",
                                                   "ManagedPtr a",
                                                   "GObject a"])
                 ++ " => " ++ goConstraint name' ++ " a where {}"
@@ -317,7 +317,7 @@ genGObjectType iT n = do
     line $ "instance " ++ className ++ " " ++ name'
     forM_ iT $ \ancestor -> do
           ancestor' <- upperName ancestor
-          line $ "instance " ++ (klass ancestor') ++ " " ++ name'
+          line $ "instance " ++ klass ancestor' ++ " " ++ name'
 
 -- Type casting with type checking
 genGObjectCasts isIU n o = do
@@ -356,7 +356,7 @@ manageUnManagedPtr n = do
     indent $ do
             line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
                      " x) -> castPtr $ unsafeForeignPtrToPtr x)"
-            line $ "touchManagedPtr      _ = return ()"
+            line   "touchManagedPtr      _ = return ()"
 
 -- Wrap a given Object. We enforce that every Object that we wrap is a
 -- GObject. This is the case for everything expect the ParamSpec* set
@@ -371,7 +371,7 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
 
   let t = (\(Name ns' n') -> TInterface ns' n') n
   isGO <- isGObject t
-  when (not isGO) $ notImplementedError $ "APIObject \"" ++ name' ++
+  unless isGO $ notImplementedError $ "APIObject \"" ++ name' ++
            "\" does not descend from GObject, it will be ignored."
 
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
@@ -384,7 +384,7 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
 
   -- Implemented interfaces
   let oIfs = objInterfaces o
-  when ((not . null) oIfs) $ group $ forM_ oIfs $ \(Name ns n) -> do
+  unless (null oIfs) $ group $ forM_ oIfs $ \(Name ns n) -> do
     prefix <- qualify ns
     let ifClass = prefix ++ interfaceClassName n
     line $ "instance " ++ ifClass ++ " " ++ name'
@@ -446,14 +446,14 @@ genInterface n iface = do
             iT <- instanceTree pName
             forM_ iT $ \ancestor -> do
                   ancestor' <- upperName ancestor
-                  line $ "instance " ++ (klass ancestor') ++ " " ++ name'
+                  line $ "instance " ++ klass ancestor' ++ " " ++ name'
         _ -> error $ "Prerequisite is neither an object or an interface!? : "
                        ++ ns ++ "." ++ n
 
   when isGO $ do
     let cn_ = case ifTypeInit iface of
                 Just typeInit -> typeInit
-                Nothing -> error $ "GObject derived interface without a type!"
+                Nothing -> error "GObject derived interface without a type!"
 
     group $ do
       line $ "foreign import ccall \"" ++ cn_ ++ "\""
@@ -470,7 +470,7 @@ genInterface n iface = do
   -- Methods
   forM_ (ifMethods iface) $ \(mn, f) -> do
     isFunction <- symbolFromFunction (fnSymbol f)
-    when (not isFunction) $
+    unless isFunction $
          handleCGExc
          (\e -> line ("-- XXX Could not generate method "
                       ++ name' ++ "::" ++ name mn ++ "\n"
@@ -515,14 +515,14 @@ genPrelude :: String -> String -> CodeGen ()
 genPrelude name modulePrefix = do
     let mp = (modulePrefix ++)
 
-    line $ "-- Generated code."
+    line "-- Generated code."
     blank
-    line $ "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
+    line "{-# OPTIONS_GHC -fno-warn-unused-imports #-}"
     blank
-    line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
-    line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
-    line $ "    FlexibleInstances, UndecidableInstances, DataKinds,"
-    line $ "    OverloadedStrings, NegativeLiterals #-}"
+    line "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
+    line "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
+    line "    FlexibleInstances, UndecidableInstances, DataKinds,"
+    line "    OverloadedStrings, NegativeLiterals #-}"
     blank
     -- XXX: Generate export list.
     line $ "module " ++ mp name ++ " where"
@@ -530,37 +530,37 @@ genPrelude name modulePrefix = do
     -- The Prelude functions often clash with variable names or
     -- functions defined in the bindings, so we only import the
     -- necessary minimum into our namespace.
-    line $ "import Prelude ()"
-    line $ "import GI.Utils.ShortPrelude"
+    line "import Prelude ()"
+    line "import GI.Utils.ShortPrelude"
     -- Error types come from GLib.
     when (name /= "GLib") $
          line $ "import " ++ mp "GLib (Error(..))"
-    line $ "import Data.Char"
-    line $ "import Data.Int"
-    line $ "import Data.Word"
-    line $ "import qualified Data.ByteString.Char8 as B"
-    line $ "import Data.ByteString.Char8 (ByteString)"
-    line $ "import Foreign.C"
-    line $ "import Foreign.Ptr"
-    line $ "import Foreign.ForeignPtr.Safe"
-    line $ "import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)"
-    line $ "import Foreign.Storable (peek, poke, sizeOf)"
-    line $ "import Control.Applicative ((<$>))"
-    line $ "import Control.Exception (onException)"
-    line $ "import qualified Data.Text as T"
+    line "import Data.Char"
+    line "import Data.Int"
+    line "import Data.Word"
+    line "import qualified Data.ByteString.Char8 as B"
+    line "import Data.ByteString.Char8 (ByteString)"
+    line "import Foreign.C"
+    line "import Foreign.Ptr"
+    line "import Foreign.ForeignPtr.Safe"
+    line "import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)"
+    line "import Foreign.Storable (peek, poke, sizeOf)"
+    line "import Control.Applicative ((<$>))"
+    line "import Control.Exception (onException)"
+    line "import qualified Data.Text as T"
     blank
-    line $ "import GI.Utils.Attributes hiding (get, set)"
-    line $ "import GI.Utils.BasicTypes"
-    line $ "import GI.Utils.BasicConversions"
-    line $ "import GI.Utils.Closure"
-    line $ "import GI.Utils.GError"
-    line $ "import GI.Utils.GParamSpec"
-    line $ "import GI.Utils.GVariant"
-    line $ "import GI.Utils.GValue"
-    line $ "import GI.Utils.ManagedPtr"
-    line $ "import GI.Utils.Properties hiding (new)"
-    line $ "import GI.Utils.Signals (SignalConnectMode(..), connectSignalFunPtr)"
-    line $ "import GI.Utils.Utils"
+    line "import GI.Utils.Attributes hiding (get, set)"
+    line "import GI.Utils.BasicTypes"
+    line "import GI.Utils.BasicConversions"
+    line "import GI.Utils.Closure"
+    line "import GI.Utils.GError"
+    line "import GI.Utils.GParamSpec"
+    line "import GI.Utils.GVariant"
+    line "import GI.Utils.GValue"
+    line "import GI.Utils.ManagedPtr"
+    line "import GI.Utils.Properties hiding (new)"
+    line "import GI.Utils.Signals (SignalConnectMode(..), connectSignalFunPtr)"
+    line "import GI.Utils.Utils"
     blank
 
 genModule :: String -> [(Name, API)] -> String -> CodeGen ()
@@ -590,8 +590,7 @@ genModule name apis modulePrefix = do
           filter (not . (== Name "GObject" "Value") . fst) $
           filter (not . (== Name "GObject" "Closure") . fst) $
           -- Some callback types are defined inside structs
-          map fixAPIStructs $ (++ embeddedAPIs) $
-                 apis
+          map fixAPIStructs $ (++ embeddedAPIs) apis
 
   genPrelude name' modulePrefix
   deps <- S.toList <$> getDeps

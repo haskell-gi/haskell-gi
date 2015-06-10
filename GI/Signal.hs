@@ -7,8 +7,8 @@ module GI.Signal
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (when)
-import Control.Monad (forM, forM_)
+import Control.Monad (forM, forM_, when, unless)
+
 import Data.List (intercalate)
 import Data.Typeable (typeOf)
 import Data.Bool (bool)
@@ -69,7 +69,7 @@ genCCallbackPrototype cb name' isSignal =
 genCallbackWrapperFactory :: String -> CodeGen ()
 genCallbackWrapperFactory name' =
   group $ do
-    line $ "foreign import ccall \"wrapper\""
+    line "foreign import ccall \"wrapper\""
     indent $ line $ "mk" ++ name' ++ " :: "
                ++ name' ++ "C -> IO (FunPtr " ++ name' ++ "C)"
 
@@ -92,8 +92,8 @@ convertNullable aname c = do
   line $ "maybe" ++ ucFirst aname ++ " <-"
   indent $ do
     line $ "if " ++ aname ++ " == nullPtr"
-    line $ "then return Nothing"
-    line $ "else do"
+    line   "then return Nothing"
+    line   "else do"
     indent $ do
              unpacked <- c
              line $ "return $ Just " ++ unpacked
@@ -102,24 +102,24 @@ convertNullable aname c = do
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
 convertCallbackInCArray :: Callable -> Arg -> Type -> String -> ExcCodeGen String
-convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname = do
+convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname =
   if length > -1
   then wrapMaybe arg >>= bool convertAndFree
                          (convertNullable aname convertAndFree)
   else
-      -- Not much we can do, we just pass the pointer along, and let
-      -- the callback deal with it.
-      return aname
+    -- Not much we can do, we just pass the pointer along, and let
+    -- the callback deal with it.
+    return aname
   where
-    lname = escapeReserved $ argName $ (args callable)!!length
+    lname = escapeReserved $ argName $ args callable !! length
 
     convertAndFree :: ExcCodeGen String
     convertAndFree = do
       unpacked <- convert aname $ unpackCArray lname t (transfer arg)
       -- Free the memory associated with the array
-      when ((transfer arg) == TransferEverything) $
+      when (transfer arg == TransferEverything) $
            mapM_ line =<< freeElements t aname lname
-      when ((transfer arg) /= TransferNothing) $
+      when (transfer arg /= TransferNothing) $
            mapM_ line =<< freeContainer t aname
       return unpacked
 
@@ -129,11 +129,10 @@ convertCallbackInCArray _ t _ _ =
 
 -- Prepare an argument for passing into the Haskell side.
 prepareArgForCall :: Callable -> Arg -> ExcCodeGen String
-prepareArgForCall cb arg = do
-  case direction arg of
-    DirectionIn -> prepareInArg cb arg
-    DirectionInout -> prepareInoutArg arg
-    DirectionOut -> error "Unexpected DirectionOut!"
+prepareArgForCall cb arg = case direction arg of
+  DirectionIn -> prepareInArg cb arg
+  DirectionInout -> prepareInoutArg arg
+  DirectionOut -> error "Unexpected DirectionOut!"
 
 prepareInArg :: Callable -> Arg -> ExcCodeGen String
 prepareInArg cb arg = do
@@ -176,7 +175,7 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
   group $ do
     line $ lcFirst name' ++ "Wrapper ::"
     indent $ do
-      when (not isSignal) $
+      unless isSignal $
            line $ "Maybe (Ptr (FunPtr (" ++ name' ++ "C))) ->"
       line $ name' ++ " ->"
       when isSignal $ line "Ptr () ->"
@@ -193,8 +192,8 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
       line $ show ret
 
     let allArgs = if isSignal
-                  then intercalate " " $ ["_cb", "_"] ++ cArgNames ++ ["_"]
-                  else intercalate " " $ ["funptrptr", "_cb"] ++ cArgNames
+                  then unwords $ ["_cb", "_"] ++ cArgNames ++ ["_"]
+                  else unwords $ ["funptrptr", "_cb"] ++ cArgNames
     line $ lcFirst name' ++ "Wrapper " ++ allArgs ++ " = do"
     indent $ do
       hInNames <- forM hInArgs (prepareArgForCall cb)
@@ -203,21 +202,21 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
                           TBasicType TVoid -> []
                           _                -> ["result"]
           argName' = escapeReserved . argName
-          returnVars = maybeReturn ++ (map (("out"++) . argName') hOutArgs)
+          returnVars = maybeReturn ++ map (("out"++) . argName') hOutArgs
           returnBind = case returnVars of
-                         [] -> ""
-                         r:[] -> r ++ " <- "
-                         _ -> parenthesize (intercalate ", " returnVars) ++ " <- "
+                         []  -> ""
+                         [r] -> r ++ " <- "
+                         _   -> parenthesize (intercalate ", " returnVars) ++ " <- "
       line $ returnBind ++ "_cb " ++ concatMap (" " ++) hInNames
 
       forM_ hOutArgs saveOutArg
 
-      when (not isSignal) $ line "maybeReleaseFunPtr funptrptr"
+      unless isSignal $ line "maybeReleaseFunPtr funptrptr"
 
       when (returnType cb /= TBasicType TVoid) $
            if returnMayBeNull cb
            then do
-             line $ "maybeM nullPtr result $ \\result' -> do"
+             line "maybeM nullPtr result $ \\result' -> do"
              indent $ unwrapped "result'"
            else unwrapped "result"
            where
@@ -231,7 +230,7 @@ genCallback n (Callback cb) = do
   line $ "-- callback " ++ name'
 
   let -- user_data pointers, which we generically omit
-      dataptrs = map ((args cb)!!) . filter (/= -1) . map argClosure $ args cb
+      dataptrs = map (args cb !!) . filter (/= -1) . map argClosure $ args cb
       hidden = dataptrs ++ arrayLengths cb
 
       inArgs = filter ((/= DirectionOut) . direction) $ args cb
@@ -239,7 +238,7 @@ genCallback n (Callback cb) = do
       outArgs = filter ((/= DirectionIn) . direction) $ args cb
       hOutArgs = filter (not . (`elem` hidden)) outArgs
 
-  if (skipReturn cb)
+  if skipReturn cb
   then group $ do
     line $ "-- XXX Skipping callback " ++ name'
     line $ "-- Callbacks skipping return unsupported :\n"
@@ -268,9 +267,9 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   line $ "-- signal " ++ on' ++ "::" ++ sn
 
   let inArgs = filter ((/= DirectionOut) . direction) $ args cb
-      hInArgs = filter (not . (`elem` (arrayLengths cb))) inArgs
+      hInArgs = filter (not . (`elem` arrayLengths cb)) inArgs
       outArgs = filter ((/= DirectionIn) . direction) $ args cb
-      hOutArgs = filter (not . (`elem` (arrayLengths cb))) outArgs
+      hOutArgs = filter (not . (`elem` arrayLengths cb)) outArgs
       sn' = signalHaskellName sn
       signalConnectorName = on' ++ ucFirst sn'
       cbType = signalConnectorName ++ "Callback"

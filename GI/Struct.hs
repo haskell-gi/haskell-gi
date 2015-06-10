@@ -7,7 +7,8 @@ module GI.Struct ( genStructFields
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, when, unless)
+
 import Data.List (isSuffixOf)
 import Data.Maybe (mapMaybe)
 
@@ -75,7 +76,7 @@ buildFieldGetter n@(Name ns _) field = do
 
   hType <- show <$> haskellType (fieldType field)
   fType <- show <$> foreignType (fieldType field)
-  when (not $ "Private" `isSuffixOf` hType) $ do
+  unless ("Private" `isSuffixOf` hType) $ do
      fName <- upperName $ Name ns (fieldName field)
      let getter = lcFirst name' ++ "Read" ++ fName
      line $ getter ++ " :: " ++ name' ++ " -> IO " ++

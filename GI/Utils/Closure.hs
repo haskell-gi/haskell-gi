@@ -18,8 +18,8 @@ noClosure :: Maybe Closure
 noClosure = Nothing
 
 instance ManagedPtr Closure where
-    unsafeManagedPtrGetPtr = (\(Closure x) -> castPtr $ unsafeForeignPtrToPtr x)
-    touchManagedPtr        = (\(Closure x) -> touchForeignPtr x)
+    unsafeManagedPtrGetPtr (Closure x) = castPtr $ unsafeForeignPtrToPtr x
+    touchManagedPtr        (Closure x) = touchForeignPtr x
 
 foreign import ccall "g_closure_get_type" c_g_closure_get_type ::
     IO GType

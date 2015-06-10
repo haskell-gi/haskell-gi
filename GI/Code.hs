@@ -104,7 +104,7 @@ recurse :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
 recurse cg = do
   cfg <- config
   oldState <- get
-  (liftIO $ runExceptT $ runRWST cg cfg oldState) >>= \case
+  liftIO (runExceptT $ runRWST cg cfg oldState) >>= \case
              Left e -> throwError e
              Right (r, st, c) -> put (mergeState oldState st)
                                  >> return (r, c)
@@ -115,7 +115,7 @@ handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
 handleCGExc fallback action = do
   cfg <- config
   oldState <- get
-  (liftIO $ runExceptT $ runRWST action cfg oldState) >>= \case
+  liftIO (runExceptT $ runRWST action cfg oldState) >>= \case
              Left e -> fallback e
              Right (r, s, c) -> do
                                 put $ mergeState oldState s
@@ -162,7 +162,7 @@ recurse' cg = snd <$> recurse cg
 loadDependency :: String -> CodeGen ()
 loadDependency name = do
   deps <- getDeps
-  when (not $ Set.member name deps) $
+  unless (Set.member name deps) $
        do
          apis <- getAPIs
          cfg <- config
@@ -170,7 +170,7 @@ loadDependency name = do
                      liftIO (loadFilteredAPI (verbose cfg) (overrides cfg) name)
          let newDeps = Set.insert name deps
              newAPIs = M.union apis imported
-         put $ CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
+         put CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
 
 -- | Give a friendly textual description of the error for presenting
 -- to the user.
@@ -231,7 +231,7 @@ foreignImport cg = do
   tell $ ForeignImport c
   return a
 
-codeToString c = concatMap (++ "\n") $ str 0 c []
+codeToString c = unlines $ str 0 c []
     where str _ NoCode cont = cont
           str n (Line s) cont = (replicate (n * 4) ' ' ++ s) : cont
           str n (Indent c) cont = str (n + 1) c cont

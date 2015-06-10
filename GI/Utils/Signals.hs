@@ -1,4 +1,3 @@
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -68,6 +67,6 @@ connectSignalFunPtr object signal fn mode = do
   let flags = case mode of
                 SignalConnectAfter -> 1
                 SignalConnectBefore -> 0
-  withCString signal $ \csignal -> do
+  withCString signal $ \csignal ->
     withManagedPtr object $ \objPtr ->
         g_signal_connect_data objPtr csignal fn (castFunPtrToPtr fn) safeFreeFunPtrPtr flags

@@ -57,14 +57,14 @@ fullObjectInheritableList :: Inheritable i => Name -> Object ->
                              CodeGen [(Name, i)]
 fullObjectInheritableList n obj = do
   iT <- instanceTree n
-  (++) <$> (concat <$> (mapM apiInheritables $ [n] ++ iT))
-       <*> (concat <$> (mapM apiInheritables $ objInterfaces obj))
+  (++) <$> (concat <$> mapM apiInheritables (n : iT))
+       <*> (concat <$> mapM apiInheritables (objInterfaces obj))
 
 fullInterfaceInheritableList :: Inheritable i => Name -> Interface ->
                                 CodeGen [(Name, i)]
 fullInterfaceInheritableList n iface =
-    ((++) $ map ((,) n) (ifInheritables iface))
-       <$> (concat <$> (mapM fullAPIInheritableList $ ifPrerequisites iface))
+  (++) (map ((,) n) (ifInheritables iface))
+    <$> (concat <$> mapM fullAPIInheritableList (ifPrerequisites iface))
 
 -- It is sometimes the case that a property name or signal is defined
 -- both in an object and in one of its ancestors/implemented
@@ -82,17 +82,15 @@ removeDuplicates inheritables =
                     CodeGen (M.Map String (Bool, Name, i))
       filterDups m (name, prop) =
         case M.lookup (iName prop) m of
-          Just (tainted, n, p) ->
-              if tainted
-              then return m
-              else if p == prop
-                   then return m -- Duplicated, but isomorphic property
-                   else do
-                     line $ "--- XXX Duplicated object with different types:"
-                     line $ "  --- " ++ show n ++ " -> " ++ show p
-                     line $ "  --- " ++ show name ++ " -> " ++ show prop
-                     -- Tainted
-                     return $ M.insert (iName prop) (True, n, p) m
+          Just (tainted, n, p)
+              | tainted     -> return m
+              | (p == prop) -> return m -- Duplicated, but isomorphic property
+              | otherwise   ->
+                do line   "--- XXX Duplicated object with different types:"
+                   line $ "  --- " ++ show n ++ " -> " ++ show p
+                   line $ "  --- " ++ show name ++ " -> " ++ show prop
+                   -- Tainted
+                   return $ M.insert (iName prop) (True, n, p) m
           Nothing -> return $ M.insert (iName prop) (False, name, prop) m
       filterTainted :: [(String, (Bool, Name, i))] -> [(Name, i)]
       filterTainted xs =

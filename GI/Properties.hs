@@ -6,7 +6,7 @@ module GI.Properties
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, when, unless)
 import Data.List (intercalate)
 
 import Foreign.Storable (sizeOf)
@@ -36,11 +36,11 @@ propTypeStr t = case t of
      -- This should work for all systems in common use, but rather
      -- than leaving the assumption implicit better double checking.
      when (sizeOf (0 :: CInt) /= 4) $
-          error $ "C Integers are not 4 bytes, unsupported platform."
+          error "C Integers are not 4 bytes, unsupported platform."
      return "CInt"
    TBasicType TUInt32 -> do
      when (sizeOf (0 :: CUInt) /= 4) $
-          error $ "C Integers are not 4 bytes, unsupported platform."
+          error "C Integers are not 4 bytes, unsupported platform."
      return "CUInt"
    TBasicType TInt64 -> return "Int64"
    TBasicType TUInt64 -> return "UInt64"
@@ -155,7 +155,7 @@ genProperties n props = do
         pName = propOwnerName ++ cName
         flags = propFlags prop
         writable = ParamWritable `elem` flags &&
-                   not (ParamConstructOnly `elem` flags)
+                   (ParamConstructOnly `notElem` flags)
         readable = ParamReadable `elem` flags
         constructOnly = ParamConstructOnly `elem` flags
         owned = propOwner == n -- Whether n is the object which
@@ -169,7 +169,7 @@ genProperties n props = do
                    "construct" propOwner cName
 
     when owned $ do
-      when (not $ readable || writable || constructOnly) $
+      unless (readable || writable || constructOnly) $
            error $ "Property is not readable, writable, or constructible: "
                      ++ show pName
 
@@ -212,7 +212,7 @@ genProperties n props = do
     -- Polymorphic _label style lens
     group $ do
       inIsGO <- isGObject (propType prop)
-      hInType <- show <$> (haskellType $ propType prop)
+      hInType <- show <$> haskellType (propType prop)
       let inConstraint = if writable || constructOnly
                          then if inIsGO
                               then goConstraint hInType
@@ -220,11 +220,9 @@ genProperties n props = do
                                              then parenthesize hInType
                                              else hInType
                          else "(~) ()"
-          attrWriteType = if writable
-                          then "SettableAndConstructibleAttr"
-                          else if constructOnly
-                               then "ConstructOnlyAttr"
-                               else "ReadOnlyAttr"
+          attrWriteType | writable      = "SettableAndConstructibleAttr"
+                        | constructOnly = "ConstructOnlyAttr"
+                        | otherwise     = "ReadOnlyAttr"
           instanceVars = "\"" ++ cName ++ "\" " ++ name
 
       line $ "instance HasAttr " ++ instanceVars ++ " where"
