@@ -45,6 +45,7 @@ module GI.Utils.GValue
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
+import Control.Monad ((>=>))
 
 import Data.Word
 import Data.Int
@@ -66,8 +67,8 @@ noGValue :: Maybe GValue
 noGValue = Nothing
 
 instance ManagedPtr GValue where
-    unsafeManagedPtrGetPtr = (\(GValue x) -> castPtr $ unsafeForeignPtrToPtr x)
-    touchManagedPtr        = (\(GValue x) -> touchForeignPtr x)
+    unsafeManagedPtrGetPtr (GValue x) = castPtr $ unsafeForeignPtrToPtr x
+    touchManagedPtr        (GValue x) = touchForeignPtr x
 
 foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::
     IO CGType
@@ -97,7 +98,7 @@ class IsGValue a where
     fromGValue :: GValue -> IO a
 
 instance IsGValue String where
-    toGValue = (buildGValue gtypeString set_string) . pack
+    toGValue = buildGValue gtypeString set_string . pack
     fromGValue v = unpack <$> get_string v
 
 instance IsGValue Text where
@@ -152,8 +153,7 @@ set_string gv str = withManagedPtr gv $ \ptr -> do
                       freeMem cstr
 
 get_string :: GValue -> IO Text
-get_string gv = withManagedPtr gv $ \ptr ->
-                _get_string ptr >>= cstringToText
+get_string gv = withManagedPtr gv $ _get_string >=> cstringToText
 
 foreign import ccall unsafe "g_value_set_pointer" _set_pointer ::
     Ptr GValue -> Ptr a -> IO ()

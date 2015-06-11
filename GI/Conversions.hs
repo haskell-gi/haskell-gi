@@ -307,12 +307,12 @@ suForeignPtr isBoxed size hType transfer = do
                 _ -> "newPtr " ++ show n ++ " " ++ constructor
 
 structForeignPtr :: Struct -> TypeRep -> Transfer -> CodeGen Constructor
-structForeignPtr s hType transfer =
-    suForeignPtr (structIsBoxed s) (structSize s) hType transfer
+structForeignPtr s =
+    suForeignPtr (structIsBoxed s) (structSize s)
 
 unionForeignPtr :: Union -> TypeRep -> Transfer -> CodeGen Constructor
-unionForeignPtr u hType transfer =
-    suForeignPtr (unionIsBoxed u) (unionSize u) hType transfer
+unionForeignPtr u =
+    suForeignPtr (unionIsBoxed u) (unionSize u)
 
 fObjectToH :: Type -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fObjectToH t hType transfer = do

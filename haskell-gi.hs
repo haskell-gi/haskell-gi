@@ -50,7 +50,7 @@ defaultOptions = Options {
   optVerbose = False }
 
 parseKeyValue s =
-  let (a, ('=':b)) = break (=='=') s
+  let (a, '=':b) = break (=='=') s
    in (a, b)
 
 optDescrs :: [OptDescr (Options -> Options)]
@@ -77,7 +77,7 @@ optDescrs = [
   Option "v" ["verbose"] (NoArg $ \opt -> opt { optVerbose = True })
     "\tprint extra info while processing"]
 
-showHelp = concat $ map optAsLine optDescrs
+showHelp = concatMap optAsLine optDescrs
   where optAsLine (Option flag (long:_) _ desc) =
           "  -" ++ flag ++ "|--" ++ long ++ "\t" ++ desc ++ "\n"
         optAsLine _ = error "showHelp"
@@ -96,7 +96,7 @@ outputPath options =
 -- Generate all generic accessor functions ("_label", for example).
 genGenericAttrs :: Options -> Overrides -> [String] -> IO ()
 genGenericAttrs options ovs modules = do
-  allAPIs <- (M.toList . M.unions . (map M.fromList))
+  allAPIs <- (M.toList . M.unions . map M.fromList)
              <$> mapM (loadFilteredAPI (optVerbose options) ovs) modules
   let cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
@@ -109,7 +109,7 @@ genGenericAttrs options ovs modules = do
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
 genGenericConnectors :: Options -> Overrides -> [String] -> IO ()
 genGenericConnectors options ovs modules = do
-  allAPIs <- (M.toList . M.unions . (map M.fromList))
+  allAPIs <- (M.toList . M.unions . map M.fromList)
              <$> mapM (loadFilteredAPI (optVerbose options) ovs) modules
   let cfg = Config {modName = Nothing,
                     verbose = optVerbose options,

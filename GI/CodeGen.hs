@@ -12,7 +12,7 @@ import Control.Monad (forM, forM_, when, unless)
 import Control.Monad.Writer (tell)
 import Data.List (intercalate)
 import Data.Tuple (swap)
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
 import qualified Data.Set as S
 
@@ -111,9 +111,8 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
             forM_ valueNames $ \(v, n) ->
                 line $ "toEnum " ++ show v ++ " = " ++ n
             line $ "toEnum v = error $ \"Don't know how to convert \" ++ show v ++ \" to " ++ name' ++ ".\""
-  when (isJust eDomain) $ genErrorDomain name' (fromJust eDomain)
-
-  when (isJust maybeTypeInit) $ genBoxedObject n (fromJust maybeTypeInit)
+  forM_ eDomain (genErrorDomain name')
+  forM_ maybeTypeInit (genBoxedObject n)
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name _ name) enum = do
@@ -451,9 +450,7 @@ genInterface n iface = do
                        ++ ns ++ "." ++ n
 
   when isGO $ do
-    let cn_ = case ifTypeInit iface of
-                Just typeInit -> typeInit
-                Nothing -> error "GObject derived interface without a type!"
+    let cn_ = fromMaybe (error "GObject derived interface without a type!") (ifTypeInit iface)
 
     group $ do
       line $ "foreign import ccall \"" ++ cn_ ++ "\""
