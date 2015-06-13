@@ -190,6 +190,8 @@ hToF' t a hType fType transfer
         return $ M "packZeroTerminatedByteString"
     | TCArray True _ _ (TBasicType TBoolean) <- t =
         return $ M "(packMapZeroTerminatedStorableArray (fromIntegral . fromEnum))"
+    | TCArray True _ _ (TBasicType TGType) <- t =
+        return $ M "(packMapZeroTerminatedStorableArray gtypeToCGtype)"
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "packZeroTerminatedStorableArray"
     | TCArray False _ _ (TBasicType TUTF8) <- t =
@@ -202,6 +204,8 @@ hToF' t a hType fType transfer
         return $ M "packByteString"
     | TCArray False _ _ (TBasicType TBoolean) <- t =
         return $ M "(packMapStorableArray (fromIntegral . fromEnum))"
+    | TCArray False _ _ (TBasicType TGType) <- t =
+        return $ M "(packMapStorableArray gtypeToCGType)"
     | TCArray False _ _ (TBasicType TFloat) <- t =
         return $ M "(packMapStorableArray realToFrac)"
     | TCArray False _ _ (TBasicType TDouble) <- t =
@@ -219,6 +223,7 @@ hToF' t a hType fType transfer
                ("Bool", "CInt")      -> return "(fromIntegral . fromEnum)"
                ("Float", "CFloat")   -> return "realToFrac"
                ("Double", "CDouble") -> return "realToFrac"
+               ("GType", "CGType")   -> return "gtypeToCGType"
                _                     ->
                    notImplementedError $ "Don't know how to convert "
                                            ++ show hType ++ " into "
@@ -355,6 +360,8 @@ fToH' t a hType fType transfer
         return $ M "unpackZeroTerminatedPtrArray"
     | TCArray True _ _ (TBasicType TBoolean) <- t =
         return $ M "(unpackMapZeroTerminatedStorableArray (/= 0))"
+    | TCArray True _ _ (TBasicType TGType) <- t =
+        return $ M "(unpackMapZeroTerminatedStorableArray GType)"
     | TCArray True _ _ (TBasicType TFloat) <- t =
         return $ M "(unpackMapZeroTerminatedStorableArray realToFrac)"
     | TCArray True _ _ (TBasicType TDouble) <- t =
@@ -372,6 +379,7 @@ fToH' t a hType fType transfer
                ("CInt", "Bool")      -> return "(/= 0)"
                ("CFloat", "Float")   -> return "realToFrac"
                ("CDouble", "Double") -> return "realToFrac"
+               ("CGType", "GType")   -> return "GType"
                _                     ->
                    notImplementedError $ "Don't know how to convert "
                                            ++ show fType ++ " into "
@@ -424,6 +432,8 @@ unpackCArray length (TCArray False _ _ t) transfer =
                          "unpackPtrArrayWithLength " ++ length
     TBasicType TBoolean -> return $ apply $ M $ parenthesize $
                          "unpackMapStorableArrayWithLength (/= 0) " ++ length
+    TBasicType TGType -> return $ apply $ M $ parenthesize $
+                         "unpackMapStorableArrayWithLength GType " ++ length
     TBasicType TFloat -> return $ apply $ M $ parenthesize $
                          "unpackMapStorableArrayWithLength realToFrac " ++ length
     TBasicType TDouble -> return $ apply $ M $ parenthesize $
@@ -554,6 +564,7 @@ foreignBasicType TFileName = "CString" `con` []
 foreignBasicType TUniChar  = "CInt" `con` []
 foreignBasicType TFloat    = "CFloat" `con` []
 foreignBasicType TDouble   = "CDouble" `con` []
+foreignBasicType TGType    = "CGType" `con` []
 foreignBasicType t         = haskellBasicType t
 
 -- This translates GI types to the types used in foreign function calls.

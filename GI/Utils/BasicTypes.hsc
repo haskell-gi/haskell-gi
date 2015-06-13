@@ -1,5 +1,6 @@
 module GI.Utils.BasicTypes
-    ( GType
+    ( GType(..)
+    , CGType
 
     , gtypeName
 
@@ -12,6 +13,7 @@ module GI.Utils.BasicTypes
     , gtypeFloat
     , gtypeDouble
     , gtypeBoolean
+    , gtypeGType
     , gtypeStrv
     , gtypeBoxed
     , gtypeObject
@@ -42,8 +44,13 @@ import Foreign.C.String (CString, peekCString)
 
 #include <glib-object.h>
 
--- | A type identifier in the GLib type system.
-type GType = #type GType
+-- | A type identifier in the GLib type system. This is the low-level
+-- type associated with the representation in memory, when using this
+-- on the Haskell side use `GType` below.
+type CGType = #type GType
+
+-- | A newtype for use on the haskell side.
+newtype GType = GType {gtypeToCGType :: CGType}
 
 foreign import ccall "g_type_name" g_type_name :: GType -> IO CString
 
@@ -53,51 +60,55 @@ gtypeName gtype = g_type_name gtype >>= peekCString
 
 -- | `GType` of strings.
 gtypeString :: GType
-gtypeString = #const G_TYPE_STRING
+gtypeString = GType #const G_TYPE_STRING
 
 -- | `GType` of pointers.
 gtypePointer :: GType
-gtypePointer = #const G_TYPE_POINTER
+gtypePointer = GType #const G_TYPE_POINTER
 
 -- | `GType` for signed integers.
 gtypeInt32 :: GType
-gtypeInt32 = #const G_TYPE_INT
+gtypeInt32 = GType #const G_TYPE_INT
 
 -- | `GType` for unsigned integers.
 gtypeUInt32 :: GType
-gtypeUInt32 = #const G_TYPE_UINT
+gtypeUInt32 = GType #const G_TYPE_UINT
 
 -- | `GType` for signed 64 bit integers.
 gtypeInt64 :: GType
-gtypeInt64 = #const G_TYPE_INT64
+gtypeInt64 = GType #const G_TYPE_INT64
 
 -- | `GType` for unsigned 64 bit integers.
 gtypeUInt64 :: GType
-gtypeUInt64 = #const G_TYPE_UINT64
+gtypeUInt64 = GType #const G_TYPE_UINT64
 
 -- | `GType` for floating point values.
 gtypeFloat :: GType
-gtypeFloat = #const G_TYPE_FLOAT
+gtypeFloat = GType #const G_TYPE_FLOAT
 
 -- | `GType` for gdouble.
 gtypeDouble :: GType
-gtypeDouble = #const G_TYPE_DOUBLE
+gtypeDouble = GType #const G_TYPE_DOUBLE
 
 -- | `GType` corresponding to gboolean.
 gtypeBoolean :: GType
-gtypeBoolean = #const G_TYPE_BOOLEAN
+gtypeBoolean = GType #const G_TYPE_BOOLEAN
+
+-- | `GType` corresponding to a `GType` itself.
+gtypeGType :: GType
+gtypeGType = GType #const G_TYPE_GTYPE
 
 -- | `GType` for a NULL terminated array of strings.
 gtypeStrv :: GType
-gtypeStrv = #const G_TYPE_STRV
+gtypeStrv = GType #const G_TYPE_STRV
 
 -- | `GType` corresponding to a `BoxedObject`.
 gtypeBoxed :: GType
-gtypeBoxed = #const G_TYPE_BOXED
+gtypeBoxed = GType #const G_TYPE_BOXED
 
 -- | `GType` corresponding to a `GObject`.
 gtypeObject :: GType
-gtypeObject = #const G_TYPE_OBJECT
+gtypeObject = GType #const G_TYPE_OBJECT
 
 class ManagedPtr a where
     unsafeManagedPtrGetPtr :: a -> Ptr b

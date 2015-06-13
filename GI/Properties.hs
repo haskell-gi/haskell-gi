@@ -45,6 +45,7 @@ propTypeStr t = case t of
    TBasicType TBoolean -> return "Bool"
    TBasicType TFloat -> return "Float"
    TBasicType TDouble -> return "Double"
+   TBasicType TGType -> return "GType"
    TCArray True _ _ (TBasicType TUTF8) -> return "StringArray"
    TCArray True _ _ (TBasicType TFileName) -> return "StringArray"
    TGList (TBasicType TVoid) -> return "PtrGList"

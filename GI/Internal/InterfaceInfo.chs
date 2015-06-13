@@ -15,7 +15,7 @@ import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 
 import GI.Util (getList)
-import GI.GType (GType)
+import GI.Utils.BasicTypes (GType(..), CGType)
 
 {# import GI.Internal.Types #}
 {# import GI.Internal.Typelib #}
@@ -32,10 +32,10 @@ stupidCast ii = castPtr p
 -- g_interface_info_get_prerequisites does not seem very reliable, so
 -- we go through the gobject type machinery instead.
 foreign import ccall unsafe "g_type_interface_prerequisites"
-        g_type_interface_prerequisites :: GType -> Ptr a -> IO (Ptr GType)
+        g_type_interface_prerequisites :: CGType -> Ptr a -> IO (Ptr CGType)
 
 foreign import ccall unsafe "g_registered_type_info_get_g_type"
-        g_registered_type_info_get_g_type :: Ptr () -> IO GType
+        g_registered_type_info_get_g_type :: Ptr () -> IO CGType
 
 interfaceInfoPrerequisites :: InterfaceInfoClass iic => iic -> [BaseInfo]
 interfaceInfoPrerequisites ii = unsafePerformIO $ do
@@ -47,11 +47,11 @@ interfaceInfoPrerequisites ii = unsafePerformIO $ do
     if prereqs == nullPtr || nprereqs == 0
     then return []
     else go prereqs nprereqs
-         where go :: Ptr GType -> CUInt -> IO [BaseInfo]
+         where go :: Ptr CGType -> CUInt -> IO [BaseInfo]
                go _ 0 = return []
                go ptr n = do
                  gtype <- peek ptr
-                 pi <- findByGType gtype
+                 pi <- findByGType (GType gtype)
                  case pi of
                    Just bi -> (bi :) <$> go (ptr `plusPtr` sizeOf gtype) (n-1)
                    Nothing -> go (ptr `plusPtr` sizeOf gtype) (n-1)

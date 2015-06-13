@@ -11,7 +11,7 @@ import Foreign.Safe
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
 
-import GI.GType (GType)
+import GI.Utils.BasicTypes (GType(..), CGType)
 
 {# import GI.Internal.Types #}
 
@@ -40,7 +40,8 @@ registeredTypeInfoTypeInit rti =
       else Just <$> peekCString typeInit
 
 foreign import ccall unsafe "g_registered_type_info_get_g_type"
-        get_g_type :: Ptr () -> IO GType
+        get_g_type :: Ptr () -> IO CGType
 
 registeredTypeInfoGType :: RegisteredTypeInfoClass rtic => rtic -> GType
-registeredTypeInfoGType rti = unsafePerformIO $ get_g_type (stupidCast rti)
+registeredTypeInfoGType rti =
+    GType $ unsafePerformIO $ get_g_type (stupidCast rti)

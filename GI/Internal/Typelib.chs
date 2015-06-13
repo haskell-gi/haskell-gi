@@ -17,7 +17,7 @@ import Control.Monad (when)
 
 import GI.Internal.Types
 import GI.Util
-import GI.GType (GType)
+import GI.Utils.BasicTypes (GType(..), CGType)
 
 import GI.Utils.GError
 import GI.Utils.BasicConversions (unpackGSList)
@@ -111,10 +111,10 @@ load namespace version verbose =
         return typelib
 
 foreign import ccall unsafe "g_irepository_find_by_gtype" find_by_gtype ::
-    Ptr Repository -> GType -> IO (Ptr BaseInfo)
+    Ptr Repository -> CGType -> IO (Ptr BaseInfo)
 
 findByGType :: GType -> IO (Maybe BaseInfo)
-findByGType gtype = do
+findByGType (GType gtype) = do
   ptr <- find_by_gtype nullPtr gtype
   if ptr /= nullPtr
   then return $ (Just . BaseInfo . castPtr) ptr

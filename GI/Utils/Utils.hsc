@@ -25,7 +25,7 @@ import Foreign.C.Types (CSize(..))
 import Control.Monad (void)
 import Control.Applicative ((<$>))
 
-import GI.Utils.BasicTypes (GType, BoxedObject(..))
+import GI.Utils.BasicTypes (GType(..), CGType, BoxedObject(..))
 
 -- When the given value is of "Just a" form, execute the given action,
 -- otherwise do nothing.
@@ -59,7 +59,7 @@ callocBytes :: Int -> IO (Ptr a)
 callocBytes n =  g_malloc0 (fromIntegral n)
 
 foreign import ccall "g_boxed_copy" g_boxed_copy ::
-    GType -> Ptr a -> IO (Ptr a)
+    CGType -> Ptr a -> IO (Ptr a)
 
 -- | Make a zero filled allocation of n bytes for a boxed object. The
 -- difference with a normal callocBytes is that the returned memory is
@@ -70,8 +70,8 @@ foreign import ccall "g_boxed_copy" g_boxed_copy ::
 callocBoxedBytes :: forall a. BoxedObject a => Int -> IO (Ptr a)
 callocBoxedBytes n = do
   ptr <- callocBytes n
-  gtype <- boxedType (undefined :: a)
-  result <- g_boxed_copy gtype ptr
+  GType cgtype <- boxedType (undefined :: a)
+  result <- g_boxed_copy cgtype ptr
   freeMem ptr
   return result
 

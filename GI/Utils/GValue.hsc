@@ -26,6 +26,8 @@ module GI.Utils.GValue
     , get_double
     , set_boolean
     , get_boolean
+    , set_gtype
+    , get_gtype
     , set_object
     , get_object
     , set_boxed
@@ -63,16 +65,16 @@ instance ManagedPtr GValue where
     touchManagedPtr        = (\(GValue x) -> touchForeignPtr x)
 
 foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::
-    IO GType
+    IO CGType
 
 instance BoxedObject GValue where
-    boxedType _ = c_g_value_get_type
+    boxedType _ = GType <$> c_g_value_get_type
 
 foreign import ccall "g_value_init" g_value_init ::
-    Ptr GValue -> GType -> IO (Ptr GValue)
+    Ptr GValue -> CGType -> IO (Ptr GValue)
 
 newGValue :: GType -> IO GValue
-newGValue gtype = do
+newGValue (GType gtype) = do
   gvptr <- callocBytes #size GValue
   _ <- g_value_init gvptr gtype
   gv <- wrapBoxed GValue gvptr
@@ -128,6 +130,10 @@ instance IsGValue Double where
 instance IsGValue Bool where
     toGValue = buildGValue gtypeBoolean set_boolean
     fromGValue = get_boolean
+
+instance IsGValue GType where
+    toGValue = buildGValue gtypeGType set_gtype
+    fromGValue = get_gtype
 
 foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
@@ -232,6 +238,17 @@ set_boolean gv b = withManagedPtr gv $ \ptr ->
 
 get_boolean :: GValue -> IO Bool
 get_boolean gv = withManagedPtr gv $ \ptr -> (/= 0) <$> _get_boolean ptr
+
+foreign import ccall unsafe "g_value_set_gtype" _set_gtype ::
+    Ptr GValue -> CGType -> IO ()
+foreign import ccall unsafe "g_value_get_gtype" _get_gtype ::
+    Ptr GValue -> IO CGType
+
+set_gtype :: GValue -> GType -> IO ()
+set_gtype gv (GType g) = withManagedPtr gv $ \ptr -> _set_gtype ptr g
+
+get_gtype :: GValue -> IO GType
+get_gtype gv = GType <$> withManagedPtr gv _get_gtype
 
 foreign import ccall "g_value_set_object" _set_object ::
     Ptr GValue -> Ptr a -> IO ()

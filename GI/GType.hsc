@@ -8,17 +8,17 @@ module GI.GType
 
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
-import GI.Utils.BasicTypes (GType)
+import GI.Utils.BasicTypes (CGType, GType(..))
 
 foreign import ccall unsafe "g_type_is_a" g_type_is_a ::
-    GType -> GType -> IO CInt
+    CGType -> CGType -> IO CInt
 
 gtypeIsA :: GType -> GType -> Bool
-gtypeIsA gtype is_a = (/= 0) $
+gtypeIsA (GType gtype) (GType is_a) = (/= 0) $
     unsafePerformIO $ g_type_is_a gtype is_a
 
 gtypeBoxed :: GType
-gtypeBoxed = #const G_TYPE_BOXED
+gtypeBoxed = GType #const G_TYPE_BOXED
 
 gtypeIsBoxed :: GType -> Bool
 gtypeIsBoxed gtype = gtypeIsA gtype gtypeBoxed

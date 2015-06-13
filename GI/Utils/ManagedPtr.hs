@@ -42,13 +42,13 @@ withManagedPtrList managedList action = do
 
 -- Safe casting machinery
 foreign import ccall unsafe "check_object_type"
-    c_check_object_type :: Ptr o -> GType -> CInt
+    c_check_object_type :: Ptr o -> CGType -> CInt
 
 castTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
           (ForeignPtr o' -> o') -> o -> IO (Maybe o')
 castTo constructor obj =
     withManagedPtr obj $ \objPtr -> do
-      t <- gobjectType (undefined :: o')
+      GType t <- gobjectType (undefined :: o')
       if c_check_object_type objPtr t /= 1
         then return Nothing
         else Just <$> newObject constructor objPtr
@@ -109,14 +109,14 @@ foreign import ccall "& boxed_free_helper" boxed_free_helper ::
     FunPtr (Ptr env -> Ptr a -> IO ())
 
 foreign import ccall "g_boxed_copy" g_boxed_copy ::
-    GType -> Ptr a -> IO (Ptr a)
+    CGType -> Ptr a -> IO (Ptr a)
 
 -- Construct a Haskell wrapper for the given boxed object. We make a
 -- copy of the object.
 newBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 newBoxed constructor ptr = do
-  gtype <- boxedType (undefined :: a)
-  env <- allocMem :: IO (Ptr GType)   -- Will be freed by boxed_free_helper
+  GType gtype <- boxedType (undefined :: a)
+  env <- allocMem :: IO (Ptr CGType)   -- Will be freed by boxed_free_helper
   poke env gtype
   ptr' <- g_boxed_copy gtype ptr
   fPtr <- newForeignPtrEnv boxed_free_helper env ptr'
@@ -126,8 +126,8 @@ newBoxed constructor ptr = do
 -- object, so now it is managed by the Haskell GC).
 wrapBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapBoxed constructor ptr = do
-  gtype <- boxedType (undefined :: a)
-  env <- allocMem :: IO (Ptr GType)   -- Will be freed by boxed_free_helper
+  GType gtype <- boxedType (undefined :: a)
+  env <- allocMem :: IO (Ptr CGType)   -- Will be freed by boxed_free_helper
   poke env gtype
   fPtr <- newForeignPtrEnv boxed_free_helper env ptr
   return $! constructor fPtr
@@ -138,16 +138,16 @@ copyBoxed boxed = withManagedPtr boxed copyBoxedPtr
 
 copyBoxedPtr :: forall a. BoxedObject a => Ptr a -> IO (Ptr a)
 copyBoxedPtr ptr = do
-  gtype <- boxedType (undefined :: a)
+  GType gtype <- boxedType (undefined :: a)
   g_boxed_copy gtype ptr
 
 foreign import ccall "g_boxed_free" g_boxed_free ::
-    GType -> Ptr a -> IO ()
+    CGType -> Ptr a -> IO ()
 
 -- Free the memory associated with a boxed object
 freeBoxed :: forall a. (BoxedObject a, ManagedPtr a) => a -> IO ()
 freeBoxed boxed = do
-  gtype <- boxedType (undefined :: a)
+  GType gtype <- boxedType (undefined :: a)
   let ptr = unsafeManagedPtrGetPtr boxed
   g_boxed_free gtype ptr
   touchManagedPtr boxed
