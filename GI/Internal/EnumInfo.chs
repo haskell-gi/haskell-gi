@@ -39,7 +39,7 @@ enumInfoErrorDomain ei = unsafePerformIO $ do
        then return Nothing
        else Just <$> peekCString result
 
-valueInfoValue :: ValueInfoClass val => val -> Word64
+valueInfoValue :: ValueInfoClass val => val -> Int64
 valueInfoValue vi = unsafePerformIO $ fromIntegral <$>
     {# call g_value_info_get_value #} (stupidValueCast vi)
 

@@ -22,7 +22,7 @@ module GI.API
     , loadAPI
     ) where
 
-import Data.Word
+import Data.Int
 import Data.Maybe (isJust)
 
 import GI.Internal.Types
@@ -71,7 +71,7 @@ toConstant ci =
      in Constant value
 
 data Enumeration = Enumeration {
-    enumValues :: [(String, Word64)],
+    enumValues :: [(String, Int64)],
     errorDomain :: Maybe String,
     enumTypeInit :: Maybe String,
     enumStorageType :: TypeTag }

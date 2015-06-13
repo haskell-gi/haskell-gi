@@ -520,7 +520,7 @@ genPrelude name modulePrefix = do
     line $ "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
     line $ "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
     line $ "    FlexibleInstances, UndecidableInstances, DataKinds,"
-    line $ "    OverloadedStrings #-}"
+    line $ "    OverloadedStrings, NegativeLiterals #-}"
     blank
     -- XXX: Generate export list.
     line $ "module " ++ mp name ++ " where"
