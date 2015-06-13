@@ -1,0 +1,4 @@
+namespace Gdk
+
+# Wrongly uses (nullable) in place of (optional) for out arguments
+ignore GLContext.get_required_version
