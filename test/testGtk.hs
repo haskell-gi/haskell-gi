@@ -245,7 +245,7 @@ testMenuPopup = do
   curtime <- getCurrentEventTime
   menuPopup menu noWidget noWidget (Just positionFunc) 0 curtime
   putStrLn "+++ ScopeTypeAsync test done"
-      where positionFunc _ = do
+      where positionFunc _ _ _ = do
                   putStrLn "+++ Pos func"
                   posx <- GLib.randomIntRange 000 200
                   posy <- GLib.randomIntRange 000 200
