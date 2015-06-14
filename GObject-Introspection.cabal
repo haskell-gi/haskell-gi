@@ -33,7 +33,7 @@ Executable haskell-gi
       text >= 1.0,
       free
   build-tools: hsc2hs, c2hs
-  extensions: ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes
+  extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
       GI.Internal.Types,
@@ -98,7 +98,7 @@ Library
       containers,
       text >= 1.0
   build-tools: hsc2hs
-  extensions: ForeignFunctionInterface, DoAndIfThenElse
+  extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
 
   C-sources: c/hsgclosure.c
