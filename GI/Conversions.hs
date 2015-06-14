@@ -59,8 +59,13 @@ data FExpr next = Apply Constructor next
 
 type Converter = Free FExpr ()
 
+apply :: Constructor -> Converter
 apply f = liftF $ Apply f ()
+
+mapC :: Constructor -> Converter
 mapC f = liftF $ MapC f ()
+
+literal :: Constructor -> Converter
 literal f = liftF $ Literal f ()
 
 genConversion :: String -> Converter -> CodeGen String

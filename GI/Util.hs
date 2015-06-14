@@ -58,4 +58,5 @@ unprime primed =
       '\'' -> init primed
       _ -> error $ primed ++ " is not primed!"
 
+parenthesize :: String -> String
 parenthesize s = "(" ++ s ++ ")"

@@ -45,8 +45,11 @@ module GI.Utils.GValue
 import Control.Applicative ((<$>))
 
 import Foreign.C
-import Foreign.Safe
+import Foreign.Ptr (Ptr, castPtr)
+import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
+import Data.Word
+import Data.Int
 
 import Data.Text (Text, pack, unpack)
 
