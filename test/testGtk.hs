@@ -340,13 +340,19 @@ main = do
         -- ...
         -- args <- getArgs
         -- progName <- pack <$> getProgName
-        -- restArgs <- Gtk.init $ progName:args
+        -- restArgs <- Gtk.init $ Just $ progName:args
+        --
+        -- or simply
+        -- Gtk.init Nothing
+        --
+        -- if it is not important to give Gtk access to the
+        -- commandline arguments.
         --
         -- Here we use synthetic arguments to test that we are
         -- handling InOut arguments properly.
         progName <- pack <$> getProgName
-	restArgs <- Gtk.init $ progName:["--g-fatal-warnings"]
-        when (restArgs /= [progName]) $
+	restArgs <- Gtk.init $ Just $ progName:["--g-fatal-warnings"]
+        when (restArgs /= Just [progName]) $
              error "gtk_init did not process --g-fatal-warnings"
 
         -- Here "_type" is a polymorphic lens, valid for any object

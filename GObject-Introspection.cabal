@@ -21,7 +21,7 @@ Executable haskell-gi
   main-is: haskell-gi.hs
   pkgconfig-depends: gobject-introspection-1.0 >= 1.42, gobject-2.0 >= 2.36
   build-depends:
-      base >= 4 && < 5,
+      base >= 4.7 && < 5,
       containers,
       directory,
       filepath,

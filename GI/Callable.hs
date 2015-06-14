@@ -6,10 +6,11 @@ module GI.Callable
     , arrayLengths
     , arrayLengthsMap
 
-    , inWrapMaybe
+    , wrapMaybe
     , inArgInterfaces
     ) where
 
+import Data.Bool (bool)
 import Control.Applicative ((<$>))
 import Control.Monad (forM, forM_, when)
 import Data.List (intercalate, nub)
@@ -28,7 +29,7 @@ import GI.Internal.ArgInfo
 
 import Text.Show.Pretty (ppShow)
 
-hOutType :: Callable -> [Arg] -> Bool -> CodeGen TypeRep
+hOutType :: Callable -> [Arg] -> Bool -> ExcCodeGen TypeRep
 hOutType callable outArgs ignoreReturn = do
   hReturnType <- case returnType callable of
                    TBasicType TVoid -> return $ typeOf ()
@@ -36,9 +37,9 @@ hOutType callable outArgs ignoreReturn = do
                                        then return $ typeOf ()
                                        else haskellType $ returnType callable
   hOutArgTypes <- forM outArgs $ \outarg ->
-                  if outWrapMaybe outarg
-                  then maybeT <$> haskellType (argType outarg)
-                  else haskellType (argType outarg)
+                  wrapMaybe outarg >>= bool
+                                (haskellType (argType outarg))
+                                (maybeT <$> haskellType (argType outarg))
   let maybeHReturnType = if returnMayBeNull callable && not ignoreReturn
                          then maybeT hReturnType
                          else hReturnType
@@ -72,48 +73,36 @@ mkForeignImport symbol callable throwsGError = foreignImport $ do
                              TBasicType TVoid -> return $ typeOf ()
                              _  -> foreignType (returnType callable)
 
--- Given an (in) argument to a function, return whether it should be
--- wrapped in a maybe type (useful for nullable types).
-inWrapMaybe :: Arg -> Bool
-inWrapMaybe arg =
-    if direction arg == DirectionIn && mayBeNull arg
+-- Given an argument to a function, return whether it should be
+-- wrapped in a maybe type (useful for nullable types). We do some
+-- sanity checking to make sure that the argument is actually nullable
+-- (a relatively common annotation mistake is to mix up (optional)
+-- with (nullable)).
+wrapMaybe :: Arg -> ExcCodeGen Bool
+wrapMaybe arg =
+    if mayBeNull arg
     then case argType arg of
            -- NULL GLists and GSLists are semantically the same as an
            -- empty list, so they don't need a Maybe wrapper on their
            -- type.
-           TGList _ -> False
-           TGSList _ -> False
-           _ -> True
-    else False
-
--- Same for (out) arguments. Notice that (inout) arguments are never
--- supposed to be nullable, since they have the same nullability
--- properties as the in arg, and we always pass something non-NULL for
--- that. See https://bugzilla.gnome.org/show_bug.cgi?id=660879#c61
-outWrapMaybe :: Arg -> Bool
-outWrapMaybe arg =
-    if direction arg == DirectionOut && mayBeNull arg
-    then case argType arg of
-           -- NULL GLists and GSLists are semantically the same as an
-           -- empty list, so they don't need a Maybe wrapper on their
-           -- type.
-           TGList _ -> False
-           TGSList _ -> False
-           _ -> True
-    else False
+           TGList _ -> return False
+           TGSList _ -> return False
+           _ -> if isNullable (argType arg)
+                then return True
+                else badIntroError $ "argument \"" ++ argName arg ++ "\" is not of nullable type, but it is marked as such."
+    else return False
 
 -- Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
-inArgInterfaces :: [Arg] -> CodeGen ([String], [String])
+inArgInterfaces :: [Arg] -> ExcCodeGen ([String], [String])
 inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
   where
-    rec :: [Char] -> [Arg] -> CodeGen ([String], [String])
+    rec :: [Char] -> [Arg] -> ExcCodeGen ([String], [String])
     rec _ [] = return ([], [])
     rec letters (arg:args) = do
       (ls, t, cons) <- argumentType letters $ argType arg
-      let t' = if inWrapMaybe arg
-               then "Maybe (" ++ t ++ ")"
-               else t
+      t' <- wrapMaybe arg >>= bool (return t)
+                                   (return $ "Maybe (" ++ t ++ ")")
       (restCons, restTypes) <- rec ls args
       return (cons ++ restCons, t' : restTypes)
 
@@ -177,17 +166,17 @@ readInArrayLength :: Arg -> Arg -> ExcCodeGen ()
 readInArrayLength array length = do
   let lvar = escapeReserved $ argName length
       avar = escapeReserved $ argName array
-  if inWrapMaybe array
-  then do
-    line $ "let " ++ lvar ++ " = case " ++ avar ++ " of"
-    indent $ indent $ do
-         line $ "Nothing -> 0"
-         let jarray = "j" ++ ucFirst avar
-         al <- computeArrayLength jarray (argType array)
-         line $ "Just " ++ jarray ++ " -> " ++ al
-  else do
-    al <- computeArrayLength avar (argType array)
-    line $ "let " ++ lvar ++ " = " ++ al
+  wrapMaybe array >>= bool
+                (do
+                  al <- computeArrayLength avar (argType array)
+                  line $ "let " ++ lvar ++ " = " ++ al)
+                (do
+                  line $ "let " ++ lvar ++ " = case " ++ avar ++ " of"
+                  indent $ indent $ do
+                    line $ "Nothing -> 0"
+                    let jarray = "j" ++ ucFirst avar
+                    al <- computeArrayLength jarray (argType array)
+                    line $ "Just " ++ jarray ++ " -> " ++ al)
 
 -- Check that the given array has a length equal to the given length
 -- variable.
@@ -199,20 +188,20 @@ checkInArrayLength n array length previous = do
       avar = escapeReserved $ argName array
       expectedLength = avar ++ "_expected_length_"
       pvar = escapeReserved $ argName previous
-  if inWrapMaybe array
-  then do
-    line $ "let " ++ expectedLength ++ " = case " ++ avar ++ " of"
-    indent $ indent $ do
-         line $ "Nothing -> 0"
-         let jarray = "j" ++ ucFirst avar
-         al <- computeArrayLength jarray (argType array)
-         line $ "Just " ++ jarray ++ " -> " ++ al
-  else do
-    al <- computeArrayLength avar (argType array)
-    line $ "let " ++ expectedLength ++ " = " ++ al
+  wrapMaybe array >>= bool
+            (do
+              al <- computeArrayLength avar (argType array)
+              line $ "let " ++ expectedLength ++ " = " ++ al)
+            (do
+              line $ "let " ++ expectedLength ++ " = case " ++ avar ++ " of"
+              indent $ indent $ do
+                line $ "Nothing -> 0"
+                let jarray = "j" ++ ucFirst avar
+                al <- computeArrayLength jarray (argType array)
+                line $ "Just " ++ jarray ++ " -> " ++ al)
   line $ "when (" ++ expectedLength ++ " /= " ++ lvar ++ ") $"
   indent $ line $ "error \"" ++ funcName ++ " : length of '" ++ avar ++
-                    "' does not agree with that of '" ++ pvar ++ "'.\""
+             "' does not agree with that of '" ++ pvar ++ "'.\""
 
 -- Whether to skip the return value in the generated bindings. The
 -- C convention is that functions throwing an error and returning
@@ -277,23 +266,23 @@ prepareArgForCall omitted arg = do
 prepareInArg :: Arg -> ExcCodeGen String
 prepareInArg arg = do
   let name = escapeReserved $ argName arg
-  if inWrapMaybe arg
-  then do
-    let maybeName = "maybe" ++ ucFirst name
-    line $ maybeName ++ " <- case " ++ name ++ " of"
-    indent $ do
-      line $ "Nothing -> return nullPtr"
-      let jName = "j" ++ ucFirst name
-      line $ "Just " ++ jName ++ " -> do"
-      indent $ do
-              converted <- convert jName $ hToF (argType arg)
-                                                (transfer arg)
-              line $ "return " ++ converted
-    return maybeName
-  else convert name $ hToF (argType arg) (transfer arg)
+  wrapMaybe arg >>= bool
+            (convert name $ hToF (argType arg) (transfer arg))
+            (do
+              let maybeName = "maybe" ++ ucFirst name
+              line $ maybeName ++ " <- case " ++ name ++ " of"
+              indent $ do
+                line $ "Nothing -> return nullPtr"
+                let jName = "j" ++ ucFirst name
+                line $ "Just " ++ jName ++ " -> do"
+                indent $ do
+                         converted <- convert jName $ hToF (argType arg)
+                                                           (transfer arg)
+                         line $ "return " ++ converted
+                return maybeName)
 
 -- Callbacks are a fairly special case, we treat them separately.
-prepareInCallback :: Arg -> CodeGen String
+prepareInCallback :: Arg -> ExcCodeGen String
 prepareInCallback arg = do
   let name = escapeReserved $ argName arg
       ptrName = "ptr" ++ name
@@ -311,58 +300,61 @@ prepareInCallback arg = do
 
   when (scope == ScopeTypeAsync) $
        line $ ptrName ++ " <- callocBytes $ sizeOf (undefined :: " ++ fC ++ ")"
-  if inWrapMaybe arg
-  then do
-    let maybeName = "maybe" ++ ucFirst name
-    line $ maybeName ++ " <- case " ++ name ++ " of"
-    indent $ do
-         line $ "Nothing -> return (castPtrToFunPtr nullPtr)"
-         let jName = "j" ++ ucFirst name
-             jName' = prime jName
-         line $ "Just " ++ jName ++ " -> do"
-         indent $ do
-               let p = if (scope == ScopeTypeAsync)
-                       then parenthesize $ "Just " ++ ptrName
-                       else "Nothing"
-               line $ jName' ++ " <- " ++ maker ++ " "
-                        ++ parenthesize (wrapper ++ " " ++ p ++ " " ++ jName)
-               when (scope == ScopeTypeAsync) $
-                    line $ "poke " ++ ptrName ++ " " ++ jName'
-               line $ "return " ++ jName'
-    return maybeName
-  else do
-    let name' = prime name
-        p = if (scope == ScopeTypeAsync)
-            then parenthesize $ "Just " ++ ptrName
-            else "Nothing"
-    line $ name' ++ " <- " ++ maker ++ " "
-             ++ parenthesize (wrapper ++ " " ++ p ++ " " ++ name)
-    when (scope == ScopeTypeAsync) $
-         line $ "poke " ++ ptrName ++ " " ++ name'
-    return name'
+  wrapMaybe arg >>= bool
+            (do
+              let name' = prime name
+                  p = if (scope == ScopeTypeAsync)
+                      then parenthesize $ "Just " ++ ptrName
+                      else "Nothing"
+              line $ name' ++ " <- " ++ maker ++ " "
+                       ++ parenthesize (wrapper ++ " " ++ p ++ " " ++ name)
+              when (scope == ScopeTypeAsync) $
+                   line $ "poke " ++ ptrName ++ " " ++ name'
+              return name')
+            (do
+              let maybeName = "maybe" ++ ucFirst name
+              line $ maybeName ++ " <- case " ++ name ++ " of"
+              indent $ do
+                line $ "Nothing -> return (castPtrToFunPtr nullPtr)"
+                let jName = "j" ++ ucFirst name
+                    jName' = prime jName
+                line $ "Just " ++ jName ++ " -> do"
+                indent $ do
+                         let p = if (scope == ScopeTypeAsync)
+                                 then parenthesize $ "Just " ++ ptrName
+                                 else "Nothing"
+                         line $ jName' ++ " <- " ++ maker ++ " "
+                                  ++ parenthesize (wrapper ++ " "
+                                                   ++ p ++ " " ++ jName)
+                         when (scope == ScopeTypeAsync) $
+                              line $ "poke " ++ ptrName ++ " " ++ jName'
+                         line $ "return " ++ jName'
+              return maybeName)
 
 prepareInoutArg :: Arg -> ExcCodeGen String
 prepareInoutArg arg = do
-  let name = escapeReserved $ argName arg
+  name' <- prepareInArg arg
   ft <- foreignType $ argType arg
-  name' <- convert name $ hToF (argType arg) (transfer arg)
   allocInfo <- requiresAlloc (argType arg)
   case allocInfo of
     Just (isBoxed, n) -> do
-        let allocator = if isBoxed
-                        then "callocBoxedBytes"
-                        else "callocBytes"
-        name'' <- genConversion (prime name') $
-                     literal $ M $ allocator ++ " " ++ show n ++
-                                 " :: " ++ show (io ft)
-        line $ "memcpy " ++ name'' ++ " " ++ name' ++ " " ++ show n
-        return name''
+         let allocator = if isBoxed
+                         then "callocBoxedBytes"
+                         else "callocBytes"
+         wrapMaybe arg >>= bool
+            (do
+              name'' <- genConversion (prime name') $
+                        literal $ M $ allocator ++ " " ++ show n ++
+                                    " :: " ++ show (io ft)
+              line $ "memcpy " ++ name'' ++ " " ++ name' ++ " " ++ show n
+              return name'')
+             -- The semantics of this case are somewhat undefined.
+            (notImplementedError "Nullable inout structs not supported")
     Nothing -> do
-        name'' <- genConversion (prime name') $
-                     literal $ M $ "allocMem :: " ++
-                             show (io $ ptr ft)
-        line $ "poke " ++ name'' ++ " " ++ name'
-        return name''
+      name'' <- genConversion (prime name') $
+                literal $ M $ "allocMem :: " ++ show (io $ ptr ft)
+      line $ "poke " ++ name'' ++ " " ++ name'
+      return name''
 
 prepareOutArg :: Arg -> CodeGen String
 prepareOutArg arg = do
@@ -433,21 +425,20 @@ readOutArrayLengths callable nameMap = do
 
 -- Touch DirectionIn arguments so we are sure that they exist when the
 -- C function was called.
-touchInArg :: Arg -> CodeGen ()
+touchInArg :: Arg -> ExcCodeGen ()
 touchInArg arg = when (direction arg /= DirectionOut) $ do
   let name = escapeReserved $ argName arg
   case elementType (argType arg) of
     Just a -> do
       managed <- isManaged a
-      when managed $ line $
-           if inWrapMaybe arg
-           then "whenJust " ++ name ++ " (mapM_ touchManagedPtr)"
-           else "mapM_ touchManagedPtr " ++ name
+      when managed $ wrapMaybe arg >>= bool
+              (line $ "mapM_ touchManagedPtr " ++ name)
+              (line $ "whenJust " ++ name ++ " (mapM_ touchManagedPtr)")
     Nothing -> do
       managed <- isManaged (argType arg)
-      when managed $ line $ if inWrapMaybe arg
-           then "whenJust " ++ name ++ " touchManagedPtr"
-           else "touchManagedPtr " ++ name
+      when managed $ wrapMaybe arg >>= bool
+           (line $ "touchManagedPtr " ++ name)
+           (line $ "whenJust " ++ name ++ " touchManagedPtr")
 
 -- Find the association between closure arguments and their
 -- corresponding callback.
@@ -523,7 +514,7 @@ freeCallCallbacks callable nameMap =
        when (argScope arg == ScopeTypeCall) $
             line $ "safeFreeFunPtr $ castFunPtrToPtr " ++ name'
 
-hSignature :: [Arg] -> TypeRep -> CodeGen ()
+hSignature :: [Arg] -> TypeRep -> ExcCodeGen ()
 hSignature hInArgs retType = do
   (constraints, types) <- inArgInterfaces hInArgs
   indent $ do
@@ -670,16 +661,16 @@ genCallable n symbol callable throwsGError = do
              do aname' <- genConversion inName $ apply $ M "peek"
                 let wrapArray a = convertOutCArray callable t a
                                              nameMap (transfer arg)
-                if outWrapMaybe arg
-                then do
-                  line $ "maybe" ++ ucFirst aname'
-                           ++ " <- convertIfNonNull " ++ aname'
-                           ++ " $ \\" ++ prime aname' ++ " -> do"
-                  indent $ do
-                          wrapped <- wrapArray (prime aname')
-                          line $ "return " ++ wrapped
-                  return $ "maybe" ++ ucFirst aname'
-                else wrapArray aname'
+                wrapMaybe arg >>= bool
+                       (wrapArray aname')
+                       (do
+                         line $ "maybe" ++ ucFirst aname'
+                                  ++ " <- convertIfNonNull " ++ aname'
+                                  ++ " $ \\" ++ prime aname' ++ " -> do"
+                         indent $ do
+                           wrapped <- wrapArray (prime aname')
+                           line $ "return " ++ wrapped
+                         return $ "maybe" ++ ucFirst aname')
          t -> do
            weAlloc <- isJust <$> requiresAlloc t
            peeked <- if weAlloc
@@ -692,16 +683,16 @@ genCallable n symbol callable throwsGError = do
                            else transfer arg
            result <- do
                 let wrap ptr = convert ptr $ fToH (argType arg) transfer'
-                if outWrapMaybe arg
-                then do
-                  line $ "maybe" ++ ucFirst peeked
-                           ++ " <- convertIfNonNull " ++ peeked
-                           ++ " $ \\" ++ prime peeked ++ " -> do"
-                  indent $ do
+                wrapMaybe arg >>= bool
+                     (wrap peeked)
+                     (do
+                       line $ "maybe" ++ ucFirst peeked
+                                ++ " <- convertIfNonNull " ++ peeked
+                                ++ " $ \\" ++ prime peeked ++ " -> do"
+                       indent $ do
                           wrapped <- wrap (prime peeked)
                           line $ "return " ++ wrapped
-                  return $ "maybe" ++ ucFirst peeked
-                else wrap peeked
+                       return $ "maybe" ++ ucFirst peeked)
            -- Free the memory associated with the out argument
            when (transfer' == TransferEverything) $
                 mapM_ line =<< freeElements t peeked undefined

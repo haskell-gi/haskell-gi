@@ -4,9 +4,5 @@ namespace Gtk
 # fairly weird semantics.
 ignore TreeModelFilter.set_modify_func
 
-# Wrongly uses (nullable) in place of (optional) for out arguments
-ignore GestureDrag.get_offset
-ignore GestureDrag.get_start_point
-
 # Signal with an (out) (caller-allocates) parameter, which we do not support.
 ignore Overlay.get-child-position

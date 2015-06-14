@@ -15,7 +15,9 @@ module GI.Conversions
     , elementType
     , elementMap
     , elementTypeAndMap
+
     , isManaged
+    , isNullable
 
     , getIsScalar
     , requiresAlloc
@@ -650,6 +652,15 @@ isManaged t = do
     Just (APIStruct _)    -> return True
     Just (APIUnion _)     -> return True
     _                     -> return False
+
+-- Returns whether the given type is nullable in the C sense,
+-- i.e. whether it can be set to NULL.
+isNullable :: Type -> Bool
+isNullable (TBasicType TVoid) = True
+isNullable (TBasicType TUTF8) = True
+isNullable (TBasicType TFileName) = True
+isNullable (TBasicType _) = False
+isNullable _ = True
 
 -- If the given type maps to a list in Haskell, return the type of the
 -- elements, and the function that maps over them.

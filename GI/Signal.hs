@@ -9,11 +9,12 @@ import Control.Monad (when)
 import Control.Monad (forM, forM_)
 import Data.List (intercalate)
 import Data.Typeable (typeOf)
+import Data.Bool (bool)
 
 import Text.Show.Pretty (ppShow)
 
 import GI.API
-import GI.Callable (hOutType, arrayLengths, inWrapMaybe)
+import GI.Callable (hOutType, arrayLengths, wrapMaybe)
 import GI.Code
 import GI.Conversions
 import GI.SymbolNaming
@@ -25,16 +26,16 @@ import GI.Internal.ArgInfo
 -- The prototype of the callback on the Haskell side (what users of
 -- the binding will see)
 genHaskellCallbackPrototype :: Callable -> String -> [Arg] -> [Arg] ->
-                               CodeGen ()
+                               ExcCodeGen ()
 genHaskellCallbackPrototype cb name' hInArgs hOutArgs = do
   group $ do
     line $ "type " ++ name' ++ " ="
     indent $ do
       forM_ hInArgs $ \arg -> do
         ht <- haskellType (argType arg)
-        line $ (show $ if inWrapMaybe arg
-                       then maybeT ht
-                       else ht) ++ " ->"
+        wrapMaybe arg >>= bool
+                          (line $ show ht ++ " ->")
+                          (line $ show (maybeT ht) ++ " ->")
       ret <- hOutType cb hOutArgs False
       line $ show $ io ret
 
@@ -100,10 +101,9 @@ convertNullable aname c = do
 -- named "aname", into the corresponding Haskell object.
 convertCallbackInCArray :: Callable -> Arg -> Type -> String -> ExcCodeGen String
 convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname = do
-  if length > -1 then do
-          if inWrapMaybe arg
-          then do convertNullable aname convertAndFree
-          else convertAndFree
+  if length > -1
+  then wrapMaybe arg >>= bool convertAndFree
+                         (convertNullable aname convertAndFree)
   else
       -- Not much we can do, we just pass the pointer along, and let
       -- the callback deal with it.
@@ -140,9 +140,7 @@ prepareInArg cb arg = do
     t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
     _ -> do
       let c = convert name $ fToH (argType arg) (transfer arg)
-      if inWrapMaybe arg
-      then convertNullable name c
-      else c
+      wrapMaybe arg >>= bool c (convertNullable name c)
 
 prepareInoutArg :: Arg -> ExcCodeGen String
 prepareInoutArg arg = do
@@ -245,19 +243,16 @@ genCallback n (Callback cb) = do
     line $ "-- Callbacks skipping return unsupported :\n"
              ++ ppShow n ++ "\n" ++ ppShow cb
   else do
-    genHaskellCallbackPrototype cb name' hInArgs hOutArgs
-
-    genCCallbackPrototype cb name' False
-
-    genCallbackWrapperFactory name'
-
     let closure = lcFirst name' ++ "Closure"
 
     handleCGExc (\e -> line ("-- XXX Could not generate callback wrapper for "
                              ++ name' ++
                              "\n-- Error was : " ++ describeCGError e))
-                 (genClosure name' closure False >>
-                  genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False)
+       (genClosure name' closure False >>
+        genCCallbackPrototype cb name' False >>
+        genCallbackWrapperFactory name' >>
+        genHaskellCallbackPrototype cb name' hInArgs hOutArgs >>
+        genCallbackWrapper cb name' dataptrs hInArgs hOutArgs False)
 
 -- | Return the name for the signal in Haskell CamelCase conventions.
 signalHaskellName :: String -> String
