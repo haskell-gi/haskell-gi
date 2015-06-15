@@ -1,13 +1,16 @@
-
 module GI.Value
     ( Value(..)
     , fromArgument
     , valueType
     ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
+#endif
+
 import Data.Int
 import Data.Word
+
 import Foreign (peekByteOff,Ptr)
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
@@ -76,4 +79,3 @@ fromArgument ti (Argument arg) =
     basic TDouble = VDouble <$> fromRational <$> toRational <$>  {# get GIArgument->v_double #} arg
     basic TUTF8 = VUTF8 <$> (peekCString =<< {# get GIArgument->v_string #} arg)
     basic t = error $ "a: implement me: " ++ show t
-

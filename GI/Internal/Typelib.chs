@@ -9,7 +9,9 @@ module GI.Internal.Typelib
   )
 where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
+#endif
 import Control.Monad (when)
 
 import Foreign

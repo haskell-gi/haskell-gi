@@ -1,11 +1,13 @@
-
 module GI.Internal.UnionInfo
     ( unionInfoFields
     , unionInfoSize
     , unionInfoMethods
     ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
+#endif
+
 import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)

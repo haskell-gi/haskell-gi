@@ -1,4 +1,3 @@
-
 module GI.Internal.StructInfo
     ( structInfoFields
     , structInfoIsGTypeStruct
@@ -10,7 +9,10 @@ module GI.Internal.StructInfo
     )
 where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
+#endif
+
 import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)

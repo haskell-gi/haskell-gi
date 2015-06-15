@@ -1,4 +1,3 @@
-
 module GI.Internal.FieldInfo
     ( FieldInfoFlag(..)
     , fieldInfoFlags
@@ -6,7 +5,10 @@ module GI.Internal.FieldInfo
     , fieldInfoType
     ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
+#endif
+
 import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)

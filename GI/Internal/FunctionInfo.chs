@@ -1,4 +1,3 @@
-
 module GI.Internal.FunctionInfo
     ( FunctionInfoFlag(..)
     , functionInfoSymbol
@@ -9,7 +8,10 @@ module GI.Internal.FunctionInfo
     )
 where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
+#endif
+
 import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)

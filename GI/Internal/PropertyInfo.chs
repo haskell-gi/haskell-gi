@@ -1,4 +1,3 @@
-
 module GI.Internal.PropertyInfo
     ( ParamFlag(..)
     , propertyInfoFlags
@@ -7,7 +6,10 @@ module GI.Internal.PropertyInfo
     )
 where
 
+#if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
+#endif
+
 import Foreign
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
