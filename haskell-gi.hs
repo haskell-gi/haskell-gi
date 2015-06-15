@@ -2,6 +2,7 @@ module Main where
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+import Data.Traversable (traverse)
 #endif
 import Control.Monad (forM_)
 import Control.Exception (handle)

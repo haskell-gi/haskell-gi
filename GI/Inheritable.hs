@@ -7,7 +7,7 @@ module GI.Inheritable
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 #endif
 import Control.Monad (foldM)
 import qualified Data.Map as M

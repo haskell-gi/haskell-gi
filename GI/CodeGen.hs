@@ -111,8 +111,8 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
             forM_ valueNames $ \(v, n) ->
                 line $ "toEnum " ++ show v ++ " = " ++ n
             line $ "toEnum v = error $ \"Don't know how to convert \" ++ show v ++ \" to " ++ name' ++ ".\""
-  forM_ eDomain (genErrorDomain name')
-  forM_ maybeTypeInit (genBoxedObject n)
+  maybe (return ()) (genErrorDomain name') eDomain
+  maybe (return ()) (genBoxedObject n) maybeTypeInit
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name _ name) enum = do

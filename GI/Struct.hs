@@ -7,7 +7,7 @@ module GI.Struct ( genStructFields
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM_, when, unless)
+import Control.Monad (forM_, unless)
 
 import Data.List (isSuffixOf)
 import Data.Maybe (mapMaybe)

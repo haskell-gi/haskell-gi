@@ -134,7 +134,7 @@ module GI.Utils.GVariant
 #include <glib-object.h>
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 #endif
 import Control.Monad (when, void, (>=>))
 import Control.Exception.Base (bracket)
