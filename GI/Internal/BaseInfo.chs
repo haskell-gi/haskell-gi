@@ -1,9 +1,9 @@
 module GI.Internal.BaseInfo
-  ( baseInfoIsDeprecated
-  , baseInfoName
-  , baseInfoNamespace
-  , baseInfoType
-  , baseInfoAttribute
+  ( infoIsDeprecated
+  , infoName
+  , infoNamespace
+  , infoType
+  , infoAttribute
   , InfoType(..)
   )
 where
@@ -26,40 +26,44 @@ import System.IO.Unsafe (unsafePerformIO)
   deriving (Show, Eq) #}
 
 -- Because all the C types are synonyms, c2hs picks the last one...
-stupidCast :: BaseInfoClass base
-           => base
+stupidCast :: InfoClass info
+           => info
            -> ValueInfo
-stupidCast base = ValueInfo (castPtr p)
-  where
-    (BaseInfo p) = baseInfo base
+stupidCast info = ValueInfo (castPtr p)
+  where (BaseInfo p) = baseInfo info
 
-baseInfoIsDeprecated bi = unsafePerformIO $
-    (/= 0) `fmap` {# call g_base_info_is_deprecated #} (stupidCast bi)
+infoIsDeprecated :: InfoClass info
+                 => info
+                 -> Bool
+infoIsDeprecated i = unsafePerformIO $
+    (/= 0) <$> {# call g_base_info_is_deprecated #} (stupidCast i)
 
-baseInfoName :: BaseInfoClass base
-             => base
-             -> String
-baseInfoName bi = unsafePerformIO $ do
-    ret <- {# call g_base_info_get_name #} (stupidCast bi)
+infoName :: InfoClass info
+         => info
+         -> String
+infoName i = unsafePerformIO $ do
+    ret <- {# call g_base_info_get_name #} (stupidCast i)
     peekCString ret
 
-baseInfoNamespace :: BaseInfoClass base
-                  => base
-                  -> String
-baseInfoNamespace bi = unsafePerformIO $ do
-    ret <- {# call g_base_info_get_namespace #} (stupidCast bi)
+infoNamespace :: InfoClass info
+              => info
+              -> String
+infoNamespace i = unsafePerformIO $ do
+    ret <- {# call g_base_info_get_namespace #} (stupidCast i)
     peekCString ret
 
-baseInfoType :: BaseInfoClass base
-             => base
-             -> InfoType
-baseInfoType bi = unsafePerformIO $ do
-    toEnum . fromIntegral <$> {# call get_type #} (stupidCast bi)
+infoType :: InfoClass info
+         => info
+         -> InfoType
+infoType i = unsafePerformIO $ do
+    toEnum . fromIntegral <$> {# call get_type #} (stupidCast i)
 
-baseInfoAttribute :: BaseInfoClass base
-                     => base -> String -> Maybe String
-baseInfoAttribute bi name = unsafePerformIO $ do
-    result <- withCString name $ {# call get_attribute #} (stupidCast bi)
+infoAttribute :: InfoClass info
+              => info
+              -> String
+              -> Maybe String
+infoAttribute i name = unsafePerformIO $ do
+    result <- withCString name $ {# call get_attribute #} (stupidCast i)
     if result == nullPtr
        then return Nothing
        else Just <$> peekCString result

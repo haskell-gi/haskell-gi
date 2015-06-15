@@ -87,8 +87,8 @@ typeFromTypeInfo ti =
                              ArrayTypeByteArray -> TByteArray
            -- TypeTagInterface -> TInterface (typeTagToString . typeInfoTag $ ti)
            TypeTagInterface ->
-               let bi = baseInfo . typeInfoInterface $ ti
-               in case (baseInfoNamespace bi, baseInfoName bi) of
+               let bi = typeInfoInterface ti
+               in case (infoNamespace bi, infoName bi) of
                     ("GLib", "Variant") -> TVariant
                     ("GObject", "ParamSpec") -> TParamSpec
                     (ns, n) -> TInterface ns n
