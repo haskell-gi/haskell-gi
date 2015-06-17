@@ -1,6 +1,8 @@
 haskell-gi
 ==========
 
+[![Join the chat at https://gitter.im/garetxe/haskell-gi](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/garetxe/haskell-gi?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Haskell bindings for GObject Introspection, based on the code in
 http://git.rhydd.org/?p=haskell-gi;a=summary
 and
