@@ -97,15 +97,15 @@ wrapMaybe arg =
 -- Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
 inArgInterfaces :: [Arg] -> ExcCodeGen ([String], [String])
-inArgInterfaces inArgs = rec "abcdefghijklmnopqrtstuvwxyz" inArgs
+inArgInterfaces inArgs = consAndTypes "abcdefghijklmnopqrtstuvwxyz" inArgs
   where
-    rec :: [Char] -> [Arg] -> ExcCodeGen ([String], [String])
-    rec _ [] = return ([], [])
-    rec letters (arg:args) = do
+    consAndTypes :: [Char] -> [Arg] -> ExcCodeGen ([String], [String])
+    consAndTypes _ [] = return ([], [])
+    consAndTypes letters (arg:args) = do
       (ls, t, cons) <- argumentType letters $ argType arg
       t' <- wrapMaybe arg >>= bool (return t)
                                    (return $ "Maybe (" ++ t ++ ")")
-      (restCons, restTypes) <- rec ls args
+      (restCons, restTypes) <- consAndTypes ls args
       return (cons ++ restCons, t' : restTypes)
 
 -- Given a callable, return a list of (array, length) pairs, where in
