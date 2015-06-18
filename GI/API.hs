@@ -52,45 +52,47 @@ data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)
 
 getName :: InfoClass info => info -> Name
-getName i =
-   let namespace = infoNamespace i
-       name = infoName i
-    in Name namespace name
+getName i = Name namespace name
+    where namespace = infoNamespace i
+          name = infoName i
 
 withName :: InfoClass info => (info -> a) -> (info -> (Name, a))
 withName f x = (getName x, f x)
 
 data Constant = Constant {
-      constantType  :: Type,
-      constantValue :: Argument }
+      constantType      :: Type,
+      constantValue     :: Argument,
+      constIsDeprecated :: Bool }
     deriving Show
 
 toConstant :: ConstantInfo -> Constant
-toConstant ci = Constant {
-                  constantType  = typeFromTypeInfo (constantInfoType ci)
-                , constantValue = constantInfoValue ci }
+toConstant ci = Constant
+    (typeFromTypeInfo $ constantInfoType ci)
+    (constantInfoValue ci)
+    (infoIsDeprecated ci)
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
     errorDomain :: Maybe String,
     enumTypeInit :: Maybe String,
-    enumStorageType :: TypeTag }
+    enumStorageType :: TypeTag,
+    enumIsDeprecated :: Bool }
     deriving Show
 
 toEnumeration :: EnumInfo -> Enumeration
 toEnumeration ei = Enumeration
-    (map (\vi -> (infoName vi, valueInfoValue vi))
-             (enumInfoValues ei))
+    (map viToV $ enumInfoValues ei)
     (enumInfoErrorDomain ei)
     (registeredTypeInfoTypeInit ei)
     (enumInfoStorageType ei)
+    (infoIsDeprecated ei)
+    where viToV vi = (infoName vi, valueInfoValue vi)
 
 data Flags = Flags Enumeration
     deriving Show
 
 toFlags :: EnumInfo -> Flags
-toFlags ei = let enum = toEnumeration ei
-              in Flags enum
+toFlags ei = Flags $ toEnumeration ei
 
 data Arg = Arg {
     argName :: String,
@@ -104,15 +106,15 @@ data Arg = Arg {
     deriving (Show, Eq, Ord)
 
 toArg :: ArgInfo -> Arg
-toArg ai =
-   Arg (infoName ai)
-       (typeFromTypeInfo . argInfoType $ ai)
-       (argInfoDirection ai)
-       (argInfoMayBeNull ai)
-       (argInfoScope ai)
-       (argInfoClosure ai)
-       (argInfoDestroy ai)
-       (argInfoOwnershipTransfer ai)
+toArg ai = Arg
+    (infoName ai)
+    (typeFromTypeInfo . argInfoType $ ai)
+    (argInfoDirection ai)
+    (argInfoMayBeNull ai)
+    (argInfoScope ai)
+    (argInfoClosure ai)
+    (argInfoDestroy ai)
+    (argInfoOwnershipTransfer ai)
 
 data Callable = Callable {
     returnType :: Type,
@@ -120,20 +122,19 @@ data Callable = Callable {
     returnTransfer :: Transfer,
     returnAttributes :: [(String, String)],
     args :: [Arg],
-    skipReturn :: Bool }
+    skipReturn :: Bool,
+    callableIsDeprecated :: Bool }
     deriving (Show, Eq)
 
 toCallable :: CallableInfo -> Callable
-toCallable ci =
-    let returnType = callableInfoReturnType ci
-        argType = typeFromTypeInfo returnType
-        ais = callableInfoArgs ci
-        in Callable argType
-               (callableInfoMayReturnNull ci)
-               (callableInfoCallerOwns ci)
-               (callableInfoReturnAttributes ci)
-               (map toArg ais)
-               (callableInfoSkipReturn ci)
+toCallable ci = Callable
+    (typeFromTypeInfo $ callableInfoReturnType ci)
+    (callableInfoMayReturnNull ci)
+    (callableInfoCallerOwns ci)
+    (callableInfoReturnAttributes ci)
+    (map toArg $ callableInfoArgs ci)
+    (callableInfoSkipReturn ci)
+    (infoIsDeprecated ci)
 
 data Function = Function {
     fnSymbol :: String,
@@ -142,65 +143,66 @@ data Function = Function {
     deriving Show
 
 toFunction :: FunctionInfo -> Function
-toFunction fi =
-     let ci = fromBaseInfo (baseInfo fi) :: CallableInfo
-      in Function
-         (functionInfoSymbol fi)
-         (toCallable ci)
-         (functionInfoFlags fi)
+toFunction fi = Function
+    (functionInfoSymbol fi)
+    (toCallable ci)
+    (functionInfoFlags fi)
+    where ci = fromBaseInfo (baseInfo fi) :: CallableInfo
 
 data Signal = Signal {
     sigName :: String,
-    sigCallable :: Callable }
+    sigCallable :: Callable,
+    sigIsDeprecated :: Bool }
     deriving (Show, Eq)
 
 toSignal :: SignalInfo -> Signal
-toSignal si = Signal {
-    sigName = infoName si,
-    sigCallable = toCallable $ callableInfo si }
+toSignal si = Signal
+    (infoName si)
+    (toCallable $ callableInfo si)
+    (infoIsDeprecated si)
 
 data Property = Property {
     propName :: String,
     propType :: Type,
     propFlags :: [ParamFlag],
-    propTransfer :: Transfer }
+    propTransfer :: Transfer,
+    propIsDeprecated :: Bool }
     deriving (Show, Eq)
 
 toProperty :: PropertyInfo -> Property
-toProperty pi =
-    Property (infoName pi)
-        (typeFromTypeInfo $ propertyInfoType pi)
-        (propertyInfoFlags pi)
-        (propertyInfoTransfer pi)
+toProperty pi = Property
+    (infoName pi)
+    (typeFromTypeInfo $ propertyInfoType pi)
+    (propertyInfoFlags pi)
+    (propertyInfoTransfer pi)
+    (infoIsDeprecated pi)
 
 data Field = Field {
     fieldName :: String,
     fieldType :: Type,
     fieldCallback :: Maybe Callback,
     fieldOffset :: Int,
-    fieldFlags :: [FieldInfoFlag] }
+    fieldFlags :: [FieldInfoFlag],
+    fieldIsDeprecated :: Bool }
     deriving Show
 
 toField :: FieldInfo -> Field
-toField fi =
-    Field {fieldName = infoName fi,
-           fieldType = typeFromTypeInfo $ fieldInfoType fi,
-           fieldOffset = fieldInfoOffset fi,
-           -- Fields with embedded "anonymous" callback interfaces.
-           fieldCallback =
-               case typeFromTypeInfo (fieldInfoType fi) of
-                 TInterface _ n ->
-                     if n /= infoName fi
-                     then Nothing
-                     else let iface = baseInfo .
-                                      typeInfoInterface .
-                                      fieldInfoType $ fi
-                          in case infoType iface of
-                               InfoTypeCallback ->
-                                   Just . toCallback . fromBaseInfo $ iface
-                               _ -> Nothing
-                 _ -> Nothing,
-           fieldFlags = fieldInfoFlags fi}
+toField fi = Field
+    (infoName fi)
+    (typeFromTypeInfo $ fieldInfoType fi)
+     -- Fields with embedded "anonymous" callback interfaces.
+    (case typeFromTypeInfo (fieldInfoType fi) of
+       TInterface _ n ->
+         if n /= infoName fi
+         then Nothing
+         else let iface = baseInfo . typeInfoInterface . fieldInfoType $ fi
+              in case infoType iface of
+                   InfoTypeCallback -> Just . toCallback . fromBaseInfo $ iface
+                   _                -> Nothing
+       _ -> Nothing)
+    (fieldInfoOffset fi)
+    (fieldInfoFlags fi)
+    (infoIsDeprecated fi)
 
 data Struct = Struct {
     structIsBoxed :: Bool,
@@ -209,21 +211,21 @@ data Struct = Struct {
     structIsForeign :: Bool,
     isGTypeStruct :: Bool,
     structFields :: [Field],
-    structMethods :: [(Name, Function)]
-    }
+    structMethods :: [(Name, Function)],
+    structIsDeprecated :: Bool }
     deriving Show
 
 toStruct :: StructInfo -> Struct
-toStruct si = Struct {
-                structIsBoxed = isJust (registeredTypeInfoTypeInit si) &&
-                                gtypeIsBoxed (registeredTypeInfoGType si),
-                structTypeInit = registeredTypeInfoTypeInit si,
-                structFields = map toField $ structInfoFields si,
-                structMethods = map (withName toFunction)
-                                (structInfoMethods si),
-                structSize = structInfoSize si,
-                structIsForeign = structInfoIsForeign si,
-                isGTypeStruct = structInfoIsGTypeStruct si }
+toStruct si = Struct
+    (isJust (registeredTypeInfoTypeInit si) &&
+        gtypeIsBoxed (registeredTypeInfoGType si))
+    (registeredTypeInfoTypeInit si)
+    (structInfoSize si)
+    (structInfoIsForeign si)
+    (structInfoIsGTypeStruct si)
+    (map toField $ structInfoFields si)
+    (map (withName toFunction) (structInfoMethods si))
+    (infoIsDeprecated si)
 
 -- XXX: Capture alignment and method info.
 
@@ -232,18 +234,19 @@ data Union = Union {
     unionSize :: Int,
     unionTypeInit :: Maybe String,
     unionFields :: [Field],
-    unionMethods :: [(Name, Function)] }
+    unionMethods :: [(Name, Function)],
+    unionIsDeprecated :: Bool }
     deriving Show
 
 toUnion :: UnionInfo -> Union
-toUnion ui = Union {
-               unionIsBoxed = isJust (registeredTypeInfoTypeInit ui) &&
-                              gtypeIsBoxed (registeredTypeInfoGType ui),
-               unionSize = unionInfoSize ui,
-               unionTypeInit = registeredTypeInfoTypeInit ui,
-               unionFields = map toField $ unionInfoFields ui,
-               unionMethods = map (withName toFunction)
-                                (unionInfoMethods ui) }
+toUnion ui = Union
+    (isJust (registeredTypeInfoTypeInit ui) &&
+        gtypeIsBoxed (registeredTypeInfoGType ui))
+    (unionInfoSize ui)
+    (registeredTypeInfoTypeInit ui)
+    (map toField $ unionInfoFields ui)
+    (map (withName toFunction) (unionInfoMethods ui))
+    (infoIsDeprecated ui)
 
 -- XXX
 data Callback = Callback Callable
@@ -257,17 +260,19 @@ data Interface = Interface {
     ifSignals :: [Signal],
     ifPrerequisites :: [Name],
     ifTypeInit :: Maybe String,
-    ifMethods :: [(Name, Function)] }
+    ifMethods :: [(Name, Function)],
+    ifIsDeprecated :: Bool }
     deriving Show
 
 toInterface :: InterfaceInfo -> Interface
-toInterface ii = Interface {
-    ifConstants = map (withName toConstant) (interfaceInfoConstants ii),
-    ifProperties = map toProperty (interfaceInfoProperties ii),
-    ifSignals = map toSignal (interfaceInfoSignals ii),
-    ifPrerequisites = map (fst . toAPI) (interfaceInfoPrerequisites ii),
-    ifTypeInit = registeredTypeInfoTypeInit ii,
-    ifMethods = map (withName toFunction) (interfaceInfoMethods ii) }
+toInterface ii = Interface
+    (map (withName toConstant) (interfaceInfoConstants ii))
+    (map toProperty (interfaceInfoProperties ii))
+    (map toSignal (interfaceInfoSignals ii))
+    (map (fst . toAPI) (interfaceInfoPrerequisites ii))
+    (registeredTypeInfoTypeInit ii)
+    (map (withName toFunction) (interfaceInfoMethods ii))
+    (infoIsDeprecated ii)
 
 data Object = Object {
     objFields :: [Field],
@@ -280,22 +285,24 @@ data Object = Object {
     objTypeInit :: String,
     objTypeName :: String,
     objRefFunction :: Maybe String,
-    objUnrefFunction :: Maybe String }
+    objUnrefFunction :: Maybe String,
+    objIsDeprecated :: Bool }
     deriving Show
 
 toObject :: ObjectInfo -> Object
-toObject oi = Object {
-    objFields = map toField $ objectInfoFields oi,
-    objMethods = map (withName toFunction) (objectInfoMethods oi),
-    objProperties = map toProperty $ objectInfoProperties oi,
-    objSignals = map toSignal (objectInfoSignals oi),
-    objInterfaces = map getName $ objectInfoInterfaces oi,
-    objConstants = map toConstant $ objectInfoConstants oi,
-    objParent = getName <$> objectInfoParent oi,
-    objTypeInit = objectInfoTypeInit oi,
-    objTypeName = objectInfoTypeName oi,
-    objRefFunction = objectInfoRefFunction oi,
-    objUnrefFunction = objectInfoUnrefFunction oi }
+toObject oi = Object
+    (map toField $ objectInfoFields oi)
+    (map (withName toFunction) (objectInfoMethods oi))
+    (map toProperty $ objectInfoProperties oi)
+    (map toSignal (objectInfoSignals oi))
+    (map getName $ objectInfoInterfaces oi)
+    (map toConstant $ objectInfoConstants oi)
+    (getName <$> objectInfoParent oi)
+    (objectInfoTypeInit oi)
+    (objectInfoTypeName oi)
+    (objectInfoRefFunction oi)
+    (objectInfoUnrefFunction oi)
+    (infoIsDeprecated oi)
 
 -- XXX: Work out what to do with boxed types.
 data Boxed = Boxed

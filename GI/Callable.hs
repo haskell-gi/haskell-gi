@@ -97,7 +97,7 @@ wrapMaybe arg =
 -- Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
 inArgInterfaces :: [Arg] -> ExcCodeGen ([String], [String])
-inArgInterfaces inArgs = consAndTypes "abcdefghijklmnopqrtstuvwxyz" inArgs
+inArgInterfaces inArgs = consAndTypes ['a'..'z'] inArgs
   where
     consAndTypes :: [Char] -> [Arg] -> ExcCodeGen ([String], [String])
     consAndTypes _ [] = return ([], [])
@@ -455,13 +455,13 @@ closureToCallbackMap callable =
               if argScope arg == ScopeTypeInvalid
               then go as m
               else case argClosure arg of
-                     (-1) -> go as m
-                     c -> case Map.lookup c m of
-                            Just _ ->
-                                notImplementedError $ "Closure for multiple callbacks unsupported"
-                                                        ++ ppShow arg ++ "\n"
-                                                        ++ ppShow callable
-                            Nothing -> go as $ Map.insert c arg m
+                  (-1) -> go as m
+                  c -> case Map.lookup c m of
+                      Just _ -> notImplementedError $
+                                "Closure for multiple callbacks unsupported"
+                                ++ ppShow arg ++ "\n"
+                                ++ ppShow callable
+                      Nothing -> go as $ Map.insert c arg m
 
 -- user_data style arguments.
 prepareClosures :: Callable -> Map.Map String String -> ExcCodeGen ()
@@ -484,7 +484,7 @@ prepareClosures callable nameMap = do
                                            ++ ppShow nameMap
           case argScope cb of
             ScopeTypeInvalid -> badIntroError $ "Invalid scope! "
-                                ++ ppShow callable
+                                              ++ ppShow callable
             ScopeTypeNotified -> do
                 line $ "let " ++ closureName ++ " = castFunPtrToPtr " ++ n'
                 case argDestroy cb of
@@ -522,182 +522,176 @@ hSignature hInArgs retType = do
 
 genCallable :: Name -> String -> Callable -> Bool -> ExcCodeGen ()
 genCallable n symbol callable throwsGError = do
-  group $ do
-    line $ "-- Args : " ++ (show $ args callable)
-    line $ "-- Lengths : " ++ (show $ arrayLengths callable)
-    line $ "-- hInArgs : " ++ show hInArgs
-    line $ "-- returnType : " ++ (show $ returnType callable)
-    line $ "-- throws : " ++ (show throwsGError)
-    line $ "-- Skip return : " ++ (show $ skipReturn callable)
-    when (skipReturn callable && returnType callable /= TBasicType TBoolean) $
-         do line "-- XXX return value ignored, but it is not a boolean."
-            line "--     This may be a memory leak?"
-  mkForeignImport symbol callable throwsGError
-  blank
-  wrapper
+    group $ do
+        line $ "-- Args : " ++ (show $ args callable)
+        line $ "-- Lengths : " ++ (show $ arrayLengths callable)
+        line $ "-- hInArgs : " ++ show hInArgs
+        line $ "-- returnType : " ++ (show $ returnType callable)
+        line $ "-- throws : " ++ (show throwsGError)
+        line $ "-- Skip return : " ++ (show $ skipReturn callable)
+        when (skipReturn callable && returnType callable /= TBasicType TBoolean) $
+             do line "-- XXX return value ignored, but it is not a boolean."
+                line "--     This may be a memory leak?"
+    mkForeignImport symbol callable throwsGError
+    blank
+    wrapper
 
-  where
-  inArgs = filter ((/= DirectionOut) . direction) $ args callable
-  -- We do not expose user_data arguments, destroynotify arguments,
-  -- and C array length arguments to Haskell code.
-  closures = map (args callable!!) . filter (/= -1) . map argClosure $ inArgs
-  destroyers = map (args callable!!) . filter (/= -1) . map argDestroy $ inArgs
-  omitted = arrayLengths callable ++ closures ++ destroyers
-  hInArgs = filter (not . (`elem` omitted)) inArgs
-  outArgs = filter ((/= DirectionIn) . direction) $ args callable
-  hOutArgs = filter (not . (`elem` (arrayLengths callable))) outArgs
+    where
+    inArgs = filter ((/= DirectionOut) . direction) $ args callable
+    -- We do not expose user_data arguments, destroynotify arguments,
+    -- and C array length arguments to Haskell code.
+    closures = map (args callable!!) . filter (/= -1) . map argClosure $ inArgs
+    destroyers = map (args callable!!) . filter (/= -1) . map argDestroy $ inArgs
+    omitted = arrayLengths callable ++ closures ++ destroyers
+    hInArgs = filter (`notElem` omitted) inArgs
+    outArgs = filter ((/= DirectionIn) . direction) $ args callable
+    hOutArgs = filter (`notElem` (arrayLengths callable)) outArgs
 
-  ignoreReturn = skipRetVal callable throwsGError
+    ignoreReturn = skipRetVal callable throwsGError
 
-  wrapper = group $ do
-      let argName' = escapeReserved . argName
-      name <- lowerName n
-      line $ name ++ " ::"
-      hSignature hInArgs =<< hOutType callable hOutArgs ignoreReturn
-      line $
-          name ++ " " ++
-          intercalate " " (map argName' hInArgs) ++
-          " = do"
-      indent $ do
-        readInArrayLengths n callable hInArgs
-        inArgNames <- forM (args callable) $ \arg ->
-                      prepareArgForCall omitted arg
-        -- Map from argument names to names passed to the C function
-        let nameMap = Map.fromList $ flip zip inArgNames
-                                           $ map argName' $ args callable
-        prepareClosures callable nameMap
-        if throwsGError
-        then do
-          line "onException (do"
-          indent $ do
-            invokeCFunction inArgNames
-            readOutArrayLengths callable nameMap
-            result <- convertResult nameMap
-            pps <- convertOut nameMap
-            freeCallCallbacks callable nameMap
-            forM_ (args callable) touchInArg
-            mapM_ line =<< freeInArgs callable nameMap
-            returnResult result pps
-          line " ) (do"
-          indent $ do
-                 freeCallCallbacks callable nameMap
-                 actions <- freeInArgsOnError callable nameMap
-                 case actions of
-                     [] -> line $ "return ()"
-                     _ -> mapM_ line actions
-          line " )"
-        else do
-          invokeCFunction inArgNames
-          readOutArrayLengths callable nameMap
-          result <- convertResult nameMap
-          pps <- convertOut nameMap
-          freeCallCallbacks callable nameMap
-          forM_ (args callable) touchInArg
-          mapM_ line =<< freeInArgs callable nameMap
-          returnResult result pps
+    wrapper = group $ do
+        let argName' = escapeReserved . argName
+        name <- lowerName n
+        deprecatedPragma (callableIsDeprecated callable) name
+        line $ name ++ " ::"
+        hSignature hInArgs =<< hOutType callable hOutArgs ignoreReturn
+        line $ name ++ " " ++ intercalate " " (map argName' hInArgs) ++ " = do"
+        indent $ do
+            readInArrayLengths n callable hInArgs
+            inArgNames <- forM (args callable) $ \arg ->
+                          prepareArgForCall omitted arg
+            -- Map from argument names to names passed to the C function
+            let nameMap = Map.fromList $ flip zip inArgNames
+                                               $ map argName' $ args callable
+            prepareClosures callable nameMap
+            if throwsGError
+            then do
+                line "onException (do"
+                indent $ do
+                    invokeCFunction inArgNames
+                    readOutArrayLengths callable nameMap
+                    result <- convertResult nameMap
+                    pps <- convertOut nameMap
+                    freeCallCallbacks callable nameMap
+                    forM_ (args callable) touchInArg
+                    mapM_ line =<< freeInArgs callable nameMap
+                    returnResult result pps
+                line " ) (do"
+                indent $ do
+                    freeCallCallbacks callable nameMap
+                    actions <- freeInArgsOnError callable nameMap
+                    case actions of
+                        [] -> line $ "return ()"
+                        _ -> mapM_ line actions
+                line " )"
+            else do
+                invokeCFunction inArgNames
+                readOutArrayLengths callable nameMap
+                result <- convertResult nameMap
+                pps <- convertOut nameMap
+                freeCallCallbacks callable nameMap
+                forM_ (args callable) touchInArg
+                mapM_ line =<< freeInArgs callable nameMap
+                returnResult result pps
 
-  invokeCFunction argNames = do
-    let returnBind = case returnType callable of
-                       TBasicType TVoid -> ""
-                       _                -> if ignoreReturn
-                                           then "_ <- "
-                                           else "result <- "
-        maybeCatchGErrors = if throwsGError
-                            then "propagateGError $ "
-                            else ""
-    line $ returnBind ++ maybeCatchGErrors
+    invokeCFunction argNames = do
+        let returnBind = case returnType callable of
+                           TBasicType TVoid -> ""
+                           _                -> if ignoreReturn
+                                               then "_ <- "
+                                               else "result <- "
+            maybeCatchGErrors = if throwsGError
+                                then "propagateGError $ "
+                                else ""
+        line $ returnBind ++ maybeCatchGErrors
                  ++ symbol ++ concatMap (" " ++) argNames
 
-  convertResult :: Map.Map String String -> ExcCodeGen String
-  convertResult nameMap =
-      if ignoreReturn || returnType callable == TBasicType TVoid
-      then return undefined
-      else do
-        if returnMayBeNull callable
-        then do
-          line $ "maybeResult <- convertIfNonNull result $ \\result' -> do"
-          indent $ do
-               converted <- unwrappedConvertResult "result'"
-               line $ "return " ++ converted
-          return "maybeResult"
-        else unwrappedConvertResult "result"
-    where
-      unwrappedConvertResult rname =
-        case returnType callable of
-             -- Arrays without length information are just passed
-             -- along.
-             TCArray False (-1) (-1) _ -> return rname
-             -- Not zero-terminated C arrays require knowledge of the
-             -- length, so we deal with them directly.
-             t@(TCArray False _ _ _) ->
-                 convertOutCArray callable t rname nameMap
-                                      (returnTransfer callable)
-             t -> do
-               result <- convert rname $ fToH (returnType callable)
-                                                 (returnTransfer callable)
-               freeContainerType (returnTransfer callable) t rname undefined
-               return result
+    convertResult :: Map.Map String String -> ExcCodeGen String
+    convertResult nameMap =
+        if ignoreReturn || returnType callable == TBasicType TVoid
+        then return undefined
+        else do
+            if returnMayBeNull callable
+            then do
+                line $ "maybeResult <- convertIfNonNull result $ \\result' -> do"
+                indent $ do
+                    converted <- unwrappedConvertResult "result'"
+                    line $ "return " ++ converted
+                return "maybeResult"
+            else unwrappedConvertResult "result"
 
-  convertOut :: Map.Map String String -> ExcCodeGen [String]
-  convertOut nameMap = do
-    -- Convert out parameters and result
-    forM hOutArgs $ \arg -> do
-       let name = escapeReserved $ argName arg
-       inName <- case Map.lookup name nameMap of
-                   Just name' -> return name'
-                   Nothing -> badIntroError $ "Parameter " ++
-                                              name ++ " not found!"
-       case argType arg of
-         -- Passed along as a raw pointer
-         TCArray False (-1) (-1) _ -> genConversion inName $ apply $ M "peek"
-         t@(TCArray False _ _ _) ->
-             do aname' <- genConversion inName $ apply $ M "peek"
-                let wrapArray a = convertOutCArray callable t a
-                                             nameMap (transfer arg)
-                wrapMaybe arg >>= bool
-                       (wrapArray aname')
-                       (do
-                         line $ "maybe" ++ ucFirst aname'
-                                  ++ " <- convertIfNonNull " ++ aname'
-                                  ++ " $ \\" ++ prime aname' ++ " -> do"
-                         indent $ do
-                           wrapped <- wrapArray (prime aname')
-                           line $ "return " ++ wrapped
-                         return $ "maybe" ++ ucFirst aname')
-         t -> do
-           weAlloc <- isJust <$> requiresAlloc t
-           peeked <- if weAlloc
-                     then return inName
-                     else genConversion inName $ apply $ M "peek"
-           -- If we alloc we always take control of the resulting
-           -- memory, otherwise we may leak.
-           let transfer' = if weAlloc
-                           then TransferEverything
-                           else transfer arg
-           result <- do
-                let wrap ptr = convert ptr $ fToH (argType arg) transfer'
-                wrapMaybe arg >>= bool
-                     (wrap peeked)
-                     (do
-                       line $ "maybe" ++ ucFirst peeked
-                                ++ " <- convertIfNonNull " ++ peeked
-                                ++ " $ \\" ++ prime peeked ++ " -> do"
-                       indent $ do
-                          wrapped <- wrap (prime peeked)
-                          line $ "return " ++ wrapped
-                       return $ "maybe" ++ ucFirst peeked)
-           -- Free the memory associated with the out argument
-           freeContainerType transfer' t peeked undefined
-           return result
+        where
+        unwrappedConvertResult rname = case returnType callable of
+            -- Arrays without length information are just passed
+            -- along.
+            TCArray False (-1) (-1) _ -> return rname
+            -- Not zero-terminated C arrays require knowledge of the
+            -- length, so we deal with them directly.
+            t@(TCArray False _ _ _) ->
+                convertOutCArray callable t rname nameMap
+                                 (returnTransfer callable)
+            t -> do
+                result <- convert rname $ fToH (returnType callable)
+                                               (returnTransfer callable)
+                freeContainerType (returnTransfer callable) t rname undefined
+                return result
 
-  returnResult :: String -> [String] -> CodeGen ()
-  returnResult result pps =
-    if ignoreReturn || returnType callable == TBasicType TVoid
-    then case pps of
-           []      -> line "return ()"
-           (pp:[]) -> line $ "return " ++ pp
-           _       -> line $ "return (" ++ intercalate ", " pps ++ ")"
-    else do
-      case pps of
-        [] -> line $ "return " ++ result
-        _  -> line $ "return (" ++ intercalate ", " (result : pps) ++ ")"
+    convertOut :: Map.Map String String -> ExcCodeGen [String]
+    convertOut nameMap = do
+        -- Convert out parameters and result
+        forM hOutArgs $ \arg -> do
+            let name = escapeReserved $ argName arg
+            inName <- case Map.lookup name nameMap of
+                Just name' -> return name'
+                Nothing -> badIntroError $ "Parameter " ++ name ++ " not found!"
+            case argType arg of
+                -- Passed along as a raw pointer
+                TCArray False (-1) (-1) _ -> genConversion inName $ apply $ M "peek"
+                t@(TCArray False _ _ _) -> do
+                    aname' <- genConversion inName $ apply $ M "peek"
+                    let wrapArray a = convertOutCArray callable t a
+                                          nameMap (transfer arg)
+                    wrapMaybe arg >>= bool
+                           (wrapArray aname')
+                           (do line $ "maybe" ++ ucFirst aname'
+                                   ++ " <- convertIfNonNull " ++ aname'
+                                   ++ " $ \\" ++ prime aname' ++ " -> do"
+                               indent $ do
+                                   wrapped <- wrapArray (prime aname')
+                                   line $ "return " ++ wrapped
+                               return $ "maybe" ++ ucFirst aname')
+                t -> do
+                    weAlloc <- isJust <$> requiresAlloc t
+                    peeked <- if weAlloc
+                             then return inName
+                             else genConversion inName $ apply $ M "peek"
+                    -- If we alloc we always take control of the resulting
+                    -- memory, otherwise we may leak.
+                    let transfer' = if weAlloc
+                                   then TransferEverything
+                                   else transfer arg
+                    result <- do
+                        let wrap ptr = convert ptr $ fToH (argType arg) transfer'
+                        wrapMaybe arg >>= bool
+                            (wrap peeked)
+                            (do line $ "maybe" ++ ucFirst peeked
+                                    ++ " <- convertIfNonNull " ++ peeked
+                                    ++ " $ \\" ++ prime peeked ++ " -> do"
+                                indent $ do
+                                    wrapped <- wrap (prime peeked)
+                                    line $ "return " ++ wrapped
+                                return $ "maybe" ++ ucFirst peeked)
+                    -- Free the memory associated with the out argument
+                    freeContainerType transfer' t peeked undefined
+                    return result
+
+    returnResult :: String -> [String] -> CodeGen ()
+    returnResult result pps =
+        if ignoreReturn || returnType callable == TBasicType TVoid
+        then case pps of
+            []      -> line "return ()"
+            (pp:[]) -> line $ "return " ++ pp
+            _       -> line $ "return (" ++ intercalate ", " pps ++ ")"
+        else case pps of
+            [] -> line $ "return " ++ result
+            _  -> line $ "return (" ++ intercalate ", " (result : pps) ++ ")"

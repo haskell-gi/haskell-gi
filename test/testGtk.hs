@@ -348,7 +348,7 @@ main = do
         -- Here we use synthetic arguments to test that we are
         -- handling InOut arguments properly.
         progName <- pack <$> getProgName
-	restArgs <- Gtk.init $ Just $ progName:["--g-fatal-warnings"]
+        restArgs <- Gtk.init $ Just $ progName:["--g-fatal-warnings"]
         when (restArgs /= Just [progName]) $
              error "gtk_init did not process --g-fatal-warnings"
 
@@ -358,7 +358,7 @@ main = do
         -- type that declared it, for instance "windowType" in this
         -- case. Specifying also makes the type errors in case
         -- something goes wrong easier to understand.
-	win <- new Window [_type := WindowTypeToplevel,
+        win <- new Window [_type := WindowTypeToplevel,
                            _iconName := "applications-haskell"]
         on win Destroy $ do
                   putStrLn "Closing the program"
@@ -413,6 +413,6 @@ main = do
         testCast
         testArrayOfArrays
 
-	widgetShowAll win
+        widgetShowAll win
 
-	Gtk.main
+        Gtk.main

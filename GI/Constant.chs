@@ -23,8 +23,9 @@ import GI.Internal.Types (Argument(..))
 #include <girepository.h>
 
 genConstant :: Name -> Constant -> CodeGen ()
-genConstant (Name _ name) (Constant t value) = do
+genConstant (Name _ name) (Constant t value isDeprecated) = do
   line $ "-- constant " ++ name
+  deprecatedPragma isDeprecated name
 
   handleCGExc (\e -> line $ "-- XXX: Could not generate constant: " ++ describeCGError e)
               (assignValue name t value)
