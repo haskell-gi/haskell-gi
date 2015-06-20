@@ -3,7 +3,7 @@ Version:             0.5
 Synopsis:            Generate Haskell bindings for GObject-Introspection capable libraries
 Description:         Generate Haskell bindings for GObject-Introspection capable libraries. This includes most notably Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
 Homepage:            https://github.com/garetxe/haskell-gi
-License:             LGPL-2.1
+License:             LGPL-3
 License-file:        LICENSE
 Author:              Will Thompson,
                      Iñaki García Etxebarria,
@@ -27,6 +27,7 @@ Executable haskell-gi
       directory,
       filepath,
       mtl >= 2.2,
+      transformers >= 0.3,
       pretty-show,
       process,
       bytestring,
@@ -56,6 +57,7 @@ Executable haskell-gi
       GI.Internal.UnionInfo,
       GI.API,
       GI.Attributes,
+      GI.Cabal,
       GI.Callable,
       GI.Code,
       GI.Config,
@@ -65,6 +67,8 @@ Executable haskell-gi
       GI.Inheritable,
       GI.OverloadedSignals,
       GI.Overrides,
+      GI.PkgConfig,
+      GI.ProjectInfo,
       GI.Properties,
       GI.Signal,
       GI.Struct,

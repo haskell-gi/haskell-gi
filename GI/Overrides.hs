@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, ViewPatterns #-}
 module GI.Overrides
-    ( Overrides -- ^ We export just the type, but no constructors.
+    ( Overrides(pkgConfigMap, cabalPkgVersion)
     , parseOverridesFile
     , loadFilteredAPI
     ) where
@@ -12,7 +12,7 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer
 
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -23,22 +23,28 @@ import GI.API
 data Overrides = Overrides {
       -- | Prefix for constants in a given namespace, if not given the
       -- "_" string will be used.
-      constantPrefix :: M.Map String String,
+      constantPrefix  :: M.Map String String,
       -- | Ignored elements of a given API.
-      ignoredElems   :: M.Map Name (S.Set String),
+      ignoredElems    :: M.Map Name (S.Set String),
       -- | Ignored APIs (all elements in this API will just be discarded).
-      ignoredAPIs    :: S.Set Name,
+      ignoredAPIs     :: S.Set Name,
       -- | Structs for which accessors should not be auto-generated.
-      sealedStructs  :: S.Set Name
+      sealedStructs   :: S.Set Name,
+      -- | Mapping from GObject-Introspection namespaces to pkg-config
+      pkgConfigMap    :: M.Map String String,
+      -- | Version number for the generated .cabal package.
+      cabalPkgVersion :: Maybe String
 }
 
 -- | Construct the generic config for a module.
 defaultOverrides :: Overrides
 defaultOverrides = Overrides {
-              constantPrefix = M.empty,
-              ignoredElems   = M.empty,
-              ignoredAPIs    = S.empty,
-              sealedStructs  = S.empty }
+              constantPrefix  = M.empty,
+              ignoredElems    = M.empty,
+              ignoredAPIs     = S.empty,
+              sealedStructs   = S.empty,
+              pkgConfigMap    = M.empty,
+              cabalPkgVersion = Nothing }
 
 -- | There is a sensible notion of zero and addition of Overridess,
 -- encode this so that we can view the parser as a writer monad of
@@ -46,12 +52,15 @@ defaultOverrides = Overrides {
 instance Monoid Overrides where
     mempty = defaultOverrides
     mappend a b = Overrides {
-                         constantPrefix = constantPrefix a <> constantPrefix b,
-                         ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
-                         sealedStructs = sealedStructs a <> sealedStructs b,
-                         ignoredElems = M.unionWith S.union (ignoredElems a)
-                                        (ignoredElems b)
-                       }
+      constantPrefix = constantPrefix a <> constantPrefix b,
+      ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
+      sealedStructs = sealedStructs a <> sealedStructs b,
+      ignoredElems = M.unionWith S.union (ignoredElems a) (ignoredElems b),
+      pkgConfigMap = pkgConfigMap a <> pkgConfigMap b,
+      cabalPkgVersion = if isJust (cabalPkgVersion b)
+                        then cabalPkgVersion b
+                        else cabalPkgVersion a
+    }
 
 -- | We have a bit of context (the current namespace), and can fail,
 -- encode this in a monad.
@@ -77,6 +86,8 @@ parseOneLine (T.stripPrefix "namespace " -> Just ns) =
 parseOneLine (T.stripPrefix "ignore " -> Just ign) = get >>= parseIgnore ign
 parseOneLine (T.stripPrefix "constantPrefix " -> Just p) = get >>= parseConstP p
 parseOneLine (T.stripPrefix "seal " -> Just s) = get >>= parseSeal s
+parseOneLine (T.stripPrefix "pkg-config-name" -> Just s) = parsePkgConfigName s
+parseOneLine (T.stripPrefix "cabal-pkg-version" -> Just s) = parseCabalPkgVersion s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 
 -- | Ignored elements.
@@ -107,6 +118,25 @@ parseSeal (T.words -> [s]) (Just ns) = tell $
 parseSeal seal _ =
     throwError ("seal syntax is of the form \"seal name\".\nGot \"seal "
                 <> seal <> "\" instead.")
+
+-- | Mapping from GObject-Introspection namespaces to pkg-config.
+parsePkgConfigName :: Text -> Parser
+parsePkgConfigName (T.words -> [gi,pc]) = tell $
+    defaultOverrides {pkgConfigMap =
+                          M.singleton (T.unpack $ T.toLower gi) (T.unpack pc)}
+parsePkgConfigName t =
+    throwError ("pkg-config-name syntax is of the form\n" <>
+                "\t\"pkg-config-name gi-namespace pk-name\"\n" <>
+                "Got \"pkg-config-name " <> t <> "\" instead.")
+
+-- | Specifying the cabal package version by hand.
+parseCabalPkgVersion :: Text -> Parser
+parseCabalPkgVersion (T.words -> [version]) = tell $
+    defaultOverrides {cabalPkgVersion = Just (T.unpack version)}
+parseCabalPkgVersion t =
+    throwError ("cabal-pkg-version syntax is of the form\n" <>
+               "\t\"cabal-pkg-version version\"\n" <>
+               "Got \"cabal-pkg-version " <> t <> "\" instead.")
 
 -- | Filter a set of named objects based on a lookup list of names to
 -- ignore.

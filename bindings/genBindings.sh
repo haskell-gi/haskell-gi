@@ -5,15 +5,18 @@ set -e
 generate()
 {
     for mod in $@; do
-        if test -f $mod/$mod.overrides;
+	mkdir -p $mod
+        pushd $mod > /dev/null
+        rm -rf GI
+        rm -f Setup.hs
+        rm -f *.cabal
+        if test -f $mod.overrides;
         then
-            haskell-gi -o $mod/$mod.overrides $mod
+            haskell-gi -o $mod.overrides $mod
         else
             haskell-gi $mod
         fi
-	mkdir -p $mod
-	rm -rf $mod/GI
-	mv GI $mod
+        popd > /dev/null
     done
 }
 

@@ -4,13 +4,14 @@ module Main where
 import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Control.Exception (handle)
 
+import Data.Bool (bool)
 import Data.List (intercalate)
 import Data.Text (unpack)
 
-import System.Directory (createDirectoryIfMissing)
+import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FilePath (splitPath, joinPath)
 import System.Console.GetOpt
 import System.Exit
@@ -20,12 +21,14 @@ import System.Environment (getArgs)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import qualified Data.Set as S
 
 import GI.Utils.GError
 import Text.Show.Pretty (ppShow)
 
 import GI.API (loadAPI)
-import GI.Code (codeToString, genCode)
+import GI.Cabal (cabalSetupHs, genCabalProject)
+import GI.Code (codeToString, genCode, evalCodeGen)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
@@ -41,14 +44,16 @@ data Options = Options {
   optOutput :: Maybe String,
   optOverridesFiles :: [String],
   optSearchPaths :: [String],
-  optVerbose :: Bool}
+  optVerbose :: Bool,
+  optCabal :: Bool}
 
 defaultOptions = Options {
   optMode = GenerateCode,
   optOutput = Just "GI",
   optOverridesFiles = [],
   optSearchPaths = [],
-  optVerbose = False }
+  optVerbose = False,
+  optCabal = True}
 
 parseKeyValue s =
   let (a, '=':b) = break (=='=') s
@@ -64,6 +69,8 @@ optDescrs = [
     "generate generic signal connectors",
   Option "d" ["dump"] (NoArg $ \opt -> opt { optMode = Dump })
     "\tdump internal representation",
+  Option "n" ["no-cabal"] (NoArg $ \opt -> opt {optCabal = False})
+    "\tdo not generate .cabal file",
   Option "o" ["overrides"] (ReqArg
                            (\arg opt -> opt {optOverridesFiles =
                                                  arg : optOverridesFiles opt})
@@ -134,19 +141,40 @@ processMod options ovs name = do
   (modPrefix, dirPrefix) <- outputPath options
 
   putStrLn $ "\t* Generating " ++ modPrefix ++ nm
-  (_, code) <- genCode cfg (genModule name apis modPrefix)
+  (modDeps, code) <- genCode cfg (genModule name apis modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
              codeToString code
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Attributes"
-  (_, attrCode) <- genCode cfg (genAttributes name apis modPrefix)
+  (attrDeps, attrCode) <- genCode cfg (genAttributes name apis modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
             codeToString attrCode
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
-  (_, signalCode) <- genCode cfg (genSignalInstances name apis modPrefix)
+  (sigDeps, signalCode) <- genCode cfg (genSignalInstances name apis modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ "Signals.hs"]) $
             codeToString signalCode
+
+  when (optCabal options) $ do
+    let cabal = nm ++ ".cabal"
+    fname <- doesFileExist cabal >>=
+             bool (return cabal)
+                  (putStrLn (cabal ++ " exists, writing "
+                             ++ cabal ++ ".new instead") >>
+                   return (cabal ++ ".new"))
+    putStrLn $ "\t\t+ " ++ fname
+    let allDeps = S.toList
+                  $ S.delete name -- The module is not a dep of itself
+                  $ S.insert "GLib" -- and GLib always is
+                  $ S.unions [modDeps, attrDeps, sigDeps]
+    (err, cabalCode) <- evalCodeGen cfg (genCabalProject name allDeps modPrefix)
+    case err of
+      Nothing -> do
+               writeFile fname (codeToString cabalCode)
+               putStrLn "\t\t+ Setup.hs"
+               writeFile "Setup.hs" cabalSetupHs
+      Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
+                  ++ "\nError was: " ++ msg
 
 dump :: Options -> String -> IO ()
 dump options name = do

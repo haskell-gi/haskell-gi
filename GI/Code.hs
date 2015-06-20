@@ -5,6 +5,7 @@ module GI.Code
     , ExcCodeGen
     , CGError(..)
     , genCode
+    , evalCodeGen
     , codeToString
     , loadDependency
     , getDeps
@@ -16,6 +17,7 @@ module GI.Code
     , describeCGError
     , notImplementedError
     , badIntroError
+    , missingInfoError
     , indent
     , line
     , blank
@@ -68,6 +70,7 @@ data CodeGenState = CodeGenState {
 
 data CGError = CGErrorNotImplemented String
              | CGErrorBadIntrospectionInfo String
+             | CGErrorMissingInfo String
                deriving (Show)
 
 type BaseCodeGen excType a =
@@ -149,10 +152,19 @@ mergeState oldState newState =
        in CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
   else oldState
 
+-- | Run a code generator, and return the dependencies encountered
+-- when generating code.
 genCode :: Config -> CodeGen () -> IO (Deps, Code)
 genCode cfg cg = do
   (_, st, code) <- unwrapCodeGen cfg emptyState cg
   return (moduleDeps st, code)
+
+-- | Like `genCode`, but keep the final value and output, discarding
+-- the state.
+evalCodeGen :: Config -> CodeGen a -> IO (a, Code)
+evalCodeGen cfg cg = do
+  (r, _, code) <- unwrapCodeGen cfg emptyState cg
+  return (r, code)
 
 -- | Like `recurse`, but for generators returning a unit value, where
 -- we can just drop the result.
@@ -175,13 +187,18 @@ loadDependency name = do
 -- | Give a friendly textual description of the error for presenting
 -- to the user.
 describeCGError :: CGError -> String
-describeCGError = show
+describeCGError (CGErrorNotImplemented e) = "Not implemented: " ++ show e
+describeCGError (CGErrorBadIntrospectionInfo e) = "Bad introspection data: " ++ show e
+describeCGError (CGErrorMissingInfo e) = "Missing info: " ++ show e
 
 notImplementedError :: String -> ExcCodeGen a
 notImplementedError s = throwError $ CGErrorNotImplemented s
 
 badIntroError :: String -> ExcCodeGen a
 badIntroError s = throwError $ CGErrorBadIntrospectionInfo s
+
+missingInfoError :: String -> ExcCodeGen a
+missingInfoError s = throwError $ CGErrorMissingInfo s
 
 findAPI :: Type -> CodeGen (Maybe API)
 findAPI TError = Just <$> findAPIByName (Name "GLib" "Error")

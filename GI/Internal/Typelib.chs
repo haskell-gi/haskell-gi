@@ -2,6 +2,8 @@ module GI.Internal.Typelib
   ( getSearchPath
   , prependSearchPath
   , getLoadedNamespaces
+  , getTransitiveDependencies
+  , getVersion
   , getInfos
   , getSharedLibraries
   , findByGType
@@ -12,7 +14,7 @@ where
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (when)
+import Control.Monad (when, (>=>))
 
 import Foreign
 import Foreign.C
@@ -23,6 +25,7 @@ import GI.Utils.BasicTypes (GType(..), CGType)
 
 import GI.Utils.GError
 import GI.Utils.BasicConversions (unpackGSList)
+import GI.Utils.Utils (freeMem)
 
 #include <girepository.h>
 
@@ -65,9 +68,25 @@ getLoadedNamespaces :: IO [String]
 getLoadedNamespaces = do
     nsPtrs <- {# call unsafe get_loaded_namespaces #} nullRepository
     nss <- peekCStrings nsPtrs
-    _ <- mapCStrings free nsPtrs
-    free nsPtrs
+    _ <- mapCStrings freeMem nsPtrs
+    freeMem nsPtrs
     return nss
+
+-- | This assumes that the namespace has been loaded already.
+getTransitiveDependencies :: String -> IO [(String, String)]
+getTransitiveDependencies namespace =
+    withCString namespace $ \nsPtr -> do
+      cdeps <- {# call unsafe get_dependencies #} nullRepository nsPtr
+      deps <- peekCStrings cdeps
+      _ <- mapCStrings freeMem cdeps
+      freeMem cdeps
+      return $ map (fmap tail . break (== '-')) deps
+
+-- | This assumes that the namespace has been loaded already.
+getVersion :: Typelib -> IO String
+getVersion = {# call unsafe g_typelib_get_namespace #} >=>
+             {# call get_version #} nullRepository >=>
+             peekCString
 
 getInfos :: Typelib -> IO [BaseInfo]
 getInfos typelib = do

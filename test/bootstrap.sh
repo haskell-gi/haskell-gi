@@ -12,9 +12,9 @@ generate()
 	OVERRIDES=../bindings/$mod/$mod.overrides
         if test -f $OVERRIDES;
         then
-            haskell-gi -o $OVERRIDES $mod
+            haskell-gi -n -o $OVERRIDES $mod
         else
-            haskell-gi $mod
+            haskell-gi -n $mod
         fi
     done
 
