@@ -82,7 +82,7 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
       n <- upperName $ Name ns (name ++ "_" ++ fieldName)
       return (n, value)
 
-  deprecatedPragma isDeprecated name'
+  deprecatedPragma name' deprecated
 
   group $ do
     line $ "data " ++ name' ++ " = "
@@ -159,7 +159,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
     name' <- upperName n
     line $ "-- struct " ++ name'
 
-    deprecatedPragma (structIsDeprecated s) name'
+    deprecatedPragma name' $ structDeprecated s
     line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
     noName name'
     when (structIsBoxed s) $
@@ -180,7 +180,7 @@ genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
     name' <- upperName n
 
-    deprecatedPragma (unionIsDeprecated u) name'
+    deprecatedPragma name' $ unionDeprecated u
     line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
     noName name'
@@ -332,7 +332,7 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
     name' <- upperName n
 
     line $ "-- object " ++ name'
-    deprecatedPragma (objIsDeprecated o) name'
+    deprecatedPragma name' $ objDeprecated o
 
     let t = (\(Name ns' n') -> TInterface ns' n') n
     isGO <- isGObject t
@@ -382,7 +382,7 @@ genInterface n iface = do
   name' <- upperName n
   let cls = interfaceClassName name'
   line $ "-- interface " ++ name' ++ " "
-  deprecatedPragma (ifIsDeprecated iface) name'
+  deprecatedPragma name' $ ifDeprecated iface
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
   line $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
 

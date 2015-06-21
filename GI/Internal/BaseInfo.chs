@@ -1,5 +1,5 @@
 module GI.Internal.BaseInfo
-  ( infoIsDeprecated
+  ( infoDeprecated
   , infoName
   , infoNamespace
   , infoType
@@ -11,6 +11,8 @@ where
 #if __GLASGOW_HASKELL__ < 710
 import Control.Applicative ((<$>))
 #endif
+import Data.Bool
+import Data.Maybe (fromMaybe)
 
 import Foreign
 import Foreign.C
@@ -32,24 +34,26 @@ stupidCast :: InfoClass info
 stupidCast info = ValueInfo (castPtr p)
   where (BaseInfo p) = baseInfo info
 
-infoIsDeprecated :: InfoClass info
-                 => info
-                 -> Bool
-infoIsDeprecated i = unsafePerformIO $
-    (/= 0) <$> {# call g_base_info_is_deprecated #} (stupidCast i)
+infoDeprecated :: InfoClass info
+               => info
+               -> Maybe String
+infoDeprecated i = unsafePerformIO $
+    (/= 0) <$> {# call is_deprecated #} (stupidCast i) >>= return . bool
+        Nothing
+        (Just $ fromMaybe "(unknown reason)" (infoAttribute i "deprecated"))
 
 infoName :: InfoClass info
          => info
          -> String
 infoName i = unsafePerformIO $ do
-    ret <- {# call g_base_info_get_name #} (stupidCast i)
+    ret <- {# call get_name #} (stupidCast i)
     peekCString ret
 
 infoNamespace :: InfoClass info
               => info
               -> String
 infoNamespace i = unsafePerformIO $ do
-    ret <- {# call g_base_info_get_namespace #} (stupidCast i)
+    ret <- {# call get_namespace #} (stupidCast i)
     peekCString ret
 
 infoType :: InfoClass info

@@ -62,21 +62,21 @@ withName f x = (getName x, f x)
 data Constant = Constant {
       constantType      :: Type,
       constantValue     :: Argument,
-      constIsDeprecated :: Bool }
+      constDeprecated   :: Maybe String }
     deriving Show
 
 toConstant :: ConstantInfo -> Constant
 toConstant ci = Constant
     (typeFromTypeInfo $ constantInfoType ci)
     (constantInfoValue ci)
-    (infoIsDeprecated ci)
+    (infoDeprecated ci)
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
     errorDomain :: Maybe String,
     enumTypeInit :: Maybe String,
     enumStorageType :: TypeTag,
-    enumIsDeprecated :: Bool }
+    enumDeprecated :: Maybe String }
     deriving Show
 
 toEnumeration :: EnumInfo -> Enumeration
@@ -85,7 +85,7 @@ toEnumeration ei = Enumeration
     (enumInfoErrorDomain ei)
     (registeredTypeInfoTypeInit ei)
     (enumInfoStorageType ei)
-    (infoIsDeprecated ei)
+    (infoDeprecated ei)
     where viToV vi = (infoName vi, valueInfoValue vi)
 
 data Flags = Flags Enumeration
@@ -123,7 +123,7 @@ data Callable = Callable {
     returnAttributes :: [(String, String)],
     args :: [Arg],
     skipReturn :: Bool,
-    callableIsDeprecated :: Bool }
+    callableDeprecated :: Maybe String }
     deriving (Show, Eq)
 
 toCallable :: CallableInfo -> Callable
@@ -134,7 +134,7 @@ toCallable ci = Callable
     (callableInfoReturnAttributes ci)
     (map toArg $ callableInfoArgs ci)
     (callableInfoSkipReturn ci)
-    (infoIsDeprecated ci)
+    (infoDeprecated ci)
 
 data Function = Function {
     fnSymbol :: String,
@@ -152,21 +152,21 @@ toFunction fi = Function
 data Signal = Signal {
     sigName :: String,
     sigCallable :: Callable,
-    sigIsDeprecated :: Bool }
+    sigDeprecated :: Maybe String }
     deriving (Show, Eq)
 
 toSignal :: SignalInfo -> Signal
 toSignal si = Signal
     (infoName si)
     (toCallable $ callableInfo si)
-    (infoIsDeprecated si)
+    (infoDeprecated si)
 
 data Property = Property {
     propName :: String,
     propType :: Type,
     propFlags :: [ParamFlag],
     propTransfer :: Transfer,
-    propIsDeprecated :: Bool }
+    propDeprecated :: Maybe String }
     deriving (Show, Eq)
 
 toProperty :: PropertyInfo -> Property
@@ -175,7 +175,7 @@ toProperty pi = Property
     (typeFromTypeInfo $ propertyInfoType pi)
     (propertyInfoFlags pi)
     (propertyInfoTransfer pi)
-    (infoIsDeprecated pi)
+    (infoDeprecated pi)
 
 data Field = Field {
     fieldName :: String,
@@ -183,7 +183,7 @@ data Field = Field {
     fieldCallback :: Maybe Callback,
     fieldOffset :: Int,
     fieldFlags :: [FieldInfoFlag],
-    fieldIsDeprecated :: Bool }
+    fieldDeprecated :: Maybe String }
     deriving Show
 
 toField :: FieldInfo -> Field
@@ -202,7 +202,7 @@ toField fi = Field
        _ -> Nothing)
     (fieldInfoOffset fi)
     (fieldInfoFlags fi)
-    (infoIsDeprecated fi)
+    (infoDeprecated fi)
 
 data Struct = Struct {
     structIsBoxed :: Bool,
@@ -212,7 +212,7 @@ data Struct = Struct {
     isGTypeStruct :: Bool,
     structFields :: [Field],
     structMethods :: [(Name, Function)],
-    structIsDeprecated :: Bool }
+    structDeprecated :: Maybe String }
     deriving Show
 
 toStruct :: StructInfo -> Struct
@@ -225,7 +225,7 @@ toStruct si = Struct
     (structInfoIsGTypeStruct si)
     (map toField $ structInfoFields si)
     (map (withName toFunction) (structInfoMethods si))
-    (infoIsDeprecated si)
+    (infoDeprecated si)
 
 -- XXX: Capture alignment and method info.
 
@@ -235,7 +235,7 @@ data Union = Union {
     unionTypeInit :: Maybe String,
     unionFields :: [Field],
     unionMethods :: [(Name, Function)],
-    unionIsDeprecated :: Bool }
+    unionDeprecated :: Maybe String }
     deriving Show
 
 toUnion :: UnionInfo -> Union
@@ -246,7 +246,7 @@ toUnion ui = Union
     (registeredTypeInfoTypeInit ui)
     (map toField $ unionInfoFields ui)
     (map (withName toFunction) (unionInfoMethods ui))
-    (infoIsDeprecated ui)
+    (infoDeprecated ui)
 
 -- XXX
 data Callback = Callback Callable
@@ -261,7 +261,7 @@ data Interface = Interface {
     ifPrerequisites :: [Name],
     ifTypeInit :: Maybe String,
     ifMethods :: [(Name, Function)],
-    ifIsDeprecated :: Bool }
+    ifDeprecated :: Maybe String }
     deriving Show
 
 toInterface :: InterfaceInfo -> Interface
@@ -272,7 +272,7 @@ toInterface ii = Interface
     (map (fst . toAPI) (interfaceInfoPrerequisites ii))
     (registeredTypeInfoTypeInit ii)
     (map (withName toFunction) (interfaceInfoMethods ii))
-    (infoIsDeprecated ii)
+    (infoDeprecated ii)
 
 data Object = Object {
     objFields :: [Field],
@@ -286,7 +286,7 @@ data Object = Object {
     objTypeName :: String,
     objRefFunction :: Maybe String,
     objUnrefFunction :: Maybe String,
-    objIsDeprecated :: Bool }
+    objDeprecated :: Maybe String }
     deriving Show
 
 toObject :: ObjectInfo -> Object
@@ -302,7 +302,7 @@ toObject oi = Object
     (objectInfoTypeName oi)
     (objectInfoRefFunction oi)
     (objectInfoUnrefFunction oi)
-    (infoIsDeprecated oi)
+    (infoDeprecated oi)
 
 -- XXX: Work out what to do with boxed types.
 data Boxed = Boxed

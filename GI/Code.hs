@@ -244,9 +244,9 @@ foreignImport cg = do
     tell $ ForeignImport c
     return a
 
-deprecatedPragma :: Bool -> String -> CodeGen ()
-deprecatedPragma isDeprecated name =
-    when isDeprecated $ line $ "{-# DEPRECATED " ++ name ++ " \"\" #-}"
+deprecatedPragma :: String -> Maybe String -> CodeGen ()
+deprecatedPragma _    Nothing       = return ()
+deprecatedPragma name (Just reason) = line $ "{-# DEPRECATED " ++ name ++ " \"" ++ reason ++ "\" #-}"
 
 codeToString c = unlines $ str 0 c []
     where str _ NoCode cont = cont
