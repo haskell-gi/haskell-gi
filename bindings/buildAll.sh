@@ -13,4 +13,4 @@ build()
     done
 }
 
-build GLib GObject Atk Gio cairo Pango GdkPixbuf Gdk Gtk Vte Notify
+build GLib GObject Atk Gio Soup cairo Pango GdkPixbuf Gdk Gtk Vte Notify

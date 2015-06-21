@@ -20,4 +20,4 @@ generate()
     done
 }
 
-generate Atk cairo Gdk GdkPixbuf Gio GLib GObject Gtk Notify Pango Vte
+generate Atk cairo Gdk GdkPixbuf Gio GLib GObject Gtk Notify Pango Soup Vte
