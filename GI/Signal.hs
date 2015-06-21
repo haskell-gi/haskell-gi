@@ -20,7 +20,7 @@ import GI.Callable (hOutType, arrayLengths, wrapMaybe)
 import GI.Code
 import GI.Conversions
 import GI.SymbolNaming
-import GI.Transfer (freeElements, freeContainer)
+import GI.Transfer (freeContainerType)
 import GI.Type
 import GI.Util (split, parenthesize, withComment)
 import GI.Internal.ArgInfo
@@ -117,10 +117,7 @@ convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname =
     convertAndFree = do
       unpacked <- convert aname $ unpackCArray lname t (transfer arg)
       -- Free the memory associated with the array
-      when (transfer arg == TransferEverything) $
-           mapM_ line =<< freeElements t aname lname
-      when (transfer arg /= TransferNothing) $
-           mapM_ line =<< freeContainer t aname
+      freeContainerType (transfer arg) t aname lname
       return unpacked
 
 -- Remove the warning, this should never be reached.

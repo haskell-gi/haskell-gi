@@ -84,6 +84,7 @@ Library
       GI.Utils.BasicTypes,
       GI.Utils.Closure,
       GI.Utils.GError,
+      GI.Utils.GHashTable,
       GI.Utils.GValue,
       GI.Utils.GVariant,
       GI.Utils.ManagedPtr,

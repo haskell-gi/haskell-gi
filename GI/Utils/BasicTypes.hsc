@@ -34,10 +34,13 @@ module GI.Utils.BasicTypes
     , g_list_free
     , GSList(..)
     , g_slist_free
+
+    , PtrWrapped(..)
+    , GDestroyNotify
     ) where
 
 import Data.Word
-import Foreign.Ptr (Ptr, castPtr)
+import Foreign.Ptr (Ptr, castPtr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 import Foreign.C.String (CString, peekCString)
@@ -143,6 +146,13 @@ data GByteArray = GByteArray (Ptr GByteArray)
 data GHashTable a b = GHashTable (Ptr (GHashTable a b))
 data GList a = GList (Ptr (GList a))
 data GSList a = GSList (Ptr (GSList a))
+
+-- | Some APIs, such as `GHashTable`, pass around scalar types
+-- wrapped into a pointer. We encode such a type as follows.
+newtype PtrWrapped a = PtrWrapped {unwrapPtr :: Ptr a}
+
+-- | Destroy the memory associated with a given pointer.
+type GDestroyNotify a = FunPtr (Ptr a -> IO ())
 
 foreign import ccall "g_list_free" g_list_free ::
     Ptr (GList a) -> IO ()

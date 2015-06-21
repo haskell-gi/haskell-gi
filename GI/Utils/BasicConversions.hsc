@@ -16,6 +16,9 @@ module GI.Utils.BasicConversions
     , packGByteArray
     , unpackGByteArray
     , unrefGByteArray
+    , packGHashTable
+    , unpackGHashTable
+    , unrefGHashTable
     , packByteString
     , packZeroTerminatedByteString
     , unpackByteStringWithLength
@@ -69,6 +72,7 @@ import Control.Monad (foldM)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text.Foreign as TF
 
@@ -77,6 +81,7 @@ import Foreign.C.Types
 import Foreign.C.String
 
 import GI.Utils.BasicTypes
+import GI.Utils.GHashTable (GEqualFunc, GHashFunc)
 import GI.Utils.ManagedPtr (copyBoxedPtr)
 import GI.Utils.Utils (allocBytes, memcpy, freeMem)
 
@@ -215,6 +220,42 @@ unpackGByteArray array = do
   dataPtr <- peek (castPtr array :: Ptr (Ptr CChar))
   length <- peek (array `plusPtr` (sizeOf dataPtr)) :: IO CUInt
   B.packCStringLen (dataPtr, fromIntegral length)
+
+foreign import ccall "g_hash_table_new_full" g_hash_table_new_full ::
+    GHashFunc a -> GEqualFunc a -> GDestroyNotify a -> GDestroyNotify b ->
+                 IO (Ptr (GHashTable a b))
+foreign import ccall "g_hash_table_insert" g_hash_table_insert ::
+    Ptr (GHashTable a b) -> PtrWrapped a -> PtrWrapped b -> IO #{type gboolean}
+
+packGHashTable :: GHashFunc a -> GEqualFunc a ->
+                  Maybe (GDestroyNotify a) -> Maybe (GDestroyNotify b) ->
+                  [(PtrWrapped a, PtrWrapped b)] -> IO (Ptr (GHashTable a b))
+packGHashTable keyHash keyEqual keyDestroy elemDestroy pairs = do
+  let keyDPtr = fromMaybe nullFunPtr keyDestroy
+      elemDPtr = fromMaybe nullFunPtr elemDestroy
+  ht <- g_hash_table_new_full keyHash keyEqual keyDPtr elemDPtr
+  mapM_ (uncurry (g_hash_table_insert ht)) pairs
+  return ht
+
+foreign import ccall "g_hash_table_get_keys" g_hash_table_get_keys ::
+    Ptr (GHashTable a b) -> IO (Ptr (GList (Ptr a)))
+foreign import ccall "g_hash_table_lookup" g_hash_table_lookup ::
+    Ptr (GHashTable a b) -> PtrWrapped a -> IO (PtrWrapped b)
+unpackGHashTable :: Ptr (GHashTable a b) -> IO [(PtrWrapped a, PtrWrapped b)]
+unpackGHashTable ht = do
+  keysGList <- g_hash_table_get_keys ht
+  keys <- (map (PtrWrapped . castPtr)) <$> unpackGList keysGList
+  g_list_free keysGList
+  -- At this point we could use g_hash_table_get_values, since the
+  -- current implementation in GLib returns elements in the same order
+  -- as g_hash_table_get_keys. But to be on the safe side, since the
+  -- ordering is not specified in the documentation, we do the
+  -- following, which is (quite) slower but manifestly safe.
+  elems <- mapM (g_hash_table_lookup ht) keys
+  return (zip keys elems)
+
+foreign import ccall "g_hash_table_unref" unrefGHashTable ::
+   Ptr (GHashTable a b) -> IO ()
 
 packByteString :: ByteString -> IO (Ptr Word8)
 packByteString bs = do

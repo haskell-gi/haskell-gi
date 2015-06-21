@@ -2,16 +2,15 @@
 
 module GI.Transfer
     ( freeInArg
-    , freeElements
-    , freeContainer
-
     , freeInArgOnError
+    , freeContainerType
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>))
 #endif
 
+import Control.Monad (when)
 import Data.Maybe (isJust)
 
 import GI.API
@@ -39,7 +38,7 @@ basicFreeFn (TPtrArray _) = Just "unrefPtrArray"
 basicFreeFn (TByteArray) = Just "unrefGByteArray"
 basicFreeFn (TGList _) = Just "g_list_free"
 basicFreeFn (TGSList _) = Just "g_slist_free"
-basicFreeFn (TGHash _ _) = Nothing
+basicFreeFn (TGHash _ _) = Just "unrefGHashTable"
 basicFreeFn (TError) = Nothing
 basicFreeFn (TVariant) = Nothing
 basicFreeFn (TParamSpec) = Nothing
@@ -105,7 +104,7 @@ basicFreeFnOnError (TPtrArray _) _ = return $ Just "unrefPtrArray"
 basicFreeFnOnError (TByteArray) _ = return $ Just "unrefGByteArray"
 basicFreeFnOnError (TGList _) _ = return $ Just "g_list_free"
 basicFreeFnOnError (TGSList _) _ = return $ Just "g_slist_free"
-basicFreeFnOnError (TGHash _ _) _ = return Nothing
+basicFreeFnOnError (TGHash _ _) _ = return $ Just "unrefGHashTable"
 basicFreeFnOnError (TError) _ = return Nothing
 
 -- Free just the container, but not the elements.
@@ -158,33 +157,70 @@ freeElements t label len =
                    Just innerFree ->
                        return [mapFn ++ " " ++ innerFree ++ " " ++ label]
 
+-- | Free a container and/or the contained elements, depending on the
+-- transfer mode.
+freeContainerType :: Transfer -> Type -> String -> String -> ExcCodeGen ()
+freeContainerType transfer (TGHash _ _) label _ = freeGHashTable transfer label
+freeContainerType transfer t label len = do
+      when (transfer == TransferEverything) $
+           mapM_ line =<< freeElements t label len
+      when (transfer /= TransferNothing) $
+           mapM_ line =<< freeContainer t label
+
+freeGHashTable :: Transfer -> String -> ExcCodeGen ()
+freeGHashTable TransferNothing _ = return ()
+freeGHashTable TransferContainer label =
+    notImplementedError $ "Hash table argument with transfer = Container? "
+                        ++ label
+-- Hash tables support setting a free function for keys and elements,
+-- we assume that these are always properly set. The worst that can
+-- happen this way is a memory leak, as opposed to a double free if we
+-- try do free anything here.
+freeGHashTable TransferEverything label =
+    line $ "unrefGHashTable " ++ label
+
 -- Free the elements of a container type in the case an error ocurred,
 -- in particular args that should have been transferred did not get
 -- transfered.
-freeElementsOnError :: Arg -> String -> String -> ExcCodeGen [String]
-freeElementsOnError arg label len =
-    case elementTypeAndMap (argType arg) len of
+freeElementsOnError :: Transfer -> Type -> String -> String ->
+                       ExcCodeGen [String]
+freeElementsOnError transfer t label len =
+    case elementTypeAndMap t len of
       Nothing -> return []
       Just (inner, mapFn) ->
-         fullyFreeOnError inner label (transfer arg) >>= \case
+         fullyFreeOnError inner label transfer >>= \case
                    Nothing -> return []
                    Just innerFree ->
                        return [mapFn ++ " " ++ innerFree ++ " " ++ label]
 
-freeIn arg label len = do
-    let t = argType arg
-    case transfer arg of
+freeIn :: Transfer -> Type -> String -> String -> ExcCodeGen [String]
+freeIn transfer (TGHash _ _) label _ =
+    freeInGHashTable transfer label
+freeIn transfer t label len =
+    case transfer of
       TransferNothing -> (++) <$> freeElements t label len <*> freeContainer t label
       TransferContainer -> freeElements t label len
       TransferEverything -> return []
 
-freeInOnError arg label len =
-    (++) <$> freeElementsOnError arg label len
-             <*> freeContainer (argType arg) label
+freeInOnError :: Transfer -> Type -> String -> String -> ExcCodeGen [String]
+freeInOnError transfer (TGHash _ _) label _ =
+    freeInGHashTable transfer label
+freeInOnError transfer t label len =
+    (++) <$> freeElementsOnError transfer t label len
+             <*> freeContainer t label
 
+-- See freeGHashTable above.
+freeInGHashTable :: Transfer -> String -> ExcCodeGen [String]
+freeInGHashTable TransferEverything _ = return []
+freeInGHashTable TransferContainer label =
+    notImplementedError $ "Hash table argument with TransferContainer? "
+                        ++ label
+freeInGHashTable TransferNothing label = return ["unrefGHashTable " ++ label]
+
+freeOut :: String -> CodeGen [String]
 freeOut label = return ["freeMem " ++ label]
 
--- Given an input argument to a C callable, and its label in the code,
+-- | Given an input argument to a C callable, and its label in the code,
 -- return the list of actions relevant to freeing the memory allocated
 -- for the argument (if appropriate, depending on the ownership
 -- transfer semantics of the callable).
@@ -196,16 +232,17 @@ freeInArg arg label len = do
   -- be DirectionIn.
   if not weAlloc
   then case direction arg of
-         DirectionIn -> freeIn arg label len
+         DirectionIn -> freeIn (transfer arg) (argType arg) label len
          DirectionOut -> freeOut label
          DirectionInout -> freeOut label
   else return []
 
--- Same thing as freeInArg, but called in case the call to C didn't
+-- | Same thing as freeInArg, but called in case the call to C didn't
 -- succeed. We thus free everything we allocated in preparation for
 -- the call, including args that would have been transferred to C.
 freeInArgOnError :: Arg -> String -> String -> ExcCodeGen [String]
-freeInArgOnError arg label len = case direction arg of
-                            DirectionIn -> freeInOnError arg label len
-                            DirectionOut -> freeOut label
-                            DirectionInout -> freeOut label
+freeInArgOnError arg label len =
+    case direction arg of
+      DirectionIn -> freeInOnError (transfer arg) (argType arg) label len
+      DirectionOut -> freeOut label
+      DirectionInout -> freeOut label

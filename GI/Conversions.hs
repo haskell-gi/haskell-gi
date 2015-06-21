@@ -33,6 +33,7 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (when)
 import Control.Monad.Free (Free(..), liftF)
+import Data.List (intercalate)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import Data.Int
 import Data.Word
@@ -57,17 +58,39 @@ instance IsString Constructor where
     fromString = P
 
 data FExpr next = Apply Constructor next
-                | MapC Constructor next
+                | MapC Map Constructor next
                 | Literal Constructor next
                   deriving (Show, Functor)
 
 type Converter = Free FExpr ()
 
+-- Different available maps.
+data Map = Map | MapFirst | MapSecond
+         deriving (Show)
+
+-- Naming for the maps.
+mapName :: Map -> String
+mapName Map = "map"
+mapName MapFirst = "mapFirst"
+mapName MapSecond = "mapSecond"
+
+-- Naming for the monadic versions of the maps that we use
+monadicMapName :: Map -> String
+monadicMapName Map = "mapM"
+monadicMapName MapFirst = "mapFirstA"
+monadicMapName MapSecond = "mapSecondA"
+
 apply :: Constructor -> Converter
 apply f = liftF $ Apply f ()
 
 mapC :: Constructor -> Converter
-mapC f = liftF $ MapC f ()
+mapC f = liftF $ MapC Map f ()
+
+mapFirst :: Constructor -> Converter
+mapFirst f = liftF $ MapC MapFirst f ()
+
+mapSecond :: Constructor -> Converter
+mapSecond f = liftF $ MapC MapSecond f ()
 
 literal :: Constructor -> Converter
 literal f = liftF $ Literal f ()
@@ -85,13 +108,13 @@ genConversion l (Free k) = do
            genConversion l' next
     Apply Id next -> genConversion l next
 
-    MapC (P f) next ->
-        do line $ "let " ++ l' ++ " = map " ++ f ++ " " ++ l
+    MapC m (P f) next ->
+        do line $ "let " ++ l' ++ " = " ++ mapName m ++ " " ++ f ++ " " ++ l
            genConversion l' next
-    MapC (M f) next ->
-        do line $ l' ++ " <- mapM " ++ f ++ " " ++ l
+    MapC m (M f) next ->
+        do line $ l' ++ " <- " ++ monadicMapName m ++ " " ++ f ++ " " ++ l
            genConversion l' next
-    MapC Id next -> genConversion l next
+    MapC _ Id next -> genConversion l next
 
     Literal (P f) next ->
         do line $ "let " ++ l ++ " = " ++ f
@@ -222,8 +245,6 @@ hToF' t a hType fType transfer
         return $ M "packStorableArray"
     | TCArray{}  <- t = notImplementedError $
                    "Don't know how to pack C array of type " ++ show t
-    | TGHash _ _ <- t = notImplementedError
-                   "Hash tables are not properly supported yet"
     | otherwise = case (show hType, show fType) of
                ("T.Text", "CString") -> return $ M "textToCString"
                ("[Char]", "CString") -> return $ M "stringToCString"
@@ -239,20 +260,63 @@ hToF' t a hType fType transfer
                                         ++ "Internal type: "
                                         ++ show t
 
-hToF_PackedType t packer transfer = do
+getForeignConstructor :: Type -> Transfer -> ExcCodeGen Constructor
+getForeignConstructor t transfer = do
   a <- findAPI t
   hType <- haskellType t
   fType <- foreignType t
-  innerConstructor <- hToF' t a hType fType transfer
+  hToF' t a hType fType transfer
+
+hToF_PackedType :: Type -> String -> Transfer -> ExcCodeGen Converter
+hToF_PackedType t packer transfer = do
+  innerConstructor <- getForeignConstructor t transfer
   return $ do
     mapC innerConstructor
     apply (M packer)
+
+-- | Try to find the `hash` and `equal` functions appropriate for the
+-- given type, when used as a key in a GHashTable.
+hashTableKeyMappings :: Type -> ExcCodeGen (String, String)
+hashTableKeyMappings (TBasicType TVoid) = return ("gDirectHash", "gDirectEqual")
+hashTableKeyMappings (TBasicType TUTF8) = return ("gStrHash", "gStrEqual")
+hashTableKeyMappings t =
+    notImplementedError $ "GHashTable key of type " ++ show t ++ " unsupported."
+
+-- | `GHashTable` tries to fit every type into a pointer, the
+-- following function tries to find the appropriate
+-- (destroy,packer,unpacker) for the given type.
+hashTablePtrPackers :: Type -> ExcCodeGen (String, String, String)
+hashTablePtrPackers (TBasicType TVoid) =
+    return ("Nothing", "ptrPackPtr", "ptrUnpackPtr")
+hashTablePtrPackers (TBasicType TUTF8) =
+    return ("(Just ptr_to_g_free)", "cstringPackPtr", "cstringUnpackPtr")
+hashTablePtrPackers t =
+    notImplementedError $ "GHashTable element of type " ++ show t ++ " unsupported."
+
+hToF_PackGHashTable :: Type -> Type -> ExcCodeGen Converter
+hToF_PackGHashTable keys elems = do
+  -- We will be adding elements to the Hash list with appropriate
+  -- destructors, so we always want a fresh copy.
+  keysConstructor <- getForeignConstructor keys TransferEverything
+  elemsConstructor <- getForeignConstructor elems TransferEverything
+  (keyHash, keyEqual) <- hashTableKeyMappings keys
+  (keyDestroy, keyPack, _) <- hashTablePtrPackers keys
+  (elemDestroy, elemPack, _) <- hashTablePtrPackers elems
+  return $ do
+    apply (P "Map.toList")
+    mapFirst keysConstructor
+    mapSecond elemsConstructor
+    mapFirst (P keyPack)
+    mapSecond (P elemPack)
+    apply (M (intercalate " " ["packGHashTable", keyHash, keyEqual,
+                               keyDestroy, elemDestroy]))
 
 hToF :: Type -> Transfer -> ExcCodeGen Converter
 hToF (TGList t) transfer = hToF_PackedType t "packGList" transfer
 hToF (TGSList t) transfer = hToF_PackedType t "packGSList" transfer
 hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
 hToF (TPtrArray t) transfer = hToF_PackedType t "packGPtrArray" transfer
+hToF (TGHash ta tb) _ = hToF_PackGHashTable ta tb
 -- Arrays without length info are just passed along.
 hToF (TCArray False (-1) (-1) _) _ = return $ Pure ()
 hToF (TCArray zt _ _ t@(TCArray{})) transfer = do
@@ -395,14 +459,33 @@ fToH' t a hType fType transfer
                                            ++ "Internal type: "
                                            ++ show t
 
-fToH_PackedType t unpacker transfer = do
+getHaskellConstructor :: Type -> Transfer -> ExcCodeGen Constructor
+getHaskellConstructor t transfer = do
   a <- findAPI t
   hType <- haskellType t
   fType <- foreignType t
-  innerConstructor <- fToH' t a hType fType transfer
+  fToH' t a hType fType transfer
+
+fToH_PackedType :: Type -> String -> Transfer -> ExcCodeGen Converter
+fToH_PackedType t unpacker transfer = do
+  innerConstructor <- getHaskellConstructor t transfer
   return $ do
     apply (M unpacker)
     mapC innerConstructor
+
+fToH_UnpackGHashTable :: Type -> Type -> Transfer -> ExcCodeGen Converter
+fToH_UnpackGHashTable keys elems transfer = do
+  keysConstructor <- getHaskellConstructor keys transfer
+  (_,_,keysUnpack) <- hashTablePtrPackers keys
+  elemsConstructor <- getHaskellConstructor elems transfer
+  (_,_,elemsUnpack) <- hashTablePtrPackers elems
+  return $ do
+    apply (M "unpackGHashTable")
+    mapFirst (P keysUnpack)
+    mapFirst keysConstructor
+    mapSecond (P elemsUnpack)
+    mapSecond elemsConstructor
+    apply (P "Map.fromList")
 
 fToH :: Type -> Transfer -> ExcCodeGen Converter
 
@@ -410,6 +493,7 @@ fToH (TGList t) transfer = fToH_PackedType t "unpackGList" transfer
 fToH (TGSList t) transfer = fToH_PackedType t "unpackGSList" transfer
 fToH (TGArray t) transfer = fToH_PackedType t "unpackGArray" transfer
 fToH (TPtrArray t) transfer = fToH_PackedType t "unpackGPtrArray" transfer
+fToH (TGHash a b) transfer = fToH_UnpackGHashTable a b transfer
 -- Arrays without length info are just passed along.
 fToH (TCArray False (-1) (-1) _) _ = return $ Pure ()
 fToH (TCArray True _ _ t@(TCArray{})) transfer =
@@ -547,7 +631,7 @@ haskellType (TGSList a) = do
 haskellType (TGHash a b) = do
   innerA <- haskellType a
   innerB <- haskellType b
-  return $ "GHashTable" `con` [innerA, innerB]
+  return $ "Map.Map" `con` [innerA, innerB]
 haskellType TError = return $ "Error" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
 haskellType TParamSpec = return $ "GParamSpec" `con` []
@@ -598,7 +682,10 @@ foreignType (TGList a) = do
 foreignType (TGSList a) = do
   inner <- foreignType a
   return $ ptr ("GSList" `con` [inner])
-foreignType t@(TGHash _ _) = ptr <$> haskellType t
+foreignType (TGHash a b) = do
+  innerA <- foreignType a
+  innerB <- foreignType b
+  return $ ptr ("GHashTable" `con` [innerA, innerB])
 foreignType t@TError = ptr <$> haskellType t
 foreignType t@TVariant = ptr <$> haskellType t
 foreignType t@TParamSpec = ptr <$> haskellType t
@@ -675,6 +762,7 @@ elementTypeAndMap (TGArray t) _ = Just (t, "mapGArray")
 elementTypeAndMap (TPtrArray t) _ = Just (t, "mapPtrArray")
 elementTypeAndMap (TGList t) _ = Just (t, "mapGList")
 elementTypeAndMap (TGSList t) _ = Just (t, "mapGSList")
+-- GHashTable is treated separately, see Transfer.hs
 elementTypeAndMap _ _ = Nothing
 
 -- Return just the element type.

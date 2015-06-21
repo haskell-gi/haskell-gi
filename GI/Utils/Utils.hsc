@@ -1,14 +1,20 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TupleSections #-}
+{- | Assorted utility functions for bindings. -}
 module GI.Utils.Utils
     ( whenJust
     , maybeM
     , maybeFromPtr
+    , mapFirst
+    , mapFirstA
+    , mapSecond
+    , mapSecondA
     , convertIfNonNull
     , callocBytes
     , callocBoxedBytes
     , allocBytes
     , allocMem
     , freeMem
+    , ptr_to_g_free
     , memcpy
     , safeFreeFunPtr
     , safeFreeFunPtrPtr
@@ -18,7 +24,7 @@ module GI.Utils.Utils
 #include <glib-object.h>
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative (Applicative, pure, (<$>), (<*>))
 #endif
 import Control.Monad (void)
 
@@ -31,7 +37,7 @@ import Foreign.Storable (Storable(..))
 
 import GI.Utils.BasicTypes (GType(..), CGType, BoxedObject(..))
 
--- When the given value is of "Just a" form, execute the given action,
+-- | When the given value is of "Just a" form, execute the given action,
 -- otherwise do nothing.
 whenJust :: Monad m => Maybe a -> (a -> m ()) -> m ()
 whenJust (Just v) f = f v
@@ -43,10 +49,33 @@ maybeM :: Monad m => b -> Maybe a -> (a -> m b) -> m b
 maybeM d Nothing _ = return d
 maybeM _ (Just v) action = action v
 
+-- | Check if the pointer is `nullPtr`, and wrap it on a `Maybe`
+-- accordingly.
 maybeFromPtr :: Ptr a -> Maybe (Ptr a)
 maybeFromPtr ptr = if ptr == nullPtr
                    then Nothing
                    else Just ptr
+
+-- | Given a function and a list of two-tuples, apply the function to
+-- every first element of the tuples.
+mapFirst :: (a -> c) -> [(a,b)] -> [(c,b)]
+mapFirst _ [] = []
+mapFirst f ((x,y) : rest) = (f x, y) : mapFirst f rest
+
+-- | Same for the second element.
+mapSecond :: (b -> c) -> [(a,b)] -> [(a,c)]
+mapSecond _ [] = []
+mapSecond f ((x,y) : rest) = (x, f y) : mapSecond f rest
+
+-- | Applicative version of `mapFirst`.
+mapFirstA :: Applicative f => (a -> f c) -> [(a,b)] -> f [(c,b)]
+mapFirstA _ [] = pure []
+mapFirstA f ((x,y) : rest) = (:) <$> ((,y) <$> f x) <*> mapFirstA f rest
+
+-- | Applicative version of `mapSecond`.
+mapSecondA :: Applicative f => (b -> f c) -> [(a,b)] -> f [(a,c)]
+mapSecondA _ [] = pure []
+mapSecondA f ((x,y) : rest) = (:) <$> ((x,) <$> f y) <*> mapSecondA f rest
 
 -- | Apply the given conversion action to the given pointer if it is
 -- non-NULL, otherwise return `Nothing`.
@@ -58,6 +87,7 @@ convertIfNonNull ptr convert = if ptr == nullPtr
 foreign import ccall "g_malloc0" g_malloc0 ::
     #{type gsize} -> IO (Ptr a)
 
+-- | Make a zero-filled allocation using the GLib allocator.
 {-# INLINE callocBytes #-}
 callocBytes :: Int -> IO (Ptr a)
 callocBytes n =  g_malloc0 (fromIntegral n)
@@ -82,31 +112,43 @@ callocBoxedBytes n = do
 foreign import ccall "g_malloc" g_malloc ::
     #{type gsize} -> IO (Ptr a)
 
+-- | Allocate the given number of bytes using the GLib allocator.
 {-# INLINE allocBytes #-}
 allocBytes :: Integral a => a -> IO (Ptr b)
 allocBytes n = g_malloc (fromIntegral n)
 
--- A version of malloc that uses the GLib allocator.
+-- | Allocate space for the given `Storable` using the GLib allocator.
 {-# INLINE allocMem #-}
 allocMem :: forall a. Storable a => IO (Ptr a)
 allocMem = g_malloc $ (fromIntegral . sizeOf) (undefined :: a)
 
+-- | A wrapped for `g_free`.
 foreign import ccall "g_free" freeMem :: Ptr a -> IO ()
+
+-- | Pointer to `g_free`.
+foreign import ccall "&g_free" ptr_to_g_free :: FunPtr (Ptr a -> IO ())
 
 foreign import ccall unsafe "string.h memcpy" _memcpy :: Ptr a -> Ptr b -> CSize -> IO (Ptr ())
 
+-- | Copy memory into a destination (in the first argument) from a
+-- source (in the second argument).
 {-# INLINE memcpy #-}
 memcpy :: Ptr a -> Ptr b -> Int -> IO ()
 memcpy dest src n = void $ _memcpy dest src (fromIntegral n)
 
--- Same as freeHaskellFunPtr, but it does nothing when given a
+-- | Same as freeHaskellFunPtr, but it does nothing when given a
 -- nullPtr.
 foreign import ccall "safeFreeFunPtr" safeFreeFunPtr ::
     Ptr a -> IO ()
 
+-- | A pointer to `safeFreeFunPtr`.
 foreign import ccall "& safeFreeFunPtr" safeFreeFunPtrPtr ::
     FunPtr (Ptr a -> IO ())
 
+-- | If given a pointer to the memory location, free the `FunPtr` at
+-- that location, and then the pointer itself. Useful for freeing the
+-- memory associated to callbacks which are called just once, with no
+-- destroy notification.
 maybeReleaseFunPtr :: Maybe (Ptr (FunPtr a)) -> IO ()
 maybeReleaseFunPtr Nothing = return ()
 maybeReleaseFunPtr (Just f) = do

@@ -384,10 +384,7 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
   then do
     unpacked <- convert aname $ unpackCArray (show fixed) t transfer
     -- Free the memory associated with the array
-    when (transfer == TransferEverything) $
-         mapM_ line =<< freeElements t aname undefined
-    when (transfer /= TransferNothing) $
-         mapM_ line =<< freeContainer t aname
+    freeContainerType transfer t aname undefined
     return unpacked
   else do
     when (length == -1) $
@@ -401,10 +398,7 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
     let lname'' = prime lname'
     unpacked <- convert aname $ unpackCArray lname'' t transfer
     -- Free the memory associated with the array
-    when (transfer == TransferEverything) $
-         mapM_ line =<< freeElements t aname lname''
-    when (transfer /= TransferNothing) $
-         mapM_ line =<< freeContainer t aname
+    freeContainerType transfer t aname lname''
     return unpacked
 
 -- Remove the warning, this should never be reached.
@@ -641,10 +635,7 @@ genCallable n symbol callable throwsGError = do
              t -> do
                result <- convert rname $ fToH (returnType callable)
                                                  (returnTransfer callable)
-               when (returnTransfer callable == TransferEverything) $
-                    mapM_ line =<< freeElements t rname undefined
-               when (returnTransfer callable /= TransferNothing) $
-                    mapM_ line =<< freeContainer t rname
+               freeContainerType (returnTransfer callable) t rname undefined
                return result
 
   convertOut :: Map.Map String String -> ExcCodeGen [String]
@@ -696,10 +687,7 @@ genCallable n symbol callable throwsGError = do
                           line $ "return " ++ wrapped
                        return $ "maybe" ++ ucFirst peeked)
            -- Free the memory associated with the out argument
-           when (transfer' == TransferEverything) $
-                mapM_ line =<< freeElements t peeked undefined
-           when (transfer' /= TransferNothing) $
-                mapM_ line =<< freeContainer t peeked
+           freeContainerType transfer' t peeked undefined
            return result
 
   returnResult :: String -> [String] -> CodeGen ()
