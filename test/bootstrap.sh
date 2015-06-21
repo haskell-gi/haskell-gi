@@ -1,15 +1,20 @@
 #!/bin/bash
 
+# This script generates the bindings and compiles testGtk. If you want
+# to use haskell-gi in your program it is probably better to install
+# the cabalized bindings in the toplevel "bindings" directory.
+
 set -e
 
 generate()
 {
     for mod in $@; do
-        if test -f $mod.overrides;
+	OVERRIDES=../bindings/$mod/$mod.overrides
+        if test -f $OVERRIDES;
         then
-            haskell-gi -o $mod.overrides $mod
+            haskell-gi -n -o $OVERRIDES $mod
         else
-            haskell-gi $mod
+            haskell-gi -n $mod
         fi
     done
 
