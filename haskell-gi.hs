@@ -33,7 +33,7 @@ import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
 import GI.OverloadedSignals (genSignalInstances, genOverloadedSignalConnectors)
-import GI.Overrides (Overrides, parseOverridesFile, loadFilteredAPI)
+import GI.Overrides (Overrides, parseOverridesFile, loadFilteredAPI, nsChooseVersion)
 import GI.SymbolNaming (ucFirst)
 import GI.Internal.Typelib (prependSearchPath)
 
@@ -176,9 +176,9 @@ processMod options ovs name = do
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ msg
 
-dump :: Options -> String -> IO ()
-dump options name = do
-  apis <- loadAPI (optVerbose options) name
+dump :: Options -> Overrides -> String -> IO ()
+dump options ovs name = do
+  apis <- loadAPI (optVerbose options) name (M.lookup name (nsChooseVersion ovs))
   mapM_ (putStrLn . ppShow) apis
 
 process :: Options -> [String] -> IO ()
@@ -194,7 +194,7 @@ process options names = do
                    GenerateCode -> forM_ names (processMod options ovs)
                    Attributes -> genGenericAttrs options ovs names
                    Signals -> genGenericConnectors options ovs names
-                   Dump -> forM_ names (dump options)
+                   Dump -> forM_ names (dump options ovs)
                    Help -> putStr showHelp
 
 foreign import ccall "g_type.h g_type_init"

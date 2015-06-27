@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, ViewPatterns #-}
 module GI.Overrides
-    ( Overrides(pkgConfigMap, cabalPkgVersion)
+    ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion)
     , parseOverridesFile
     , loadFilteredAPI
     ) where
@@ -33,7 +33,9 @@ data Overrides = Overrides {
       -- | Mapping from GObject-Introspection namespaces to pkg-config
       pkgConfigMap    :: M.Map String String,
       -- | Version number for the generated .cabal package.
-      cabalPkgVersion :: Maybe String
+      cabalPkgVersion :: Maybe String,
+      -- | Prefered version of the namespace
+      nsChooseVersion :: M.Map String String
 }
 
 -- | Construct the generic config for a module.
@@ -44,7 +46,8 @@ defaultOverrides = Overrides {
               ignoredAPIs     = S.empty,
               sealedStructs   = S.empty,
               pkgConfigMap    = M.empty,
-              cabalPkgVersion = Nothing }
+              cabalPkgVersion = Nothing,
+              nsChooseVersion = M.empty }
 
 -- | There is a sensible notion of zero and addition of Overridess,
 -- encode this so that we can view the parser as a writer monad of
@@ -59,7 +62,8 @@ instance Monoid Overrides where
       pkgConfigMap = pkgConfigMap a <> pkgConfigMap b,
       cabalPkgVersion = if isJust (cabalPkgVersion b)
                         then cabalPkgVersion b
-                        else cabalPkgVersion a
+                        else cabalPkgVersion a,
+      nsChooseVersion = nsChooseVersion a <> nsChooseVersion b
     }
 
 -- | We have a bit of context (the current namespace), and can fail,
@@ -88,6 +92,7 @@ parseOneLine (T.stripPrefix "constantPrefix " -> Just p) = get >>= parseConstP p
 parseOneLine (T.stripPrefix "seal " -> Just s) = get >>= parseSeal s
 parseOneLine (T.stripPrefix "pkg-config-name" -> Just s) = parsePkgConfigName s
 parseOneLine (T.stripPrefix "cabal-pkg-version" -> Just s) = parseCabalPkgVersion s
+parseOneLine (T.stripPrefix "namespace-version" -> Just s) = parseNsVersion s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 
 -- | Ignored elements.
@@ -128,6 +133,16 @@ parsePkgConfigName t =
     throwError ("pkg-config-name syntax is of the form\n" <>
                 "\t\"pkg-config-name gi-namespace pk-name\"\n" <>
                 "Got \"pkg-config-name " <> t <> "\" instead.")
+
+-- | Choose a preferred namespace version to load.
+parseNsVersion :: Text -> Parser
+parseNsVersion (T.words -> [ns,version]) = tell $
+    defaultOverrides {nsChooseVersion =
+                          M.singleton (T.unpack ns) (T.unpack version)}
+parseNsVersion t =
+    throwError ("namespace-version syntax is of the form\n" <>
+                "\t\"namespace-version namespace version\"\n" <>
+                "Got \"namespace-version " <> t <> "\" instead.")
 
 -- | Specifying the cabal package version by hand.
 parseCabalPkgVersion :: Text -> Parser
@@ -179,4 +194,5 @@ filterAPIs ovs apis = map (filterOneAPI ovs . fetchIgnores) filtered
 
 -- | Load the given API using the given list of overrides.
 loadFilteredAPI :: Bool -> Overrides -> String -> IO [(Name, API)]
-loadFilteredAPI verbose ovs name = filterAPIs ovs <$> loadAPI verbose name
+loadFilteredAPI verbose ovs name =
+  filterAPIs ovs <$> loadAPI verbose name (M.lookup name (nsChooseVersion ovs))

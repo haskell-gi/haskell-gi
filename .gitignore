@@ -5,7 +5,8 @@ testGtk
 *.o
 
 # cabal stuff
-
+.cabal-sandbox
+cabal.sandbox.config
 dist/
 
 # folder for generated sources
