@@ -14,6 +14,9 @@ dist/
 bindings/*/*.cabal
 bindings/*/Setup.hs
 
+# For Emacs
+TAGS
+
 # all directories named GI
 GI/
 # except the one in the project root
