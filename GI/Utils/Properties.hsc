@@ -1,8 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables, GADTs, DataKinds #-}
-{-# OPTIONS_GHC -Wall #-}
+{-# LANGUAGE ScopedTypeVariables, GADTs, DataKinds, KindSignatures,
+FlexibleInstances, MultiParamTypeClasses, TypeFamilies, PolyKinds #-}
+{-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 
 module GI.Utils.Properties
     ( new
+
+    , PropertyNotify(..)
 
     , setObjectPropertyString
     , setObjectPropertyStringArray
@@ -77,8 +80,12 @@ import GI.Utils.BasicTypes
 import GI.Utils.BasicConversions
 import GI.Utils.ManagedPtr
 import GI.Utils.Attributes
+import GI.Utils.GParamSpec (newGParamSpecFromPtr)
 import GI.Utils.GValue
 import GI.Utils.GVariant (newGVariantFromPtr)
+import GI.Utils.Signals (SignalConnectMode, connectSignalFunPtr, HasSignal(..))
+
+import GHC.TypeLits
 
 import Foreign hiding (new)
 import Foreign.C
@@ -139,6 +146,42 @@ new constructor attrs = do
         do cstr <- peek (castPtr dataPtr) :: IO CString
            free cstr
            freeStrings (n-1) (dataPtr `plusPtr` gparameterSize)
+
+-- | Proxy for "notify::property-name" signals.
+data PropertyNotify (s :: Symbol) slot where
+  PropertyNotify :: Attr slot o -> PropertyNotify "notify::*" slot
+
+-- GHC warns about orphan instances here, we suppress the warning above.
+instance (GObject o, ManagedPtr o) => HasSignal "notify::*" o where
+  type HaskellCallbackType "notify::*" o = GObjectNotifyCallback
+  type ConnectConstraint "notify::*" o = HasAttr o
+  connectSignal = connectGObjectNotify
+
+-- | Type for a `GObject` `notify` callback.
+type GObjectNotifyCallback = GParamSpec -> IO ()
+
+gobjectNotifyCallbackWrapper ::
+    GObjectNotifyCallback -> Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
+gobjectNotifyCallbackWrapper _cb _ pspec _ = do
+    pspec' <- newGParamSpecFromPtr pspec
+    _cb  pspec'
+
+type GObjectNotifyCallbackC = Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
+
+foreign import ccall "wrapper"
+    mkGObjectNotifyCallback :: GObjectNotifyCallbackC -> IO (FunPtr GObjectNotifyCallbackC)
+
+data Proxy (s :: k) = Proxy
+
+-- | Connect the given notify callback for a GObject.
+connectGObjectNotify :: forall o slot proxy signal. (GObject o, ManagedPtr o, KnownSymbol slot) =>
+                        proxy (signal :: Symbol) slot ->
+                        o -> GObjectNotifyCallback ->
+                        SignalConnectMode -> IO CULong
+connectGObjectNotify _ obj cb after = do
+  cb' <- mkGObjectNotifyCallback (gobjectNotifyCallbackWrapper cb)
+  let signalName = "notify::" ++ symbolVal (Proxy :: Proxy slot)
+  connectSignalFunPtr obj signalName cb' after
 
 foreign import ccall "g_object_set_property" g_object_set_property ::
     Ptr a -> CString -> Ptr GValue -> IO ()

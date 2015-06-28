@@ -42,7 +42,7 @@ genPropertyAttr :: String -> CodeGen ()
 genPropertyAttr pName = group $ do
   line $ "-- Property \"" ++ pName ++ "\""
   let name = hyphensToCamelCase pName
-  line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ name ++ "\" o"
+  line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ pName ++ "\" o"
   line $ "_" ++ lcFirst name ++ " = Attr"
 
 genProps :: (Name, API) -> CodeGen ()

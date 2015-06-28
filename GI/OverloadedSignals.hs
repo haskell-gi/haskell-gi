@@ -51,13 +51,13 @@ genOverloadedSignalConnectors allAPIs modulePrefix = do
   blank
   line   "import GHC.TypeLits"
   blank
-  line   "data SignalProxy (a :: Symbol) where"
+  line   "data SignalProxy (a :: Symbol) (b :: Symbol) where"
   indent $ do
     signalNames <- findSignalNames allAPIs
     let maxLength = maximum $ map (length . signalHaskellName) signalNames
     forM_ signalNames $ \sn ->
         line $ padTo (maxLength + 1) (ucFirst (signalHaskellName sn)) ++
-                 ":: SignalProxy \"" ++ sn ++ "\""
+                 ":: SignalProxy \"" ++ sn ++ "\" \"" ++ sn ++ "\""
 
 -- | Generate the given signal instance for the given API object.
 genInstance :: Name -> (Name, Signal) -> CodeGen ()
@@ -72,6 +72,8 @@ genInstance n (owner, signal) = group $ do
           cbHaskellType = signalConnectorName ++ "Callback"
       line $ "type HaskellCallbackType \"" ++ sigName signal ++ "\" "
                ++ name n ++ " = " ++ cbHaskellType
+      line $ "type ConnectConstraint \"" ++ sigName signal ++ "\" "
+              ++ name n ++ " = (~) \"" ++ sigName signal ++ "\""
       ons <- qualify (namespace owner)
       line $ "connectSignal _ = " ++ ons ++ "connect"
                ++ ucFirst (name owner) ++ ucFirst sn

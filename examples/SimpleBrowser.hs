@@ -6,24 +6,14 @@ import GI.GtkSignals ()
 import GI.WebKit
 import GI.WebKitSignals ()
 import GI.WebKitAttributes ()
-import GI.GObject
 import qualified GI.GLib as GLib
 
 import GI.Properties
 import GI.Signals
 import GI.Utils.Base
 
-import Foreign.C
-
 import Data.Text (pack)
 import System.Environment (getProgName)
-
--- | Run the given callback whenever a property changes.
-onPropertyNotify :: (GObject o, ManagedPtr o) =>
-                    o -> String -> ObjectNotifyCallback -> IO CULong
-onPropertyNotify obj prop cb = do
-  cb' <- mkObjectNotifyCallback (objectNotifyCallbackWrapper cb)
-  connectSignalFunPtr obj ("notify::" ++ prop) cb' SignalConnectBefore
 
 main :: IO ()
 main = do
@@ -55,7 +45,7 @@ main = do
                            _title := "A simple WebKit browser"]
   windowSetTitlebar win (Just header)
 
-  onPropertyNotify view "load-status" $ \_ -> do
+  on view (PropertyNotify _loadStatus) $ \_ -> do
     view `get` _loadStatus >>= print
 
   on view LoadError $ \_ uri error -> do

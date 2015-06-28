@@ -223,9 +223,9 @@ genProperties n props = do
           attrWriteType | writable      = "SettableAndConstructibleAttr"
                         | constructOnly = "ConstructOnlyAttr"
                         | otherwise     = "ReadOnlyAttr"
-          instanceVars = "\"" ++ cName ++ "\" " ++ name
+          instanceVars = "\"" ++ propName prop ++ "\" " ++ name
 
-      line $ "instance HasAttr " ++ instanceVars ++ " where"
+      line $ "instance HasAttr " ++ name ++ " \"" ++ propName prop ++ "\" where"
       indent $ do
               line $ "type AttrIsReadable " ++ instanceVars
                        ++ " = " ++ show readable

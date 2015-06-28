@@ -141,7 +141,7 @@ testPolymorphicLenses parent message = do
 
   -- This should fail to compile with
 {-
-    No instance for (HasAttr "Buttons" String)
+    No instance for (HasAttr String "Buttons")
       arising from a use of `:='
     ...
     (among others)
