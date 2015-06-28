@@ -22,3 +22,5 @@ TAGS
 GI/
 # except the one in the project root
 !/GI/
+# and in the examples subfolder
+!/examples/GI/

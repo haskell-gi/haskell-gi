@@ -1,0 +1,36 @@
+Name:                GI-Examples
+Version:             0.1
+Synopsis:            Some examples of the use of GObject-Introspection
+Description:         Some examples of the use of GObject-Introspection
+Homepage:            https://github.com/garetxe/haskell-gi
+License:             LGPL-3
+Author:              Will Thompson,
+                     Iñaki García Etxebarria,
+                     Jonas Platte
+Maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+Stability:           Experimental
+Category:            Development
+Build-type:          Simple
+Cabal-version:       >=1.8
+
+source-repository head
+  type: git
+  location: git://github.com/garetxe/haskell-gi.git
+
+Executable SimpleBrowser
+  main-is: SimpleBrowser.hs
+  pkgconfig-depends: webkitgtk-3.0 >= 2.4 && < 3
+  build-depends:
+      base >= 4.7 && < 5,
+      basic-prelude >= 0.5 && <0.6,
+      GObject-Introspection >= 0.5 && < 0.6,
+      gi-glib >= 0.2.44 && < 0.3,
+      gi-gobject >= 0.2.44 && < 0.3,
+      gi-gtk >= 0.3.16 && < 0.4,
+      gi-webkit >= 0.2.4 && < 0.3,
+      text >= 1.0
+  extensions: OverloadedStrings, NoImplicitPrelude
+  ghc-options: -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing
+  other-modules:
+      GI.Properties,
+      GI.Signals
