@@ -1,7 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE LambdaCase #-}
-
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import BasicPrelude hiding (on, error)
 import qualified BasicPrelude as BP
