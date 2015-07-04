@@ -28,7 +28,9 @@ main = do
   on win Destroy mainQuit
 
   view <- new WebView []
-  on view CloseWebView $ (widgetDestroy win >> return True)
+  on view CloseWebView $ do
+    widgetDestroy win
+    return True
   webViewLoadUri view "http://www.haskell.org"
 
   scroll <- new ScrolledWindow [_child := view]
@@ -46,7 +48,8 @@ main = do
   windowSetTitlebar win (Just header)
 
   on view (PropertyNotify _loadStatus) $ \_ -> do
-    view `get` _loadStatus >>= print
+    status <- view `get` _loadStatus
+    print status
 
   on view LoadError $ \_ uri error -> do
     errMsg <- GLib.errorReadMessage error
