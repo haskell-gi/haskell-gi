@@ -83,7 +83,7 @@ import Foreign.C.String
 import GI.Utils.BasicTypes
 import GI.Utils.GHashTable (GEqualFunc, GHashFunc)
 import GI.Utils.ManagedPtr (copyBoxedPtr)
-import GI.Utils.Utils (allocBytes, memcpy, freeMem)
+import GI.Utils.Utils (allocBytes, callocBytes, memcpy, freeMem)
 
 #include <glib-object.h>
 
@@ -443,9 +443,14 @@ cstringToString = peekCString
 foreign import ccall "g_strndup" g_strndup ::
     CString -> #{type gsize} -> IO CString
 
+-- | Convert `Text` into a `CString`, using the GLib allocator.
 textToCString :: Text -> IO CString
-textToCString str = TF.withCStringLen str $
-                      \(cstr, len) -> g_strndup cstr (fromIntegral len)
+textToCString str = TF.withCStringLen str $ \(cstr, len) ->
+  -- Because withCStringLen returns NULL for a zero-length Text, and
+  -- g_strndup returns NULL for NULL, even if n==0.
+  if cstr /= nullPtr
+  then g_strndup cstr (fromIntegral len)
+  else callocBytes 1
 
 withTextCString :: Text -> (CString -> IO a) -> IO a
 withTextCString text action = bracket (textToCString text) freeMem action
