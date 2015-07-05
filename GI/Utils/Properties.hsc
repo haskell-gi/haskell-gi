@@ -83,7 +83,7 @@ import GI.Utils.Attributes
 import GI.Utils.GParamSpec (newGParamSpecFromPtr)
 import GI.Utils.GValue
 import GI.Utils.GVariant (newGVariantFromPtr)
-import GI.Utils.Signals (SignalConnectMode, connectSignalFunPtr, HasSignal(..))
+import GI.Utils.Signals (SignalConnectMode, connectSignalFunPtr, HasSignal(..), SignalHandlerId)
 
 import GHC.TypeLits
 
@@ -177,7 +177,7 @@ data Proxy (s :: k) = Proxy
 connectGObjectNotify :: forall o slot proxy signal. (GObject o, ManagedPtr o, KnownSymbol slot) =>
                         proxy (signal :: Symbol) slot ->
                         o -> GObjectNotifyCallback ->
-                        SignalConnectMode -> IO CULong
+                        SignalConnectMode -> IO SignalHandlerId
 connectGObjectNotify _ obj cb after = do
   cb' <- mkGObjectNotifyCallback (gobjectNotifyCallbackWrapper cb)
   let signalName = "notify::" ++ symbolVal (Proxy :: Proxy slot)

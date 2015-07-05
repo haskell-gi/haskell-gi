@@ -10,7 +10,8 @@ module GI.Utils.Signals
       SignalConnectMode(..),
       connectSignalFunPtr,
       on,
-      after
+      after,
+      SignalHandlerId
     ) where
 
 import Foreign
@@ -23,6 +24,11 @@ import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr (withManagedPtr)
 import GI.Utils.Utils (safeFreeFunPtrPtr)
 
+#include <glib-object.h>
+
+-- | Type of a `GObject` signal handler id.
+type SignalHandlerId = #type gulong
+
 -- | Typeclass whose members are `GObject`s with the given signal.
 class (GObject o, ManagedPtr o) => HasSignal (signal :: Symbol) o where
     type HaskellCallbackType signal o
@@ -34,7 +40,7 @@ class (GObject o, ManagedPtr o) => HasSignal (signal :: Symbol) o where
                      proxy signal slot -> o ->
                      HaskellCallbackType signal o ->
                      SignalConnectMode ->
-                     IO CULong
+                     IO SignalHandlerId
 
 -- | Whether to connect a handler to a signal with `connectSignal` so
 -- that it runs before/after the default handler for the given signal.
@@ -46,14 +52,14 @@ data SignalConnectMode = SignalConnectBefore  -- ^ Run before the default handle
 --
 -- > on = connectSignal SignalConnectBefore
 on :: (HasSignal s o, KnownSymbol slot, ConnectConstraint s o slot) =>
-      o -> proxy s slot -> HaskellCallbackType s o -> IO CULong
+      o -> proxy s slot -> HaskellCallbackType s o -> IO SignalHandlerId
 on o s c = connectSignal s o c SignalConnectBefore
 
 -- | Connect a signal to a handler, running the handler after the default one.
 --
 -- > after = connectSignal SignalConnectAfter
 after :: (HasSignal s o, KnownSymbol slot, ConnectConstraint s o slot) =>
-         o -> proxy s slot -> HaskellCallbackType s o -> IO CULong
+         o -> proxy s slot -> HaskellCallbackType s o -> IO SignalHandlerId
 after o s c = connectSignal s o c SignalConnectBefore
 
 -- Connecting GObjects to signals
@@ -64,11 +70,11 @@ foreign import ccall "g_signal_connect_data" g_signal_connect_data ::
     Ptr () ->                           -- data
     FunPtr c ->                         -- destroy_data
     CUInt ->                            -- connect_flags
-    IO CULong
+    IO SignalHandlerId
 
 -- | Connect a signal to a handler, given as a `FunPtr`.
 connectSignalFunPtr :: (GObject o, ManagedPtr o) =>
-                  o -> String -> FunPtr a -> SignalConnectMode -> IO CULong
+                  o -> String -> FunPtr a -> SignalConnectMode -> IO SignalHandlerId
 connectSignalFunPtr object signal fn mode = do
   let flags = case mode of
                 SignalConnectAfter -> 1

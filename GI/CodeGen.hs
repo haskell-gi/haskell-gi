@@ -558,7 +558,7 @@ genPrelude name modulePrefix = do
     line "import GI.Utils.GValue"
     line "import GI.Utils.ManagedPtr"
     line "import GI.Utils.Properties hiding (new)"
-    line "import GI.Utils.Signals (SignalConnectMode(..), connectSignalFunPtr)"
+    line "import GI.Utils.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId)"
     line "import GI.Utils.Utils"
     blank
 

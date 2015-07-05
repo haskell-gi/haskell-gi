@@ -289,7 +289,7 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   group $ do
     let signatureConstraints =
           "(ManagedPtr a, GObject a) =>"
-        signatureArgs = "a -> " ++ cbType ++ " -> IO CULong"
+        signatureArgs = "a -> " ++ cbType ++ " -> IO SignalHandlerId"
         signature = " :: " ++ signatureConstraints ++ " " ++ signatureArgs
         onName = "on" ++ signalConnectorName
         afterName = "after" ++ signalConnectorName
@@ -305,7 +305,7 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
         signatureConstraints =
           "(ManagedPtr a, GObject a) =>"
         signatureArgs = "a -> " ++ cbType
-                        ++ " -> SignalConnectMode -> IO CULong"
+                        ++ " -> SignalConnectMode -> IO SignalHandlerId"
     line $ fullName ++ " :: " ++ signatureConstraints
     line $ replicate (4 + length fullName) ' ' ++ signatureArgs
     line $ fullName ++ " obj cb after = do"
