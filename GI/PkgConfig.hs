@@ -4,7 +4,10 @@ module GI.PkgConfig
 
 import Control.Monad (when)
 import Data.Char (toLower)
-import Data.Monoid (First(..), mconcat)
+import Data.Monoid (First(..))
+#if !MIN_VERSION_base(4,8,0)
+import Data.Monoid (mconcat)
+#endif
 import qualified Data.Map.Strict as M
 import System.Exit (ExitCode(..))
 import System.Process (readProcessWithExitCode)

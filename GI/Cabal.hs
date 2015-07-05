@@ -13,6 +13,9 @@ import Data.Char (toLower)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Version (Version(..),  showVersion)
+#if MIN_VERSION_base(4,8,0)
+import Data.Version (makeVersion)
+#endif
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Text.Read
@@ -42,9 +45,16 @@ lower = map toLower
 haskellGIAPIVersion :: Int
 haskellGIAPIVersion = (head . versionBranch) version
 
+#if !MIN_VERSION_base(4,8,0)
+-- Create a version without tags, which we ignore anyway. The
+-- versionTags constructor field is deprecated in base 4.8.0.
+makeVersion :: [Int] -> Version
+makeVersion branch = Version branch []
+#endif
+
 haskellGIRevision :: String
 haskellGIRevision =
-    showVersion (Version (tail (versionBranch version)) (versionTags version))
+    showVersion $ makeVersion (tail (versionBranch version))
 
 {- |
 
