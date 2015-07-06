@@ -76,9 +76,14 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text.Foreign as TF
 
-import Foreign
-import Foreign.C.Types
-import Foreign.C.String
+import Foreign.Ptr (Ptr, plusPtr, nullPtr, nullFunPtr, castPtr)
+import Foreign.ForeignPtr (withForeignPtr)
+import Foreign.Storable (Storable, peek, poke, sizeOf)
+import Foreign.C.Types (CInt(..), CUInt(..), CSize(..), CChar(..))
+import Foreign.C.String (CString, withCString, peekCString)
+import Data.Word (Word8, Word64)
+import Data.Int (Int32)
+import Data.Bits (Bits, (.|.), (.&.), shift)
 
 import GI.Utils.BasicTypes
 import GI.Utils.GHashTable (GEqualFunc, GHashFunc)

@@ -22,9 +22,9 @@ import Control.Applicative ((<$>))
 import Control.Monad (when, void)
 
 import Foreign (finalizerFree, poke)
-import Foreign.C
-import Foreign.Ptr
-import Foreign.ForeignPtr
+import Foreign.C (CInt(..))
+import Foreign.Ptr (Ptr, FunPtr, castPtr)
+import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv)
 
 import GI.Utils.BasicTypes
 import GI.Utils.Utils

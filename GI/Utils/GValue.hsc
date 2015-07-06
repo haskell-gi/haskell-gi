@@ -51,7 +51,8 @@ import Data.Word
 import Data.Int
 import Data.Text (Text, pack, unpack)
 
-import Foreign.C
+import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..))
+import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr, castPtr)
 import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)

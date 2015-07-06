@@ -32,7 +32,7 @@ import Data.Word
 
 import Foreign (peek)
 import Foreign.C.Types (CSize(..))
-import Foreign.Ptr
+import Foreign.Ptr (Ptr, nullPtr, FunPtr, freeHaskellFunPtr)
 import Foreign.Storable (Storable(..))
 
 import GI.Utils.BasicTypes (GType(..), CGType, BoxedObject(..))
