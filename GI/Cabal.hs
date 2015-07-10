@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module GI.Cabal
     ( genCabalProject
-    , cabalSetupHs
+    , cabalConfig
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -30,14 +30,9 @@ import GI.SymbolNaming (ucFirst)
 
 import Paths_GObject_Introspection (version)
 
-cabalSetupHs :: String
-cabalSetupHs = unlines ["import Distribution.Simple",
-                        "",
-                        "main = defaultMainWithHooks simpleUserHooks {",
-                        "         haddockHook = haddockHook",
-                        "       }",
-                        "    where",
-                        "      haddockHook _ _ _ _ = putStrLn \"Skipping haddock, this package provides no documentation.\""]
+cabalConfig :: String
+cabalConfig = unlines ["documentation: False",
+                       "optimization: False"]
 
 lower :: String -> String
 lower = map toLower
@@ -138,7 +133,7 @@ genCabalProject name deps modulePrefix =
       line $ padTo 20 "author:" ++ authors
       line $ padTo 20 "maintainer:" ++ maintainers
       line $ padTo 20 "category:" ++ "Bindings"
-      line $ padTo 20 "build-type:" ++ "Custom"
+      line $ padTo 20 "build-type:" ++ "Simple"
       line $ padTo 20 "cabal-version:" ++ ">=1.10"
       blank
       line $ "library"

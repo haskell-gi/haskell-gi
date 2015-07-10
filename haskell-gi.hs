@@ -27,7 +27,7 @@ import GI.Utils.GError
 import Text.Show.Pretty (ppShow)
 
 import GI.API (loadAPI)
-import GI.Cabal (cabalSetupHs, genCabalProject)
+import GI.Cabal (cabalConfig, genCabalProject)
 import GI.Code (codeToString, genCode, evalCodeGen)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
@@ -171,8 +171,8 @@ processMod options ovs name = do
     case err of
       Nothing -> do
                writeFile fname (codeToString cabalCode)
-               putStrLn "\t\t+ Setup.hs"
-               writeFile "Setup.hs" cabalSetupHs
+               putStrLn "\t\t+ cabal.config"
+               writeFile "cabal.config" cabalConfig
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ msg
 
