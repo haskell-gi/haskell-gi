@@ -1,7 +1,8 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, OverloadedStrings #-}
 
 module GI.Repository
     ( readGiRepository
+    , girNamespace
     ) where
 
 import Prelude hiding (readFile)
@@ -9,8 +10,10 @@ import Prelude hiding (readFile)
 import Control.Monad (when)
 import qualified Data.List as List
 import Data.Maybe
+import Data.Text (Text)
 import Safe (maximumMay)
 import Text.XML
+import Text.XML.Cursor
 
 import System.Directory
 import System.Environment.XDG.BaseDir (getSystemDataDirs)
@@ -57,3 +60,10 @@ readGiRepository verbose name version =
             error $ "Did not find a GI repository for " ++ name
                 ++ maybe "" ("-" ++) version
                 ++ " in " ++ show dataDirs
+
+girNamespace :: Document -> Text
+girNamespace doc =
+    let cursor = fromDocument doc
+    in case cursor $/ laxElement "namespace" >=> attribute "name" of
+        [] -> error "Couldn't find namespace!"
+        [text] -> text
