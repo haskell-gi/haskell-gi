@@ -319,10 +319,9 @@ genGObjectType iT n = do
           line $ "instance " ++ klass ancestor' ++ " " ++ name'
 
 -- Type casting with type checking
-genGObjectCasts isIU n o = do
+genGObjectCasts :: Bool -> Name -> String -> CodeGen ()
+genGObjectCasts isIU n cn_ = do
   name' <- upperName n
-
-  let cn_ = objTypeInit o
 
   group $ do
     line $ "foreign import ccall \"" ++ cn_ ++ "\""
@@ -333,6 +332,12 @@ genGObjectCasts isIU n o = do
     indent $ group $ do
             line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
             line $ "gobjectType _ = c_" ++ cn_
+
+  -- Safe downcasting.
+  group $ do
+    let safeCast = "to" ++ name'
+    line $ safeCast ++ " :: " ++ goConstraint name' ++ " o => o -> IO " ++ name'
+    line $ safeCast ++ " = unsafeCastTo " ++ name'
 
 -- ManagedPtr implementation, for types with real memory management.
 manageManagedPtr n = do
@@ -390,7 +395,7 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
 
   -- Type safe casting
   isIU <- isInitiallyUnowned t
-  genGObjectCasts isIU n o
+  genGObjectCasts isIU n (objTypeInit o)
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) ->
@@ -451,18 +456,8 @@ genInterface n iface = do
 
   when isGO $ do
     let cn_ = fromMaybe (error "GObject derived interface without a type!") (ifTypeInit iface)
-
-    group $ do
-      line $ "foreign import ccall \"" ++ cn_ ++ "\""
-      indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
-
     isIU <- apiIsInitiallyUnowned n (APIInterface iface)
-
-    group $ do
-      line $ "instance GObject " ++ name' ++ " where"
-      indent $ group $ do
-                line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
-                line $ "gobjectType _ = c_" ++ cn_
+    genGObjectCasts isIU n cn_
 
   -- Methods
   forM_ (ifMethods iface) $ \(mn, f) -> do

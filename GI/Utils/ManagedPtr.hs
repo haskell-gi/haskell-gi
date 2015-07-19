@@ -3,6 +3,7 @@ module GI.Utils.ManagedPtr
     ( withManagedPtr
     , withManagedPtrList
     , castTo
+    , unsafeCastTo
     , newObject
     , wrapObject
     , refObject
@@ -47,6 +48,10 @@ withManagedPtrList managedList action = do
 foreign import ccall unsafe "check_object_type"
     c_check_object_type :: Ptr o -> CGType -> CInt
 
+-- | Cast to the given type, checking that the cast is valid. If it is
+-- not, we return `Nothing`. Usage:
+--
+-- > maybeWidget <- castTo Widget label
 castTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
           (ForeignPtr o' -> o') -> o -> IO (Maybe o')
 castTo constructor obj =
@@ -55,6 +60,21 @@ castTo constructor obj =
       if c_check_object_type objPtr t /= 1
         then return Nothing
         else Just <$> newObject constructor objPtr
+
+-- | Cast to the given type, assuming that the cast will succeed. This
+-- function will call `error` if the cast is illegal.
+unsafeCastTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
+                (ForeignPtr o' -> o') -> o -> IO o'
+unsafeCastTo constructor obj =
+  withManagedPtr obj $ \objPtr -> do
+    GType t <- gobjectType (undefined :: o')
+    if c_check_object_type objPtr t /= 1
+      then do
+      srcType <- gobjectType obj >>= gtypeName
+      destType <- gobjectType (undefined :: o') >>= gtypeName
+      error $ "unsafeCastTo :: invalid conversion from " ++ srcType ++ " to "
+        ++ destType ++ " requested."
+      else newObject constructor objPtr
 
 -- Reference counting for constructors
 foreign import ccall "&dbg_g_object_unref"

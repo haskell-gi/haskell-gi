@@ -314,6 +314,7 @@ testCast :: IO ()
 testCast =  do
   putStrLn "*** castTo test"
   label <- new Label []
+  _ <- toWidget label -- Safe cast, should always succeed.
   castTo Widget label >>= \case
     Just w -> castTo Button w >>= \case
       Just _ -> error "Converted Label to Button successfully, this is an error!"
