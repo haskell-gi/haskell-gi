@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module GI.API
     ( API(..)
@@ -27,30 +28,22 @@ import Control.Applicative ((<$>))
 #endif
 
 import Data.Int
-import Data.Maybe (isJust)
+import qualified Data.Text as T
 
-import GI.Internal.Types
+import Text.XML.Cursor
+
+import GI.Repository
 import GI.Internal.ArgInfo
-import GI.Internal.BaseInfo
-import GI.Internal.CallableInfo
-import GI.Internal.ConstantInfo
-import GI.Internal.EnumInfo
 import GI.Internal.FieldInfo
 import GI.Internal.FunctionInfo
-import GI.Internal.InterfaceInfo
-import GI.Internal.ObjectInfo
 import GI.Internal.PropertyInfo
-import GI.Internal.RegisteredTypeInfo
-import GI.Internal.StructInfo
 import GI.Internal.TypeInfo
-import GI.Internal.Typelib (getInfos, load)
-import GI.Internal.UnionInfo
-import GI.GType
 import GI.Type
 
 data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)
 
+{-
 getName :: InfoClass info => info -> Name
 getName i = Name namespace name
     where namespace = infoNamespace i
@@ -58,6 +51,7 @@ getName i = Name namespace name
 
 withName :: InfoClass info => (info -> a) -> (info -> (Name, a))
 withName f x = (getName x, f x)
+-}
 
 data Constant = Constant {
       constantType      :: Type,
@@ -65,11 +59,13 @@ data Constant = Constant {
       constDeprecated   :: Maybe String }
     deriving Show
 
+{-
 toConstant :: ConstantInfo -> Constant
 toConstant ci = Constant
     (typeFromTypeInfo $ constantInfoType ci)
     (constantInfoValue ci)
     (infoDeprecated ci)
+-}
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
@@ -79,6 +75,7 @@ data Enumeration = Enumeration {
     enumDeprecated :: Maybe String }
     deriving Show
 
+{-
 toEnumeration :: EnumInfo -> Enumeration
 toEnumeration ei = Enumeration
     (map viToV $ enumInfoValues ei)
@@ -87,12 +84,15 @@ toEnumeration ei = Enumeration
     (enumInfoStorageType ei)
     (infoDeprecated ei)
     where viToV vi = (infoName vi, valueInfoValue vi)
+-}
 
 data Flags = Flags Enumeration
     deriving Show
 
+{-
 toFlags :: EnumInfo -> Flags
 toFlags ei = Flags $ toEnumeration ei
+-}
 
 data Arg = Arg {
     argName :: String,
@@ -105,6 +105,7 @@ data Arg = Arg {
     transfer :: Transfer }
     deriving (Show, Eq, Ord)
 
+{-
 toArg :: ArgInfo -> Arg
 toArg ai = Arg
     (infoName ai)
@@ -115,6 +116,7 @@ toArg ai = Arg
     (argInfoClosure ai)
     (argInfoDestroy ai)
     (argInfoOwnershipTransfer ai)
+-}
 
 data Callable = Callable {
     returnType :: Type,
@@ -126,6 +128,7 @@ data Callable = Callable {
     callableDeprecated :: Maybe String }
     deriving (Show, Eq)
 
+{-
 toCallable :: CallableInfo -> Callable
 toCallable ci = Callable
     (typeFromTypeInfo $ callableInfoReturnType ci)
@@ -135,6 +138,7 @@ toCallable ci = Callable
     (map toArg $ callableInfoArgs ci)
     (callableInfoSkipReturn ci)
     (infoDeprecated ci)
+-}
 
 data Function = Function {
     fnSymbol :: String,
@@ -142,12 +146,14 @@ data Function = Function {
     fnFlags :: [FunctionInfoFlag] }
     deriving Show
 
+{-
 toFunction :: FunctionInfo -> Function
 toFunction fi = Function
     (functionInfoSymbol fi)
     (toCallable ci)
     (functionInfoFlags fi)
     where ci = fromBaseInfo (baseInfo fi) :: CallableInfo
+-}
 
 data Signal = Signal {
     sigName :: String,
@@ -155,11 +161,13 @@ data Signal = Signal {
     sigDeprecated :: Maybe String }
     deriving (Show, Eq)
 
+{-
 toSignal :: SignalInfo -> Signal
 toSignal si = Signal
     (infoName si)
     (toCallable $ callableInfo si)
     (infoDeprecated si)
+-}
 
 data Property = Property {
     propName :: String,
@@ -169,6 +177,7 @@ data Property = Property {
     propDeprecated :: Maybe String }
     deriving (Show, Eq)
 
+{-
 toProperty :: PropertyInfo -> Property
 toProperty pi = Property
     (infoName pi)
@@ -176,6 +185,7 @@ toProperty pi = Property
     (propertyInfoFlags pi)
     (propertyInfoTransfer pi)
     (infoDeprecated pi)
+-}
 
 data Field = Field {
     fieldName :: String,
@@ -186,6 +196,7 @@ data Field = Field {
     fieldDeprecated :: Maybe String }
     deriving Show
 
+{-
 toField :: FieldInfo -> Field
 toField fi = Field
     (infoName fi)
@@ -203,6 +214,7 @@ toField fi = Field
     (fieldInfoOffset fi)
     (fieldInfoFlags fi)
     (infoDeprecated fi)
+-}
 
 data Struct = Struct {
     structIsBoxed :: Bool,
@@ -215,6 +227,7 @@ data Struct = Struct {
     structDeprecated :: Maybe String }
     deriving Show
 
+{-
 toStruct :: StructInfo -> Struct
 toStruct si = Struct
     (isJust (registeredTypeInfoTypeInit si) &&
@@ -226,6 +239,7 @@ toStruct si = Struct
     (map toField $ structInfoFields si)
     (map (withName toFunction) (structInfoMethods si))
     (infoDeprecated si)
+-}
 
 -- XXX: Capture alignment and method info.
 
@@ -238,6 +252,7 @@ data Union = Union {
     unionDeprecated :: Maybe String }
     deriving Show
 
+{-
 toUnion :: UnionInfo -> Union
 toUnion ui = Union
     (isJust (registeredTypeInfoTypeInit ui) &&
@@ -247,12 +262,15 @@ toUnion ui = Union
     (map toField $ unionInfoFields ui)
     (map (withName toFunction) (unionInfoMethods ui))
     (infoDeprecated ui)
+-}
 
 -- XXX
 data Callback = Callback Callable
     deriving Show
 
+{-
 toCallback = Callback . toCallable
+-}
 
 data Interface = Interface {
     ifConstants :: [(Name, Constant)],
@@ -264,6 +282,7 @@ data Interface = Interface {
     ifDeprecated :: Maybe String }
     deriving Show
 
+{-
 toInterface :: InterfaceInfo -> Interface
 toInterface ii = Interface
     (map (withName toConstant) (interfaceInfoConstants ii))
@@ -273,6 +292,7 @@ toInterface ii = Interface
     (registeredTypeInfoTypeInit ii)
     (map (withName toFunction) (interfaceInfoMethods ii))
     (infoDeprecated ii)
+-}
 
 data Object = Object {
     objFields :: [Field],
@@ -289,6 +309,7 @@ data Object = Object {
     objDeprecated :: Maybe String }
     deriving Show
 
+{-
 toObject :: ObjectInfo -> Object
 toObject oi = Object
     (map toField $ objectInfoFields oi)
@@ -303,13 +324,16 @@ toObject oi = Object
     (objectInfoRefFunction oi)
     (objectInfoUnrefFunction oi)
     (infoDeprecated oi)
+-}
 
 -- XXX: Work out what to do with boxed types.
 data Boxed = Boxed
     deriving Show
 
+{-
 toBoxed :: BaseInfo -> Boxed
 toBoxed _ = Boxed
+-}
 
 data API
     = APIConst Constant
@@ -324,6 +348,7 @@ data API
     | APIBoxed Boxed
     deriving Show
 
+{-
 toAPI :: BaseInfo -> (Name, API)
 toAPI bi = (getName bi, toAPI' (infoType bi) bi)
     where
@@ -341,10 +366,20 @@ toAPI bi = (getName bi, toAPI' (infoType bi) bi)
     toAPI' it = error $ "not expecting a " ++ show it
 
     convert fa fb bi = fa $ fb $ fromBaseInfo bi
+-}
+
+-- TODO
+toAPI :: Cursor -> [(Name, API)]
+toAPI cursor =
+    let nameList = attribute "name" cursor
+    in case nameList of
+        [name] -> [(Name "<ns>" (T.unpack name), APIBoxed Boxed)]
+        _      -> []
 
 -- | Load the APIs in the given namespace.
 loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
 loadAPI verbose name version = do
-    lib <- load name version verbose
-    infos <- getInfos lib
-    return $ map toAPI infos
+    doc <- readGiRepository verbose name version
+    if Just (T.pack name) /= girNamespaceName doc -- TODO: better message
+    then error "Given module name and its namespace do not match!"
+    else return $ girNamespaceCursor doc $/ toAPI

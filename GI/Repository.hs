@@ -2,7 +2,8 @@
 
 module GI.Repository
     ( readGiRepository
-    , girNamespace
+    , girNamespaceCursor
+    , girNamespaceName
     ) where
 
 import Prelude hiding (readFile)
@@ -61,9 +62,15 @@ readGiRepository verbose name version =
                 ++ maybe "" ("-" ++) version
                 ++ " in " ++ show dataDirs
 
-girNamespace :: Document -> Text
-girNamespace doc =
-    let cursor = fromDocument doc
-    in case cursor $/ laxElement "namespace" >=> attribute "name" of
-        [] -> error "Couldn't find namespace!"
-        [text] -> text
+girNamespaceCursor' :: Document -> [Cursor]
+girNamespaceCursor' doc =
+    fromDocument doc $/ laxElement "namespace"
+
+girNamespaceCursor :: Document -> Cursor
+girNamespaceCursor = head . girNamespaceCursor'
+
+girNamespaceName :: Document -> Maybe Text
+girNamespaceName doc =
+    case girNamespaceCursor' doc >>= attribute "name" of
+        [text] -> Just text
+        _      -> Nothing
