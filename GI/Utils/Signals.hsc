@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- | Routines for connecting `GObject`s to signals.
 module GI.Utils.Signals
@@ -30,7 +31,7 @@ import GI.Utils.Utils (safeFreeFunPtrPtr)
 type SignalHandlerId = #type gulong
 
 -- | Typeclass whose members are `GObject`s with the given signal.
-class (GObject o, ManagedPtr o) => HasSignal (signal :: Symbol) o where
+class GObject o => HasSignal (signal :: Symbol) o where
     type HaskellCallbackType signal o
     type ConnectConstraint signal o :: Symbol -> Constraint
     -- | Connect a Haskell function to a signal of the given `GObject`,
@@ -73,7 +74,7 @@ foreign import ccall "g_signal_connect_data" g_signal_connect_data ::
     IO SignalHandlerId
 
 -- | Connect a signal to a handler, given as a `FunPtr`.
-connectSignalFunPtr :: (GObject o, ManagedPtr o) =>
+connectSignalFunPtr :: GObject o =>
                   o -> String -> FunPtr a -> SignalConnectMode -> IO SignalHandlerId
 connectSignalFunPtr object signal fn mode = do
   let flags = case mode of

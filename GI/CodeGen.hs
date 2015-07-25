@@ -77,6 +77,18 @@ genBoxedObject n typeInit = do
        line $ "instance BoxedObject " ++ name' ++ " where"
        indent $ line $ "boxedType _ = c_" ++ typeInit
 
+genBoxedEnum :: Name -> String -> CodeGen ()
+genBoxedEnum n typeInit = do
+  name' <- upperName n
+
+  group $ do
+    line $ "foreign import ccall \"" ++ typeInit ++ "\" c_" ++
+            typeInit ++ " :: "
+    indent $ line "IO GType"
+  group $ do
+       line $ "instance BoxedEnum " ++ name' ++ " where"
+       indent $ line $ "boxedEnumType _ = c_" ++ typeInit
+
 genEnumOrFlags :: Name -> Enumeration -> CodeGen ()
 genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage) = do
   -- Conversion functions expect enums and flags to map to CUInt,
@@ -112,7 +124,7 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
                 line $ "toEnum " ++ show v ++ " = " ++ n
             line $ "toEnum v = error $ \"Don't know how to convert \" ++ show v ++ \" to " ++ name' ++ ".\""
   maybe (return ()) (genErrorDomain name') eDomain
-  maybe (return ()) (genBoxedObject n) maybeTypeInit
+  maybe (return ()) (genBoxedEnum n) maybeTypeInit
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name _ name) enum = do
@@ -161,15 +173,12 @@ genStruct n s = unless (ignoreStruct n s) $ do
       name' <- upperName n
       line $ "-- struct " ++ name'
 
-      line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+      line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
       noName name'
 
-      if structIsBoxed s
-      then do
-        manageManagedPtr n
-        genBoxedObject n $ fromJust (structTypeInit s)
-      else manageUnManagedPtr n
+      when (structIsBoxed s) $
+           genBoxedObject n (fromJust $ structTypeInit s)
 
       -- Generate code for fields.
       genStructFields n s
@@ -190,15 +199,12 @@ genUnion n u = do
 
   line $ "-- union " ++ name' ++ " "
 
-  line $ "data " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+  line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
   noName name'
 
-  if unionIsBoxed u
-  then do
-    manageManagedPtr n
-    genBoxedObject n $ fromJust (unionTypeInit u)
-  else manageUnManagedPtr n
+  when (unionIsBoxed u) $
+    genBoxedObject n (fromJust $ unionTypeInit u)
 
   -- XXX Fields
 
@@ -283,19 +289,18 @@ genMethod cn mn (Function {
               else c'
     genCallable mn' sym c'' (FunctionThrows `elem` fs)
 
--- Since all GObjects are instances of their own class, ManagedPtr and
--- GObject, the method signatures can get a little cumbersome. The
--- construction below basically defines a constraint synonym, so the
--- resulting signatures are shorter. A perhaps nicer way of achieving
--- the same thing would be to use the ConstraintKinds extension, but
--- doing things in the current manner has the advantage that the
--- generated (goConstraint name') has directly kind "* -> Constraint",
--- which plays well with the way we are implementing polymorphic
--- lenses for GObject properties.
+-- Since all GObjects are instances of their own class and GObject,
+-- the method signatures can get a little cumbersome. The construction
+-- below basically defines a constraint synonym, so the resulting
+-- signatures are shorter. A perhaps nicer way of achieving the same
+-- thing would be to use the ConstraintKinds extension, but doing
+-- things in the current manner has the advantage that the generated
+-- (goConstraint name') has directly kind "* -> Constraint", which
+-- plays well with the way we are implementing polymorphic lenses for
+-- GObject properties.
 genUnifiedConstraint name' = do
   let unified = parenthesize (intercalate ", " [klass name' ++ " a",
-                                                  "ManagedPtr a",
-                                                  "GObject a"])
+                                                "GObject a"])
                 ++ " => " ++ goConstraint name' ++ " a where {}"
   line $ "class " ++ unified
   line $ "instance " ++ unified
@@ -309,8 +314,6 @@ genGObjectType iT n = do
   line $ "class " ++ className ++ " o"
 
   genUnifiedConstraint name'
-
-  manageManagedPtr n
 
   group $ do
     line $ "instance " ++ className ++ " " ++ name'
@@ -338,29 +341,6 @@ genGObjectCasts isIU n cn_ = do
     let safeCast = "to" ++ name'
     line $ safeCast ++ " :: " ++ goConstraint name' ++ " o => o -> IO " ++ name'
     line $ safeCast ++ " = unsafeCastTo " ++ name'
-
--- ManagedPtr implementation, for types with real memory management.
-manageManagedPtr n = do
-  name' <- upperName n
-  group $ do
-    line $ "instance ManagedPtr " ++ name' ++ " where"
-    indent $ do
-            line $ "unsafeManagedPtrGetPtr (" ++ name' ++
-                     " x) = unsafeForeignPtrToPtr x"
-            line $ "touchManagedPtr        (" ++ name' ++
-                     " x) = touchForeignPtr x"
-
--- Some objects, such as APIObjects not descending from GObjects, or
--- structs/unions which are not boxed cannot be automatically memory
--- managed. For the moment we just implement no-ops here.
-manageUnManagedPtr n = do
-  name' <- upperName n
-  group $ do
-    line $ "instance ManagedPtr " ++ name' ++ " where"
-    indent $ do
-            line $ "unsafeManagedPtrGetPtr (" ++ name' ++
-                     " x) = unsafeForeignPtrToPtr x"
-            line   "touchManagedPtr      _ = return ()"
 
 -- Wrap a given Object. We enforce that every Object that we wrap is a
 -- GObject. This is the case for everything expect the ParamSpec* set
@@ -424,16 +404,12 @@ genInterface n iface = do
   let cls = interfaceClassName name'
   line $ "-- interface " ++ name' ++ " "
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
-  line $ "class " ++ cls ++ " a"
+  line $ "class FunPtrNewtype a => " ++ cls ++ " a"
 
   noName name'
 
   isGO <- apiIsGObject n (APIInterface iface)
-  if isGO
-  then do
-    genUnifiedConstraint name'
-    manageManagedPtr n
-  else manageUnManagedPtr n
+  when isGO (genUnifiedConstraint name')
 
   group $ do
     line $ "instance " ++ cls ++ " " ++ name'
@@ -514,7 +490,7 @@ genPrelude name modulePrefix = do
     line "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
     line "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
     line "    FlexibleInstances, UndecidableInstances, DataKinds,"
-    line "    OverloadedStrings, NegativeLiterals #-}"
+    line "    OverloadedStrings, NegativeLiterals, FlexibleContexts #-}"
     blank
     -- XXX: Generate export list.
     line $ "module " ++ mp name ++ " where"

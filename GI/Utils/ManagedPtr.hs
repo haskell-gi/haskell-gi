@@ -1,7 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 module GI.Utils.ManagedPtr
     ( withManagedPtr
     , withManagedPtrList
+    , unsafeManagedPtrGetPtr
+    , unsafeManagedPtrCastPtr
+    , touchManagedPtr
     , castTo
     , unsafeCastTo
     , newObject
@@ -22,27 +25,41 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (when, void)
 
+import Data.Coerce (coerce)
+
 import Foreign (finalizerFree, poke)
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr)
-import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv)
+import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv, touchForeignPtr)
+import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import GI.Utils.BasicTypes
 import GI.Utils.Utils
 
-withManagedPtr :: ManagedPtr a => a -> (Ptr a -> IO c) -> IO c
+withManagedPtr :: FunPtrNewtype a => a -> (Ptr a -> IO c) -> IO c
 withManagedPtr managed action = do
   let ptr = unsafeManagedPtrGetPtr managed
   result <- action ptr
   touchManagedPtr managed
   return result
 
-withManagedPtrList :: ManagedPtr a => [a] -> ([Ptr a] -> IO c) -> IO c
+withManagedPtrList :: FunPtrNewtype a => [a] -> ([Ptr a] -> IO c) -> IO c
 withManagedPtrList managedList action = do
   let ptrs = map unsafeManagedPtrGetPtr managedList
   result <- action ptrs
   mapM_ touchManagedPtr managedList
   return result
+
+unsafeManagedPtrGetPtr :: FunPtrNewtype a => a -> Ptr a
+unsafeManagedPtrGetPtr = unsafeForeignPtrToPtr . coerce
+
+unsafeManagedPtrCastPtr :: forall a b. FunPtrNewtype a => a -> Ptr b
+unsafeManagedPtrCastPtr x = let p = coerce x :: ForeignPtr a
+                            in castPtr (unsafeForeignPtrToPtr p)
+
+touchManagedPtr :: forall a. FunPtrNewtype a => a -> IO ()
+touchManagedPtr x = let p = coerce x :: ForeignPtr a
+                     in touchForeignPtr p
 
 -- Safe casting machinery
 foreign import ccall unsafe "check_object_type"
@@ -52,7 +69,7 @@ foreign import ccall unsafe "check_object_type"
 -- not, we return `Nothing`. Usage:
 --
 -- > maybeWidget <- castTo Widget label
-castTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
+castTo :: forall o o'. (FunPtrNewtype o, GObject o, GObject o') =>
           (ForeignPtr o' -> o') -> o -> IO (Maybe o')
 castTo constructor obj =
     withManagedPtr obj $ \objPtr -> do
@@ -63,7 +80,7 @@ castTo constructor obj =
 
 -- | Cast to the given type, assuming that the cast will succeed. This
 -- function will call `error` if the cast is illegal.
-unsafeCastTo :: forall o o'. (ManagedPtr o, GObject o, GObject o') =>
+unsafeCastTo :: forall o o'. (FunPtrNewtype o, GObject o, GObject o') =>
                 (ForeignPtr o' -> o') -> o -> IO o'
 unsafeCastTo constructor obj =
   withManagedPtr obj $ \objPtr -> do
@@ -119,13 +136,13 @@ wrapObject constructor ptr = do
   fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
-refObject :: (ManagedPtr a, GObject a, GObject b) => a -> IO (Ptr b)
+refObject :: (FunPtrNewtype a, GObject a, GObject b) => a -> IO (Ptr b)
 refObject obj = castPtr <$> withManagedPtr obj g_object_ref
 
 foreign import ccall "g_object_unref" g_object_unref ::
     Ptr a -> IO ()
 
-unrefObject :: (ManagedPtr a, GObject a) => a -> IO ()
+unrefObject :: (FunPtrNewtype a, GObject a) => a -> IO ()
 unrefObject obj = withManagedPtr obj g_object_unref
 
 foreign import ccall "& boxed_free_helper" boxed_free_helper ::
@@ -156,7 +173,7 @@ wrapBoxed constructor ptr = do
   return $! constructor fPtr
 
 -- Make a copy of the given boxed object.
-copyBoxed :: forall a. (BoxedObject a, ManagedPtr a) => a -> IO (Ptr a)
+copyBoxed :: forall a. (BoxedObject a, FunPtrNewtype a) => a -> IO (Ptr a)
 copyBoxed boxed = withManagedPtr boxed copyBoxedPtr
 
 copyBoxedPtr :: forall a. BoxedObject a => Ptr a -> IO (Ptr a)
@@ -168,7 +185,7 @@ foreign import ccall "g_boxed_free" g_boxed_free ::
     CGType -> Ptr a -> IO ()
 
 -- Free the memory associated with a boxed object
-freeBoxed :: forall a. (BoxedObject a, ManagedPtr a) => a -> IO ()
+freeBoxed :: forall a. BoxedObject a => a -> IO ()
 freeBoxed boxed = do
   GType gtype <- boxedType (undefined :: a)
   let ptr = unsafeManagedPtrGetPtr boxed

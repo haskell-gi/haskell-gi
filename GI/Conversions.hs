@@ -158,7 +158,7 @@ hObjectToF t transfer =
   -- the GObject, not just the precise type of the GObject, while the
   -- foreign function declaration requires a pointer of the precise
   -- type.
-  else return "(castPtr . unsafeManagedPtrGetPtr)"
+  else return "unsafeManagedPtrCastPtr"
 
 hVariantToF :: Transfer -> CodeGen Constructor
 hVariantToF transfer =
@@ -578,8 +578,7 @@ argumentType letters@(l:ls) t   = do
              let constraints =
                      if isGO
                      then [goConstraint s ++ " " ++ [l]]
-                     else [interfaceClassName s ++ " " ++ [l],
-                           "ManagedPtr " ++ [l]]
+                     else [interfaceClassName s ++ " " ++ [l]]
              return (ls, [l], constraints)
     -- Instead of restricting to the actual class,
     -- we allow for any object descending from it.

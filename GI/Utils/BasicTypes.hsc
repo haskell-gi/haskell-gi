@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds, FlexibleContexts #-}
 module GI.Utils.BasicTypes
     ( GType(..)
     , CGType
@@ -18,8 +19,9 @@ module GI.Utils.BasicTypes
     , gtypeBoxed
     , gtypeObject
 
-    , ManagedPtr(..)
+    , FunPtrNewtype
     , BoxedObject(..)
+    , BoxedEnum(..)
     , GObject(..)
     , GVariant(..)
     , GParamSpec(..)
@@ -39,10 +41,10 @@ module GI.Utils.BasicTypes
     , GDestroyNotify
     ) where
 
+import Data.Coerce (Coercible)
 import Data.Word
 import Foreign.Ptr (Ptr, FunPtr)
-import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
-import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
+import Foreign.ForeignPtr (ForeignPtr)
 import Foreign.C.String (CString, peekCString)
 
 #include <glib-object.h>
@@ -113,31 +115,31 @@ gtypeBoxed = GType #const G_TYPE_BOXED
 gtypeObject :: GType
 gtypeObject = GType #const G_TYPE_OBJECT
 
-class ManagedPtr a where
-    unsafeManagedPtrGetPtr :: a -> Ptr a
-    touchManagedPtr        :: a -> IO ()
+-- | A constraint ensuring that the given type is coercible to a
+-- ForeignPtr. It will hold for newtypes of the form
+--
+-- > newtype Foo = Foo (ForeignPtr Foo)
+--
+-- which is the typical shape of wrapped 'GObject's.
+type FunPtrNewtype a = Coercible a (ForeignPtr a)
 
-class BoxedObject a where
+-- | Wrapped boxed structures, identified by their `GType`.
+class FunPtrNewtype a => BoxedObject a where
     boxedType :: a -> IO GType -- This should not use the value of its
                                -- argument.
 
--- These class methods should not use the value of their argument.
+-- | Enums with an associated `GType`.
+class BoxedEnum a where
+    boxedEnumType :: a -> IO GType
 
-class GObject a where
+-- | A wrapped `GObject`.
+class FunPtrNewtype a => GObject a where
     gobjectIsInitiallyUnowned :: a -> Bool
     gobjectType :: a -> IO GType
 
-data GVariant = GVariant (ForeignPtr GVariant)
+newtype GVariant = GVariant (ForeignPtr GVariant)
 
-instance ManagedPtr GVariant where
-    unsafeManagedPtrGetPtr (GVariant fPtr) = unsafeForeignPtrToPtr fPtr
-    touchManagedPtr        (GVariant fPtr) = touchForeignPtr fPtr
-
-data GParamSpec = GParamSpec (ForeignPtr GParamSpec)
-
-instance ManagedPtr GParamSpec where
-    unsafeManagedPtrGetPtr (GParamSpec fPtr) = unsafeForeignPtrToPtr fPtr
-    touchManagedPtr        (GParamSpec fPtr) = touchForeignPtr fPtr
+newtype GParamSpec = GParamSpec (ForeignPtr GParamSpec)
 
 class Enum a => IsGFlag a
 

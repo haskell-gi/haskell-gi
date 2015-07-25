@@ -54,22 +54,17 @@ import Data.Text (Text, pack, unpack)
 import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr)
-import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
-import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
+import Foreign.ForeignPtr (ForeignPtr)
 
 import GI.Utils.BasicTypes
 import GI.Utils.BasicConversions (cstringToText, textToCString)
 import GI.Utils.ManagedPtr
 import GI.Utils.Utils (callocBytes, freeMem)
 
-data GValue = GValue (ForeignPtr GValue)
+newtype GValue = GValue (ForeignPtr GValue)
 
 noGValue :: Maybe GValue
 noGValue = Nothing
-
-instance ManagedPtr GValue where
-    unsafeManagedPtrGetPtr (GValue x) = unsafeForeignPtrToPtr x
-    touchManagedPtr        (GValue x) = touchForeignPtr x
 
 foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::
     IO CGType

@@ -6,20 +6,15 @@ module GI.Utils.Closure
     ) where
 
 import Foreign
-import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr (wrapBoxed)
 import GI.Utils.Utils (safeFreeFunPtrPtr)
 
-data Closure = Closure (ForeignPtr Closure)
+newtype Closure = Closure (ForeignPtr Closure)
 
 noClosure :: Maybe Closure
 noClosure = Nothing
-
-instance ManagedPtr Closure where
-    unsafeManagedPtrGetPtr (Closure x) = unsafeForeignPtrToPtr x
-    touchManagedPtr        (Closure x) = touchForeignPtr x
 
 foreign import ccall "g_closure_get_type" c_g_closure_get_type ::
     IO GType

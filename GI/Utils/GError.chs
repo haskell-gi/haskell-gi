@@ -59,15 +59,14 @@ import Control.Applicative ((<$>))
 #endif
 
 import Foreign (poke, peek)
-import Foreign.ForeignPtr (ForeignPtr, withForeignPtr, touchForeignPtr)
-import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
+import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 import Foreign.Ptr (Ptr, plusPtr, nullPtr)
 import Foreign.C
 import Control.Exception
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 
-import GI.Utils.BasicTypes (ManagedPtr(..), BoxedObject(..), GType(..))
+import GI.Utils.BasicTypes (BoxedObject(..), GType(..))
 import GI.Utils.BasicConversions (withTextCString, cstringToText)
 import GI.Utils.ManagedPtr (wrapBoxed)
 import GI.Utils.Utils (allocMem, freeMem)
@@ -86,10 +85,6 @@ foreign import ccall "g_error_get_type" g_error_get_type :: IO GType
 
 instance BoxedObject GError where
     boxedType _ = g_error_get_type
-
-instance ManagedPtr GError where
-    unsafeManagedPtrGetPtr (GError fPtr) = unsafeForeignPtrToPtr fPtr
-    touchManagedPtr        (GError fPtr) = touchForeignPtr fPtr
 
 -- | A GQuark.
 type GQuark = {# type GQuark #}
