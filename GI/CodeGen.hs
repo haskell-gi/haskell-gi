@@ -345,21 +345,21 @@ manageManagedPtr n = do
   group $ do
     line $ "instance ManagedPtr " ++ name' ++ " where"
     indent $ do
-            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
-                     " x) -> castPtr $ unsafeForeignPtrToPtr x)"
-            line $ "touchManagedPtr        = (\\(" ++ name' ++
-                     " x) -> touchForeignPtr x)"
+            line $ "unsafeManagedPtrGetPtr (" ++ name' ++
+                     " x) = unsafeForeignPtrToPtr x"
+            line $ "touchManagedPtr        (" ++ name' ++
+                     " x) = touchForeignPtr x"
 
 -- Some objects, such as APIObjects not descending from GObjects, or
--- structs/unions which are not boxed cannot be automatically memoery
+-- structs/unions which are not boxed cannot be automatically memory
 -- managed. For the moment we just implement no-ops here.
 manageUnManagedPtr n = do
   name' <- upperName n
   group $ do
     line $ "instance ManagedPtr " ++ name' ++ " where"
     indent $ do
-            line $ "unsafeManagedPtrGetPtr = (\\(" ++ name' ++
-                     " x) -> castPtr $ unsafeForeignPtrToPtr x)"
+            line $ "unsafeManagedPtrGetPtr (" ++ name' ++
+                     " x) = unsafeForeignPtrToPtr x"
             line   "touchManagedPtr      _ = return ()"
 
 -- Wrap a given Object. We enforce that every Object that we wrap is a
