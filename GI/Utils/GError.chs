@@ -61,7 +61,7 @@ import Control.Applicative ((<$>))
 import Foreign (poke, peek)
 import Foreign.ForeignPtr (ForeignPtr, withForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
-import Foreign.Ptr (Ptr, castPtr, plusPtr, nullPtr)
+import Foreign.Ptr (Ptr, plusPtr, nullPtr)
 import Foreign.C
 import Control.Exception
 import Data.Text (Text)
@@ -88,7 +88,7 @@ instance BoxedObject GError where
     boxedType _ = g_error_get_type
 
 instance ManagedPtr GError where
-    unsafeManagedPtrGetPtr (GError fPtr) = castPtr $ unsafeForeignPtrToPtr fPtr
+    unsafeManagedPtrGetPtr (GError fPtr) = unsafeForeignPtrToPtr fPtr
     touchManagedPtr        (GError fPtr) = touchForeignPtr fPtr
 
 -- | A GQuark.

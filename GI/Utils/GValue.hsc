@@ -53,7 +53,7 @@ import Data.Text (Text, pack, unpack)
 
 import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..))
 import Foreign.C.String (CString)
-import Foreign.Ptr (Ptr, castPtr)
+import Foreign.Ptr (Ptr)
 import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
@@ -68,7 +68,7 @@ noGValue :: Maybe GValue
 noGValue = Nothing
 
 instance ManagedPtr GValue where
-    unsafeManagedPtrGetPtr (GValue x) = castPtr $ unsafeForeignPtrToPtr x
+    unsafeManagedPtrGetPtr (GValue x) = unsafeForeignPtrToPtr x
     touchManagedPtr        (GValue x) = touchForeignPtr x
 
 foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::

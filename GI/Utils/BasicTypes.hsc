@@ -40,7 +40,7 @@ module GI.Utils.BasicTypes
     ) where
 
 import Data.Word
-import Foreign.Ptr (Ptr, castPtr, FunPtr)
+import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 import Foreign.C.String (CString, peekCString)
@@ -114,7 +114,7 @@ gtypeObject :: GType
 gtypeObject = GType #const G_TYPE_OBJECT
 
 class ManagedPtr a where
-    unsafeManagedPtrGetPtr :: a -> Ptr b
+    unsafeManagedPtrGetPtr :: a -> Ptr a
     touchManagedPtr        :: a -> IO ()
 
 class BoxedObject a where
@@ -122,6 +122,7 @@ class BoxedObject a where
                                -- argument.
 
 -- These class methods should not use the value of their argument.
+
 class GObject a where
     gobjectIsInitiallyUnowned :: a -> Bool
     gobjectType :: a -> IO GType
@@ -129,14 +130,14 @@ class GObject a where
 data GVariant = GVariant (ForeignPtr GVariant)
 
 instance ManagedPtr GVariant where
-    unsafeManagedPtrGetPtr = (\(GVariant x) -> castPtr $ unsafeForeignPtrToPtr x)
-    touchManagedPtr        = (\(GVariant x) -> touchForeignPtr x)
+    unsafeManagedPtrGetPtr (GVariant fPtr) = unsafeForeignPtrToPtr fPtr
+    touchManagedPtr        (GVariant fPtr) = touchForeignPtr fPtr
 
 data GParamSpec = GParamSpec (ForeignPtr GParamSpec)
 
 instance ManagedPtr GParamSpec where
-    unsafeManagedPtrGetPtr = (\(GParamSpec x) -> castPtr $ unsafeForeignPtrToPtr x)
-    touchManagedPtr        = (\(GParamSpec x) -> touchForeignPtr x)
+    unsafeManagedPtrGetPtr (GParamSpec fPtr) = unsafeForeignPtrToPtr fPtr
+    touchManagedPtr        (GParamSpec fPtr) = touchForeignPtr fPtr
 
 class Enum a => IsGFlag a
 

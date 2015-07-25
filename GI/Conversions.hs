@@ -154,7 +154,11 @@ hObjectToF t transfer =
     if isGO
     then return $ M "refObject"
     else badIntroError "Transferring a non-GObject object"
-  else return "unsafeManagedPtrGetPtr"
+  -- castPtr since we accept any instance of the class associated with
+  -- the GObject, not just the precise type of the GObject, while the
+  -- foreign function declaration requires a pointer of the precise
+  -- type.
+  else return "(castPtr . unsafeManagedPtrGetPtr)"
 
 hVariantToF :: Transfer -> CodeGen Constructor
 hVariantToF transfer =
