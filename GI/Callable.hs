@@ -56,7 +56,7 @@ mkForeignImport symbol callable throwsGError = foreignImport $ do
     indent $ do
         mapM_ (\a -> line =<< fArgStr a) (args callable)
         when throwsGError $
-               line $ padTo 40 "Ptr (Ptr ()) -> " ++ "-- error"
+               line $ padTo 40 "Ptr (Ptr GError) -> " ++ "-- error"
         line =<< last
     where
     first = "foreign import ccall \"" ++ symbol ++ "\" " ++

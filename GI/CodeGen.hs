@@ -136,7 +136,7 @@ genErrorDomain name' domain = do
   group $ do
     line $ "instance GErrorClass " ++ name' ++ " where"
     indent $ line $
-               "gerrorDomain _ = \"" ++ domain ++ "\""
+               "gerrorClassDomain _ = \"" ++ domain ++ "\""
   -- Generate type specific error handling (saves a bit of typing, and
   -- it's clearer to read).
   group $ do
@@ -524,9 +524,6 @@ genPrelude name modulePrefix = do
     -- necessary minimum into our namespace.
     line "import Prelude ()"
     line "import GI.Utils.ShortPrelude"
-    -- Error types come from GLib.
-    when (name /= "GLib") $
-         line $ "import " ++ mp "GLib (Error(..))"
     line "import Data.Char"
     line "import Data.Int"
     line "import Data.Word"
@@ -577,6 +574,7 @@ genModule name apis modulePrefix = do
   code <- recurse' $ mapM_ (uncurry genAPI) $
           -- We provide these ourselves
           filter (not . (== Name "GLib" "Array") . fst) $
+          filter (not . (== Name "GLib" "Error") . fst) $
           filter (not . (== Name "GLib" "HashTable") . fst) $
           filter (not . (== Name "GLib" "List") . fst) $
           filter (not . (== Name "GLib" "SList") . fst) $

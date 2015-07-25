@@ -96,14 +96,18 @@ getInfos typelib = do
         ({# call unsafe get_info #} nullRepository)
         nsPtr
 
+foreign import ccall "g_irepository_require" g_irepository_require ::
+    Ptr Repository -> CString -> CString -> {# type GIRepositoryLoadFlags #}
+             -> Ptr (Ptr GError) -> IO (Ptr Typelib)
+
 -- _require()'s return is annotated as 'transfer none'. I'm assuming
 -- that we don't need to ref this because it's never going to be freed,
 -- though, so we're fine.
-require :: String -> Maybe String -> Ptr (Ptr ()) -> IO Typelib
+require :: String -> Maybe String -> Ptr (Ptr GError) -> IO Typelib
 require namespace version gError =
     withCString namespace $ \nsPtr ->
     maybeWithCString version $ \versionPtr ->
-        {# call unsafe require #} nullRepository nsPtr versionPtr 0 gError
+        Typelib <$> g_irepository_require nullPtr nsPtr versionPtr 0 gError
 
 -- Although the C function is called "_get_shared_library" and the
 -- documentation suggests that a single library name is returned, is
@@ -118,6 +122,10 @@ getSharedLibraries name =
           then return Nothing
           else Just <$> split ',' <$> peekCString path
 
+foreign import ccall "g_irepository_load_typelib" g_irepository_load_typelib ::
+    Ptr Repository -> Ptr Typelib -> {# type GIRepositoryLoadFlags #}
+                   -> Ptr (Ptr GError) -> IO CString
+
 load :: String -> Maybe String -> Bool -> IO Typelib
 load namespace version verbose =
     propagateGError $ \gError -> do
@@ -127,7 +135,7 @@ load namespace version verbose =
                     {# call get_typelib_path #} nullRepository nsPtr)
             when verbose $
                  putStrLn $ "Loading typelib: " ++ path
-            _ <- {# call unsafe load_typelib #} nullRepository typelib 0 gError
+            _ <- g_irepository_load_typelib nullPtr (unTypelib typelib) 0 gError
             return ()
         return typelib
 

@@ -134,7 +134,7 @@ foreign import ccall "& boxed_free_helper" boxed_free_helper ::
 foreign import ccall "g_boxed_copy" g_boxed_copy ::
     CGType -> Ptr a -> IO (Ptr a)
 
--- Construct a Haskell wrapper for the given boxed object. We make a
+-- | Construct a Haskell wrapper for the given boxed object. We make a
 -- copy of the object.
 newBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 newBoxed constructor ptr = do
@@ -145,7 +145,7 @@ newBoxed constructor ptr = do
   fPtr <- newForeignPtrEnv boxed_free_helper env ptr'
   return $! constructor fPtr
 
--- Like newBoxed, but we do not make a copy (we "steal" the passed
+-- | Like 'newBoxed', but we do not make a copy (we "steal" the passed
 -- object, so now it is managed by the Haskell GC).
 wrapBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapBoxed constructor ptr = do

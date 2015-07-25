@@ -145,97 +145,104 @@ accessorOrUndefined available accessor (Name ons on) cName =
       prefix <- qualifyWithSuffix "A." ons
       return $ prefix ++ accessor ++ on ++ cName
 
+genOneProperty :: Name -> Name -> Property -> ExcCodeGen ()
+genOneProperty n propOwner@(Name ons on) prop = do
+  name <- upperName n
+  propOwnerName <- upperName propOwner
+  let cName = hyphensToCamelCase $ propName prop
+      pName = propOwnerName ++ cName
+      flags = propFlags prop
+      writable = ParamWritable `elem` flags &&
+                 (ParamConstructOnly `notElem` flags)
+      readable = ParamReadable `elem` flags
+      constructOnly = ParamConstructOnly `elem` flags
+      owned = propOwner == n -- Whether n is the object which
+                             -- defined the property, will be False
+                             -- for properties inherited from parent
+                             -- classes.
+
+  -- For properties the meaning of having transfer /= TransferNothing
+  -- is not clear (what are the right semantics for GValue setters?),
+  -- and the other possibilities are very uncommon, so let us just
+  -- assume that TransferNothing is always the case.
+  when (propTransfer prop /= TransferNothing) $
+       notImplementedError $ "Property " ++ pName
+                               ++ " has unsupported transfer type "
+                               ++ show (propTransfer prop)
+
+  getter <- accessorOrUndefined readable "get" propOwner cName
+  setter <- accessorOrUndefined writable "set" propOwner cName
+  constructor <- accessorOrUndefined (writable || constructOnly)
+                 "construct" propOwner cName
+
+  when owned $ do
+    unless (readable || writable || constructOnly) $
+         notImplementedError $ "Property is not readable, writable, or constructible: "
+                                 ++ show pName
+
+    group $ do
+      line $ "-- VVV Prop \"" ++ propName prop ++ "\""
+      line $ "   -- Type: " ++ show (propType prop)
+      line $ "   -- Flags: " ++ show (propFlags prop)
+
+    when readable $ genPropertyGetter n pName prop
+    when writable $ genPropertySetter n pName prop
+    when (writable || constructOnly) $ genPropertyConstructor pName prop
+
+  outType <- if not readable
+             then return "()"
+             else do
+               sOutType <- show <$> haskellType (propType prop)
+               return $ if ' ' `elem` sOutType
+                        then parenthesize sOutType
+                        else sOutType
+
+  qualifiedLens <- do
+    prefix <- qualifyWithSuffix "A." ons
+    return $ prefix ++ lcFirst on ++ cName
+
+  when owned $ group $ do
+    line $ qualifiedLens ++ " :: "
+             ++ parenthesize (goConstraint name ++ " o")
+             ++ " => Attr \"" ++ cName ++ "\" o"
+    line $ qualifiedLens ++ " = undefined"
+
+  -- Polymorphic _label style lens
+  group $ do
+    inIsGO <- isGObject (propType prop)
+    hInType <- show <$> haskellType (propType prop)
+    let inConstraint = if writable || constructOnly
+                       then if inIsGO
+                            then goConstraint hInType
+                            else "(~) " ++ if ' ' `elem` hInType
+                                           then parenthesize hInType
+                                           else hInType
+                       else "(~) ()"
+        attrWriteType | writable      = "SettableAndConstructibleAttr"
+                      | constructOnly = "ConstructOnlyAttr"
+                      | otherwise     = "ReadOnlyAttr"
+        instanceVars = "\"" ++ propName prop ++ "\" " ++ name
+
+    line $ "instance HasAttr " ++ name ++ " \"" ++ propName prop ++ "\" where"
+    indent $ do
+            line $ "type AttrIsReadable " ++ instanceVars
+                     ++ " = " ++ show readable
+            line $ "type " ++ "AttrSetTypeConstraint " ++ instanceVars
+                     ++ " = " ++ inConstraint
+            line $ "type " ++ "AttrSettableConstraint " ++ instanceVars
+                     ++ " = " ++ attrWriteType
+            line $ "type AttrGetType " ++ instanceVars
+                     ++ " = " ++ outType
+            line $ "attrLabel _ _ = \"" ++ name ++ ":" ++ cName ++ "\""
+            line $ "attrGet _ = " ++ getter
+            line $ "attrSet _ = " ++ setter
+            line $ "attrConstruct _ = " ++ constructor
+
+
 genProperties :: Name -> [(Name, Property)] -> CodeGen ()
 genProperties n props = do
-  name <- upperName n
-
-  forM_ props $ \(propOwner@(Name ons on), prop) -> do
-    propOwnerName <- upperName propOwner
-    let cName = hyphensToCamelCase $ propName prop
-        pName = propOwnerName ++ cName
-        flags = propFlags prop
-        writable = ParamWritable `elem` flags &&
-                   (ParamConstructOnly `notElem` flags)
-        readable = ParamReadable `elem` flags
-        constructOnly = ParamConstructOnly `elem` flags
-        owned = propOwner == n -- Whether n is the object which
-                               -- defined the property, will be False
-                               -- for properties inherited from parent
-                               -- classes.
-
-    getter <- accessorOrUndefined readable "get" propOwner cName
-    setter <- accessorOrUndefined writable "set" propOwner cName
-    constructor <- accessorOrUndefined (writable || constructOnly)
-                   "construct" propOwner cName
-
-    when owned $ do
-      unless (readable || writable || constructOnly) $
-           error $ "Property is not readable, writable, or constructible: "
-                     ++ show pName
-
-      group $ do
-        line $ "-- VVV Prop \"" ++ propName prop ++ "\""
-        line $ "   -- Type: " ++ show (propType prop)
-        line $ "   -- Flags: " ++ show (propFlags prop)
-
-      -- For properties the meaning of having transfer /=
-      -- TransferNothing is not totally clear (what are the right
-      -- semantics for GValue setters?), and the other possibilities
-      -- are in any case unused for Gtk at least, so let us just
-      -- assume that TransferNothing is always the case.
-      when (propTransfer prop /= TransferNothing) $
-         error $ "Property " ++ pName ++ " has unsupported transfer type "
-                   ++ show (propTransfer prop)
-
-      when readable $ genPropertyGetter n pName prop
-      when writable $ genPropertySetter n pName prop
-      when (writable || constructOnly) $ genPropertyConstructor pName prop
-
-    outType <- if not readable
-               then return "()"
-               else do
-                 sOutType <- show <$> haskellType (propType prop)
-                 return $ if ' ' `elem` sOutType
-                          then parenthesize sOutType
-                          else sOutType
-
-    qualifiedLens <- do
-      prefix <- qualifyWithSuffix "A." ons
-      return $ prefix ++ lcFirst on ++ cName
-
-    when owned $ group $ do
-      line $ qualifiedLens ++ " :: "
-               ++ parenthesize (goConstraint name ++ " o")
-               ++ " => Attr \"" ++ cName ++ "\" o"
-      line $ qualifiedLens ++ " = undefined"
-
-    -- Polymorphic _label style lens
-    group $ do
-      inIsGO <- isGObject (propType prop)
-      hInType <- show <$> haskellType (propType prop)
-      let inConstraint = if writable || constructOnly
-                         then if inIsGO
-                              then goConstraint hInType
-                              else "(~) " ++ if ' ' `elem` hInType
-                                             then parenthesize hInType
-                                             else hInType
-                         else "(~) ()"
-          attrWriteType | writable      = "SettableAndConstructibleAttr"
-                        | constructOnly = "ConstructOnlyAttr"
-                        | otherwise     = "ReadOnlyAttr"
-          instanceVars = "\"" ++ propName prop ++ "\" " ++ name
-
-      line $ "instance HasAttr " ++ name ++ " \"" ++ propName prop ++ "\" where"
-      indent $ do
-              line $ "type AttrIsReadable " ++ instanceVars
-                       ++ " = " ++ show readable
-              line $ "type " ++ "AttrSetTypeConstraint " ++ instanceVars
-                       ++ " = " ++ inConstraint
-              line $ "type " ++ "AttrSettableConstraint " ++ instanceVars
-                       ++ " = " ++ attrWriteType
-              line $ "type AttrGetType " ++ instanceVars
-                       ++ " = " ++ outType
-              line $ "attrLabel _ _ = \"" ++ name ++ ":" ++ cName ++ "\""
-              line $ "attrGet _ = " ++ getter
-              line $ "attrSet _ = " ++ setter
-              line $ "attrConstruct _ = " ++ constructor
+  forM_ props $ \(owner, prop) -> do
+      handleCGExc (\err -> line $ "-- XXX Generation of property\""
+                             ++ propName prop
+                             ++ "\" failed: " ++ describeCGError err)
+                  (genOneProperty n owner prop)

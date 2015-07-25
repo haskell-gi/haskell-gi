@@ -414,7 +414,7 @@ fToH' t a hType fType transfer
     | ( hType == fType ) = return Id
     | Just (APIEnum _) <- a = return "(toEnum . fromIntegral)"
     | Just (APIFlags _) <- a = return "wordToGFlags"
-    | TError <- t = boxedForeignPtr "GI.GLib.Error" transfer
+    | TError <- t = boxedForeignPtr "GError" transfer
     | TVariant <- t = fVariantToH transfer
     | TParamSpec <- t = fParamSpecToH transfer
     | Just (APIStruct s) <- a = structForeignPtr s hType transfer
@@ -632,7 +632,7 @@ haskellType (TGHash a b) = do
   innerA <- haskellType a
   innerB <- haskellType b
   return $ "Map.Map" `con` [innerA, innerB]
-haskellType TError = return $ "Error" `con` []
+haskellType TError = return $ "GError" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
 haskellType TParamSpec = return $ "GParamSpec" `con` []
 haskellType (TInterface "GObject" "Value") = return $ "GValue" `con` []

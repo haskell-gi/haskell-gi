@@ -6,7 +6,6 @@ import GI.GtkSignals ()
 import GI.WebKit
 import GI.WebKitSignals ()
 import GI.WebKitAttributes ()
-import qualified GI.GLib as GLib
 
 import GI.Properties
 import GI.Signals
@@ -52,7 +51,7 @@ main = do
     print status
 
   on view LoadError $ \_ uri error -> do
-    errMsg <- GLib.errorReadMessage error
+    errMsg <- gerrorMessage error
     putStrLn $ "Error when reading \"" <> uri <> "\": " <> errMsg
     -- Keep processing, so WebKit shows the error page
     return False

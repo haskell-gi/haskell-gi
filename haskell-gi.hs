@@ -4,7 +4,7 @@ module Main where
 import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, when, (>=>))
 import Control.Exception (handle)
 
 import Data.Bool (bool)
@@ -90,7 +90,7 @@ showHelp = concatMap optAsLine optDescrs
           "  -" ++ flag ++ "|--" ++ long ++ "\t" ++ desc ++ "\n"
         optAsLine _ = error "showHelp"
 
-printGError = handle (\(GError _dom _code msg) -> putStrLn (unpack msg))
+printGError = handle (gerrorMessage >=> putStrLn . unpack)
 
 outputPath :: Options -> IO (String, String) -- modPrefix, dirPrefix
 outputPath options =
