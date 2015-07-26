@@ -1,4 +1,4 @@
--- The Haskell Prelude exports a number of symbols that can easily
+-- | The Haskell Prelude exports a number of symbols that can easily
 -- collide with functions appearing in bindings. The generated code
 -- requires just a small subset of the functions in the Prelude, which
 -- we reexport explicitly here.

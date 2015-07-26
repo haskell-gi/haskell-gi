@@ -1,6 +1,9 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts #-}
+-- | Basic types used in the bindings.
 module GI.Utils.BasicTypes
-    ( GType(..)
+    (
+     -- * GType related
+     GType(..)
     , CGType
 
     , gtypeName
@@ -19,14 +22,16 @@ module GI.Utils.BasicTypes
     , gtypeBoxed
     , gtypeObject
 
-    , FunPtrNewtype
+     -- * Memory management
+
+    , ForeignPtrNewtype
     , BoxedObject(..)
     , BoxedEnum(..)
     , GObject(..)
+
+    -- * Basic GLib \/ GObject types
     , GVariant(..)
     , GParamSpec(..)
-
-    , IsGFlag
 
     , GArray(..)
     , GPtrArray(..)
@@ -36,6 +41,8 @@ module GI.Utils.BasicTypes
     , g_list_free
     , GSList(..)
     , g_slist_free
+
+    , IsGFlag
 
     , PtrWrapped(..)
     , GDestroyNotify
@@ -121,10 +128,10 @@ gtypeObject = GType #const G_TYPE_OBJECT
 -- > newtype Foo = Foo (ForeignPtr Foo)
 --
 -- which is the typical shape of wrapped 'GObject's.
-type FunPtrNewtype a = Coercible a (ForeignPtr a)
+type ForeignPtrNewtype a = Coercible a (ForeignPtr a)
 
 -- | Wrapped boxed structures, identified by their `GType`.
-class FunPtrNewtype a => BoxedObject a where
+class ForeignPtrNewtype a => BoxedObject a where
     boxedType :: a -> IO GType -- This should not use the value of its
                                -- argument.
 
@@ -133,21 +140,35 @@ class BoxedEnum a where
     boxedEnumType :: a -> IO GType
 
 -- | A wrapped `GObject`.
-class FunPtrNewtype a => GObject a where
+class ForeignPtrNewtype a => GObject a where
     gobjectIsInitiallyUnowned :: a -> Bool
     gobjectType :: a -> IO GType
 
+-- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "GI.Utils.GVariant" for further methods.
 newtype GVariant = GVariant (ForeignPtr GVariant)
 
+-- | A <https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html GParamSpec>. See "GI.Utils.GParamSpec" for further methods.
 newtype GParamSpec = GParamSpec (ForeignPtr GParamSpec)
 
+-- | An enum usable as a flag for a function.
 class Enum a => IsGFlag a
 
+-- | A <https://developer.gnome.org/glib/stable/glib-Arrays.html GArray>. Marshalling for this type is done in "GI.Utils.BasicConversions", it is mapped to a list on the Haskell side.
 data GArray a = GArray (Ptr (GArray a))
+
+-- | A <https://developer.gnome.org/glib/stable/glib-Pointer-Arrays.html GPtrArray>. Marshalling for this type is done in "GI.Utils.BasicConversions", it is mapped to a list on the Haskell side.
 data GPtrArray a = GPtrArray (Ptr (GPtrArray a))
+
+-- | A <https://developer.gnome.org/glib/stable/glib-Byte-Arrays.html GByteArray>. Marshalling for this type is done in "GI.Utils.BasicConversions", it is packed to a 'Data.ByteString.ByteString' on the Haskell side.
 data GByteArray = GByteArray (Ptr GByteArray)
+
+-- | A <https://developer.gnome.org/glib/stable/glib-Hash-Tables.html GHashTable>. It is mapped to a 'Data.Map.Map' on the Haskell side.
 data GHashTable a b = GHashTable (Ptr (GHashTable a b))
+
+-- | A <https://developer.gnome.org/glib/stable/glib-Doubly-Linked-Lists.html GList>, mapped to a list on the Haskell side. Marshalling is done in "GI.Utils.BasicConversions".
 data GList a = GList (Ptr (GList a))
+
+-- | A <https://developer.gnome.org/glib/stable/glib-Singly-Linked-Lists.html GSList>, mapped to a list on the Haskell side. Marshalling is done in "GI.Utils.BasicConversions".
 data GSList a = GSList (Ptr (GSList a))
 
 -- | Some APIs, such as `GHashTable`, pass around scalar types
@@ -157,8 +178,10 @@ newtype PtrWrapped a = PtrWrapped {unwrapPtr :: Ptr a}
 -- | Destroy the memory associated with a given pointer.
 type GDestroyNotify a = FunPtr (Ptr a -> IO ())
 
+-- | Free the given 'GList'.
 foreign import ccall "g_list_free" g_list_free ::
     Ptr (GList a) -> IO ()
 
+-- | Free the given 'GSList'.
 foreign import ccall "g_slist_free" g_slist_free ::
     Ptr (GSList a) -> IO ()
