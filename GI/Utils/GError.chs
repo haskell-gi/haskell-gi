@@ -89,7 +89,7 @@ instance BoxedObject GError where
 -- | A GQuark.
 type GQuark = {# type GQuark #}
 
--- | A code used to identify the \'namespace\' of the error. Within each error
+-- | A code used to identify the "namespace" of the error. Within each error
 --   domain all the error codes are defined in an enumeration. Each gtk\/gnome
 --   module that uses GErrors has its own error domain. The rationale behind
 --   using error domains is so that each module can organise its own error codes
@@ -98,7 +98,7 @@ type GErrorDomain  = GQuark
 
 -- | A code to identify a specific error within a given 'GErrorDomain'. Most of
 --   time you will not need to deal with this raw code since there is an
---   enumeration type for each error domain. Of course which enumeraton to use
+--   enumeration type for each error domain. Of course which enumeration to use
 --   depends on the error domain, but if you use 'catchGErrorJustDomain' or
 --   'handleGErrorJustDomain', this is worked out for you automatically.
 type GErrorCode = {# type gint #}
@@ -218,13 +218,13 @@ handleGErrorJust code = flip (catchGErrorJust code)
 handleGErrorJustDomain :: GErrorClass err => (err -> GErrorMessage -> IO a) -> IO a -> IO a
 handleGErrorJustDomain = flip catchGErrorJustDomain
 
--- | Run the given function catching possible GErrors in its
--- execution. If a GError is emitted this throws the corresponding
+-- | Run the given function catching possible 'GError's in its
+-- execution. If a 'GError' is emitted this throws the corresponding
 -- exception.
 propagateGError :: (Ptr (Ptr GError) -> IO a) -> IO a
 propagateGError f = checkGError f throw
 
--- | Like propagateGError, but allows to specify a custom handler
+-- | Like 'propagateGError', but allows to specify a custom handler
 -- instead of just throwing the exception.
 checkGError :: (Ptr (Ptr GError) -> IO a) -> (GError -> IO a) -> IO a
 checkGError f handler = do
