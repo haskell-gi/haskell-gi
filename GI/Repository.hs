@@ -2,19 +2,23 @@
 
 module GI.Repository
     ( readGiRepository
-    , girNamespaceCursor
-    , girNamespaceName
+    , girNamespaceElem
+    , girNamespace
+    , girVersion
+    , girPackage
+    , girIncludes
+    , nodeToElement
     ) where
 
 import Prelude hiding (readFile)
 
 import Control.Monad (when)
 import qualified Data.List as List
+import qualified Data.Map as M
 import Data.Maybe
-import Data.Text (Text)
+import qualified Data.Text as T
 import Safe (maximumMay)
 import Text.XML
-import Text.XML.Cursor
 
 import System.Directory
 import System.Environment.XDG.BaseDir (getSystemDataDirs)
@@ -62,15 +66,47 @@ readGiRepository verbose name version =
                 ++ maybe "" ("-" ++) version
                 ++ " in " ++ show dataDirs
 
-girNamespaceCursor' :: Document -> [Cursor]
-girNamespaceCursor' doc =
-    fromDocument doc $/ laxElement "namespace"
+girNamespaceElem :: Document -> Maybe Element
+girNamespaceElem = listToMaybe . topLevelChildsWithLocalName "namespace"
 
-girNamespaceCursor :: Document -> Cursor
-girNamespaceCursor = head . girNamespaceCursor'
+girNamespace :: Document -> Maybe String
+girNamespace doc = do
+    namespaceNode <- girNamespaceElem doc
+    namespaceText <- M.lookup "name" $ elementAttributes namespaceNode
+    return $ T.unpack namespaceText
 
-girNamespaceName :: Document -> Maybe Text
-girNamespaceName doc =
-    case girNamespaceCursor' doc >>= attribute "name" of
-        [text] -> Just text
-        _      -> Nothing
+girVersion :: Document -> Maybe String
+girVersion doc = do
+    namespaceNode <- girNamespaceElem doc
+    versionText <- M.lookup "version" $ elementAttributes namespaceNode
+    return $ T.unpack versionText
+
+girPackage :: Document -> Maybe String
+girPackage doc = do
+    packageNode <- listToMaybe $ topLevelChildsWithLocalName "package" doc
+    packageText <- M.lookup "name" $ elementAttributes packageNode
+    return $ T.unpack packageText
+
+-- This is just awful ._.
+girIncludes :: Document -> [(String, String)]
+girIncludes doc = do
+    let includeElems   = topLevelChildsWithLocalName "include" doc
+        includeAttribs = elementAttributes <$> includeElems
+    Just includeNames    <- M.lookup "name" <$> includeAttribs
+    Just includeVersions <- M.lookup "version" <$> includeAttribs
+    return (T.unpack includeNames, T.unpack includeVersions)
+
+-- Just helper functions that probably already
+-- exist in Data.XML in some form, hiding from me
+topLevelChildsWithLocalName :: String -> Document -> [Element]
+topLevelChildsWithLocalName n =
+    childElemsWithLocalName n . documentRoot
+
+nodeToElement :: Node -> Maybe Element
+nodeToElement (NodeElement e) = Just e
+nodeToElement _               = Nothing
+
+childElemsWithLocalName :: String -> Element -> [Element]
+childElemsWithLocalName n =
+    filter localNameMatch . mapMaybe nodeToElement . elementNodes
+    where localNameMatch = (== n) . T.unpack . nameLocalName . elementName

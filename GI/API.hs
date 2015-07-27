@@ -20,7 +20,8 @@ module GI.API
 
     , Scope(..) -- from GI.Internal.ArgInfo, for convenience
 
-    , loadAPI
+    , parseGIRDocument
+    , loadGIRDocument
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -28,9 +29,9 @@ import Control.Applicative ((<$>))
 #endif
 
 import Data.Int
-import qualified Data.Text as T
+import Data.Maybe (mapMaybe)
 
-import Text.XML.Cursor
+import Text.XML hiding (Name)
 
 import GI.Repository
 import GI.Internal.ArgInfo
@@ -66,6 +67,11 @@ toConstant ci = Constant
     (constantInfoValue ci)
     (infoDeprecated ci)
 -}
+
+toConstant :: Element -> Maybe Constant
+toConstant el = do
+    val <- M.lookup "value" $ elementAttributes el
+    return Constant val Nothing
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
@@ -368,18 +374,41 @@ toAPI bi = (getName bi, toAPI' (infoType bi) bi)
     convert fa fb bi = fa $ fb $ fromBaseInfo bi
 -}
 
--- TODO
-toAPI :: Cursor -> [(Name, API)]
-toAPI cursor =
-    let nameList = attribute "name" cursor
-    in case nameList of
-        [name] -> [(Name "<ns>" (T.unpack name), APIBoxed Boxed)]
-        _      -> []
+toAPI :: String -> Node -> Maybe (Name, API)
+toAPI ns node = do
+    el   <- nodeToElement node
+    name <- M.lookup "name" $ elementAttributes el
+    api  <- case nameLocalName $ elementName el of
+        "constant" -> APIConst <$> toConstant el
+        -- Next type of API
+        _          -> Nothing
+    return (Name ns name, api)
 
--- | Load the APIs in the given namespace.
-loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
-loadAPI verbose name version = do
-    doc <- readGiRepository verbose name version
-    if Just (T.pack name) /= girNamespaceName doc -- TODO: better message
-    then error "Given module name and its namespace do not match!"
-    else return $ girNamespaceCursor doc $/ toAPI
+data GIRInfo = GIRInfo {
+    girInfoNamespace :: String,
+    girInfoVersion   :: String,
+    girInfoPackage   :: Maybe String,
+    girInfoIncludes  :: [(String, String)],
+    girInfoAPIs      :: [(Name, API)]
+}
+
+parseGIRDocument :: Document -> Maybe GIRInfo
+parseGIRDocument doc = do
+    ns      <- girNamespace doc
+    version <- girVersion doc
+    nsElem  <- girNamespaceElem doc
+    let pkg  = girPackage doc
+        incs = girIncludes doc
+        apis = mapMaybe $ toAPI ns $ elementNodes nsElem
+    return GIRInfo { girInfoNamespace = ns
+                   , girInfoVersion = version
+                   , girInfoPackage = pkg
+                   , girInfoIncludes = incs
+                   , girInfoAPIs = apis }
+
+loadGIRDocument :: Bool -> String -> Maybe String -> IO GIRInfo
+loadGIRDocument verbose name version = do
+    Just info <- parseGIRDocument <$> readGiRepository verbose name version
+    if girInfoNamespace info == name
+    then return info
+    else error "GIR file name - namespace name mismatch!"
