@@ -89,16 +89,15 @@ genBoxedEnum n typeInit = do
        line $ "instance BoxedEnum " ++ name' ++ " where"
        indent $ line $ "boxedEnumType _ = c_" ++ typeInit
 
-genEnumOrFlags :: Name -> Enumeration -> CodeGen ()
+genEnumOrFlags :: Name -> Enumeration -> ExcCodeGen ()
 genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage) = do
   -- Conversion functions expect enums and flags to map to CUInt,
   -- which we assume to be of 32 bits. Fail early, instead of giving
   -- strange errors at runtime.
   when (sizeOf (0 :: CUInt) /= 4) $
-       error $ "Unsupported CUInt size: " ++ show (sizeOf (0 :: CUInt))
+       notImplementedError $ "Unsupported CUInt size: " ++ show (sizeOf (0 :: CUInt))
   when (storage /= TypeTagInt32 && storage /= TypeTagUint32) $
-       error $ show n ++ " : storage of size /= 32 not supported for enum : "
-                 ++ show storage
+       notImplementedError $ "Storage of size /= 32 not supported : " ++ show storage
 
   name' <- upperName n
   fields' <- forM fields $ \(fieldName, value) -> do
@@ -111,18 +110,21 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
         ((fieldName, _value):fs) -> do
           line $ "  " ++ fieldName
           forM_ fs $ \(n, _) -> line $ "| " ++ n
+          line $ "| Another" ++ name' ++ " Int"
           line "deriving (Show, Eq)"
         _ -> return ()
   group $ do
     line $ "instance Enum " ++ name' ++ " where"
-    indent $ forM_ fields' $ \(n, v) ->
-      line $ "fromEnum " ++ n ++ " = " ++ show v
+    indent $ do
+            forM_ fields' $ \(n, v) ->
+                line $ "fromEnum " ++ n ++ " = " ++ show v
+            line $ "fromEnum (Another" ++ name' ++ " k) = k"
     let valueNames = M.toList . M.fromListWith (curry snd) $ map swap fields'
     blank
     indent $ do
             forM_ valueNames $ \(v, n) ->
                 line $ "toEnum " ++ show v ++ " = " ++ n
-            line $ "toEnum v = error $ \"Don't know how to convert \" ++ show v ++ \" to " ++ name' ++ ".\""
+            line $ "toEnum k = Another" ++ name' ++ " k"
   maybe (return ()) (genErrorDomain name') eDomain
   maybe (return ()) (genBoxedEnum n) maybeTypeInit
 
@@ -130,7 +132,8 @@ genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name _ name) enum = do
   line $ "-- Enum " ++ name
 
-  genEnumOrFlags n enum
+  handleCGExc (\e -> line $ "-- XXX Could not generate: " ++ describeCGError e)
+              (genEnumOrFlags n enum)
 
 -- Very similar to enums, but we also declare ourselves as members of
 -- the IsGFlag typeclass.
@@ -138,10 +141,12 @@ genFlags :: Name -> Flags -> CodeGen ()
 genFlags n@(Name _ name) (Flags enum) = do
   line $ "-- Flags " ++ name
 
-  genEnumOrFlags n enum
+  handleCGExc (\e -> line $ "-- XXX Could not generate: " ++ describeCGError e)
+              (do
+                genEnumOrFlags n enum
 
-  name' <- upperName n
-  group $ line $ "instance IsGFlag " ++ name'
+                name' <- upperName n
+                group $ line $ "instance IsGFlag " ++ name')
 
 genErrorDomain :: String -> String -> CodeGen ()
 genErrorDomain name' domain = do
