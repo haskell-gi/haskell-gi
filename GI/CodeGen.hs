@@ -409,7 +409,7 @@ genInterface n iface = do
   let cls = interfaceClassName name'
   line $ "-- interface " ++ name' ++ " "
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
-  line $ "class FunPtrNewtype a => " ++ cls ++ " a"
+  line $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
 
   noName name'
 
