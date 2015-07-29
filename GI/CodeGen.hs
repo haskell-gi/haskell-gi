@@ -21,7 +21,7 @@ import Foreign.C (CUInt)
 
 import GI.API
 import GI.Callable (genCallable)
-import GI.Conversions
+import GI.Constant (genConstant)
 import GI.Code
 import GI.GObject
 import GI.Signal (genSignal, genCallback)
@@ -30,33 +30,9 @@ import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
-import GI.Value
 import GI.Internal.ArgInfo
 import GI.Internal.FunctionInfo
 import GI.Internal.TypeInfo
-
-valueStr VVoid         = "()"
-valueStr (VBoolean x)  = show x
-valueStr (VInt8 x)     = show x
-valueStr (VUInt8 x)    = show x
-valueStr (VInt16 x)    = show x
-valueStr (VUInt16 x)   = show x
-valueStr (VInt32 x)    = show x
-valueStr (VUInt32 x)   = show x
-valueStr (VInt64 x)    = show x
-valueStr (VUInt64 x)   = show x
-valueStr (VFloat x)    = show x
-valueStr (VDouble x)   = show x
-valueStr (VGType x)    = show x
-valueStr (VUTF8 x)     = show x
-valueStr (VFileName x) = show x
-
-genConstant :: Name -> Constant -> CodeGen ()
-genConstant (Name _ name) (Constant value) = do
-    ht <- haskellType $ valueType value
-    line $ "-- constant " ++ name
-    line $ name ++ " :: " ++ show ht
-    line $ name ++ " = " ++ valueStr value
 
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable flags) = do

@@ -47,7 +47,6 @@ import GI.Internal.Typelib (getInfos, load)
 import GI.Internal.UnionInfo
 import GI.GType
 import GI.Type
-import GI.Value
 
 data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)
@@ -62,15 +61,14 @@ withName :: BaseInfoClass bi => (bi -> a) -> (bi -> (Name, a))
 withName f x = (getName x, f x)
 
 data Constant = Constant {
-    constValue :: Value }
+      constantType  :: Type,
+      constantValue :: Argument }
     deriving Show
 
 toConstant :: ConstantInfo -> Constant
-toConstant ci =
-    let typeInfo = constantInfoType ci
-        arg = constantInfoValue ci
-        value = fromArgument typeInfo arg
-     in Constant value
+toConstant ci = Constant {
+                  constantType  = typeFromTypeInfo (constantInfoType ci)
+                , constantValue = constantInfoValue ci }
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
@@ -310,8 +308,6 @@ data API
     = APIConst Constant
     | APIFunction Function
     | APICallback Callback
-    -- XXX: These plus APIUnion should have their gTypes exposed (via a
-    -- binding of GIRegisteredTypeInfo.
     | APIEnum Enumeration
     | APIFlags Flags
     | APIInterface Interface

@@ -43,7 +43,7 @@ import Foreign
 
 #include <girepository.h>
 
-{# pointer *GIArgument as Argument newtype #}
+{# pointer *GIArgument as Argument newtype #} deriving(Show)
 {# pointer *GIAttributeIter as AttributeIter newtype #}
 
 {# pointer *GIBaseInfo as BaseInfo newtype #}
