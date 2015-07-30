@@ -22,6 +22,8 @@ module GI.API
 
     , parseGIRDocument
     , loadGIRDocument
+
+    , loadAPI
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -30,7 +32,9 @@ import Control.Applicative ((<$>))
 
 import Data.Int
 import Data.Maybe (mapMaybe)
-
+import qualified Data.Text as T
+import Data.Text (Text)
+import qualified Data.Map as M
 import Text.XML hiding (Name)
 
 import GI.Repository
@@ -55,9 +59,9 @@ withName f x = (getName x, f x)
 -}
 
 data Constant = Constant {
-      constantType      :: Type,
-      constantValue     :: Argument,
-      constDeprecated   :: Maybe String }
+      constantType       :: Type,
+      constantValue      :: Argument, -- XXX should be Text
+      constantDeprecated :: Maybe String }
     deriving Show
 
 {-
@@ -71,7 +75,7 @@ toConstant ci = Constant
 toConstant :: Element -> Maybe Constant
 toConstant el = do
     val <- M.lookup "value" $ elementAttributes el
-    return Constant val Nothing
+    return $ Constant undefined Nothing
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
@@ -382,7 +386,7 @@ toAPI ns node = do
         "constant" -> APIConst <$> toConstant el
         -- Next type of API
         _          -> Nothing
-    return (Name ns name, api)
+    return (Name ns (T.unpack name), api)
 
 data GIRInfo = GIRInfo {
     girInfoNamespace :: String,
@@ -399,7 +403,7 @@ parseGIRDocument doc = do
     nsElem  <- girNamespaceElem doc
     let pkg  = girPackage doc
         incs = girIncludes doc
-        apis = mapMaybe $ toAPI ns $ elementNodes nsElem
+        apis = mapMaybe (toAPI ns) $ elementNodes nsElem
     return GIRInfo { girInfoNamespace = ns
                    , girInfoVersion = version
                    , girInfoPackage = pkg
@@ -412,3 +416,6 @@ loadGIRDocument verbose name version = do
     if girInfoNamespace info == name
     then return info
     else error "GIR file name - namespace name mismatch!"
+
+loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
+loadAPI = error $ "This git branch is a work in progress, use the main git branch instead!"
