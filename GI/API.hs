@@ -20,7 +20,7 @@ module GI.API
 
     , Scope(..) -- from GI.Internal.ArgInfo, for convenience
 
-    , parseGIRDocument
+    , GIRInfo(..)
     , loadGIRDocument
 
     , loadAPI
@@ -29,12 +29,15 @@ module GI.API
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
+import Control.Applicative ((<|>))
 
 import Data.Int
-import Data.Maybe (mapMaybe)
-import qualified Data.Text as T
-import Data.Text (Text)
 import qualified Data.Map as M
+import Data.Maybe (mapMaybe)
+import Data.Monoid
+import Data.Text (Text)
+import qualified Data.Text as T
+
 import Text.XML hiding (Name)
 
 import GI.Repository
@@ -389,33 +392,47 @@ toAPI ns node = do
     return (Name ns (T.unpack name), api)
 
 data GIRInfo = GIRInfo {
-    girInfoNamespace :: String,
-    girInfoVersion   :: String,
-    girInfoPackage   :: Maybe String,
-    girInfoIncludes  :: [(String, String)],
-    girInfoAPIs      :: [(Name, API)]
+    girNamespace :: String,
+    girVersion   :: String,
+    girPackage   :: Maybe String,
+    girIncludes  :: [(String, String)],
+    girAPIs      :: [(Name, API)]
 }
 
+data GIRInfoParse = GIRInfoParse {
+    girIPNamespace :: Maybe String,
+    girIPVersion   :: Maybe String,
+    girIPPackage   :: Maybe String,
+    girIPIncludes  :: [(String, String)],
+    girIPAPIs      :: [(Name, API)]
+}
+
+instance Monoid GIRInfoParse where
+    mempty = GIRInfoParse Nothing Nothing Nothing [] []
+    mappend (GIRInfoParse nsA verA pkgA incA apiA)
+            (GIRInfoParse nsB verB pkgB incB apiB)
+        = GIRInfoParse {
+            girIPNamespace = nsA <|> nsB,
+            girIPVersion   = verA <|> verB,
+            girIPPackage   = pkgA <|> pkgB,
+            girIPIncludes  = incA <> incB,
+            girIPAPIs      = apiA <> apiB
+        }
+
 parseGIRDocument :: Document -> Maybe GIRInfo
-parseGIRDocument doc = do
-    ns      <- girNamespace doc
-    version <- girVersion doc
-    nsElem  <- girNamespaceElem doc
-    let pkg  = girPackage doc
-        incs = girIncludes doc
-        apis = mapMaybe (toAPI ns) $ elementNodes nsElem
-    return GIRInfo { girInfoNamespace = ns
-                   , girInfoVersion = version
-                   , girInfoPackage = pkg
-                   , girInfoIncludes = incs
-                   , girInfoAPIs = apis }
+parseGIRDocument doc = undefined
 
 loadGIRDocument :: Bool -> String -> Maybe String -> IO GIRInfo
 loadGIRDocument verbose name version = do
     Just info <- parseGIRDocument <$> readGiRepository verbose name version
-    if girInfoNamespace info == name
+    if girNamespace info == name
     then return info
     else error "GIR file name - namespace name mismatch!"
 
 loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
 loadAPI = error $ "This git branch is a work in progress, use the main git branch instead!"
+
+-- Small helper function, might be a good idea to move to somewhere else
+nodeToElement :: Node -> Maybe Element
+nodeToElement (NodeElement e) = Just e
+nodeToElement _               = Nothing
