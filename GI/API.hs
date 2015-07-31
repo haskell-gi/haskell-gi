@@ -46,6 +46,7 @@ import GI.Internal.FieldInfo
 import GI.Internal.FunctionInfo
 import GI.Internal.PropertyInfo
 import GI.Internal.TypeInfo
+import GI.Internal.Types (Argument)
 import GI.Type
 
 data Name = Name { namespace :: String, name :: String }
@@ -78,7 +79,7 @@ toConstant ci = Constant
 toConstant :: Element -> Maybe Constant
 toConstant el = do
     val <- M.lookup "value" $ elementAttributes el
-    return $ Constant undefined Nothing
+    return $ Constant undefined undefined Nothing
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],

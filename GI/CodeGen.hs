@@ -68,7 +68,7 @@ genBoxedEnum n typeInit = do
        indent $ line $ "boxedEnumType _ = c_" ++ typeInit
 
 genEnumOrFlags :: Name -> Enumeration -> ExcCodeGen ()
-genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage isDeprecated = do
+genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage isDeprecated) = do
   -- Conversion functions expect enums and flags to map to CUInt,
   -- which we assume to be of 32 bits. Fail early, instead of giving
   -- strange errors at runtime.
@@ -82,7 +82,7 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
       n <- upperName $ Name ns (name ++ "_" ++ fieldName)
       return (n, value)
 
-  deprecatedPragma name' deprecated
+  deprecatedPragma name' isDeprecated
 
   group $ do
     line $ "data " ++ name' ++ " = "
@@ -329,23 +329,23 @@ genGObjectCasts isIU n cn_ = do
 -- by the handler in handleCGExc below.
 genObject :: Name -> Object -> CodeGen ()
 genObject n o = handleCGExc (\_ -> return ()) $ do
-    name' <- upperName n
+  name' <- upperName n
 
-    line $ "-- object " ++ name'
-    deprecatedPragma name' $ objDeprecated o
+  line $ "-- object " ++ name'
+  deprecatedPragma name' $ objDeprecated o
 
-    let t = (\(Name ns' n') -> TInterface ns' n') n
-    isGO <- isGObject t
-    unless isGO $ notImplementedError $ "APIObject \"" ++ name' ++
-             "\" does not descend from GObject, it will be ignored."
+  let t = (\(Name ns' n') -> TInterface ns' n') n
+  isGO <- isGObject t
+  unless isGO $ notImplementedError $ "APIObject \"" ++ name' ++
+           "\" does not descend from GObject, it will be ignored."
 
-    line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+  line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
-    noName name'
+  noName name'
 
-    -- Instances and type conversions
-    iT <- instanceTree n
-    genGObjectType iT n
+  -- Instances and type conversions
+  iT <- instanceTree n
+  genGObjectType iT n
 
   -- Implemented interfaces
   let oIfs = objInterfaces o
@@ -362,14 +362,14 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
   forM_ (objMethods o) $ \(mn, f) ->
          handleCGExc
          (line . (concat ["-- XXX Could not generate method ", name', "::"
-                         , name mn, "\n", "-- Error was : "] ++) describeCGError)
+                         , name mn, "\n", "-- Error was : "] ++) . describeCGError)
          (genMethod n mn f)
 
   -- And finally signals
   forM_ (objSignals o) $ \s ->
       handleCGExc
       (line . (concat ["-- XXX Could not generate signal ", name', "::"
-                      , sigName s, "\n", "-- Error was : "] ++) describeCGError)
+                      , sigName s, "\n", "-- Error was : "] ++) . describeCGError)
       (genSignal s n)
 
 genInterface :: Name -> Interface -> CodeGen ()
