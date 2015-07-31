@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, PatternGuards #-}
 
 module GI.API
     ( API(..)
@@ -20,10 +20,9 @@ module GI.API
 
     , Scope(..) -- from GI.Internal.ArgInfo, for convenience
 
-    , GIRInfo(..)
-    , loadGIRDocument
-
     , loadAPI
+
+    , loadGIRInfo
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -33,24 +32,31 @@ import Control.Applicative ((<|>))
 
 import Data.Int
 import qualified Data.Map as M
-import Data.Maybe (mapMaybe)
-import Data.Monoid
-import Data.Text (Text)
+import qualified Data.List as L
+import Data.Maybe (mapMaybe, listToMaybe, fromMaybe)
 import qualified Data.Text as T
+import qualified Data.Text.Read as TR
+import Data.Text (Text)
+import Foreign.Storable (sizeOf)
+import Foreign.C (CInt, CUInt, CLong, CULong)
 
 import Text.XML hiding (Name)
 
-import GI.Repository
 import GI.Internal.ArgInfo
 import GI.Internal.FieldInfo
 import GI.Internal.FunctionInfo
 import GI.Internal.PropertyInfo
 import GI.Internal.TypeInfo
 import GI.Internal.Types (Argument)
+import GI.Repository (readGiRepository)
 import GI.Type
 
 data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)
+
+data ParseContext = ParseContext {
+      currentNamespace :: Text
+    }
 
 {-
 getName :: InfoClass info => info -> Name
@@ -62,11 +68,192 @@ withName :: InfoClass info => (info -> a) -> (info -> (Name, a))
 withName f x = (getName x, f x)
 -}
 
+-- * Some helpers for making traversals easier.
+
+-- | Find all children of the given element which are XML Elements
+-- themselves.
+subelements :: Element -> [Element]
+subelements = mapMaybe nodeToElement . elementNodes
+
+-- | The local name of an element.
+localName :: Element -> Text
+localName = nameLocalName . elementName
+
+-- | Restrict to those with the given local name.
+childElemsWithLocalName :: Text -> Element -> [Element]
+childElemsWithLocalName n =
+    filter localNameMatch . subelements
+    where localNameMatch = (== n) . localName
+
+-- | Find the first child element with the given name.
+firstChildWithLocalName :: Text -> Element -> Maybe Element
+firstChildWithLocalName n = listToMaybe . childElemsWithLocalName n
+
+-- | Get the content of a given element, if it exists.
+getElementContent :: Element -> Maybe Text
+getElementContent = listToMaybe . mapMaybe getContent . elementNodes
+    where getContent :: Node -> Maybe Text
+          getContent (NodeContent t) = Just t
+          getContent _ = Nothing
+
+data TypeElement = TypeElement Element | ArrayElement Element
+
+-- | Find the children giving the type of the given element.
+findTypeElements :: Element -> [TypeElement]
+findTypeElements = mapMaybe toTypeElement . subelements
+    where toTypeElement :: Element -> Maybe TypeElement
+          toTypeElement elem
+              | "type" <- localName elem = Just (TypeElement elem)
+              | "array" <- localName elem = Just (ArrayElement elem)
+          toTypeElement _ = Nothing
+
+data DeprecationInfo = DeprecationInfo {
+      deprecatedSinceVersion :: Maybe Text,
+      deprecationMessage     :: Maybe Text
+    } deriving (Show)
+
+-- | Map the given type name to a BasicType (in GI.Type), if possible.
+nameToBasicType :: Text -> Maybe BasicType
+nameToBasicType "none"     = Just TVoid
+-- XXX Should we try to distinguish TPtr from TVoid?
+nameToBasicType "gpointer" = Just TVoid
+nameToBasicType "gboolean" = Just TBoolean
+nameToBasicType "gint8"    = Just TInt8
+nameToBasicType "guint8"   = Just TUInt8
+nameToBasicType "gint16"   = Just TInt16
+nameToBasicType "guint16"  = Just TUInt16
+nameToBasicType "gint32"   = Just TInt32
+nameToBasicType "guint32"  = Just TUInt32
+nameToBasicType "gint64"   = Just TInt64
+nameToBasicType "guint64"  = Just TUInt64
+nameToBasicType "gfloat"   = Just TFloat
+nameToBasicType "gdouble"  = Just TDouble
+nameToBasicType "gunichar" = Just TUniChar
+nameToBasicType "gtype"    = Just TGType
+nameToBasicType "utf8"     = Just TUTF8
+nameToBasicType "filename" = Just TFileName
+nameToBasicType "gint"     = case sizeOf (0 :: CInt) of
+                                 4 -> Just TInt32
+                                 8 -> Just TInt64
+                                 n -> error $ "Unexpected length: " ++ show n
+nameToBasicType "guint"    = case sizeOf (0 :: CUInt) of
+                                 4 -> Just TUInt32
+                                 8 -> Just TUInt64
+                                 n -> error $ "Unexpected length: " ++ show n
+nameToBasicType "glong"    = case sizeOf (0 :: CLong) of
+                                 4 -> Just TInt32
+                                 8 -> Just TInt64
+                                 n -> error $ "Unexpected length: " ++ show n
+nameToBasicType "gulong"   = case sizeOf (0 :: CULong) of
+                                 4 -> Just TUInt32
+                                 8 -> Just TUInt64
+                                 n -> error $ "Unexpected length: " ++ show n
+nameToBasicType _          = Nothing
+
+-- | Parse a signed integer.
+parseInteger :: Text -> Maybe Int
+parseInteger str = case TR.signed TR.decimal str of
+                     Right (n, r) | T.null r -> Just n
+                     _ -> Nothing
+
+-- | A boolean value given by a numerical constant.
+parseBool :: Text -> Maybe Bool
+parseBool "0" = Just False
+parseBool "1" = Just True
+parseBool _   = Nothing
+
+-- | The different array types.
+parseArrayType :: ParseContext -> Element -> Maybe Type
+parseArrayType ctx elem =
+    case M.lookup "name" (elementAttributes elem) of
+      Just "GLib.Array" -> TGArray <$> parseType ctx elem
+      Just "GLib.PtrArray" -> TPtrArray <$> parseType ctx elem
+      Just "GLib.ByteArray" -> Just TByteArray
+      Just _ -> Nothing
+      Nothing -> parseCArrayType ctx elem
+
+-- | A C array
+parseCArrayType :: ParseContext -> Element -> Maybe Type
+parseCArrayType ctx element = do
+  let attrs = elementAttributes element
+      length = fromMaybe (-1) (M.lookup "length" attrs >>= parseInteger)
+      zeroTerminated = fromMaybe True (M.lookup "zero-terminated" attrs >>= parseBool)
+      fixedSize = fromMaybe (-1) (M.lookup "fixed-size" attrs >>= parseInteger)
+  elementType <- parseType ctx element
+  return $ TCArray zeroTerminated fixedSize length elementType
+
+-- | A hash table.
+parseHashTable :: ParseContext -> Element -> Maybe Type
+parseHashTable ctx elem =
+    case findTypeElements elem of
+      [key, value] -> TGHash <$> parseTypeElement ctx key <*> parseTypeElement ctx value
+      _ -> Nothing
+
+-- | A type which is not a BasicType or array.
+parseFundamentalType :: Text -> ParseContext -> Element -> Maybe Type
+parseFundamentalType "GLib.List" ctx elem = TGList <$> parseType ctx elem
+parseFundamentalType "GLib.SList" ctx elem = TGSList <$> parseType ctx elem
+parseFundamentalType "GLib.HashTable" ctx elem = parseHashTable ctx elem
+parseFundamentalType "GLib.Error" _ _ = Just TError
+parseFundamentalType "GLib.Variant" _ _ = Just TVariant
+parseFundamentalType "GObject.ParamSpec" _ _ = Just TParamSpec
+parseFundamentalType iface ctx _ = parseInterface iface ctx
+
+-- | An interface type (basically, everything that is not of a known type).
+parseInterface :: Text -> ParseContext -> Maybe Type
+parseInterface iface ParseContext{..} =
+    case T.split (== '.') iface of
+      -- XXX We should apply aliases here.
+      [ns, n] -> Just $ TInterface (T.unpack ns) (T.unpack n)
+      [n]     -> Just $ TInterface (T.unpack currentNamespace) (T.unpack n)
+      _       -> Nothing
+
+-- | Parse the type of a node (which will be described by a child node
+-- named "type" or "array").
+parseType :: ParseContext -> Element -> Maybe Type
+parseType ctx element =
+    case findTypeElements element of
+      [e] -> parseTypeElement ctx e
+      _ -> Nothing -- If there is not precisely one type element it is
+                   -- not clear what to do.
+
+-- | Parse a single type element (the "type" or "array" element itself).
+parseTypeElement :: ParseContext -> TypeElement -> Maybe Type
+parseTypeElement ctx (TypeElement e) = do
+  typeName <- M.lookup "name" (elementAttributes e)
+  (TBasicType <$> nameToBasicType typeName) <|> parseFundamentalType typeName ctx e
+parseTypeElement ctx (ArrayElement e) = parseArrayType ctx e
+
+parseDeprecation :: Element -> Maybe DeprecationInfo
+parseDeprecation element =
+    case M.lookup "deprecated" attrs of
+      Just _ -> let version = M.lookup "deprecated-version" attrs
+                    msg = firstChildWithLocalName "doc-deprecated" element >>=
+                          getElementContent
+                in Just (DeprecationInfo version msg)
+      Nothing -> Nothing
+    where attrs = elementAttributes element
+
 data Constant = Constant {
       constantType       :: Type,
       constantValue      :: Argument, -- XXX should be Text
-      constantDeprecated :: Maybe String }
+      constantDeprecated :: Maybe (Maybe String, Maybe String) }
     deriving Show
+
+data ConstantInfo = ConstantInfo {
+      constantInfoName        :: Text,
+      constantInfoType        :: Type,
+      constantInfoValue       :: Text,
+      constantInfoDeprecated  :: Maybe DeprecationInfo
+    } deriving (Show)
+
+parseConstant :: ParseContext -> Element -> Maybe ConstantInfo
+parseConstant ctx element = do
+  let attrs = elementAttributes element
+  name <- M.lookup "name" attrs
+  value <- M.lookup "value" attrs
+  t <- parseType ctx element
+  return $ ConstantInfo name t value (parseDeprecation element)
 
 {-
 toConstant :: ConstantInfo -> Constant
@@ -75,11 +262,6 @@ toConstant ci = Constant
     (constantInfoValue ci)
     (infoDeprecated ci)
 -}
-
-toConstant :: Element -> Maybe Constant
-toConstant el = do
-    val <- M.lookup "value" $ elementAttributes el
-    return $ Constant undefined undefined Nothing
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
@@ -382,53 +564,77 @@ toAPI bi = (getName bi, toAPI' (infoType bi) bi)
     convert fa fb bi = fa $ fb $ fromBaseInfo bi
 -}
 
-toAPI :: String -> Node -> Maybe (Name, API)
-toAPI ns node = do
-    el   <- nodeToElement node
-    name <- M.lookup "name" $ elementAttributes el
-    api  <- case nameLocalName $ elementName el of
-        "constant" -> APIConst <$> toConstant el
-        -- Next type of API
-        _          -> Nothing
-    return (Name ns (T.unpack name), api)
+data GIRNamespace = GIRNamespace {
+      girNSName      :: Text,
+      girNSVersion   :: Text,
+      girNSAliases   :: [Maybe (Text, Text)],
+      girNSConstants :: [Maybe ConstantInfo]
+    } deriving (Show)
 
-data GIRInfo = GIRInfo {
-    girNamespace :: String,
-    girVersion   :: String,
-    girPackage   :: Maybe String,
-    girIncludes  :: [(String, String)],
-    girAPIs      :: [(Name, API)]
-}
+parseNamespaceElement :: GIRNamespace -> Element -> GIRNamespace
+parseNamespaceElement ns@GIRNamespace{..} element =
+    let ctx = ParseContext girNSName
+    in case nameLocalName (elementName element) of
+      "alias" -> ns {girNSAliases = parseAlias element : girNSAliases}
+      "constant" -> ns {girNSConstants = parseConstant ctx element : girNSConstants}
+      _ -> ns
+
+parseAlias :: Element -> Maybe (Text, Text)
+parseAlias element = do
+  name <- M.lookup "name" (elementAttributes element)
+  child <- listToMaybe (childElemsWithLocalName "type" element)
+  realType <- M.lookup "name" (elementAttributes child)
+  return (name, realType)
+
+parseNamespace :: Element -> Maybe GIRNamespace
+parseNamespace element = do
+  let attrs = elementAttributes element
+  name <- M.lookup "name" attrs
+  version <- M.lookup "version" attrs
+  let ns = GIRNamespace {
+             girNSName         = name,
+             girNSVersion      = version,
+             girNSAliases      = [],
+             girNSConstants    = []
+           }
+  return $ L.foldl' parseNamespaceElement ns (subelements element)
+
+parseInclude :: Element -> Maybe (Text, Text)
+parseInclude element = do
+  name <- M.lookup "name" attrs
+  version <- M.lookup "version" attrs
+  return (name, version)
+      where attrs = elementAttributes element
+
+parsePackage :: Element -> Maybe Text
+parsePackage element = M.lookup "name" (elementAttributes element)
+
+parseRootElement :: GIRInfoParse -> Element -> GIRInfoParse
+parseRootElement info@GIRInfoParse{..} element =
+    case nameLocalName (elementName element) of
+      "include" -> info {girIPIncludes = parseInclude element : girIPIncludes}
+      "package" -> info {girIPPackage = parsePackage element : girIPPackage}
+      "namespace" -> info {girIPNamespaces = parseNamespace element : girIPNamespaces}
+      _ -> info
 
 data GIRInfoParse = GIRInfoParse {
-    girIPNamespace :: Maybe String,
-    girIPVersion   :: Maybe String,
-    girIPPackage   :: Maybe String,
-    girIPIncludes  :: [(String, String)],
-    girIPAPIs      :: [(Name, API)]
-}
+    girIPPackage    :: [Maybe Text],
+    girIPIncludes   :: [Maybe (Text, Text)],
+    girIPNamespaces :: [Maybe GIRNamespace]
+} deriving (Show)
 
-instance Monoid GIRInfoParse where
-    mempty = GIRInfoParse Nothing Nothing Nothing [] []
-    mappend (GIRInfoParse nsA verA pkgA incA apiA)
-            (GIRInfoParse nsB verB pkgB incB apiB)
-        = GIRInfoParse {
-            girIPNamespace = nsA <|> nsB,
-            girIPVersion   = verA <|> verB,
-            girIPPackage   = pkgA <|> pkgB,
-            girIPIncludes  = incA <> incB,
-            girIPAPIs      = apiA <> apiB
-        }
+emptyGIRInfoParse :: GIRInfoParse
+emptyGIRInfoParse = GIRInfoParse {
+                      girIPPackage = [],
+                      girIPIncludes = [],
+                      girIPNamespaces = []
+                    }
 
-parseGIRDocument :: Document -> Maybe GIRInfo
-parseGIRDocument doc = undefined
+parseGIRDocument :: Document -> GIRInfoParse
+parseGIRDocument doc = L.foldl' parseRootElement emptyGIRInfoParse (subelements (documentRoot doc))
 
-loadGIRDocument :: Bool -> String -> Maybe String -> IO GIRInfo
-loadGIRDocument verbose name version = do
-    Just info <- parseGIRDocument <$> readGiRepository verbose name version
-    if girNamespace info == name
-    then return info
-    else error "GIR file name - namespace name mismatch!"
+loadGIRInfo :: Bool -> String -> Maybe String -> IO GIRInfoParse
+loadGIRInfo verbose name version = parseGIRDocument <$> readGiRepository verbose name version
 
 loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
 loadAPI = error $ "This git branch is a work in progress, use the main git branch instead!"
