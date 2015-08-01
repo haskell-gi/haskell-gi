@@ -3,7 +3,7 @@ module GI.Constant
     ( genConstant
     ) where
 
-#if __GLASGOW_HASKELL__ < 710
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
 
@@ -15,8 +15,6 @@ import GI.Code
 import GI.Conversions
 import GI.Type
 import GI.Internal.ArgInfo (Transfer(TransferNothing))
-
-#include <girepository.h>
 
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant (Name _ name) (Constant t value deprecated) = do
