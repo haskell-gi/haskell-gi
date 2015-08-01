@@ -552,7 +552,7 @@ genCallable n symbol callable throwsGError = do
     wrapper = group $ do
         let argName' = escapeReserved . argName
         name <- lowerName n
-        deprecatedPragma name $ callableDeprecated callable
+        line $ deprecatedPragma name $ callableDeprecated callable
         line $ name ++ " ::"
         hSignature hInArgs =<< hOutType callable hOutArgs ignoreReturn
         line $ name ++ " " ++ intercalate " " (map argName' hInArgs) ++ " = do"

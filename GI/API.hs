@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards, PatternGuards #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, PatternGuards, NamedFieldPuns #-}
 
 module GI.API
     ( API(..)
@@ -19,6 +19,9 @@ module GI.API
     , Union (..)
 
     , Scope(..) -- from GI.Internal.ArgInfo, for convenience
+
+    , deprecatedPragma
+    , DeprecationInfo(..)
 
     , loadAPI
 
@@ -47,7 +50,6 @@ import GI.Internal.FieldInfo
 import GI.Internal.FunctionInfo
 import GI.Internal.PropertyInfo
 import GI.Internal.TypeInfo
-import GI.Internal.Types (Argument)
 import GI.Repository (readGiRepository)
 import GI.Type
 
@@ -57,6 +59,21 @@ data Name = Name { namespace :: String, name :: String }
 data ParseContext = ParseContext {
       currentNamespace :: Text
     }
+
+data DeprecationInfo = DeprecationInfo {
+      deprecatedSinceVersion :: Maybe Text,
+      deprecationMessage     :: Maybe Text
+    } deriving (Show, Eq)
+
+deprecatedPragma :: String -> Maybe DeprecationInfo -> String
+deprecatedPragma _    Nothing     = ""
+deprecatedPragma name (Just info) = "{-# DEPRECATED " ++ name ++ reason ++ note ++ "#-}"
+        where reason = case deprecationMessage info of
+                         Nothing -> " <no reason given for deprecation> "
+                         Just msg -> " \"" ++ T.unpack msg ++ "\" "
+              note = case deprecatedSinceVersion info of
+                       Nothing -> ""
+                       Just v -> "(since version " ++ T.unpack v ++ " ) "
 
 {-
 getName :: InfoClass info => info -> Name
@@ -106,11 +123,6 @@ findTypeElements = mapMaybe toTypeElement . subelements
               | "type" <- localName elem = Just (TypeElement elem)
               | "array" <- localName elem = Just (ArrayElement elem)
           toTypeElement _ = Nothing
-
-data DeprecationInfo = DeprecationInfo {
-      deprecatedSinceVersion :: Maybe Text,
-      deprecationMessage     :: Maybe Text
-    } deriving (Show)
 
 -- | Map the given type name to a BasicType (in GI.Type), if possible.
 nameToBasicType :: Text -> Maybe BasicType
@@ -234,26 +246,24 @@ parseDeprecation element =
       Nothing -> Nothing
     where attrs = elementAttributes element
 
-data Constant = Constant {
-      constantType       :: Type,
-      constantValue      :: Argument, -- XXX should be Text
-      constantDeprecated :: Maybe (Maybe String, Maybe String) }
-    deriving Show
+-- | Build a name in the current namespace.
+nameInCurrentNS :: ParseContext -> Text -> Name
+nameInCurrentNS ctx n = Name (T.unpack (currentNamespace ctx)) (T.unpack n)
 
-data ConstantInfo = ConstantInfo {
-      constantInfoName        :: Text,
-      constantInfoType        :: Type,
-      constantInfoValue       :: Text,
-      constantInfoDeprecated  :: Maybe DeprecationInfo
+data Constant = Constant {
+      constantType        :: Type,
+      constantValue       :: Text,
+      constantDeprecated  :: Maybe DeprecationInfo
     } deriving (Show)
 
-parseConstant :: ParseContext -> Element -> Maybe ConstantInfo
+parseConstant :: ParseContext -> Element -> Maybe (Name, API)
 parseConstant ctx element = do
   let attrs = elementAttributes element
   name <- M.lookup "name" attrs
   value <- M.lookup "value" attrs
   t <- parseType ctx element
-  return $ ConstantInfo name t value (parseDeprecation element)
+  return (nameInCurrentNS ctx name,
+          APIConst (Constant t value (parseDeprecation element)))
 
 {-
 toConstant :: ConstantInfo -> Constant
@@ -268,7 +278,7 @@ data Enumeration = Enumeration {
     errorDomain :: Maybe String,
     enumTypeInit :: Maybe String,
     enumStorageType :: TypeTag,
-    enumDeprecated :: Maybe String }
+    enumDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
 {-
@@ -321,7 +331,7 @@ data Callable = Callable {
     returnAttributes :: [(String, String)],
     args :: [Arg],
     skipReturn :: Bool,
-    callableDeprecated :: Maybe String }
+    callableDeprecated :: Maybe DeprecationInfo }
     deriving (Show, Eq)
 
 {-
@@ -354,7 +364,7 @@ toFunction fi = Function
 data Signal = Signal {
     sigName :: String,
     sigCallable :: Callable,
-    sigDeprecated :: Maybe String }
+    sigDeprecated :: Maybe DeprecationInfo }
     deriving (Show, Eq)
 
 {-
@@ -370,7 +380,7 @@ data Property = Property {
     propType :: Type,
     propFlags :: [ParamFlag],
     propTransfer :: Transfer,
-    propDeprecated :: Maybe String }
+    propDeprecated :: Maybe DeprecationInfo }
     deriving (Show, Eq)
 
 {-
@@ -389,7 +399,7 @@ data Field = Field {
     fieldCallback :: Maybe Callback,
     fieldOffset :: Int,
     fieldFlags :: [FieldInfoFlag],
-    fieldDeprecated :: Maybe String }
+    fieldDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
 {-
@@ -420,7 +430,7 @@ data Struct = Struct {
     isGTypeStruct :: Bool,
     structFields :: [Field],
     structMethods :: [(Name, Function)],
-    structDeprecated :: Maybe String }
+    structDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
 {-
@@ -445,7 +455,7 @@ data Union = Union {
     unionTypeInit :: Maybe String,
     unionFields :: [Field],
     unionMethods :: [(Name, Function)],
-    unionDeprecated :: Maybe String }
+    unionDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
 {-
@@ -475,7 +485,7 @@ data Interface = Interface {
     ifPrerequisites :: [Name],
     ifTypeInit :: Maybe String,
     ifMethods :: [(Name, Function)],
-    ifDeprecated :: Maybe String }
+    ifDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
 {-
@@ -502,7 +512,7 @@ data Object = Object {
     objTypeName :: String,
     objRefFunction :: Maybe String,
     objUnrefFunction :: Maybe String,
-    objDeprecated :: Maybe String }
+    objDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
 {-
@@ -568,15 +578,19 @@ data GIRNamespace = GIRNamespace {
       girNSName      :: Text,
       girNSVersion   :: Text,
       girNSAliases   :: [Maybe (Text, Text)],
-      girNSConstants :: [Maybe ConstantInfo]
+      girNSAPIs      :: [(Name, API)]
     } deriving (Show)
+
+maybeAddAPI :: GIRNamespace -> Maybe (Name, API) -> GIRNamespace
+maybeAddAPI ns Nothing = ns
+maybeAddAPI ns@GIRNamespace{girNSAPIs} (Just k) = ns {girNSAPIs = k : girNSAPIs}
 
 parseNamespaceElement :: GIRNamespace -> Element -> GIRNamespace
 parseNamespaceElement ns@GIRNamespace{..} element =
     let ctx = ParseContext girNSName
     in case nameLocalName (elementName element) of
       "alias" -> ns {girNSAliases = parseAlias element : girNSAliases}
-      "constant" -> ns {girNSConstants = parseConstant ctx element : girNSConstants}
+      "constant" -> maybeAddAPI ns (parseConstant ctx element)
       _ -> ns
 
 parseAlias :: Element -> Maybe (Text, Text)
@@ -595,7 +609,7 @@ parseNamespace element = do
              girNSName         = name,
              girNSVersion      = version,
              girNSAliases      = [],
-             girNSConstants    = []
+             girNSAPIs         = []
            }
   return $ L.foldl' parseNamespaceElement ns (subelements element)
 

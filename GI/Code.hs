@@ -23,7 +23,7 @@ module GI.Code
     , blank
     , group
     , foreignImport
-    , deprecatedPragma
+
     , findAPI
     , findAPIByName
     , config
@@ -243,10 +243,6 @@ foreignImport cg = do
     (a, c) <- recurse cg
     tell $ ForeignImport c
     return a
-
-deprecatedPragma :: String -> Maybe String -> CodeGen ()
-deprecatedPragma _    Nothing       = return ()
-deprecatedPragma name (Just reason) = line $ "{-# DEPRECATED " ++ name ++ " \"" ++ reason ++ "\" #-}"
 
 codeToString c = unlines $ str 0 c []
     where str _ NoCode cont = cont
