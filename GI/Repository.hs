@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module GI.Repository (readGiRepository) where
 
 import Prelude hiding (readFile)
@@ -9,8 +8,10 @@ import Control.Applicative ((<$>))
 #endif
 
 import Control.Monad (when)
-import qualified Data.List as List
 import Data.Maybe
+import qualified Data.List as List
+import qualified Data.Text as T
+import Data.Text (Text)
 import Safe (maximumMay)
 import Text.XML
 
@@ -24,9 +25,9 @@ girDataDirs = getSystemDataDirs "gir-1.0"
 girFilePath :: String -> String -> FilePath -> FilePath
 girFilePath name version path = path </> name ++ "-" ++ version <.> "gir"
 
-girFile' :: String -> Maybe String -> FilePath -> IO (Maybe FilePath)
+girFile' :: Text -> Maybe Text -> FilePath -> IO (Maybe FilePath)
 girFile' name (Just version) path =
-    let filePath = girFilePath name version path
+    let filePath = girFilePath (T.unpack name) (T.unpack version) path
     in  doesFileExist filePath >>= \case
         True  -> return $ Just filePath
         False -> return Nothing
@@ -35,20 +36,20 @@ girFile' name Nothing path =
         True -> do
             repositories <- map takeBaseName <$> getDirectoryContents path
             let version = maximumMay . catMaybes $
-                    List.stripPrefix (name ++ "-") <$> repositories
+                    List.stripPrefix (T.unpack name ++ "-") <$> repositories
 
             return $ case version of
-                Just v  -> Just $ girFilePath name v path
+                Just v  -> Just $ girFilePath (T.unpack name) v path
                 Nothing -> Nothing
 
         False -> return Nothing
 
-girFile :: String -> Maybe String -> IO (Maybe FilePath)
+girFile :: Text -> Maybe Text -> IO (Maybe FilePath)
 girFile name version =
     firstJust <$> (girDataDirs >>= mapM (girFile' name version))
     where firstJust = listToMaybe . catMaybes
 
-readGiRepository :: Bool -> String -> Maybe String -> IO Document
+readGiRepository :: Bool -> Text -> Maybe Text -> IO Document
 readGiRepository verbose name version =
     girFile name version >>= \case
         Just path -> do
@@ -56,6 +57,6 @@ readGiRepository verbose name version =
             readFile def path
         Nothing -> do
             dataDirs <- girDataDirs
-            error $ "Did not find a GI repository for " ++ name
-                ++ maybe "" ("-" ++) version
+            error $ "Did not find a GI repository for " ++ (T.unpack name)
+                ++ maybe "" ("-" ++) (T.unpack <$> version)
                 ++ " in " ++ show dataDirs

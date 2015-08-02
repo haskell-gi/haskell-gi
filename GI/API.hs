@@ -34,9 +34,10 @@ import Control.Applicative ((<$>))
 import Control.Applicative ((<|>))
 
 import Data.Int
-import qualified Data.Map as M
 import qualified Data.List as L
+import qualified Data.Map as M
 import Data.Maybe (mapMaybe, listToMaybe, fromMaybe)
+import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
 import Data.Text (Text)
@@ -86,6 +87,11 @@ withName f x = (getName x, f x)
 -}
 
 -- * Some helpers for making traversals easier.
+
+-- | Turn a node into an element (it is indeed an element node).
+nodeToElement :: Node -> Maybe Element
+nodeToElement (NodeElement e) = Just e
+nodeToElement _               = Nothing
 
 -- | Find all children of the given element which are XML Elements
 -- themselves.
@@ -264,14 +270,6 @@ parseConstant ctx element = do
   t <- parseType ctx element
   return (nameInCurrentNS ctx name,
           APIConst (Constant t value (parseDeprecation element)))
-
-{-
-toConstant :: ConstantInfo -> Constant
-toConstant ci = Constant
-    (typeFromTypeInfo $ constantInfoType ci)
-    (constantInfoValue ci)
-    (infoDeprecated ci)
--}
 
 data Enumeration = Enumeration {
     enumValues :: [(String, Int64)],
@@ -647,13 +645,46 @@ emptyGIRInfoParse = GIRInfoParse {
 parseGIRDocument :: Document -> GIRInfoParse
 parseGIRDocument doc = L.foldl' parseRootElement emptyGIRInfoParse (subelements (documentRoot doc))
 
-loadGIRInfo :: Bool -> String -> Maybe String -> IO GIRInfoParse
-loadGIRInfo verbose name version = parseGIRDocument <$> readGiRepository verbose name version
+-- | Parse the list of includes in a given document.
+documentListIncludes :: Document -> S.Set (Text, Text)
+documentListIncludes doc = S.fromList (mapMaybe parseInclude includes)
+    where includes = childElemsWithLocalName "include" (documentRoot doc)
+
+-- | Load a set of dependencies, recursively.
+loadDependencies :: Bool                              -- Verbose
+                 -> S.Set (Text, Text)                -- Requested
+                 -> M.Map (Text, Text) Document       -- Loaded so far
+                 -> IO (M.Map (Text, Text) Document)  -- New loaded set
+loadDependencies verbose requested loaded
+        | S.null requested = return loaded
+        | otherwise = do
+  let (name, version) = S.elemAt 0 requested
+  doc <- readGiRepository verbose name (Just version)
+  let newLoaded = M.insert (name, version) doc loaded
+      newRequested = S.union requested (documentListIncludes doc)
+      notYetLoaded = S.filter (/= (name, version)) newRequested
+  loadDependencies verbose notYetLoaded newLoaded
+
+-- | Load a given GIR file and recursively its dependencies
+loadGIRFile :: Bool             -- ^ verbose
+            -> Text             -- ^ name
+            -> Maybe Text       -- ^ version
+            -> IO (Document,                    -- ^ loaded document
+                   M.Map (Text, Text) Document) -- ^ dependencies
+loadGIRFile verbose name version = do
+  doc <- readGiRepository verbose name version
+  deps <- loadDependencies verbose (documentListIncludes doc) M.empty
+  return (doc, deps)
+
+-- | Load and parse a GIR file, including its dependencies.
+loadGIRInfo :: Bool             -- ^ verbose
+            -> Text             -- ^ name
+            -> Maybe Text       -- ^ version
+            -> IO (GIRInfoParse,                    -- ^ parsed document
+                   M.Map (Text, Text) GIRInfoParse) -- ^ parsed deps
+loadGIRInfo verbose name version = do
+  (doc, _) <- loadGIRFile verbose name version
+  return $ parseGIRDocument doc
 
 loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
 loadAPI = error $ "This git branch is a work in progress, use the main git branch instead!"
-
--- Small helper function, might be a good idea to move to somewhere else
-nodeToElement :: Node -> Maybe Element
-nodeToElement (NodeElement e) = Just e
-nodeToElement _               = Nothing
