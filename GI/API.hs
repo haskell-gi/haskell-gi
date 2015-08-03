@@ -57,8 +57,12 @@ import GI.Type
 data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)
 
+-- (Namespace, name)
+type Alias = (Text, Text)
+
 data ParseContext = ParseContext {
-      currentNamespace :: Text
+      currentNamespace :: Text,
+      knownAliases     :: M.Map Alias Type
     }
 
 data DeprecationInfo = DeprecationInfo {
@@ -221,10 +225,14 @@ parseFundamentalType iface ctx _ = parseInterface iface ctx
 parseInterface :: Text -> ParseContext -> Maybe Type
 parseInterface iface ParseContext{..} =
     case T.split (== '.') iface of
-      -- XXX We should apply aliases here.
-      [ns, n] -> Just $ TInterface (T.unpack ns) (T.unpack n)
-      [n]     -> Just $ TInterface (T.unpack currentNamespace) (T.unpack n)
+      [ns, n] -> Just $ checkAliases ns n
+      [n]     -> Just $ checkAliases currentNamespace n
       _       -> Nothing
+    where checkAliases :: Text -> Text -> Type
+          checkAliases ns name =
+              case M.lookup (ns, name) knownAliases of
+                Just t -> t
+                Nothing -> TInterface (T.unpack ns) (T.unpack name)
 
 -- | Parse the type of a node (which will be described by a child node
 -- named "type" or "array").
@@ -575,7 +583,6 @@ toAPI bi = (getName bi, toAPI' (infoType bi) bi)
 data GIRNamespace = GIRNamespace {
       girNSName      :: Text,
       girNSVersion   :: Text,
-      girNSAliases   :: [Maybe (Text, Text)],
       girNSAPIs      :: [(Name, API)]
     } deriving (Show)
 
@@ -583,33 +590,25 @@ maybeAddAPI :: GIRNamespace -> Maybe (Name, API) -> GIRNamespace
 maybeAddAPI ns Nothing = ns
 maybeAddAPI ns@GIRNamespace{girNSAPIs} (Just k) = ns {girNSAPIs = k : girNSAPIs}
 
-parseNamespaceElement :: GIRNamespace -> Element -> GIRNamespace
-parseNamespaceElement ns@GIRNamespace{..} element =
-    let ctx = ParseContext girNSName
-    in case nameLocalName (elementName element) of
-      "alias" -> ns {girNSAliases = parseAlias element : girNSAliases}
+parseNamespaceElement :: ParseContext -> GIRNamespace -> Element -> GIRNamespace
+parseNamespaceElement ctx ns@GIRNamespace{..} element =
+    case nameLocalName (elementName element) of
+      "alias" -> ns     -- Processed separately
       "constant" -> maybeAddAPI ns (parseConstant ctx element)
       _ -> ns
 
-parseAlias :: Element -> Maybe (Text, Text)
-parseAlias element = do
-  name <- M.lookup "name" (elementAttributes element)
-  child <- listToMaybe (childElemsWithLocalName "type" element)
-  realType <- M.lookup "name" (elementAttributes child)
-  return (name, realType)
-
-parseNamespace :: Element -> Maybe GIRNamespace
-parseNamespace element = do
+parseNamespace :: Element -> M.Map Alias Type -> Maybe GIRNamespace
+parseNamespace element aliases = do
   let attrs = elementAttributes element
   name <- M.lookup "name" attrs
   version <- M.lookup "version" attrs
   let ns = GIRNamespace {
              girNSName         = name,
              girNSVersion      = version,
-             girNSAliases      = [],
              girNSAPIs         = []
            }
-  return $ L.foldl' parseNamespaceElement ns (subelements element)
+      ctx = ParseContext name aliases
+  return $ L.foldl' (parseNamespaceElement ctx) ns (subelements element)
 
 parseInclude :: Element -> Maybe (Text, Text)
 parseInclude element = do
@@ -621,12 +620,12 @@ parseInclude element = do
 parsePackage :: Element -> Maybe Text
 parsePackage element = M.lookup "name" (elementAttributes element)
 
-parseRootElement :: GIRInfoParse -> Element -> GIRInfoParse
-parseRootElement info@GIRInfoParse{..} element =
+parseRootElement :: M.Map Alias Type -> GIRInfoParse -> Element -> GIRInfoParse
+parseRootElement aliases info@GIRInfoParse{..} element =
     case nameLocalName (elementName element) of
       "include" -> info {girIPIncludes = parseInclude element : girIPIncludes}
       "package" -> info {girIPPackage = parsePackage element : girIPPackage}
-      "namespace" -> info {girIPNamespaces = parseNamespace element : girIPNamespaces}
+      "namespace" -> info {girIPNamespaces = parseNamespace element aliases : girIPNamespaces}
       _ -> info
 
 data GIRInfoParse = GIRInfoParse {
@@ -642,8 +641,36 @@ emptyGIRInfoParse = GIRInfoParse {
                       girIPNamespaces = []
                     }
 
-parseGIRDocument :: Document -> GIRInfoParse
-parseGIRDocument doc = L.foldl' parseRootElement emptyGIRInfoParse (subelements (documentRoot doc))
+parseGIRDocument :: M.Map Alias Type -> Document -> GIRInfoParse
+parseGIRDocument aliases doc = L.foldl' (parseRootElement aliases) emptyGIRInfoParse (subelements (documentRoot doc))
+
+-- | Find all aliases in a given namespace. We assume that namespaces
+-- are the first elements in the namespace, in order to avoid scanning
+-- all the entries in the namespace.
+namespaceListAliases :: Element -> M.Map Alias Type
+namespaceListAliases ns = M.fromList $ maybe [] (go (subelements ns)) maybeNSName
+    where maybeNSName = M.lookup "name" (elementAttributes ns)
+          go :: [Element] -> Text -> [(Alias, Type)]
+          go [] _ = []
+          go (e:es) nsName
+             | localName e /= "alias" = []
+             | otherwise = case parseAlias nsName e of
+                             Just n -> n : go es nsName
+                             Nothing -> go es nsName
+
+-- | Parse an alias
+parseAlias :: Text -> Element -> Maybe (Alias, Type)
+parseAlias nsName element = do
+  name <- M.lookup "name" (elementAttributes element)
+  t <- parseType ctx element
+  return ((nsName, name), t)
+  where ctx = ParseContext {currentNamespace = nsName,
+                            knownAliases = M.empty}
+
+-- | Find all aliases in a given document.
+documentListAliases :: Document -> M.Map Alias Type
+documentListAliases doc = M.unions (map namespaceListAliases namespaces)
+    where namespaces = childElemsWithLocalName "namespace" (documentRoot doc)
 
 -- | Parse the list of includes in a given document.
 documentListIncludes :: Document -> S.Set (Text, Text)
@@ -682,9 +709,11 @@ loadGIRInfo :: Bool             -- ^ verbose
             -> Maybe Text       -- ^ version
             -> IO (GIRInfoParse,                    -- ^ parsed document
                    M.Map (Text, Text) GIRInfoParse) -- ^ parsed deps
-loadGIRInfo verbose name version = do
-  (doc, _) <- loadGIRFile verbose name version
-  return $ parseGIRDocument doc
+loadGIRInfo verbose name version =  do
+  (doc, deps) <- loadGIRFile verbose name version
+  let aliases = M.unions (map documentListAliases (doc : M.elems deps))
+  return ( parseGIRDocument aliases doc
+         , M.map (parseGIRDocument aliases) deps)
 
 loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
 loadAPI = error $ "This git branch is a work in progress, use the main git branch instead!"
