@@ -9,7 +9,7 @@ import Control.Exception (handle)
 
 import Data.Bool (bool)
 import Data.List (intercalate)
-import Data.Text (unpack)
+import Data.Text (pack, unpack, Text)
 
 import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FilePath (splitPath, joinPath)
@@ -26,14 +26,14 @@ import qualified Data.Set as S
 import GI.Utils.GError
 import Text.Show.Pretty (ppShow)
 
-import GI.API (loadAPI)
+import GI.API (loadGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import GI.Cabal (cabalConfig, genCabalProject)
 import GI.Code (codeToString, genCode, evalCodeGen)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
 import GI.OverloadedSignals (genSignalInstances, genOverloadedSignalConnectors)
-import GI.Overrides (Overrides, parseOverridesFile, loadFilteredAPI, nsChooseVersion)
+import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
 import GI.SymbolNaming (ucFirst)
 import GI.Internal.Typelib (prependSearchPath)
 
@@ -101,37 +101,48 @@ outputPath options =
         let prefix = intercalate "." (splitPath dir) ++ "."
         return (prefix, dir)
 
+-- | Load the given API and dependencies, filtering them in the process.
+loadFilteredAPI :: Bool -> Overrides -> Text
+                -> IO (M.Map Name API, M.Map Name API)
+loadFilteredAPI verbose ovs name = do
+  (gir, girDeps) <- loadGIRInfo verbose name Nothing
+  return $ filterAPIsAndDeps ovs gir girDeps
+
 -- Generate all generic accessor functions ("_label", for example).
-genGenericAttrs :: Options -> Overrides -> [String] -> IO ()
+genGenericAttrs :: Options -> Overrides -> [Text] -> IO ()
 genGenericAttrs options ovs modules = do
-  allAPIs <- (M.toList . M.unions . map M.fromList)
-             <$> mapM (loadFilteredAPI (optVerbose options) ovs) modules
+  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs) modules
+  let apis = M.unions (map fst girInfos)
+      allAPIs = M.unions (apis : map snd girInfos) -- Including dependencies
   let cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
                     overrides = ovs}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
-  (_, code) <- genCode cfg (genAllAttributes allAPIs modPrefix)
+  (_, code) <- genCode cfg allAPIs (genAllAttributes (M.toList apis) modPrefix)
   writeFile (joinPath [dirPrefix, "Properties.hs"]) $ codeToString code
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
-genGenericConnectors :: Options -> Overrides -> [String] -> IO ()
+genGenericConnectors :: Options -> Overrides -> [Text] -> IO ()
 genGenericConnectors options ovs modules = do
-  allAPIs <- (M.toList . M.unions . map M.fromList)
-             <$> mapM (loadFilteredAPI (optVerbose options) ovs) modules
+  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs) modules
+  let apis = M.unions (map fst girInfos)
+      allAPIs = M.unions (apis : map snd girInfos) -- Including dependencies
   let cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
                     overrides = ovs}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Signals"
-  (_, code) <- genCode cfg (genOverloadedSignalConnectors allAPIs modPrefix)
+  (_, code) <- genCode cfg allAPIs (genOverloadedSignalConnectors (M.toList apis) modPrefix)
   writeFile (joinPath [dirPrefix, "Signals.hs"]) $ codeToString code
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
 processMod :: Options -> Overrides -> String -> IO ()
 processMod options ovs name = do
-  apis <- loadFilteredAPI (optVerbose options) ovs name
+  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) Nothing
+  let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
+      allAPIs = M.union apis deps
 
   let cfg = Config {modName = Just name,
                     verbose = optVerbose options,
@@ -141,17 +152,17 @@ processMod options ovs name = do
   (modPrefix, dirPrefix) <- outputPath options
 
   putStrLn $ "\t* Generating " ++ modPrefix ++ nm
-  (modDeps, code) <- genCode cfg (genModule name apis modPrefix)
+  (modDeps, code) <- genCode cfg allAPIs (genModule name (M.toList apis) modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
              codeToString code
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Attributes"
-  (attrDeps, attrCode) <- genCode cfg (genAttributes name apis modPrefix)
+  (attrDeps, attrCode) <- genCode cfg allAPIs (genAttributes name (M.toList apis) modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
             codeToString attrCode
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
-  (sigDeps, signalCode) <- genCode cfg (genSignalInstances name apis modPrefix)
+  (sigDeps, signalCode) <- genCode cfg allAPIs (genSignalInstances name (M.toList apis) modPrefix)
   writeFile (joinPath [dirPrefix, nm ++ "Signals.hs"]) $
             codeToString signalCode
 
@@ -163,23 +174,24 @@ processMod options ovs name = do
                              ++ cabal ++ ".new instead") >>
                    return (cabal ++ ".new"))
     putStrLn $ "\t\t+ " ++ fname
-    let allDeps = S.toList
-                  $ S.delete name -- The module is not a dep of itself
-                  $ S.insert "GLib" -- and GLib always is
-                  $ S.unions [modDeps, attrDeps, sigDeps]
-    (err, cabalCode) <- evalCodeGen cfg (genCabalProject name allDeps modPrefix)
+    let usedDeps = S.delete name -- The module is not a dep of itself
+                   $ S.unions [modDeps, attrDeps, sigDeps]
+        -- We only list as dependencies in the cabal file the
+        -- dependencies that we use, disregarding what the .gir file says.
+        actualDeps = filter ((`S.member` usedDeps) . T.unpack . girNSName) girDeps
+    (err, cabalCode) <- evalCodeGen cfg allAPIs (genCabalProject gir actualDeps modPrefix)
     case err of
       Nothing -> do
                writeFile fname (codeToString cabalCode)
                putStrLn "\t\t+ cabal.config"
-               writeFile "cabal.config" cabalConfig
+               writeFile "cabal.config" (T.unpack cabalConfig)
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ msg
 
 dump :: Options -> Overrides -> String -> IO ()
 dump options ovs name = do
-  apis <- loadAPI (optVerbose options) name (M.lookup name (nsChooseVersion ovs))
-  mapM_ (putStrLn . ppShow) apis
+  (doc, _) <- loadGIRInfo (optVerbose options) (pack name) (pack <$> M.lookup name (nsChooseVersion ovs))
+  mapM_ (putStrLn . ppShow) (girAPIs doc)
 
 process :: Options -> [String] -> IO ()
 process options names = do
@@ -192,8 +204,8 @@ process options names = do
       exitFailure
     Right ovs -> case optMode options of
                    GenerateCode -> forM_ names (processMod options ovs)
-                   Attributes -> genGenericAttrs options ovs names
-                   Signals -> genGenericConnectors options ovs names
+                   Attributes -> genGenericAttrs options ovs (map T.pack names)
+                   Signals -> genGenericConnectors options ovs (map T.pack names)
                    Dump -> forM_ names (dump options ovs)
                    Help -> putStr showHelp
 

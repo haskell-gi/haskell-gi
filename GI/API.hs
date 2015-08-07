@@ -23,8 +23,7 @@ module GI.API
     , deprecatedPragma
     , DeprecationInfo(..)
 
-    , loadAPI
-
+    , GIRInfo(..)
     , loadGIRInfo
     ) where
 
@@ -36,13 +35,14 @@ import Control.Applicative ((<|>))
 import Data.Int
 import qualified Data.List as L
 import qualified Data.Map as M
-import Data.Maybe (mapMaybe, listToMaybe, fromMaybe)
+import Data.Maybe (mapMaybe, listToMaybe, fromMaybe, catMaybes)
+import Data.Monoid ((<>))
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR
 import Data.Text (Text)
 import Foreign.Storable (sizeOf)
-import Foreign.C (CInt, CUInt, CLong, CULong)
+import Foreign.C (CInt, CUInt, CLong, CULong, CSize)
 
 import Text.XML hiding (Name)
 
@@ -56,6 +56,25 @@ import GI.Type
 
 data Name = Name { namespace :: String, name :: String }
     deriving (Eq, Ord, Show)
+
+data GIRInfo = GIRInfo {
+      girPCPackages      :: [Text],
+      girNSName          :: Text,
+      girNSVersion       :: Text,
+      girAPIs            :: [(Name, API)]
+    } deriving Show
+
+data GIRNamespace = GIRNamespace {
+      nsName      :: Text,
+      nsVersion   :: Text,
+      nsAPIs      :: [(Name, API)]
+    } deriving (Show)
+
+data GIRInfoParse = GIRInfoParse {
+    girIPPackage    :: [Maybe Text],
+    girIPIncludes   :: [Maybe (Text, Text)],
+    girIPNamespaces :: [Maybe GIRNamespace]
+} deriving (Show)
 
 -- (Namespace, name)
 type Alias = (Text, Text)
@@ -140,6 +159,7 @@ nameToBasicType "none"     = Just TVoid
 -- XXX Should we try to distinguish TPtr from TVoid?
 nameToBasicType "gpointer" = Just TVoid
 nameToBasicType "gboolean" = Just TBoolean
+nameToBasicType "gchar"    = Just TInt8
 nameToBasicType "gint8"    = Just TInt8
 nameToBasicType "guint8"   = Just TUInt8
 nameToBasicType "gint16"   = Just TInt16
@@ -155,21 +175,25 @@ nameToBasicType "gtype"    = Just TGType
 nameToBasicType "utf8"     = Just TUTF8
 nameToBasicType "filename" = Just TFileName
 nameToBasicType "gint"     = case sizeOf (0 :: CInt) of
-                                 4 -> Just TInt32
-                                 8 -> Just TInt64
-                                 n -> error $ "Unexpected length: " ++ show n
+                               4 -> Just TInt32
+                               8 -> Just TInt64
+                               n -> error $ "Unexpected int length: " ++ show n
 nameToBasicType "guint"    = case sizeOf (0 :: CUInt) of
-                                 4 -> Just TUInt32
-                                 8 -> Just TUInt64
-                                 n -> error $ "Unexpected length: " ++ show n
+                               4 -> Just TUInt32
+                               8 -> Just TUInt64
+                               n -> error $ "Unexpected uint length: " ++ show n
 nameToBasicType "glong"    = case sizeOf (0 :: CLong) of
-                                 4 -> Just TInt32
-                                 8 -> Just TInt64
-                                 n -> error $ "Unexpected length: " ++ show n
+                               4 -> Just TInt32
+                               8 -> Just TInt64
+                               n -> error $ "Unexpected long length: " ++ show n
 nameToBasicType "gulong"   = case sizeOf (0 :: CULong) of
-                                 4 -> Just TUInt32
-                                 8 -> Just TUInt64
-                                 n -> error $ "Unexpected length: " ++ show n
+                               4 -> Just TUInt32
+                               8 -> Just TUInt64
+                               n -> error $ "Unexpected ulong length: " ++ show n
+nameToBasicType "gsize"    = case sizeOf (0 :: CSize) of
+                               4 -> Just TUInt32
+                               8 -> Just TUInt64
+                               n -> error $ "Unexpected size length: " ++ show n
 nameToBasicType _          = Nothing
 
 -- | Parse a signed integer.
@@ -580,15 +604,9 @@ toAPI bi = (getName bi, toAPI' (infoType bi) bi)
     convert fa fb bi = fa $ fb $ fromBaseInfo bi
 -}
 
-data GIRNamespace = GIRNamespace {
-      girNSName      :: Text,
-      girNSVersion   :: Text,
-      girNSAPIs      :: [(Name, API)]
-    } deriving (Show)
-
 maybeAddAPI :: GIRNamespace -> Maybe (Name, API) -> GIRNamespace
 maybeAddAPI ns Nothing = ns
-maybeAddAPI ns@GIRNamespace{girNSAPIs} (Just k) = ns {girNSAPIs = k : girNSAPIs}
+maybeAddAPI ns@GIRNamespace{nsAPIs} (Just k) = ns {nsAPIs = k : nsAPIs}
 
 parseNamespaceElement :: ParseContext -> GIRNamespace -> Element -> GIRNamespace
 parseNamespaceElement ctx ns@GIRNamespace{..} element =
@@ -603,9 +621,9 @@ parseNamespace element aliases = do
   name <- M.lookup "name" attrs
   version <- M.lookup "version" attrs
   let ns = GIRNamespace {
-             girNSName         = name,
-             girNSVersion      = version,
-             girNSAPIs         = []
+             nsName         = name,
+             nsVersion      = version,
+             nsAPIs         = []
            }
       ctx = ParseContext name aliases
   return $ L.foldl' (parseNamespaceElement ctx) ns (subelements element)
@@ -627,12 +645,6 @@ parseRootElement aliases info@GIRInfoParse{..} element =
       "package" -> info {girIPPackage = parsePackage element : girIPPackage}
       "namespace" -> info {girIPNamespaces = parseNamespace element aliases : girIPNamespaces}
       _ -> info
-
-data GIRInfoParse = GIRInfoParse {
-    girIPPackage    :: [Maybe Text],
-    girIPIncludes   :: [Maybe (Text, Text)],
-    girIPNamespaces :: [Maybe GIRNamespace]
-} deriving (Show)
 
 emptyGIRInfoParse :: GIRInfoParse
 emptyGIRInfoParse = GIRInfoParse {
@@ -703,17 +715,41 @@ loadGIRFile verbose name version = do
   deps <- loadDependencies verbose (documentListIncludes doc) M.empty
   return (doc, deps)
 
+-- | Turn a GIRInfoParse into a proper GIRInfo, doing some sanity
+-- checking along the way.
+toGIRInfo :: GIRInfoParse -> Either Text GIRInfo
+toGIRInfo info =
+    case catMaybes (girIPNamespaces info) of
+      [ns] -> Right $ GIRInfo {
+                girPCPackages = catMaybes (girIPPackage info)
+              , girNSName = nsName ns
+              , girNSVersion = nsVersion ns
+              , girAPIs = nsAPIs ns
+              }
+      [] -> Left "Found no valid namespaces."
+      _ -> Left "Found multiple namespaces."
+
 -- | Load and parse a GIR file, including its dependencies.
 loadGIRInfo :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
-            -> IO (GIRInfoParse,                    -- ^ parsed document
-                   M.Map (Text, Text) GIRInfoParse) -- ^ parsed deps
+            -> IO (GIRInfo,     -- ^ parsed document
+                   [GIRInfo])   -- ^ parsed deps
 loadGIRInfo verbose name version =  do
   (doc, deps) <- loadGIRFile verbose name version
   let aliases = M.unions (map documentListAliases (doc : M.elems deps))
-  return ( parseGIRDocument aliases doc
-         , M.map (parseGIRDocument aliases) deps)
-
-loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
-loadAPI = error $ "This git branch is a work in progress, use the main git branch instead!"
+      parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
+      parsedDeps = map (toGIRInfo . parseGIRDocument aliases) (M.elems deps)
+  case combineErrors parsedDoc parsedDeps of
+    Left err -> error . T.unpack $ "Error when parsing \"" <> name <> "\": " <> err
+    Right (docGIR, depsGIR) ->
+        if girNSName docGIR == name
+        then return (docGIR, depsGIR)
+        else error . T.unpack $ "Got unexpected namespace \""
+                 <> girNSName docGIR <> "\" when parsing \"" <> name <> "\"."
+  where combineErrors :: Either Text GIRInfo -> [Either Text GIRInfo]
+                      -> Either Text (GIRInfo, [GIRInfo])
+        combineErrors parsedDoc parsedDeps = do
+          doc <- parsedDoc
+          deps <- sequence parsedDeps
+          return (doc, deps)

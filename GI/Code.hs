@@ -9,8 +9,6 @@ module GI.Code
     , codeToString
     , loadDependency
     , getDeps
-    , getAPIs
-    , injectAPIs
     , recurse
     , recurse'
     , handleCGExc
@@ -26,6 +24,9 @@ module GI.Code
 
     , findAPI
     , findAPIByName
+    , getAPIs
+    , injectAPIs
+
     , config
     ) where
 
@@ -41,7 +42,6 @@ import qualified Data.Set as Set
 
 import GI.API (API, Name(..))
 import GI.Config (Config(..))
-import GI.Overrides (loadFilteredAPI)
 import GI.Type (Type(..))
 
 data Code = NoCode
@@ -104,9 +104,9 @@ unwrapCodeGen cfg state cg =
 -- the ambient state, and turning its output into a value.
 recurse :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
 recurse cg = do
-    cfg <- config
+    r <- ask
     oldState <- get
-    liftIO (runExceptT $ runRWST cg cfg oldState) >>= \case
+    liftIO (runExceptT $ runRWST cg r oldState) >>= \case
         Left e -> throwError e
         Right (r, st, c) -> put (mergeState oldState st) >> return (r, c)
 
@@ -114,9 +114,9 @@ recurse cg = do
 -- instead.
 handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
 handleCGExc fallback action = do
-    cfg <- config
+    r <- ask
     oldState <- get
-    liftIO (runExceptT $ runRWST action cfg oldState) >>= \case
+    liftIO (runExceptT $ runRWST action r oldState) >>= \case
         Left e -> fallback e
         Right (r, s, c) -> do
             put $ mergeState oldState s
@@ -124,7 +124,8 @@ handleCGExc fallback action = do
             return r
 
 emptyState :: CodeGenState
-emptyState = CodeGenState {moduleDeps = Set.empty, loadedAPIs = M.empty}
+emptyState = CodeGenState {moduleDeps = Set.empty
+                          ,loadedAPIs = M.empty }
 
 getDeps :: CodeGen Deps
 getDeps = moduleDeps <$> get
@@ -142,8 +143,7 @@ injectAPIs newAPIs = do
 -- | Merge two states of a code generator.
 mergeState :: CodeGenState -> CodeGenState -> CodeGenState
 mergeState oldState newState =
-    -- If no dependencies were added we do not need to merge, this saves
-    -- quite a bit of work.
+    -- If no dependencies were added we do not need to merge.
     if Set.size (moduleDeps oldState) /= Set.size (moduleDeps newState)
     then let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
              newAPIs = M.union (loadedAPIs oldState) (loadedAPIs newState)
@@ -152,16 +152,16 @@ mergeState oldState newState =
 
 -- | Run a code generator, and return the dependencies encountered
 -- when generating code.
-genCode :: Config -> CodeGen () -> IO (Deps, Code)
-genCode cfg cg = do
-    (_, st, code) <- unwrapCodeGen cfg emptyState cg
+genCode :: Config -> M.Map Name API -> CodeGen () -> IO (Deps, Code)
+genCode cfg apis cg = do
+    (_, st, code) <- unwrapCodeGen cfg (emptyState {loadedAPIs = apis}) cg
     return (moduleDeps st, code)
 
 -- | Like `genCode`, but keep the final value and output, discarding
 -- the state.
-evalCodeGen :: Config -> CodeGen a -> IO (a, Code)
-evalCodeGen cfg cg = do
-  (r, _, code) <- unwrapCodeGen cfg emptyState cg
+evalCodeGen :: Config -> M.Map Name API -> CodeGen a -> IO (a, Code)
+evalCodeGen cfg apis cg = do
+  (r, _, code) <- unwrapCodeGen cfg (emptyState {loadedAPIs = apis}) cg
   return (r, code)
 
 -- | Like `recurse`, but for generators returning a unit value, where
@@ -169,17 +169,13 @@ evalCodeGen cfg cg = do
 recurse' :: CodeGen () -> CodeGen Code
 recurse' cg = snd <$> recurse cg
 
+-- | Mark the given dependency as used by the module.
 loadDependency :: String -> CodeGen ()
 loadDependency name = do
     deps <- getDeps
     unless (Set.member name deps) $ do
-        apis <- getAPIs
-        cfg <- config
-        imported <- M.fromList <$>
-                    liftIO (loadFilteredAPI (verbose cfg) (overrides cfg) name)
         let newDeps = Set.insert name deps
-            newAPIs = M.union apis imported
-        put CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
+        modify' $ \s -> s {moduleDeps = newDeps}
 
 -- | Give a friendly textual description of the error for presenting
 -- to the user.

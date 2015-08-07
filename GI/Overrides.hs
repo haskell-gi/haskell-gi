@@ -2,7 +2,7 @@
 module GI.Overrides
     ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion)
     , parseOverridesFile
-    , loadFilteredAPI
+    , filterAPIsAndDeps
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -31,9 +31,9 @@ data Overrides = Overrides {
       -- | Structs for which accessors should not be auto-generated.
       sealedStructs   :: S.Set Name,
       -- | Mapping from GObject-Introspection namespaces to pkg-config
-      pkgConfigMap    :: M.Map String String,
+      pkgConfigMap    :: M.Map Text Text,
       -- | Version number for the generated .cabal package.
-      cabalPkgVersion :: Maybe String,
+      cabalPkgVersion :: Maybe Text,
       -- | Prefered version of the namespace
       nsChooseVersion :: M.Map String String
 }
@@ -128,7 +128,7 @@ parseSeal seal _ =
 parsePkgConfigName :: Text -> Parser
 parsePkgConfigName (T.words -> [gi,pc]) = tell $
     defaultOverrides {pkgConfigMap =
-                          M.singleton (T.unpack $ T.toLower gi) (T.unpack pc)}
+                          M.singleton (T.toLower gi) pc}
 parsePkgConfigName t =
     throwError ("pkg-config-name syntax is of the form\n" <>
                 "\t\"pkg-config-name gi-namespace pk-name\"\n" <>
@@ -147,7 +147,7 @@ parseNsVersion t =
 -- | Specifying the cabal package version by hand.
 parseCabalPkgVersion :: Text -> Parser
 parseCabalPkgVersion (T.words -> [version]) = tell $
-    defaultOverrides {cabalPkgVersion = Just (T.unpack version)}
+    defaultOverrides {cabalPkgVersion = Just version}
 parseCabalPkgVersion t =
     throwError ("cabal-pkg-version syntax is of the form\n" <>
                "\t\"cabal-pkg-version version\"\n" <>
@@ -192,7 +192,10 @@ filterAPIs ovs apis = map (filterOneAPI ovs . fetchIgnores) filtered
     where filtered = filter ((`S.notMember` ignoredAPIs ovs) . fst) apis
           fetchIgnores (n, api) = (n, api, M.lookup n (ignoredElems ovs))
 
--- | Load the given API using the given list of overrides.
-loadFilteredAPI :: Bool -> Overrides -> String -> IO [(Name, API)]
-loadFilteredAPI verbose ovs name =
-  filterAPIs ovs <$> loadAPI verbose name (M.lookup name (nsChooseVersion ovs))
+-- | Load a given API, applying filtering. Load also any necessary
+-- dependencies.
+filterAPIsAndDeps :: Overrides -> GIRInfo -> [GIRInfo]
+                  -> (M.Map Name API, M.Map Name API)
+filterAPIsAndDeps ovs doc deps =
+  let toMap = M.fromList . filterAPIs ovs . girAPIs
+  in (toMap doc, M.unions (map toMap deps))
