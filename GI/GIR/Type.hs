@@ -13,7 +13,6 @@ import qualified Data.Map as M
 import Data.Maybe (mapMaybe, fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Read as TR
 import Foreign.Storable (sizeOf)
 import Foreign.C (CInt, CUInt, CLong, CULong, CSize)
 import Text.XML (Element(elementAttributes))
@@ -21,7 +20,7 @@ import Text.XML (Element(elementAttributes))
 import GI.Type (Type(..), BasicType(..))
 import GI.GIR.BasicTypes (Alias(..), ParseContext(ParseContext, knownAliases,
                                                   currentNamespace))
-import GI.GIR.XMLUtils (subelements, localName)
+import GI.GIR.XMLUtils (subelements, localName, parseIntegral)
 
 data TypeElement = TypeElement Element | ArrayElement Element
 
@@ -77,12 +76,6 @@ nameToBasicType "gsize"    = case sizeOf (0 :: CSize) of
                                n -> error $ "Unexpected size length: " ++ show n
 nameToBasicType _          = Nothing
 
--- | Parse a signed integer.
-parseInteger :: Text -> Maybe Int
-parseInteger str = case TR.signed TR.decimal str of
-                     Right (n, r) | T.null r -> Just n
-                     _ -> Nothing
-
 -- | A boolean value given by a numerical constant.
 parseBool :: Text -> Maybe Bool
 parseBool "0" = Just False
@@ -103,9 +96,9 @@ parseArrayType ctx elem =
 parseCArrayType :: ParseContext -> Element -> Maybe Type
 parseCArrayType ctx element = do
   let attrs = elementAttributes element
-      length = fromMaybe (-1) (M.lookup "length" attrs >>= parseInteger)
+      length = fromMaybe (-1) (M.lookup "length" attrs >>= parseIntegral)
       zeroTerminated = fromMaybe True (M.lookup "zero-terminated" attrs >>= parseBool)
-      fixedSize = fromMaybe (-1) (M.lookup "fixed-size" attrs >>= parseInteger)
+      fixedSize = fromMaybe (-1) (M.lookup "fixed-size" attrs >>= parseIntegral)
   elementType <- parseType ctx element
   return $ TCArray zeroTerminated fixedSize length elementType
 

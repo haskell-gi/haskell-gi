@@ -32,7 +32,6 @@ module GI.API
     , Union (..)
     ) where
 
-import Data.Int
 import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe, catMaybes)
@@ -47,11 +46,11 @@ import GI.Internal.ArgInfo
 import GI.Internal.FieldInfo
 import GI.Internal.FunctionInfo
 import GI.Internal.PropertyInfo
-import GI.Internal.TypeInfo
 import GI.GIR.Alias (documentListAliases)
 import GI.GIR.BasicTypes (ParseContext(..), Alias, Name(..))
 import GI.GIR.Constant (Constant(..), parseConstant)
 import GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
+import GI.GIR.Enum (Enumeration(..), parseEnum)
 import GI.GIR.Repository (readGiRepository)
 import GI.GIR.XMLUtils (subelements, childElemsWithLocalName)
 import GI.Type (Type)
@@ -74,28 +73,6 @@ data GIRInfoParse = GIRInfoParse {
     girIPIncludes   :: [Maybe (Text, Text)],
     girIPNamespaces :: [Maybe GIRNamespace]
 } deriving (Show)
-
-data Enumeration = Enumeration {
-    enumValues :: [(String, Int64)],
-    errorDomain :: Maybe String,
-    enumTypeInit :: Maybe String,
-    enumStorageType :: TypeTag,
-    enumDeprecated :: Maybe DeprecationInfo }
-    deriving Show
-
-{-
-toEnumeration :: EnumInfo -> Enumeration
-toEnumeration ei = Enumeration
-    (map viToV $ enumInfoValues ei)
-    (enumInfoErrorDomain ei)
-    (registeredTypeInfoTypeInit ei)
-    (enumInfoStorageType ei)
-    (infoDeprecated ei)
-    where viToV vi = (infoName vi, valueInfoValue vi)
--}
-
-parseEnum :: ParseContext -> Element -> Maybe (Name, API)
-parseEnum _ _ = Nothing
 
 data Flags = Flags Enumeration
     deriving Show
@@ -413,7 +390,7 @@ parseNamespaceElement ctx ns@GIRNamespace{..} element =
     case nameLocalName (elementName element) of
       "alias" -> ns     -- Processed separately
       "constant" -> maybeAddAPI ns APIConst (parseConstant ctx element)
-      "enumeration" -> maybeAddAPI ns id (parseEnum ctx element)
+      "enumeration" -> maybeAddAPI ns APIEnum (parseEnum ctx element)
       "bitfield" -> maybeAddAPI ns id (parseFlags ctx element)
       "function" -> maybeAddAPI ns id (parseFunction ctx element)
       "callback" -> maybeAddAPI ns id (parseCallback ctx element)

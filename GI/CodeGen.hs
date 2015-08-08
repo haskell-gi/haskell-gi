@@ -15,6 +15,8 @@ import Data.Tuple (swap)
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.Text as T
+import Data.Text (Text)
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CUInt)
@@ -32,7 +34,6 @@ import GI.Type
 import GI.Util
 import GI.Internal.ArgInfo
 import GI.Internal.FunctionInfo
-import GI.Internal.TypeInfo
 
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable flags) = do
@@ -55,31 +56,31 @@ genBoxedObject n typeInit = do
         line $ "instance BoxedObject " ++ name' ++ " where"
         indent $ line $ "boxedType _ = c_" ++ typeInit
 
-genBoxedEnum :: Name -> String -> CodeGen ()
+genBoxedEnum :: Name -> Text -> CodeGen ()
 genBoxedEnum n typeInit = do
   name' <- upperName n
 
   group $ do
-    line $ "foreign import ccall \"" ++ typeInit ++ "\" c_" ++
-            typeInit ++ " :: "
+    line $ "foreign import ccall \"" ++ T.unpack typeInit ++ "\" c_" ++
+            T.unpack typeInit ++ " :: "
     indent $ line "IO GType"
   group $ do
        line $ "instance BoxedEnum " ++ name' ++ " where"
-       indent $ line $ "boxedEnumType _ = c_" ++ typeInit
+       indent $ line $ "boxedEnumType _ = c_" ++ T.unpack typeInit
 
 genEnumOrFlags :: Name -> Enumeration -> ExcCodeGen ()
-genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage isDeprecated) = do
+genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storageBytes isDeprecated) = do
   -- Conversion functions expect enums and flags to map to CUInt,
   -- which we assume to be of 32 bits. Fail early, instead of giving
   -- strange errors at runtime.
   when (sizeOf (0 :: CUInt) /= 4) $
        notImplementedError $ "Unsupported CUInt size: " ++ show (sizeOf (0 :: CUInt))
-  when (storage /= TypeTagInt32 && storage /= TypeTagUint32) $
-       notImplementedError $ "Storage of size /= 32 not supported : " ++ show storage
+  when (storageBytes /= 4) $
+       notImplementedError $ "Storage of size /= 4 not supported : " ++ show storageBytes
 
   name' <- upperName n
   fields' <- forM fields $ \(fieldName, value) -> do
-      n <- upperName $ Name ns (name ++ "_" ++ fieldName)
+      n <- upperName $ Name ns (name ++ "_" ++ T.unpack fieldName)
       return (n, value)
 
   line $ deprecatedPragma name' isDeprecated
@@ -129,12 +130,12 @@ genFlags n@(Name _ name) (Flags enum) = do
                 name' <- upperName n
                 group $ line $ "instance IsGFlag " ++ name')
 
-genErrorDomain :: String -> String -> CodeGen ()
+genErrorDomain :: String -> Text -> CodeGen ()
 genErrorDomain name' domain = do
   group $ do
     line $ "instance GErrorClass " ++ name' ++ " where"
     indent $ line $
-               "gerrorClassDomain _ = \"" ++ domain ++ "\""
+               "gerrorClassDomain _ = \"" ++ T.unpack domain ++ "\""
   -- Generate type specific error handling (saves a bit of typing, and
   -- it's clearer to read).
   group $ do

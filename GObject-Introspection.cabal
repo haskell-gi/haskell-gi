@@ -62,6 +62,7 @@ Executable haskell-gi
       GI.GIR.BasicTypes,
       GI.GIR.Constant,
       GI.GIR.Deprecation,
+      GI.GIR.Enum,
       GI.GIR.Repository,
       GI.GIR.Type,
       GI.GIR.XMLUtils,
@@ -87,6 +88,8 @@ Executable haskell-gi
       GI.Transfer,
       GI.Type,
       GI.Util
+
+  c-sources: c/enumStorage.c
 
 Library
   exposed-modules:
