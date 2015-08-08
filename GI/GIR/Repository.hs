@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module GI.Repository (readGiRepository) where
+module GI.GIR.Repository (readGiRepository) where
 
 import Prelude hiding (readFile)
 
