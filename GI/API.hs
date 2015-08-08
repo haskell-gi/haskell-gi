@@ -51,6 +51,7 @@ import GI.GIR.BasicTypes (ParseContext(..), Alias, Name(..))
 import GI.GIR.Constant (Constant(..), parseConstant)
 import GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
 import GI.GIR.Enum (Enumeration(..), parseEnum)
+import GI.GIR.Flags (Flags(..), parseFlags)
 import GI.GIR.Repository (readGiRepository)
 import GI.GIR.XMLUtils (subelements, childElemsWithLocalName)
 import GI.Type (Type)
@@ -73,17 +74,6 @@ data GIRInfoParse = GIRInfoParse {
     girIPIncludes   :: [Maybe (Text, Text)],
     girIPNamespaces :: [Maybe GIRNamespace]
 } deriving (Show)
-
-data Flags = Flags Enumeration
-    deriving Show
-
-{-
-toFlags :: EnumInfo -> Flags
-toFlags ei = Flags $ toEnumeration ei
--}
-
-parseFlags :: ParseContext -> Element -> Maybe (Name, API)
-parseFlags _ _ = Nothing
 
 data Arg = Arg {
     argName :: String,
@@ -391,7 +381,7 @@ parseNamespaceElement ctx ns@GIRNamespace{..} element =
       "alias" -> ns     -- Processed separately
       "constant" -> maybeAddAPI ns APIConst (parseConstant ctx element)
       "enumeration" -> maybeAddAPI ns APIEnum (parseEnum ctx element)
-      "bitfield" -> maybeAddAPI ns id (parseFlags ctx element)
+      "bitfield" -> maybeAddAPI ns APIFlags (parseFlags ctx element)
       "function" -> maybeAddAPI ns id (parseFunction ctx element)
       "callback" -> maybeAddAPI ns id (parseCallback ctx element)
       "record" -> maybeAddAPI ns id (parseStruct ctx element)

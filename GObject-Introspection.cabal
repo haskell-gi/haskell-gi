@@ -63,6 +63,7 @@ Executable haskell-gi
       GI.GIR.Constant,
       GI.GIR.Deprecation,
       GI.GIR.Enum,
+      GI.GIR.Flags,
       GI.GIR.Repository,
       GI.GIR.Type,
       GI.GIR.XMLUtils,
