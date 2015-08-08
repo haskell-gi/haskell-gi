@@ -203,14 +203,8 @@ findAPIByName n@(Name ns _) = do
     apis <- getAPIs
     case M.lookup n apis of
         Just api -> return api
-        Nothing -> do
-            deps <- getDeps
-            if not (Set.member ns deps)
-            -- If we get asked for a module not yet loaded, load it and retry.
-            then do
-                loadDependency ns
-                findAPIByName n
-            else error $ "couldn't find API description for " ++ ns ++ "." ++ name n
+        Nothing ->
+            error $ "couldn't find API description for " ++ ns ++ "." ++ name n
 
 config :: CodeGen Config
 config = ask

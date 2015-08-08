@@ -1,12 +1,7 @@
 namespace WebKit
 
 # PkgConfig names are slightly different to the GI namespaces
-pkg-config-name WebKit webkitgtk
 pkg-config-name JavaScriptCore javascriptcoregtk
-pkg-config-name Soup libsoup
-
-# Make sure we load the right JavaScriptCore GI file
-namespace-version JavaScriptCore 3.0
 
 # This is a macro, but somehow it appears in the introspection data as
 # a function.

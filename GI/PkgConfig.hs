@@ -14,12 +14,6 @@ import Data.Text (Text)
 import System.Exit (ExitCode(..))
 import System.Process (readProcessWithExitCode)
 
--- | Known mappings from (lowercased) gobject-introspection namespaces
--- to package names known to pkg-config.
-builtinMappings :: M.Map Text Text
-builtinMappings = M.fromList [("gtk", "gtk+")
-                             ,("gdkpixbuf", "gdk-pixbuf")]
-
 -- | Try asking pkg-config for the version of a given module.
 tryPkgConfig :: Text -> IO (Maybe (Text, Text))
 tryPkgConfig pkgName = do
@@ -33,8 +27,8 @@ tryPkgConfig pkgName = do
 
 -- | Get the pkg-config name and associated installed version of a given
 -- gobject-introspection namespace. Since the mapping is not
--- one-to-one some guessing is involved, and in some cases we need to
--- resort to mapping tables.
+-- one-to-one some guessing is involved, although in most cases the
+-- required information is listed in the GIR file.
 pkgConfigGetVersion :: Text     -- name
                     -> Text     -- version
                     -> [Text]   -- known package names
@@ -46,8 +40,7 @@ pkgConfigGetVersion name version packages verbose overridenNames = do
   when verbose $
            putStrLn $ T.unpack ("Querying pkg-config for " <> name <>
                               " version " <> version)
-  let knownMappings = M.union builtinMappings overridenNames
-      alternatives = case M.lookup lowerName knownMappings of
+  let alternatives = case M.lookup lowerName overridenNames of
                        Nothing -> packages ++ [lowerName <> "-" <> version,
                                                lowerName]
                        Just n -> [n <> "-" <> version, n]
