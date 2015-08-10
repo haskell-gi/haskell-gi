@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards, PatternGuards, NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, NamedFieldPuns #-}
 
 module GI.API
     ( API(..)
@@ -44,15 +44,19 @@ import Text.XML hiding (Name)
 
 import GI.Internal.ArgInfo
 import GI.Internal.FieldInfo
-import GI.Internal.FunctionInfo
-import GI.Internal.PropertyInfo
 import GI.GIR.Alias (documentListAliases)
+import GI.GIR.Arg (Arg(..))
 import GI.GIR.BasicTypes (ParseContext(..), Alias, Name(..))
+import GI.GIR.Callable (Callable(..))
 import GI.GIR.Constant (Constant(..), parseConstant)
 import GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
 import GI.GIR.Enum (Enumeration(..), parseEnum)
 import GI.GIR.Flags (Flags(..), parseFlags)
+import GI.GIR.Function (Function(..), parseFunction)
+import GI.GIR.Interface (Interface(..), parseInterface)
+import GI.GIR.Property (Property(..))
 import GI.GIR.Repository (readGiRepository)
+import GI.GIR.Signal (Signal(..))
 import GI.GIR.XMLUtils (subelements, childElemsWithLocalName)
 import GI.Type (Type)
 
@@ -74,102 +78,6 @@ data GIRInfoParse = GIRInfoParse {
     girIPIncludes   :: [Maybe (Text, Text)],
     girIPNamespaces :: [Maybe GIRNamespace]
 } deriving (Show)
-
-data Arg = Arg {
-    argName :: String,
-    argType :: Type,
-    direction :: Direction,
-    mayBeNull :: Bool,
-    argScope :: Scope,
-    argClosure :: Int,
-    argDestroy :: Int,
-    transfer :: Transfer }
-    deriving (Show, Eq, Ord)
-
-{-
-toArg :: ArgInfo -> Arg
-toArg ai = Arg
-    (infoName ai)
-    (typeFromTypeInfo . argInfoType $ ai)
-    (argInfoDirection ai)
-    (argInfoMayBeNull ai)
-    (argInfoScope ai)
-    (argInfoClosure ai)
-    (argInfoDestroy ai)
-    (argInfoOwnershipTransfer ai)
--}
-
-data Callable = Callable {
-    returnType :: Type,
-    returnMayBeNull :: Bool,
-    returnTransfer :: Transfer,
-    returnAttributes :: [(String, String)],
-    args :: [Arg],
-    skipReturn :: Bool,
-    callableDeprecated :: Maybe DeprecationInfo }
-    deriving (Show, Eq)
-
-{-
-toCallable :: CallableInfo -> Callable
-toCallable ci = Callable
-    (typeFromTypeInfo $ callableInfoReturnType ci)
-    (callableInfoMayReturnNull ci)
-    (callableInfoCallerOwns ci)
-    (callableInfoReturnAttributes ci)
-    (map toArg $ callableInfoArgs ci)
-    (callableInfoSkipReturn ci)
-    (infoDeprecated ci)
--}
-
-data Function = Function {
-    fnSymbol :: String,
-    fnCallable :: Callable,
-    fnFlags :: [FunctionInfoFlag] }
-    deriving Show
-
-{-
-toFunction :: FunctionInfo -> Function
-toFunction fi = Function
-    (functionInfoSymbol fi)
-    (toCallable ci)
-    (functionInfoFlags fi)
-    where ci = fromBaseInfo (baseInfo fi) :: CallableInfo
--}
-
-parseFunction :: ParseContext -> Element -> Maybe (Name, API)
-parseFunction _ _ = Nothing
-
-data Signal = Signal {
-    sigName :: String,
-    sigCallable :: Callable,
-    sigDeprecated :: Maybe DeprecationInfo }
-    deriving (Show, Eq)
-
-{-
-toSignal :: SignalInfo -> Signal
-toSignal si = Signal
-    (infoName si)
-    (toCallable $ callableInfo si)
-    (infoDeprecated si)
--}
-
-data Property = Property {
-    propName :: String,
-    propType :: Type,
-    propFlags :: [ParamFlag],
-    propTransfer :: Transfer,
-    propDeprecated :: Maybe DeprecationInfo }
-    deriving (Show, Eq)
-
-{-
-toProperty :: PropertyInfo -> Property
-toProperty pi = Property
-    (infoName pi)
-    (typeFromTypeInfo $ propertyInfoType pi)
-    (propertyInfoFlags pi)
-    (propertyInfoTransfer pi)
-    (infoDeprecated pi)
--}
 
 data Field = Field {
     fieldName :: String,
@@ -265,31 +173,6 @@ toCallback = Callback . toCallable
 parseCallback :: ParseContext -> Element -> Maybe (Name, API)
 parseCallback _ _ = Nothing
 
-data Interface = Interface {
-    ifConstants :: [(Name, Constant)],
-    ifProperties :: [Property],
-    ifSignals :: [Signal],
-    ifPrerequisites :: [Name],
-    ifTypeInit :: Maybe String,
-    ifMethods :: [(Name, Function)],
-    ifDeprecated :: Maybe DeprecationInfo }
-    deriving Show
-
-{-
-toInterface :: InterfaceInfo -> Interface
-toInterface ii = Interface
-    (map (withName toConstant) (interfaceInfoConstants ii))
-    (map toProperty (interfaceInfoProperties ii))
-    (map toSignal (interfaceInfoSignals ii))
-    (map (fst . toAPI) (interfaceInfoPrerequisites ii))
-    (registeredTypeInfoTypeInit ii)
-    (map (withName toFunction) (interfaceInfoMethods ii))
-    (infoDeprecated ii)
--}
-
-parseInterface :: ParseContext -> Element -> Maybe (Name, API)
-parseInterface _ _ = Nothing
-
 data Object = Object {
     objFields :: [Field],
     objMethods :: [(Name, Function)],
@@ -382,12 +265,12 @@ parseNamespaceElement ctx ns@GIRNamespace{..} element =
       "constant" -> maybeAddAPI ns APIConst (parseConstant ctx element)
       "enumeration" -> maybeAddAPI ns APIEnum (parseEnum ctx element)
       "bitfield" -> maybeAddAPI ns APIFlags (parseFlags ctx element)
-      "function" -> maybeAddAPI ns id (parseFunction ctx element)
+      "function" -> maybeAddAPI ns APIFunction (parseFunction ctx element)
       "callback" -> maybeAddAPI ns id (parseCallback ctx element)
       "record" -> maybeAddAPI ns id (parseStruct ctx element)
       "union" -> maybeAddAPI ns id (parseUnion ctx element)
       "class" -> maybeAddAPI ns id (parseObject ctx element)
-      "interface" -> maybeAddAPI ns id (parseInterface ctx element)
+      "interface" -> maybeAddAPI ns APIInterface (parseInterface ctx element)
       "boxed" -> maybeAddAPI ns id (parseBoxed ctx element)
       n -> error . T.unpack $ "Unknown GIR element \"" <> n <> "\" when processing namespace \"" <> nsName <> "\", aborting."
 
@@ -468,14 +351,14 @@ loadGIRFile verbose name version = do
 toGIRInfo :: GIRInfoParse -> Either Text GIRInfo
 toGIRInfo info =
     case catMaybes (girIPNamespaces info) of
-      [ns] -> Right $ GIRInfo {
+      [ns] -> Right GIRInfo {
                 girPCPackages = catMaybes (girIPPackage info)
               , girNSName = nsName ns
               , girNSVersion = nsVersion ns
               , girAPIs = nsAPIs ns
               }
-      [] -> Left "Found no valid namespaces."
-      _ -> Left "Found multiple namespaces."
+      [] -> Left "Found no valid namespace."
+      _  -> Left "Found multiple namespaces."
 
 -- | Load and parse a GIR file, including its dependencies.
 loadGIRInfo :: Bool             -- ^ verbose
