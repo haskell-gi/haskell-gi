@@ -8,7 +8,7 @@ module GI.CodeGen
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM, forM_, when, unless)
+import Control.Monad (forM, forM_, when, unless, filterM)
 import Control.Monad.Writer (tell)
 import Data.List (intercalate)
 import Data.Tuple (swap)
@@ -27,9 +27,8 @@ import GI.GObject
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
                   ignoreStruct)
-import GI.SymbolNaming
+import GI.SymbolNaming (upperName, ucFirst, classConstraint, noName)
 import GI.Type
-import GI.Util
 import GI.Internal.ArgInfo
 import GI.Internal.FunctionInfo
 import GI.Internal.TypeInfo
@@ -270,46 +269,19 @@ genMethod cn mn (Function {
               else c'
     genCallable mn' sym c'' (FunctionThrows `elem` fs)
 
--- Since all GObjects are instances of their own class and GObject,
--- the method signatures can get a little cumbersome. The construction
--- below basically defines a constraint synonym, so the resulting
--- signatures are shorter. A perhaps nicer way of achieving the same
--- thing would be to use the ConstraintKinds extension, but doing
--- things in the current manner has the advantage that the generated
--- (goConstraint name') has directly kind "* -> Constraint", which
--- plays well with the way we are implementing polymorphic lenses for
--- GObject properties.
-genUnifiedConstraint name' = do
-  let unified = parenthesize (intercalate ", " [klass name' ++ " a",
-                                                "GObject a"])
-                ++ " => " ++ goConstraint name' ++ " a where {}"
-  line $ "class " ++ unified
-  line $ "instance " ++ unified
-
--- Instantiation mechanism, so we can convert different object types
--- descending from GObject into each other.
-genGObjectType iT n = do
-  name' <- upperName n
-  let className = klass name'
-
-  line $ "class " ++ className ++ " o"
-
-  genUnifiedConstraint name'
-
-  group $ do
-    line $ "instance " ++ className ++ " " ++ name'
-    forM_ iT $ \ancestor -> do
-          ancestor' <- upperName ancestor
-          line $ "instance " ++ klass ancestor' ++ " " ++ name'
-
 -- Type casting with type checking
-genGObjectCasts :: Bool -> Name -> String -> CodeGen ()
-genGObjectCasts isIU n cn_ = do
+genGObjectCasts :: Bool -> Name -> String -> [Name] -> CodeGen ()
+genGObjectCasts isIU n cn_ parents = do
   name' <- upperName n
+  qualifiedParents <- traverse upperName parents
 
   group $ do
     line $ "foreign import ccall \"" ++ cn_ ++ "\""
     indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
+
+  group $ do
+    line $ "type instance ParentTypes " ++ name' ++ " = '[" ++
+         intercalate ", " qualifiedParents ++ "]"
 
   group $ do
     line $ "instance GObject " ++ name' ++ " where"
@@ -317,10 +289,16 @@ genGObjectCasts isIU n cn_ = do
             line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
             line $ "gobjectType _ = c_" ++ cn_
 
+  let className = classConstraint name'
+  group $ do
+    line $ "class GObject o => " ++ className ++ " o"
+    line $ "instance (GObject o, IsDescendantOf " ++ name' ++ " o) => "
+             ++ className ++ " o"
+
   -- Safe downcasting.
   group $ do
     let safeCast = "to" ++ name'
-    line $ safeCast ++ " :: " ++ goConstraint name' ++ " o => o -> IO " ++ name'
+    line $ safeCast ++ " :: " ++ className ++ " o => o -> IO " ++ name'
     line $ safeCast ++ " = unsafeCastTo " ++ name'
 
 -- Wrap a given Object. We enforce that every Object that we wrap is a
@@ -343,20 +321,24 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
 
   noName name'
 
-  -- Instances and type conversions
-  iT <- instanceTree n
-  genGObjectType iT n
-
-  -- Implemented interfaces
-  let oIfs = objInterfaces o
-  unless (null oIfs) $ group $ forM_ oIfs $ \(Name ns n) -> do
-    prefix <- qualify ns
-    let ifClass = prefix ++ interfaceClassName n
-    line $ "instance " ++ ifClass ++ " " ++ name'
-
   -- Type safe casting
   isIU <- isInitiallyUnowned t
-  genGObjectCasts isIU n (objTypeInit o)
+  -- Filter out interfaces inherited from the parent GObject. This is
+  -- not strictly necessary, but reduces redundancy of the generated
+  -- list of ancestor types.
+  oIfs <- case objParent o of
+            Nothing -> return (objInterfaces o)
+            Just p -> do
+              parentAPI <- findAPIByName p
+              case parentAPI of
+                APIObject po ->
+                    return $ filter (`notElem` (objInterfaces po))
+                               (objInterfaces o)
+                _ -> error $ "Parent Object of " ++ name' ++ " not an Object!"
+  -- And in case we do have a parent, that goes in the front, so it
+  -- gets tried first when doing overloading resolution.
+  let parents = maybe oIfs (: oIfs) (objParent o)
+  genGObjectCasts isIU n (objTypeInit o) parents
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) ->
@@ -382,39 +364,23 @@ genInterface n iface = do
   -- something more elegant with existential types.
 
   name' <- upperName n
-  let cls = interfaceClassName name'
   line $ "-- interface " ++ name' ++ " "
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
-  line $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
 
   noName name'
 
   isGO <- apiIsGObject n (APIInterface iface)
-  when isGO (genUnifiedConstraint name')
-
-  group $ do
-    line $ "instance " ++ cls ++ " " ++ name'
-    -- We are also instances of our prerequisites
-    forM_ (ifPrerequisites iface) $ \pName@(Name ns n) -> do
-      prefix <- qualify ns
-      api <- findAPI (TInterface ns n)
-      case api of
-        Just (APIInterface _) ->
-            line $ "instance " ++ prefix ++ interfaceClassName n ++ " " ++ name'
-        Just (APIObject _) -> do
-            line $ "instance " ++ prefix ++ klass n ++ " " ++ name'
-            -- We are also instances of the parents of the object
-            iT <- instanceTree pName
-            forM_ iT $ \ancestor -> do
-                  ancestor' <- upperName ancestor
-                  line $ "instance " ++ klass ancestor' ++ " " ++ name'
-        _ -> error $ "Prerequisite is neither an object or an interface!? : "
-                       ++ ns ++ "." ++ n
-
-  when isGO $ do
+  if isGO
+  then do
     let cn_ = fromMaybe (error "GObject derived interface without a type!") (ifTypeInit iface)
     isIU <- apiIsInitiallyUnowned n (APIInterface iface)
-    genGObjectCasts isIU n cn_
+    gobjectInterfaces <- filterM nameIsGObject (ifPrerequisites iface)
+    genGObjectCasts isIU n cn_ gobjectInterfaces
+  else group $ do
+    let cls = classConstraint name'
+    line $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
+    line $ "instance IsDescendantOf " ++ name' ++ " o => " ++ cls ++ " o"
+    line $ "type instance ParentTypes " ++ name' ++ " = '[]"
 
   -- Methods
   forM_ (ifMethods iface) $ \(mn, f) -> do
@@ -506,6 +472,7 @@ genPrelude name modulePrefix = do
     line "import GI.Utils.GVariant"
     line "import GI.Utils.GValue"
     line "import GI.Utils.ManagedPtr"
+    line "import GI.Utils.Overloading"
     line "import GI.Utils.Properties hiding (new)"
     line "import GI.Utils.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId)"
     line "import GI.Utils.Utils"

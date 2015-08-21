@@ -161,7 +161,9 @@ class BoxedEnum a where
 
 -- | A wrapped `GObject`.
 class ForeignPtrNewtype a => GObject a where
+    -- | Whether the `GObject` is a descendent of <https://developer.gnome.org/gobject/stable/gobject-The-Base-Object-Type.html#GInitiallyUnowned GInitiallyUnowned>.
     gobjectIsInitiallyUnowned :: a -> Bool
+    -- | The `GType` for this object.
     gobjectType :: a -> IO GType
 
 -- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "GI.Utils.GVariant" for further methods.

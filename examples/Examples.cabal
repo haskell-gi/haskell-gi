@@ -22,7 +22,7 @@ Executable SimpleBrowser
   build-depends:
       base >= 4.7 && < 5,
       basic-prelude >= 0.5 && <0.6,
-      GObject-Introspection >= 0.5 && < 0.6,
+      GObject-Introspection >= 0.6 && < 0.7,
       gi-gtk >= 0.3.16 && < 0.4,
       gi-webkit >= 0.2.4 && < 0.3,
       text >= 1.0

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GI.SymbolNaming
     ( qualify
     , qualifyWithSuffix
@@ -7,20 +8,23 @@ module GI.SymbolNaming
     , upperName
     , noName
     , escapeReserved
-    , interfaceClassName
+    , classConstraint
     , hyphensToCamelCase
     , underscoresToCamelCase
     ) where
 
 import Data.Char (toLower, toUpper)
 import Data.List (isPrefixOf)
+import Data.Monoid ((<>))
+import Data.String (IsString)
 
 import GI.API
 import GI.Code
 import GI.Config (Config(modName))
 import GI.Util (split)
 
-interfaceClassName = (++"Klass")
+classConstraint :: (Monoid a, IsString a) => a -> a
+classConstraint n = n <> "K"
 
 ucFirst (x:xs) = toUpper x : xs
 ucFirst "" = error "ucFirst: empty string"
@@ -83,6 +87,7 @@ hyphensToCamelCase str = concatMap ucFirst $ split '-' str
 underscoresToCamelCase :: String -> String
 underscoresToCamelCase str = concatMap ucFirst $ split '_' str
 
+escapeReserved :: String -> String
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"
 escapeReserved "data" = "data_"

@@ -574,18 +574,14 @@ argumentType letters@(l:ls) t   = do
   s <- show <$> haskellType t
   case api of
     Just (APIInterface _) -> do
-             isGO <- isGObject t
-             let constraints =
-                     if isGO
-                     then [goConstraint s ++ " " ++ [l]]
-                     else [interfaceClassName s ++ " " ++ [l]]
+             let constraints = [classConstraint s ++ " " ++ [l]]
              return (ls, [l], constraints)
     -- Instead of restricting to the actual class,
     -- we allow for any object descending from it.
     Just (APIObject _) -> do
         isGO <- isGObject t
         if isGO
-        then return (ls, [l], [goConstraint s ++ " " ++ [l]])
+        then return (ls, [l], [classConstraint s ++ " " ++ [l]])
         else return (letters, s, [])
     _ -> return (letters, s, [])
 

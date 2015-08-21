@@ -88,7 +88,7 @@ genPropertySetter :: Name -> String -> Property -> CodeGen ()
 genPropertySetter n pName prop = group $ do
   oName <- upperName n
   (constraints, t) <- attrType prop
-  let constraints' = (goConstraint oName ++ " o"):constraints
+  let constraints' = (classConstraint oName ++ " o"):constraints
   tStr <- propTypeStr $ propType prop
   line $ "set" ++ pName ++ " :: (" ++ intercalate ", " constraints'
            ++ ") => o -> " ++ t ++ " -> IO ()"
@@ -99,7 +99,7 @@ genPropertyGetter :: Name -> String -> Property -> CodeGen ()
 genPropertyGetter n pName prop = group $ do
   oName <- upperName n
   outType <- haskellType (propType prop)
-  let constraints = "(" ++ goConstraint oName ++ " o)"
+  let constraints = "(" ++ classConstraint oName ++ " o)"
   line $ "get" ++ pName ++ " :: " ++ constraints ++
                 " => o -> " ++ show (io outType)
   tStr <- propTypeStr $ propType prop
@@ -203,7 +203,7 @@ genOneProperty n propOwner@(Name ons on) prop = do
 
   when owned $ group $ do
     line $ qualifiedLens ++ " :: "
-             ++ parenthesize (goConstraint name ++ " o")
+             ++ parenthesize (classConstraint name ++ " o")
              ++ " => Attr \"" ++ cName ++ "\" o"
     line $ qualifiedLens ++ " = undefined"
 
@@ -213,7 +213,7 @@ genOneProperty n propOwner@(Name ons on) prop = do
     hInType <- show <$> haskellType (propType prop)
     let inConstraint = if writable || constructOnly
                        then if inIsGO
-                            then goConstraint hInType
+                            then classConstraint hInType
                             else "(~) " ++ if ' ' `elem` hInType
                                            then parenthesize hInType
                                            else hInType

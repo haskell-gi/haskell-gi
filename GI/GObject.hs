@@ -1,9 +1,8 @@
 module GI.GObject
-    ( klass
-    , goConstraint
-    , instanceTree
+    ( instanceTree
     , isGObject
     , apiIsGObject
+    , nameIsGObject
     , isInitiallyUnowned
     , apiIsInitiallyUnowned
     ) where
@@ -15,9 +14,6 @@ import Control.Applicative ((<$>))
 import GI.API
 import GI.Code
 import GI.Type
-
-klass n = n ++ "Klass"
-goConstraint n = n ++ "K"
 
 -- Find the parent of a given object when building the
 -- instanceTree. For the purposes of the binding we do not need to
@@ -62,6 +58,10 @@ apiDoParentSearch parent n api
 
 isGObject :: Type -> CodeGen Bool
 isGObject = typeDoParentSearch $ Name "GObject" "Object"
+
+-- | Check whether the given name descends from GObject.
+nameIsGObject :: Name -> CodeGen Bool
+nameIsGObject n = findAPIByName n >>= apiIsGObject n
 
 apiIsGObject :: Name -> API -> CodeGen Bool
 apiIsGObject = apiDoParentSearch $ Name "GObject" "Object"

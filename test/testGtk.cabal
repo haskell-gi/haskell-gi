@@ -26,7 +26,7 @@ Executable testGtk
       bytestring >= 0.10,
       containers >= 0.5 && < 0.6,
       random >= 1.1 && < 1.2,
-      GObject-Introspection >= 0.5 && < 0.6,
+      GObject-Introspection >= 0.6 && < 0.7,
       gi-glib >= 0.2.44 && < 0.3,
       gi-gdk >= 0.3.16 && < 0.4,
       gi-gio >= 0.2.44 && < 0.3,
