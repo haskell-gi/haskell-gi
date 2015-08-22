@@ -1,6 +1,5 @@
 module GI.GObject
-    ( instanceTree
-    , isGObject
+    ( isGObject
     , apiIsGObject
     , nameIsGObject
     , isInitiallyUnowned
@@ -14,26 +13,6 @@ import Control.Applicative ((<$>))
 import GI.API
 import GI.Code
 import GI.Type
-
--- Find the parent of a given object when building the
--- instanceTree. For the purposes of the binding we do not need to
--- distinguish between GObject.Object and GObject.InitiallyUnowned.
-getParent :: API -> Maybe Name
-getParent (APIObject o) = rename $ objParent o
-    where
-      rename :: Maybe Name -> Maybe Name
-      rename (Just (Name "GObject" "InitiallyUnowned")) =
-          Just (Name "GObject" "Object")
-      rename x = x
-getParent _ = Nothing
-
--- Compute the (ordered) list of parents of the current object.
-instanceTree :: Name -> CodeGen [Name]
-instanceTree n = do
-  api <- findAPIByName n
-  case getParent api of
-    Just p -> (p :) <$> instanceTree p
-    Nothing -> return []
 
 -- Returns whether the given type is a descendant of the given parent.
 typeDoParentSearch :: Name -> Type -> CodeGen Bool

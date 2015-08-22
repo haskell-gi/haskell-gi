@@ -14,6 +14,12 @@ module GI.Utils.Overloading
     , ResolveAttribute
     , HasAttribute
     , HasAttr
+
+    -- * Looking up signals in parent types
+    , SignalList
+    , HasSignal
+    , ResolveSignal
+    , GenericSignals
     ) where
 
 import GHC.Exts (Constraint)
@@ -21,7 +27,6 @@ import GHC.TypeLits
 
 -- | Join two lists.
 type family JoinLists (as :: [a]) (bs :: [a]) :: [a] where
-
     JoinLists '[] bs = bs
     JoinLists (a ': as) bs = a ': JoinLists as bs
 
@@ -96,12 +101,6 @@ type family ResolveAttribute (s :: Symbol) (o :: *) :: * where
     ResolveAttribute s o = FindElement s (CollectAttributes o)
                            (UnknownAttribute "Error: could not find attribute" s "for object" o)
 
--- | Check whether attribute resolution succeeded. This is useful in
--- order to simplify the typechecking error messages in case we try to
--- resolve a non-existent symbol.
-type family CheckAttribute (s :: Symbol) (o :: *) :: Constraint where
-    CheckAttribute s o = ()
-
 -- | Whether a given type is in the given list. If found, return
 -- @success@, otherwise return @failure@.
 type family IsElem (e :: Symbol) (es :: [(Symbol, *)]) (success :: k) (failure :: k) :: k where
@@ -121,5 +120,50 @@ type family HasAttribute (attr :: Symbol) (o :: *) where
                           ~ 'HasAttribute
 
 -- | A constraint that enforces that the given type has a given attribute.
-class HasAttr (o :: *) (attr :: Symbol)
-instance HasAttribute attr o => HasAttr o attr
+class HasAttr (attr :: Symbol) (o :: *)
+instance HasAttribute attr o => HasAttr attr o
+
+-- | The list of signals defined for a given type. Each element of
+-- the list is a tuple, with the first element of the tuple the name
+-- of the signal, and the second the type encoding the information of
+-- the signal. This type will be an instance of `SignalInfo`.
+type family SignalList a :: [(Symbol, *)]
+
+-- | Get the list of signals recursively, given a list of types.
+type family CollectParentSignals (ps :: [a]) :: [[(Symbol, *)]] where
+    CollectParentSignals '[] = '[]
+    CollectParentSignals (p ': ps) = CollectSignals p ':
+                                     CollectParentSignals ps
+
+-- | Collect all signals defined for a type, including those defined by
+-- the parents.
+type family CollectSignals (a :: *) where
+    CollectSignals a = ConcatLists (SignalList a ': CollectParentSignals (ParentTypes a))
+
+-- | Datatype returned when the signal is not found, hopefully making
+-- the resulting error messages somewhat clearer.
+data UnknownSignal (msg1 :: Symbol) (s :: Symbol) (msg2 :: Symbol) (o :: *)
+
+-- | Return the type encoding the signal information for a given
+-- type and signal.
+type family ResolveSignal (s :: Symbol) (o :: *) :: * where
+    ResolveSignal s o = FindElement s (JoinLists (SignalList GenericSignals)
+                                                 (CollectSignals o))
+                        (UnknownSignal "Error: could not find signal" s "for object" o)
+
+-- | Isomorphic to Bool, but having some extra debug information.
+data SignalCheck s t = HasSignal
+                     | DoesNotHaveSignal Symbol s Symbol t
+
+-- | A constraint enforcing that the signal exists for the given
+-- object, or one of its ancestors.
+type family HasSignal (s :: Symbol) (o :: *) where
+    HasSignal s o = IsElem s (JoinLists (SignalList GenericSignals)
+                                        (CollectSignals o))
+                    'HasSignal
+                    ('DoesNotHaveSignal "Error: signal" s "not found for type" o)
+                    ~ 'HasSignal
+
+-- | Giving an instance of `SignalList` for this type will add the
+-- signal to every type.
+data GenericSignals

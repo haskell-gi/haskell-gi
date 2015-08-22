@@ -4,25 +4,28 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- | Routines for connecting `GObject`s to signals.
 module GI.Utils.Signals
-    ( HasSignal(..),
-      SignalConnectMode(..),
+    ( SignalConnectMode(..),
       connectSignalFunPtr,
       on,
       after,
-      SignalHandlerId
+      SignalHandlerId,
+      SignalInfo(..)
     ) where
 
 import Foreign
 import Foreign.C
 
-import GHC.TypeLits
 import GHC.Exts (Constraint)
+import GHC.TypeLits
 
 import GI.Utils.BasicTypes
 import GI.Utils.ManagedPtr (withManagedPtr)
+import GI.Utils.Overloading (HasSignal, ResolveSignal)
 import GI.Utils.Utils (safeFreeFunPtrPtr)
 
 #include <glib-object.h>
@@ -30,16 +33,19 @@ import GI.Utils.Utils (safeFreeFunPtrPtr)
 -- | Type of a `GObject` signal handler id.
 type SignalHandlerId = #type gulong
 
--- | Typeclass whose members are `GObject`s with the given signal.
-class GObject o => HasSignal (signal :: Symbol) o where
-    type HaskellCallbackType signal o
-    type ConnectConstraint signal o :: Symbol -> Constraint
+-- | A proxy for passing on the signal information.
+data SignalProxy (s :: *) (e :: Symbol) (c :: * -> Constraint) = SignalProxy
+
+-- | Information about an overloaded signal.
+class SignalInfo (info :: *) where
+    type HaskellCallbackType info
     -- | Connect a Haskell function to a signal of the given `GObject`,
     -- specifying whether the handler will be called before or after
     -- the default handler.
-    connectSignal :: (KnownSymbol slot, ConnectConstraint signal o slot) =>
-                     proxy signal slot -> o ->
-                     HaskellCallbackType signal o ->
+    connectSignal :: (KnownSymbol extra, GObject o, constraint o) =>
+                     SignalProxy info extra constraint ->
+                     o ->
+                     HaskellCallbackType info ->
                      SignalConnectMode ->
                      IO SignalHandlerId
 
@@ -52,16 +58,30 @@ data SignalConnectMode = SignalConnectBefore  -- ^ Run before the default handle
 -- handler is to be run before the default handler.
 --
 -- > on = connectSignal SignalConnectBefore
-on :: (HasSignal s o, KnownSymbol slot, ConnectConstraint s o slot) =>
-      o -> proxy s slot -> HaskellCallbackType s o -> IO SignalHandlerId
-on o s c = connectSignal s o c SignalConnectBefore
+on :: forall signal extra o info constraint proxy.
+      (GObject o,
+       HasSignal signal o, info ~ ResolveSignal signal o, SignalInfo info,
+       KnownSymbol extra, constraint o) =>
+      o -> proxy (signal :: Symbol) (extra :: Symbol) (constraint :: * -> Constraint)
+        -> HaskellCallbackType info -> IO SignalHandlerId
+on o p c = connectSignal (resolve p) o c SignalConnectBefore
+    where resolve :: proxy signal extra constraint ->
+                     SignalProxy (ResolveSignal signal o) extra constraint
+          resolve _ = SignalProxy
 
 -- | Connect a signal to a handler, running the handler after the default one.
 --
 -- > after = connectSignal SignalConnectAfter
-after :: (HasSignal s o, KnownSymbol slot, ConnectConstraint s o slot) =>
-         o -> proxy s slot -> HaskellCallbackType s o -> IO SignalHandlerId
-after o s c = connectSignal s o c SignalConnectBefore
+after :: forall signal extra o info constraint proxy.
+         (GObject o,
+          HasSignal signal o, info ~ ResolveSignal signal o, SignalInfo info,
+          KnownSymbol extra, constraint o) =>
+         o -> proxy (signal :: Symbol) (extra :: Symbol) (constraint :: * -> Constraint)
+           -> HaskellCallbackType info -> IO SignalHandlerId
+after o p c = connectSignal (resolve p) o c SignalConnectAfter
+    where resolve :: proxy signal extra constraint ->
+                     SignalProxy (ResolveSignal signal o) extra constraint
+          resolve _ = SignalProxy
 
 -- Connecting GObjects to signals
 foreign import ccall "g_signal_connect_data" g_signal_connect_data ::

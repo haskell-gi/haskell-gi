@@ -1,402 +1,406 @@
 -- Generated code.
 
-{-# LANGUAGE DataKinds, GADTs, KindSignatures #-}
+{-# LANGUAGE DataKinds, GADTs, KindSignatures, FlexibleInstances #-}
 
 module GI.Signals where
 
 import GHC.TypeLits
+import GHC.Exts (Constraint)
 
-data SignalProxy (a :: Symbol) (b :: Symbol) where
-    AccelActivate                        :: SignalProxy "accel-activate" "accel-activate"
-    AccelChanged                         :: SignalProxy "accel-changed" "accel-changed"
-    AccelCleared                         :: SignalProxy "accel-cleared" "accel-cleared"
-    AccelClosuresChanged                 :: SignalProxy "accel-closures-changed" "accel-closures-changed"
-    AccelEdited                          :: SignalProxy "accel-edited" "accel-edited"
-    AcceptPosition                       :: SignalProxy "accept-position" "accept-position"
-    ActionActivated                      :: SignalProxy "action-activated" "action-activated"
-    ActionsChanged                       :: SignalProxy "actions-changed" "actions-changed"
-    Activate                             :: SignalProxy "activate" "activate"
-    ActivateCurrent                      :: SignalProxy "activate-current" "activate-current"
-    ActivateCurrentLink                  :: SignalProxy "activate-current-link" "activate-current-link"
-    ActivateCursorChild                  :: SignalProxy "activate-cursor-child" "activate-cursor-child"
-    ActivateCursorItem                   :: SignalProxy "activate-cursor-item" "activate-cursor-item"
-    ActivateCursorRow                    :: SignalProxy "activate-cursor-row" "activate-cursor-row"
-    ActivateDefault                      :: SignalProxy "activate-default" "activate-default"
-    ActivateFocus                        :: SignalProxy "activate-focus" "activate-focus"
-    ActivateItem                         :: SignalProxy "activate-item" "activate-item"
-    ActivateLink                         :: SignalProxy "activate-link" "activate-link"
-    Add                                  :: SignalProxy "add" "add"
-    AddEditable                          :: SignalProxy "add-editable" "add-editable"
-    AddWidget                            :: SignalProxy "add-widget" "add-widget"
-    AdjustBounds                         :: SignalProxy "adjust-bounds" "adjust-bounds"
-    AngleChanged                         :: SignalProxy "angle-changed" "angle-changed"
-    ApplicationActivated                 :: SignalProxy "application-activated" "application-activated"
-    ApplicationSelected                  :: SignalProxy "application-selected" "application-selected"
-    Apply                                :: SignalProxy "apply" "apply"
-    ApplyAttributes                      :: SignalProxy "apply-attributes" "apply-attributes"
-    ApplyTag                             :: SignalProxy "apply-tag" "apply-tag"
-    AttachWindow                         :: SignalProxy "attach-window" "attach-window"
-    Backspace                            :: SignalProxy "backspace" "backspace"
-    Begin                                :: SignalProxy "begin" "begin"
-    BeginPrint                           :: SignalProxy "begin-print" "begin-print"
-    BeginUserAction                      :: SignalProxy "begin-user-action" "begin-user-action"
-    ButtonPressEvent                     :: SignalProxy "button-press-event" "button-press-event"
-    ButtonReleaseEvent                   :: SignalProxy "button-release-event" "button-release-event"
-    CanActivateAccel                     :: SignalProxy "can-activate-accel" "can-activate-accel"
-    Cancel                               :: SignalProxy "cancel" "cancel"
-    CancelPosition                       :: SignalProxy "cancel-position" "cancel-position"
-    Cancelled                            :: SignalProxy "cancelled" "cancelled"
-    ChangeCurrentPage                    :: SignalProxy "change-current-page" "change-current-page"
-    ChangeValue                          :: SignalProxy "change-value" "change-value"
-    Changed                              :: SignalProxy "changed" "changed"
-    CheckResize                          :: SignalProxy "check-resize" "check-resize"
-    ChildActivated                       :: SignalProxy "child-activated" "child-activated"
-    ChildAttached                        :: SignalProxy "child-attached" "child-attached"
-    ChildDetached                        :: SignalProxy "child-detached" "child-detached"
-    ChildNotify                          :: SignalProxy "child-notify" "child-notify"
-    Cleared                              :: SignalProxy "cleared" "cleared"
-    Clicked                              :: SignalProxy "clicked" "clicked"
-    Close                                :: SignalProxy "close" "close"
-    CloseWebView                         :: SignalProxy "close-web-view" "close-web-view"
-    CloseWindow                          :: SignalProxy "close-window" "close-window"
-    Closed                               :: SignalProxy "closed" "closed"
-    ColorActivated                       :: SignalProxy "color-activated" "color-activated"
-    ColorChanged                         :: SignalProxy "color-changed" "color-changed"
-    ColorSet                             :: SignalProxy "color-set" "color-set"
-    ColumnsChanged                       :: SignalProxy "columns-changed" "columns-changed"
-    Commit                               :: SignalProxy "commit" "commit"
-    CompositedChanged                    :: SignalProxy "composited-changed" "composited-changed"
-    ConfigureEvent                       :: SignalProxy "configure-event" "configure-event"
-    ConfirmOverwrite                     :: SignalProxy "confirm-overwrite" "confirm-overwrite"
-    ConnectProxy                         :: SignalProxy "connect-proxy" "connect-proxy"
-    ConsoleMessage                       :: SignalProxy "console-message" "console-message"
-    ContentLengthReceived                :: SignalProxy "content-length-received" "content-length-received"
-    ContextMenu                          :: SignalProxy "context-menu" "context-menu"
-    CopyClipboard                        :: SignalProxy "copy-clipboard" "copy-clipboard"
-    CreateContext                        :: SignalProxy "create-context" "create-context"
-    CreateCustomWidget                   :: SignalProxy "create-custom-widget" "create-custom-widget"
-    CreateMenuProxy                      :: SignalProxy "create-menu-proxy" "create-menu-proxy"
-    CreatePluginWidget                   :: SignalProxy "create-plugin-widget" "create-plugin-widget"
-    CreateWebView                        :: SignalProxy "create-web-view" "create-web-view"
-    CreateWindow                         :: SignalProxy "create-window" "create-window"
-    CurrentFolderChanged                 :: SignalProxy "current-folder-changed" "current-folder-changed"
-    CurrentToplevel                      :: SignalProxy "current-toplevel" "current-toplevel"
-    CursorChanged                        :: SignalProxy "cursor-changed" "cursor-changed"
-    CursorOnMatch                        :: SignalProxy "cursor-on-match" "cursor-on-match"
-    CustomItemActivated                  :: SignalProxy "custom-item-activated" "custom-item-activated"
-    CustomWidgetApply                    :: SignalProxy "custom-widget-apply" "custom-widget-apply"
-    CutClipboard                         :: SignalProxy "cut-clipboard" "cut-clipboard"
-    CycleChildFocus                      :: SignalProxy "cycle-child-focus" "cycle-child-focus"
-    CycleFocus                           :: SignalProxy "cycle-focus" "cycle-focus"
-    CycleHandleFocus                     :: SignalProxy "cycle-handle-focus" "cycle-handle-focus"
-    DamageEvent                          :: SignalProxy "damage-event" "damage-event"
-    DatabaseQuotaExceeded                :: SignalProxy "database-quota-exceeded" "database-quota-exceeded"
-    DaySelected                          :: SignalProxy "day-selected" "day-selected"
-    DaySelectedDoubleClick               :: SignalProxy "day-selected-double-click" "day-selected-double-click"
-    Deactivate                           :: SignalProxy "deactivate" "deactivate"
-    DeleteEvent                          :: SignalProxy "delete-event" "delete-event"
-    DeleteFromCursor                     :: SignalProxy "delete-from-cursor" "delete-from-cursor"
-    DeleteRange                          :: SignalProxy "delete-range" "delete-range"
-    DeleteSurrounding                    :: SignalProxy "delete-surrounding" "delete-surrounding"
-    DeletedText                          :: SignalProxy "deleted-text" "deleted-text"
-    Deselect                             :: SignalProxy "deselect" "deselect"
-    DesktopFolder                        :: SignalProxy "desktop-folder" "desktop-folder"
-    Destroy                              :: SignalProxy "destroy" "destroy"
-    DestroyEvent                         :: SignalProxy "destroy-event" "destroy-event"
-    DetachWindow                         :: SignalProxy "detach-window" "detach-window"
-    DirectionChanged                     :: SignalProxy "direction-changed" "direction-changed"
-    DisconnectProxy                      :: SignalProxy "disconnect-proxy" "disconnect-proxy"
-    DocumentLoadFinished                 :: SignalProxy "document-load-finished" "document-load-finished"
-    Done                                 :: SignalProxy "done" "done"
-    DownFolder                           :: SignalProxy "down-folder" "down-folder"
-    DownloadRequested                    :: SignalProxy "download-requested" "download-requested"
-    DragActionAsk                        :: SignalProxy "drag-action-ask" "drag-action-ask"
-    DragActionRequested                  :: SignalProxy "drag-action-requested" "drag-action-requested"
-    DragBegin                            :: SignalProxy "drag-begin" "drag-begin"
-    DragDataDelete                       :: SignalProxy "drag-data-delete" "drag-data-delete"
-    DragDataGet                          :: SignalProxy "drag-data-get" "drag-data-get"
-    DragDataReceived                     :: SignalProxy "drag-data-received" "drag-data-received"
-    DragDrop                             :: SignalProxy "drag-drop" "drag-drop"
-    DragEnd                              :: SignalProxy "drag-end" "drag-end"
-    DragFailed                           :: SignalProxy "drag-failed" "drag-failed"
-    DragLeave                            :: SignalProxy "drag-leave" "drag-leave"
-    DragMotion                           :: SignalProxy "drag-motion" "drag-motion"
-    DragPerformDrop                      :: SignalProxy "drag-perform-drop" "drag-perform-drop"
-    DragUpdate                           :: SignalProxy "drag-update" "drag-update"
-    Draw                                 :: SignalProxy "draw" "draw"
-    DrawPage                             :: SignalProxy "draw-page" "draw-page"
-    EdgeOvershot                         :: SignalProxy "edge-overshot" "edge-overshot"
-    EdgeReached                          :: SignalProxy "edge-reached" "edge-reached"
-    Edited                               :: SignalProxy "edited" "edited"
-    EditingBegan                         :: SignalProxy "editing-began" "editing-began"
-    EditingCanceled                      :: SignalProxy "editing-canceled" "editing-canceled"
-    EditingDone                          :: SignalProxy "editing-done" "editing-done"
-    EditingEnded                         :: SignalProxy "editing-ended" "editing-ended"
-    EditingStarted                       :: SignalProxy "editing-started" "editing-started"
-    Embedded                             :: SignalProxy "embedded" "embedded"
-    EnableDebugging                      :: SignalProxy "enable-debugging" "enable-debugging"
-    End                                  :: SignalProxy "end" "end"
-    EndPrint                             :: SignalProxy "end-print" "end-print"
-    EndUserAction                        :: SignalProxy "end-user-action" "end-user-action"
-    Enter                                :: SignalProxy "enter" "enter"
-    EnterNotifyEvent                     :: SignalProxy "enter-notify-event" "enter-notify-event"
-    EnteringFullscreen                   :: SignalProxy "entering-fullscreen" "entering-fullscreen"
-    Error                                :: SignalProxy "error" "error"
-    Escape                               :: SignalProxy "escape" "escape"
-    Event                                :: SignalProxy "event" "event"
-    EventAfter                           :: SignalProxy "event-after" "event-after"
-    ExpandCollapseCursorRow              :: SignalProxy "expand-collapse-cursor-row" "expand-collapse-cursor-row"
-    ExtendSelection                      :: SignalProxy "extend-selection" "extend-selection"
-    FileActivated                        :: SignalProxy "file-activated" "file-activated"
-    FileSet                              :: SignalProxy "file-set" "file-set"
-    Finished                             :: SignalProxy "finished" "finished"
-    Focus                                :: SignalProxy "focus" "focus"
-    FocusChanged                         :: SignalProxy "focus-changed" "focus-changed"
-    FocusHomeOrEnd                       :: SignalProxy "focus-home-or-end" "focus-home-or-end"
-    FocusInEvent                         :: SignalProxy "focus-in-event" "focus-in-event"
-    FocusOutEvent                        :: SignalProxy "focus-out-event" "focus-out-event"
-    FocusTab                             :: SignalProxy "focus-tab" "focus-tab"
-    FontActivated                        :: SignalProxy "font-activated" "font-activated"
-    FontSet                              :: SignalProxy "font-set" "font-set"
-    FormatEntryText                      :: SignalProxy "format-entry-text" "format-entry-text"
-    FormatValue                          :: SignalProxy "format-value" "format-value"
-    FrameCreated                         :: SignalProxy "frame-created" "frame-created"
-    GeolocationPolicyDecisionCancelled   :: SignalProxy "geolocation-policy-decision-cancelled" "geolocation-policy-decision-cancelled"
-    GeolocationPolicyDecisionRequested   :: SignalProxy "geolocation-policy-decision-requested" "geolocation-policy-decision-requested"
-    GetChildPosition                     :: SignalProxy "get-child-position" "get-child-position"
-    GotPageSize                          :: SignalProxy "got-page-size" "got-page-size"
-    GrabBrokenEvent                      :: SignalProxy "grab-broken-event" "grab-broken-event"
-    GrabFocus                            :: SignalProxy "grab-focus" "grab-focus"
-    GrabNotify                           :: SignalProxy "grab-notify" "grab-notify"
-    GroupChanged                         :: SignalProxy "group-changed" "group-changed"
-    Hide                                 :: SignalProxy "hide" "hide"
-    HierarchyChanged                     :: SignalProxy "hierarchy-changed" "hierarchy-changed"
-    HomeFolder                           :: SignalProxy "home-folder" "home-folder"
-    HoveringOverLink                     :: SignalProxy "hovering-over-link" "hovering-over-link"
-    IconLoaded                           :: SignalProxy "icon-loaded" "icon-loaded"
-    IconPress                            :: SignalProxy "icon-press" "icon-press"
-    IconRelease                          :: SignalProxy "icon-release" "icon-release"
-    Input                                :: SignalProxy "input" "input"
-    InsecureContentRun                   :: SignalProxy "insecure-content-run" "insecure-content-run"
-    Insert                               :: SignalProxy "insert" "insert"
-    InsertAtCursor                       :: SignalProxy "insert-at-cursor" "insert-at-cursor"
-    InsertChildAnchor                    :: SignalProxy "insert-child-anchor" "insert-child-anchor"
-    InsertPixbuf                         :: SignalProxy "insert-pixbuf" "insert-pixbuf"
-    InsertPrefix                         :: SignalProxy "insert-prefix" "insert-prefix"
-    InsertText                           :: SignalProxy "insert-text" "insert-text"
-    InsertedText                         :: SignalProxy "inserted-text" "inserted-text"
-    InspectWebView                       :: SignalProxy "inspect-web-view" "inspect-web-view"
-    ItemActivated                        :: SignalProxy "item-activated" "item-activated"
-    KeyPressEvent                        :: SignalProxy "key-press-event" "key-press-event"
-    KeyReleaseEvent                      :: SignalProxy "key-release-event" "key-release-event"
-    KeynavFailed                         :: SignalProxy "keynav-failed" "keynav-failed"
-    KeysChanged                          :: SignalProxy "keys-changed" "keys-changed"
-    Leave                                :: SignalProxy "leave" "leave"
-    LeaveNotifyEvent                     :: SignalProxy "leave-notify-event" "leave-notify-event"
-    LeavingFullscreen                    :: SignalProxy "leaving-fullscreen" "leaving-fullscreen"
-    LoadCommitted                        :: SignalProxy "load-committed" "load-committed"
-    LoadError                            :: SignalProxy "load-error" "load-error"
-    LoadFailed                           :: SignalProxy "load-failed" "load-failed"
-    LoadFinished                         :: SignalProxy "load-finished" "load-finished"
-    LoadProgressChanged                  :: SignalProxy "load-progress-changed" "load-progress-changed"
-    LoadStarted                          :: SignalProxy "load-started" "load-started"
-    LocationPopup                        :: SignalProxy "location-popup" "location-popup"
-    LocationPopupOnPaste                 :: SignalProxy "location-popup-on-paste" "location-popup-on-paste"
-    LocationTogglePopup                  :: SignalProxy "location-toggle-popup" "location-toggle-popup"
-    Map                                  :: SignalProxy "map" "map"
-    MapEvent                             :: SignalProxy "map-event" "map-event"
-    MarkDeleted                          :: SignalProxy "mark-deleted" "mark-deleted"
-    MarkSet                              :: SignalProxy "mark-set" "mark-set"
-    MatchSelected                        :: SignalProxy "match-selected" "match-selected"
-    MimeTypePolicyDecisionRequested      :: SignalProxy "mime-type-policy-decision-requested" "mime-type-policy-decision-requested"
-    MnemonicActivate                     :: SignalProxy "mnemonic-activate" "mnemonic-activate"
-    ModifiedChanged                      :: SignalProxy "modified-changed" "modified-changed"
-    MonthChanged                         :: SignalProxy "month-changed" "month-changed"
-    MotionNotifyEvent                    :: SignalProxy "motion-notify-event" "motion-notify-event"
-    Move                                 :: SignalProxy "move" "move"
-    MoveActive                           :: SignalProxy "move-active" "move-active"
-    MoveCurrent                          :: SignalProxy "move-current" "move-current"
-    MoveCursor                           :: SignalProxy "move-cursor" "move-cursor"
-    MoveFocus                            :: SignalProxy "move-focus" "move-focus"
-    MoveFocusOut                         :: SignalProxy "move-focus-out" "move-focus-out"
-    MoveHandle                           :: SignalProxy "move-handle" "move-handle"
-    MoveScroll                           :: SignalProxy "move-scroll" "move-scroll"
-    MoveSelected                         :: SignalProxy "move-selected" "move-selected"
-    MoveSlider                           :: SignalProxy "move-slider" "move-slider"
-    MoveViewport                         :: SignalProxy "move-viewport" "move-viewport"
-    NavigationPolicyDecisionRequested    :: SignalProxy "navigation-policy-decision-requested" "navigation-policy-decision-requested"
-    NavigationRequested                  :: SignalProxy "navigation-requested" "navigation-requested"
-    NewWindowPolicyDecisionRequested     :: SignalProxy "new-window-policy-decision-requested" "new-window-policy-decision-requested"
-    NextMatch                            :: SignalProxy "next-match" "next-match"
-    NextMonth                            :: SignalProxy "next-month" "next-month"
-    NextYear                             :: SignalProxy "next-year" "next-year"
-    NoMatches                            :: SignalProxy "no-matches" "no-matches"
-    OffsetChanged                        :: SignalProxy "offset-changed" "offset-changed"
-    OnloadEvent                          :: SignalProxy "onload-event" "onload-event"
-    OpenLocation                         :: SignalProxy "open-location" "open-location"
-    OrientationChanged                   :: SignalProxy "orientation-changed" "orientation-changed"
-    Output                               :: SignalProxy "output" "output"
-    OwnerChange                          :: SignalProxy "owner-change" "owner-change"
-    PageAdded                            :: SignalProxy "page-added" "page-added"
-    PageRemoved                          :: SignalProxy "page-removed" "page-removed"
-    PageReordered                        :: SignalProxy "page-reordered" "page-reordered"
-    Paginate                             :: SignalProxy "paginate" "paginate"
-    Pan                                  :: SignalProxy "pan" "pan"
-    ParentSet                            :: SignalProxy "parent-set" "parent-set"
-    ParsingError                         :: SignalProxy "parsing-error" "parsing-error"
-    PasteClipboard                       :: SignalProxy "paste-clipboard" "paste-clipboard"
-    PasteDone                            :: SignalProxy "paste-done" "paste-done"
-    PlugAdded                            :: SignalProxy "plug-added" "plug-added"
-    PlugRemoved                          :: SignalProxy "plug-removed" "plug-removed"
-    Popdown                              :: SignalProxy "popdown" "popdown"
-    PopulatePopup                        :: SignalProxy "populate-popup" "populate-popup"
-    Popup                                :: SignalProxy "popup" "popup"
-    PopupContextMenu                     :: SignalProxy "popup-context-menu" "popup-context-menu"
-    PopupMenu                            :: SignalProxy "popup-menu" "popup-menu"
-    PostActivate                         :: SignalProxy "post-activate" "post-activate"
-    PreActivate                          :: SignalProxy "pre-activate" "pre-activate"
-    PreeditChanged                       :: SignalProxy "preedit-changed" "preedit-changed"
-    PreeditEnd                           :: SignalProxy "preedit-end" "preedit-end"
-    PreeditStart                         :: SignalProxy "preedit-start" "preedit-start"
-    Prepare                              :: SignalProxy "prepare" "prepare"
-    Pressed                              :: SignalProxy "pressed" "pressed"
-    PrevMonth                            :: SignalProxy "prev-month" "prev-month"
-    PrevYear                             :: SignalProxy "prev-year" "prev-year"
-    Preview                              :: SignalProxy "preview" "preview"
-    PreviousMatch                        :: SignalProxy "previous-match" "previous-match"
-    PrintRequested                       :: SignalProxy "print-requested" "print-requested"
-    PropertyNotifyEvent                  :: SignalProxy "property-notify-event" "property-notify-event"
-    ProximityInEvent                     :: SignalProxy "proximity-in-event" "proximity-in-event"
-    ProximityOutEvent                    :: SignalProxy "proximity-out-event" "proximity-out-event"
-    QueryTooltip                         :: SignalProxy "query-tooltip" "query-tooltip"
-    QuickBookmark                        :: SignalProxy "quick-bookmark" "quick-bookmark"
-    Ready                                :: SignalProxy "ready" "ready"
-    Realize                              :: SignalProxy "realize" "realize"
-    RecentShortcut                       :: SignalProxy "recent-shortcut" "recent-shortcut"
-    Redo                                 :: SignalProxy "redo" "redo"
-    Released                             :: SignalProxy "released" "released"
-    Remove                               :: SignalProxy "remove" "remove"
-    RemoveEditable                       :: SignalProxy "remove-editable" "remove-editable"
-    RemoveTag                            :: SignalProxy "remove-tag" "remove-tag"
-    RemoveWidget                         :: SignalProxy "remove-widget" "remove-widget"
-    Render                               :: SignalProxy "render" "render"
-    ReorderTab                           :: SignalProxy "reorder-tab" "reorder-tab"
-    RequestPageSetup                     :: SignalProxy "request-page-setup" "request-page-setup"
-    Resize                               :: SignalProxy "resize" "resize"
-    ResourceContentLengthReceived        :: SignalProxy "resource-content-length-received" "resource-content-length-received"
-    ResourceLoadFailed                   :: SignalProxy "resource-load-failed" "resource-load-failed"
-    ResourceLoadFinished                 :: SignalProxy "resource-load-finished" "resource-load-finished"
-    ResourceRequestStarting              :: SignalProxy "resource-request-starting" "resource-request-starting"
-    ResourceResponseReceived             :: SignalProxy "resource-response-received" "resource-response-received"
-    Response                             :: SignalProxy "response" "response"
-    ResponseReceived                     :: SignalProxy "response-received" "response-received"
-    RetrieveSurrounding                  :: SignalProxy "retrieve-surrounding" "retrieve-surrounding"
-    RowActivated                         :: SignalProxy "row-activated" "row-activated"
-    RowChanged                           :: SignalProxy "row-changed" "row-changed"
-    RowCollapsed                         :: SignalProxy "row-collapsed" "row-collapsed"
-    RowDeleted                           :: SignalProxy "row-deleted" "row-deleted"
-    RowExpanded                          :: SignalProxy "row-expanded" "row-expanded"
-    RowHasChildToggled                   :: SignalProxy "row-has-child-toggled" "row-has-child-toggled"
-    RowInserted                          :: SignalProxy "row-inserted" "row-inserted"
-    RowSelected                          :: SignalProxy "row-selected" "row-selected"
-    RunFileChooser                       :: SignalProxy "run-file-chooser" "run-file-chooser"
-    ScaleChanged                         :: SignalProxy "scale-changed" "scale-changed"
-    ScreenChanged                        :: SignalProxy "screen-changed" "screen-changed"
-    ScriptAlert                          :: SignalProxy "script-alert" "script-alert"
-    ScriptConfirm                        :: SignalProxy "script-confirm" "script-confirm"
-    ScriptPrompt                         :: SignalProxy "script-prompt" "script-prompt"
-    ScrollChild                          :: SignalProxy "scroll-child" "scroll-child"
-    ScrollEvent                          :: SignalProxy "scroll-event" "scroll-event"
-    ScrollbarsPolicyChanged              :: SignalProxy "scrollbars-policy-changed" "scrollbars-policy-changed"
-    SearchChanged                        :: SignalProxy "search-changed" "search-changed"
-    SearchShortcut                       :: SignalProxy "search-shortcut" "search-shortcut"
-    Select                               :: SignalProxy "select" "select"
-    SelectAll                            :: SignalProxy "select-all" "select-all"
-    SelectCursorItem                     :: SignalProxy "select-cursor-item" "select-cursor-item"
-    SelectCursorParent                   :: SignalProxy "select-cursor-parent" "select-cursor-parent"
-    SelectCursorRow                      :: SignalProxy "select-cursor-row" "select-cursor-row"
-    SelectPage                           :: SignalProxy "select-page" "select-page"
-    SelectedChildrenChanged              :: SignalProxy "selected-children-changed" "selected-children-changed"
-    SelectedRowsChanged                  :: SignalProxy "selected-rows-changed" "selected-rows-changed"
-    SelectionChanged                     :: SignalProxy "selection-changed" "selection-changed"
-    SelectionClearEvent                  :: SignalProxy "selection-clear-event" "selection-clear-event"
-    SelectionDone                        :: SignalProxy "selection-done" "selection-done"
-    SelectionGet                         :: SignalProxy "selection-get" "selection-get"
-    SelectionNotifyEvent                 :: SignalProxy "selection-notify-event" "selection-notify-event"
-    SelectionReceived                    :: SignalProxy "selection-received" "selection-received"
-    SelectionRequestEvent                :: SignalProxy "selection-request-event" "selection-request-event"
-    SequenceStateChanged                 :: SignalProxy "sequence-state-changed" "sequence-state-changed"
-    SetAnchor                            :: SignalProxy "set-anchor" "set-anchor"
-    SetFocus                             :: SignalProxy "set-focus" "set-focus"
-    SetFocusChild                        :: SignalProxy "set-focus-child" "set-focus-child"
-    ShouldApplyStyle                     :: SignalProxy "should-apply-style" "should-apply-style"
-    ShouldBeginEditing                   :: SignalProxy "should-begin-editing" "should-begin-editing"
-    ShouldChangeSelectedRange            :: SignalProxy "should-change-selected-range" "should-change-selected-range"
-    ShouldDeleteRange                    :: SignalProxy "should-delete-range" "should-delete-range"
-    ShouldEndEditing                     :: SignalProxy "should-end-editing" "should-end-editing"
-    ShouldInsertNode                     :: SignalProxy "should-insert-node" "should-insert-node"
-    ShouldInsertText                     :: SignalProxy "should-insert-text" "should-insert-text"
-    ShouldShowDeleteInterfaceForElement  :: SignalProxy "should-show-delete-interface-for-element" "should-show-delete-interface-for-element"
-    Show                                 :: SignalProxy "show" "show"
-    ShowConnectToServer                  :: SignalProxy "show-connect-to-server" "show-connect-to-server"
-    ShowEnterLocation                    :: SignalProxy "show-enter-location" "show-enter-location"
-    ShowErrorMessage                     :: SignalProxy "show-error-message" "show-error-message"
-    ShowHelp                             :: SignalProxy "show-help" "show-help"
-    ShowHidden                           :: SignalProxy "show-hidden" "show-hidden"
-    ShowMenu                             :: SignalProxy "show-menu" "show-menu"
-    ShowWindow                           :: SignalProxy "show-window" "show-window"
-    SizeAllocate                         :: SignalProxy "size-allocate" "size-allocate"
-    SizeChanged                          :: SignalProxy "size-changed" "size-changed"
-    SortColumnChanged                    :: SignalProxy "sort-column-changed" "sort-column-changed"
-    StartInteractiveSearch               :: SignalProxy "start-interactive-search" "start-interactive-search"
-    StateChanged                         :: SignalProxy "state-changed" "state-changed"
-    StateFlagsChanged                    :: SignalProxy "state-flags-changed" "state-flags-changed"
-    StateSet                             :: SignalProxy "state-set" "state-set"
-    StatusBarTextChanged                 :: SignalProxy "status-bar-text-changed" "status-bar-text-changed"
-    StatusChanged                        :: SignalProxy "status-changed" "status-changed"
-    StopSearch                           :: SignalProxy "stop-search" "stop-search"
-    Stopped                              :: SignalProxy "stopped" "stopped"
-    StyleChanged                         :: SignalProxy "style-changed" "style-changed"
-    StyleSet                             :: SignalProxy "style-set" "style-set"
-    StyleUpdated                         :: SignalProxy "style-updated" "style-updated"
-    Swipe                                :: SignalProxy "swipe" "swipe"
-    SwitchPage                           :: SignalProxy "switch-page" "switch-page"
-    TagAdded                             :: SignalProxy "tag-added" "tag-added"
-    TagChanged                           :: SignalProxy "tag-changed" "tag-changed"
-    TagRemoved                           :: SignalProxy "tag-removed" "tag-removed"
-    TestCollapseRow                      :: SignalProxy "test-collapse-row" "test-collapse-row"
-    TestExpandRow                        :: SignalProxy "test-expand-row" "test-expand-row"
-    TextPopped                           :: SignalProxy "text-popped" "text-popped"
-    TextPushed                           :: SignalProxy "text-pushed" "text-pushed"
-    TitleChanged                         :: SignalProxy "title-changed" "title-changed"
-    ToggleCursorChild                    :: SignalProxy "toggle-cursor-child" "toggle-cursor-child"
-    ToggleCursorItem                     :: SignalProxy "toggle-cursor-item" "toggle-cursor-item"
-    ToggleCursorRow                      :: SignalProxy "toggle-cursor-row" "toggle-cursor-row"
-    ToggleCursorVisible                  :: SignalProxy "toggle-cursor-visible" "toggle-cursor-visible"
-    ToggleHandleFocus                    :: SignalProxy "toggle-handle-focus" "toggle-handle-focus"
-    ToggleOverwrite                      :: SignalProxy "toggle-overwrite" "toggle-overwrite"
-    ToggleSizeAllocate                   :: SignalProxy "toggle-size-allocate" "toggle-size-allocate"
-    ToggleSizeRequest                    :: SignalProxy "toggle-size-request" "toggle-size-request"
-    Toggled                              :: SignalProxy "toggled" "toggled"
-    ToolbarReconfigured                  :: SignalProxy "toolbar-reconfigured" "toolbar-reconfigured"
-    TouchEvent                           :: SignalProxy "touch-event" "touch-event"
-    Undo                                 :: SignalProxy "undo" "undo"
-    Unmap                                :: SignalProxy "unmap" "unmap"
-    UnmapEvent                           :: SignalProxy "unmap-event" "unmap-event"
-    Unrealize                            :: SignalProxy "unrealize" "unrealize"
-    UnselectAll                          :: SignalProxy "unselect-all" "unselect-all"
-    UpFolder                             :: SignalProxy "up-folder" "up-folder"
-    Update                               :: SignalProxy "update" "update"
-    UpdateCustomWidget                   :: SignalProxy "update-custom-widget" "update-custom-widget"
-    UpdatePreview                        :: SignalProxy "update-preview" "update-preview"
-    UserChangedContents                  :: SignalProxy "user-changed-contents" "user-changed-contents"
-    ValueChanged                         :: SignalProxy "value-changed" "value-changed"
-    ViewportAttributesChanged            :: SignalProxy "viewport-attributes-changed" "viewport-attributes-changed"
-    ViewportAttributesRecomputeRequested :: SignalProxy "viewport-attributes-recompute-requested" "viewport-attributes-recompute-requested"
-    VisibilityNotifyEvent                :: SignalProxy "visibility-notify-event" "visibility-notify-event"
-    WebViewReady                         :: SignalProxy "web-view-ready" "web-view-ready"
-    WindowAdded                          :: SignalProxy "window-added" "window-added"
-    WindowObjectCleared                  :: SignalProxy "window-object-cleared" "window-object-cleared"
-    WindowRemoved                        :: SignalProxy "window-removed" "window-removed"
-    WindowStateEvent                     :: SignalProxy "window-state-event" "window-state-event"
-    Wrapped                              :: SignalProxy "wrapped" "wrapped"
+class NoConstraint a
+instance NoConstraint a
+
+data SignalProxy (a :: Symbol) (b :: Symbol) (c :: * -> Constraint) where
+    AccelActivate                        :: SignalProxy "accel-activate" "" NoConstraint
+    AccelChanged                         :: SignalProxy "accel-changed" "" NoConstraint
+    AccelCleared                         :: SignalProxy "accel-cleared" "" NoConstraint
+    AccelClosuresChanged                 :: SignalProxy "accel-closures-changed" "" NoConstraint
+    AccelEdited                          :: SignalProxy "accel-edited" "" NoConstraint
+    AcceptPosition                       :: SignalProxy "accept-position" "" NoConstraint
+    ActionActivated                      :: SignalProxy "action-activated" "" NoConstraint
+    ActionsChanged                       :: SignalProxy "actions-changed" "" NoConstraint
+    Activate                             :: SignalProxy "activate" "" NoConstraint
+    ActivateCurrent                      :: SignalProxy "activate-current" "" NoConstraint
+    ActivateCurrentLink                  :: SignalProxy "activate-current-link" "" NoConstraint
+    ActivateCursorChild                  :: SignalProxy "activate-cursor-child" "" NoConstraint
+    ActivateCursorItem                   :: SignalProxy "activate-cursor-item" "" NoConstraint
+    ActivateCursorRow                    :: SignalProxy "activate-cursor-row" "" NoConstraint
+    ActivateDefault                      :: SignalProxy "activate-default" "" NoConstraint
+    ActivateFocus                        :: SignalProxy "activate-focus" "" NoConstraint
+    ActivateItem                         :: SignalProxy "activate-item" "" NoConstraint
+    ActivateLink                         :: SignalProxy "activate-link" "" NoConstraint
+    Add                                  :: SignalProxy "add" "" NoConstraint
+    AddEditable                          :: SignalProxy "add-editable" "" NoConstraint
+    AddWidget                            :: SignalProxy "add-widget" "" NoConstraint
+    AdjustBounds                         :: SignalProxy "adjust-bounds" "" NoConstraint
+    AngleChanged                         :: SignalProxy "angle-changed" "" NoConstraint
+    ApplicationActivated                 :: SignalProxy "application-activated" "" NoConstraint
+    ApplicationSelected                  :: SignalProxy "application-selected" "" NoConstraint
+    Apply                                :: SignalProxy "apply" "" NoConstraint
+    ApplyAttributes                      :: SignalProxy "apply-attributes" "" NoConstraint
+    ApplyTag                             :: SignalProxy "apply-tag" "" NoConstraint
+    AttachWindow                         :: SignalProxy "attach-window" "" NoConstraint
+    Backspace                            :: SignalProxy "backspace" "" NoConstraint
+    Begin                                :: SignalProxy "begin" "" NoConstraint
+    BeginPrint                           :: SignalProxy "begin-print" "" NoConstraint
+    BeginUserAction                      :: SignalProxy "begin-user-action" "" NoConstraint
+    ButtonPressEvent                     :: SignalProxy "button-press-event" "" NoConstraint
+    ButtonReleaseEvent                   :: SignalProxy "button-release-event" "" NoConstraint
+    CanActivateAccel                     :: SignalProxy "can-activate-accel" "" NoConstraint
+    Cancel                               :: SignalProxy "cancel" "" NoConstraint
+    CancelPosition                       :: SignalProxy "cancel-position" "" NoConstraint
+    Cancelled                            :: SignalProxy "cancelled" "" NoConstraint
+    ChangeCurrentPage                    :: SignalProxy "change-current-page" "" NoConstraint
+    ChangeValue                          :: SignalProxy "change-value" "" NoConstraint
+    Changed                              :: SignalProxy "changed" "" NoConstraint
+    CheckResize                          :: SignalProxy "check-resize" "" NoConstraint
+    ChildActivated                       :: SignalProxy "child-activated" "" NoConstraint
+    ChildAttached                        :: SignalProxy "child-attached" "" NoConstraint
+    ChildDetached                        :: SignalProxy "child-detached" "" NoConstraint
+    ChildNotify                          :: SignalProxy "child-notify" "" NoConstraint
+    Cleared                              :: SignalProxy "cleared" "" NoConstraint
+    Clicked                              :: SignalProxy "clicked" "" NoConstraint
+    Close                                :: SignalProxy "close" "" NoConstraint
+    CloseWebView                         :: SignalProxy "close-web-view" "" NoConstraint
+    CloseWindow                          :: SignalProxy "close-window" "" NoConstraint
+    Closed                               :: SignalProxy "closed" "" NoConstraint
+    ColorActivated                       :: SignalProxy "color-activated" "" NoConstraint
+    ColorChanged                         :: SignalProxy "color-changed" "" NoConstraint
+    ColorSet                             :: SignalProxy "color-set" "" NoConstraint
+    ColumnsChanged                       :: SignalProxy "columns-changed" "" NoConstraint
+    Commit                               :: SignalProxy "commit" "" NoConstraint
+    CompositedChanged                    :: SignalProxy "composited-changed" "" NoConstraint
+    ConfigureEvent                       :: SignalProxy "configure-event" "" NoConstraint
+    ConfirmOverwrite                     :: SignalProxy "confirm-overwrite" "" NoConstraint
+    ConnectProxy                         :: SignalProxy "connect-proxy" "" NoConstraint
+    ConsoleMessage                       :: SignalProxy "console-message" "" NoConstraint
+    ContentLengthReceived                :: SignalProxy "content-length-received" "" NoConstraint
+    ContextMenu                          :: SignalProxy "context-menu" "" NoConstraint
+    CopyClipboard                        :: SignalProxy "copy-clipboard" "" NoConstraint
+    CreateContext                        :: SignalProxy "create-context" "" NoConstraint
+    CreateCustomWidget                   :: SignalProxy "create-custom-widget" "" NoConstraint
+    CreateMenuProxy                      :: SignalProxy "create-menu-proxy" "" NoConstraint
+    CreatePluginWidget                   :: SignalProxy "create-plugin-widget" "" NoConstraint
+    CreateWebView                        :: SignalProxy "create-web-view" "" NoConstraint
+    CreateWindow                         :: SignalProxy "create-window" "" NoConstraint
+    CurrentFolderChanged                 :: SignalProxy "current-folder-changed" "" NoConstraint
+    CurrentToplevel                      :: SignalProxy "current-toplevel" "" NoConstraint
+    CursorChanged                        :: SignalProxy "cursor-changed" "" NoConstraint
+    CursorOnMatch                        :: SignalProxy "cursor-on-match" "" NoConstraint
+    CustomItemActivated                  :: SignalProxy "custom-item-activated" "" NoConstraint
+    CustomWidgetApply                    :: SignalProxy "custom-widget-apply" "" NoConstraint
+    CutClipboard                         :: SignalProxy "cut-clipboard" "" NoConstraint
+    CycleChildFocus                      :: SignalProxy "cycle-child-focus" "" NoConstraint
+    CycleFocus                           :: SignalProxy "cycle-focus" "" NoConstraint
+    CycleHandleFocus                     :: SignalProxy "cycle-handle-focus" "" NoConstraint
+    DamageEvent                          :: SignalProxy "damage-event" "" NoConstraint
+    DatabaseQuotaExceeded                :: SignalProxy "database-quota-exceeded" "" NoConstraint
+    DaySelected                          :: SignalProxy "day-selected" "" NoConstraint
+    DaySelectedDoubleClick               :: SignalProxy "day-selected-double-click" "" NoConstraint
+    Deactivate                           :: SignalProxy "deactivate" "" NoConstraint
+    DeleteEvent                          :: SignalProxy "delete-event" "" NoConstraint
+    DeleteFromCursor                     :: SignalProxy "delete-from-cursor" "" NoConstraint
+    DeleteRange                          :: SignalProxy "delete-range" "" NoConstraint
+    DeleteSurrounding                    :: SignalProxy "delete-surrounding" "" NoConstraint
+    DeletedText                          :: SignalProxy "deleted-text" "" NoConstraint
+    Deselect                             :: SignalProxy "deselect" "" NoConstraint
+    DesktopFolder                        :: SignalProxy "desktop-folder" "" NoConstraint
+    Destroy                              :: SignalProxy "destroy" "" NoConstraint
+    DestroyEvent                         :: SignalProxy "destroy-event" "" NoConstraint
+    DetachWindow                         :: SignalProxy "detach-window" "" NoConstraint
+    DirectionChanged                     :: SignalProxy "direction-changed" "" NoConstraint
+    DisconnectProxy                      :: SignalProxy "disconnect-proxy" "" NoConstraint
+    DocumentLoadFinished                 :: SignalProxy "document-load-finished" "" NoConstraint
+    Done                                 :: SignalProxy "done" "" NoConstraint
+    DownFolder                           :: SignalProxy "down-folder" "" NoConstraint
+    DownloadRequested                    :: SignalProxy "download-requested" "" NoConstraint
+    DragActionAsk                        :: SignalProxy "drag-action-ask" "" NoConstraint
+    DragActionRequested                  :: SignalProxy "drag-action-requested" "" NoConstraint
+    DragBegin                            :: SignalProxy "drag-begin" "" NoConstraint
+    DragDataDelete                       :: SignalProxy "drag-data-delete" "" NoConstraint
+    DragDataGet                          :: SignalProxy "drag-data-get" "" NoConstraint
+    DragDataReceived                     :: SignalProxy "drag-data-received" "" NoConstraint
+    DragDrop                             :: SignalProxy "drag-drop" "" NoConstraint
+    DragEnd                              :: SignalProxy "drag-end" "" NoConstraint
+    DragFailed                           :: SignalProxy "drag-failed" "" NoConstraint
+    DragLeave                            :: SignalProxy "drag-leave" "" NoConstraint
+    DragMotion                           :: SignalProxy "drag-motion" "" NoConstraint
+    DragPerformDrop                      :: SignalProxy "drag-perform-drop" "" NoConstraint
+    DragUpdate                           :: SignalProxy "drag-update" "" NoConstraint
+    Draw                                 :: SignalProxy "draw" "" NoConstraint
+    DrawPage                             :: SignalProxy "draw-page" "" NoConstraint
+    EdgeOvershot                         :: SignalProxy "edge-overshot" "" NoConstraint
+    EdgeReached                          :: SignalProxy "edge-reached" "" NoConstraint
+    Edited                               :: SignalProxy "edited" "" NoConstraint
+    EditingBegan                         :: SignalProxy "editing-began" "" NoConstraint
+    EditingCanceled                      :: SignalProxy "editing-canceled" "" NoConstraint
+    EditingDone                          :: SignalProxy "editing-done" "" NoConstraint
+    EditingEnded                         :: SignalProxy "editing-ended" "" NoConstraint
+    EditingStarted                       :: SignalProxy "editing-started" "" NoConstraint
+    Embedded                             :: SignalProxy "embedded" "" NoConstraint
+    EnableDebugging                      :: SignalProxy "enable-debugging" "" NoConstraint
+    End                                  :: SignalProxy "end" "" NoConstraint
+    EndPrint                             :: SignalProxy "end-print" "" NoConstraint
+    EndUserAction                        :: SignalProxy "end-user-action" "" NoConstraint
+    Enter                                :: SignalProxy "enter" "" NoConstraint
+    EnterNotifyEvent                     :: SignalProxy "enter-notify-event" "" NoConstraint
+    EnteringFullscreen                   :: SignalProxy "entering-fullscreen" "" NoConstraint
+    Error                                :: SignalProxy "error" "" NoConstraint
+    Escape                               :: SignalProxy "escape" "" NoConstraint
+    Event                                :: SignalProxy "event" "" NoConstraint
+    EventAfter                           :: SignalProxy "event-after" "" NoConstraint
+    ExpandCollapseCursorRow              :: SignalProxy "expand-collapse-cursor-row" "" NoConstraint
+    ExtendSelection                      :: SignalProxy "extend-selection" "" NoConstraint
+    FileActivated                        :: SignalProxy "file-activated" "" NoConstraint
+    FileSet                              :: SignalProxy "file-set" "" NoConstraint
+    Finished                             :: SignalProxy "finished" "" NoConstraint
+    Focus                                :: SignalProxy "focus" "" NoConstraint
+    FocusChanged                         :: SignalProxy "focus-changed" "" NoConstraint
+    FocusHomeOrEnd                       :: SignalProxy "focus-home-or-end" "" NoConstraint
+    FocusInEvent                         :: SignalProxy "focus-in-event" "" NoConstraint
+    FocusOutEvent                        :: SignalProxy "focus-out-event" "" NoConstraint
+    FocusTab                             :: SignalProxy "focus-tab" "" NoConstraint
+    FontActivated                        :: SignalProxy "font-activated" "" NoConstraint
+    FontSet                              :: SignalProxy "font-set" "" NoConstraint
+    FormatEntryText                      :: SignalProxy "format-entry-text" "" NoConstraint
+    FormatValue                          :: SignalProxy "format-value" "" NoConstraint
+    FrameCreated                         :: SignalProxy "frame-created" "" NoConstraint
+    GeolocationPolicyDecisionCancelled   :: SignalProxy "geolocation-policy-decision-cancelled" "" NoConstraint
+    GeolocationPolicyDecisionRequested   :: SignalProxy "geolocation-policy-decision-requested" "" NoConstraint
+    GetChildPosition                     :: SignalProxy "get-child-position" "" NoConstraint
+    GotPageSize                          :: SignalProxy "got-page-size" "" NoConstraint
+    GrabBrokenEvent                      :: SignalProxy "grab-broken-event" "" NoConstraint
+    GrabFocus                            :: SignalProxy "grab-focus" "" NoConstraint
+    GrabNotify                           :: SignalProxy "grab-notify" "" NoConstraint
+    GroupChanged                         :: SignalProxy "group-changed" "" NoConstraint
+    Hide                                 :: SignalProxy "hide" "" NoConstraint
+    HierarchyChanged                     :: SignalProxy "hierarchy-changed" "" NoConstraint
+    HomeFolder                           :: SignalProxy "home-folder" "" NoConstraint
+    HoveringOverLink                     :: SignalProxy "hovering-over-link" "" NoConstraint
+    IconLoaded                           :: SignalProxy "icon-loaded" "" NoConstraint
+    IconPress                            :: SignalProxy "icon-press" "" NoConstraint
+    IconRelease                          :: SignalProxy "icon-release" "" NoConstraint
+    Input                                :: SignalProxy "input" "" NoConstraint
+    InsecureContentRun                   :: SignalProxy "insecure-content-run" "" NoConstraint
+    Insert                               :: SignalProxy "insert" "" NoConstraint
+    InsertAtCursor                       :: SignalProxy "insert-at-cursor" "" NoConstraint
+    InsertChildAnchor                    :: SignalProxy "insert-child-anchor" "" NoConstraint
+    InsertPixbuf                         :: SignalProxy "insert-pixbuf" "" NoConstraint
+    InsertPrefix                         :: SignalProxy "insert-prefix" "" NoConstraint
+    InsertText                           :: SignalProxy "insert-text" "" NoConstraint
+    InsertedText                         :: SignalProxy "inserted-text" "" NoConstraint
+    InspectWebView                       :: SignalProxy "inspect-web-view" "" NoConstraint
+    ItemActivated                        :: SignalProxy "item-activated" "" NoConstraint
+    KeyPressEvent                        :: SignalProxy "key-press-event" "" NoConstraint
+    KeyReleaseEvent                      :: SignalProxy "key-release-event" "" NoConstraint
+    KeynavFailed                         :: SignalProxy "keynav-failed" "" NoConstraint
+    KeysChanged                          :: SignalProxy "keys-changed" "" NoConstraint
+    Leave                                :: SignalProxy "leave" "" NoConstraint
+    LeaveNotifyEvent                     :: SignalProxy "leave-notify-event" "" NoConstraint
+    LeavingFullscreen                    :: SignalProxy "leaving-fullscreen" "" NoConstraint
+    LoadCommitted                        :: SignalProxy "load-committed" "" NoConstraint
+    LoadError                            :: SignalProxy "load-error" "" NoConstraint
+    LoadFailed                           :: SignalProxy "load-failed" "" NoConstraint
+    LoadFinished                         :: SignalProxy "load-finished" "" NoConstraint
+    LoadProgressChanged                  :: SignalProxy "load-progress-changed" "" NoConstraint
+    LoadStarted                          :: SignalProxy "load-started" "" NoConstraint
+    LocationPopup                        :: SignalProxy "location-popup" "" NoConstraint
+    LocationPopupOnPaste                 :: SignalProxy "location-popup-on-paste" "" NoConstraint
+    LocationTogglePopup                  :: SignalProxy "location-toggle-popup" "" NoConstraint
+    Map                                  :: SignalProxy "map" "" NoConstraint
+    MapEvent                             :: SignalProxy "map-event" "" NoConstraint
+    MarkDeleted                          :: SignalProxy "mark-deleted" "" NoConstraint
+    MarkSet                              :: SignalProxy "mark-set" "" NoConstraint
+    MatchSelected                        :: SignalProxy "match-selected" "" NoConstraint
+    MimeTypePolicyDecisionRequested      :: SignalProxy "mime-type-policy-decision-requested" "" NoConstraint
+    MnemonicActivate                     :: SignalProxy "mnemonic-activate" "" NoConstraint
+    ModifiedChanged                      :: SignalProxy "modified-changed" "" NoConstraint
+    MonthChanged                         :: SignalProxy "month-changed" "" NoConstraint
+    MotionNotifyEvent                    :: SignalProxy "motion-notify-event" "" NoConstraint
+    Move                                 :: SignalProxy "move" "" NoConstraint
+    MoveActive                           :: SignalProxy "move-active" "" NoConstraint
+    MoveCurrent                          :: SignalProxy "move-current" "" NoConstraint
+    MoveCursor                           :: SignalProxy "move-cursor" "" NoConstraint
+    MoveFocus                            :: SignalProxy "move-focus" "" NoConstraint
+    MoveFocusOut                         :: SignalProxy "move-focus-out" "" NoConstraint
+    MoveHandle                           :: SignalProxy "move-handle" "" NoConstraint
+    MoveScroll                           :: SignalProxy "move-scroll" "" NoConstraint
+    MoveSelected                         :: SignalProxy "move-selected" "" NoConstraint
+    MoveSlider                           :: SignalProxy "move-slider" "" NoConstraint
+    MoveViewport                         :: SignalProxy "move-viewport" "" NoConstraint
+    NavigationPolicyDecisionRequested    :: SignalProxy "navigation-policy-decision-requested" "" NoConstraint
+    NavigationRequested                  :: SignalProxy "navigation-requested" "" NoConstraint
+    NewWindowPolicyDecisionRequested     :: SignalProxy "new-window-policy-decision-requested" "" NoConstraint
+    NextMatch                            :: SignalProxy "next-match" "" NoConstraint
+    NextMonth                            :: SignalProxy "next-month" "" NoConstraint
+    NextYear                             :: SignalProxy "next-year" "" NoConstraint
+    NoMatches                            :: SignalProxy "no-matches" "" NoConstraint
+    OffsetChanged                        :: SignalProxy "offset-changed" "" NoConstraint
+    OnloadEvent                          :: SignalProxy "onload-event" "" NoConstraint
+    OpenLocation                         :: SignalProxy "open-location" "" NoConstraint
+    OrientationChanged                   :: SignalProxy "orientation-changed" "" NoConstraint
+    Output                               :: SignalProxy "output" "" NoConstraint
+    OwnerChange                          :: SignalProxy "owner-change" "" NoConstraint
+    PageAdded                            :: SignalProxy "page-added" "" NoConstraint
+    PageRemoved                          :: SignalProxy "page-removed" "" NoConstraint
+    PageReordered                        :: SignalProxy "page-reordered" "" NoConstraint
+    Paginate                             :: SignalProxy "paginate" "" NoConstraint
+    Pan                                  :: SignalProxy "pan" "" NoConstraint
+    ParentSet                            :: SignalProxy "parent-set" "" NoConstraint
+    ParsingError                         :: SignalProxy "parsing-error" "" NoConstraint
+    PasteClipboard                       :: SignalProxy "paste-clipboard" "" NoConstraint
+    PasteDone                            :: SignalProxy "paste-done" "" NoConstraint
+    PlugAdded                            :: SignalProxy "plug-added" "" NoConstraint
+    PlugRemoved                          :: SignalProxy "plug-removed" "" NoConstraint
+    Popdown                              :: SignalProxy "popdown" "" NoConstraint
+    PopulatePopup                        :: SignalProxy "populate-popup" "" NoConstraint
+    Popup                                :: SignalProxy "popup" "" NoConstraint
+    PopupContextMenu                     :: SignalProxy "popup-context-menu" "" NoConstraint
+    PopupMenu                            :: SignalProxy "popup-menu" "" NoConstraint
+    PostActivate                         :: SignalProxy "post-activate" "" NoConstraint
+    PreActivate                          :: SignalProxy "pre-activate" "" NoConstraint
+    PreeditChanged                       :: SignalProxy "preedit-changed" "" NoConstraint
+    PreeditEnd                           :: SignalProxy "preedit-end" "" NoConstraint
+    PreeditStart                         :: SignalProxy "preedit-start" "" NoConstraint
+    Prepare                              :: SignalProxy "prepare" "" NoConstraint
+    Pressed                              :: SignalProxy "pressed" "" NoConstraint
+    PrevMonth                            :: SignalProxy "prev-month" "" NoConstraint
+    PrevYear                             :: SignalProxy "prev-year" "" NoConstraint
+    Preview                              :: SignalProxy "preview" "" NoConstraint
+    PreviousMatch                        :: SignalProxy "previous-match" "" NoConstraint
+    PrintRequested                       :: SignalProxy "print-requested" "" NoConstraint
+    PropertyNotifyEvent                  :: SignalProxy "property-notify-event" "" NoConstraint
+    ProximityInEvent                     :: SignalProxy "proximity-in-event" "" NoConstraint
+    ProximityOutEvent                    :: SignalProxy "proximity-out-event" "" NoConstraint
+    QueryTooltip                         :: SignalProxy "query-tooltip" "" NoConstraint
+    QuickBookmark                        :: SignalProxy "quick-bookmark" "" NoConstraint
+    Ready                                :: SignalProxy "ready" "" NoConstraint
+    Realize                              :: SignalProxy "realize" "" NoConstraint
+    RecentShortcut                       :: SignalProxy "recent-shortcut" "" NoConstraint
+    Redo                                 :: SignalProxy "redo" "" NoConstraint
+    Released                             :: SignalProxy "released" "" NoConstraint
+    Remove                               :: SignalProxy "remove" "" NoConstraint
+    RemoveEditable                       :: SignalProxy "remove-editable" "" NoConstraint
+    RemoveTag                            :: SignalProxy "remove-tag" "" NoConstraint
+    RemoveWidget                         :: SignalProxy "remove-widget" "" NoConstraint
+    Render                               :: SignalProxy "render" "" NoConstraint
+    ReorderTab                           :: SignalProxy "reorder-tab" "" NoConstraint
+    RequestPageSetup                     :: SignalProxy "request-page-setup" "" NoConstraint
+    Resize                               :: SignalProxy "resize" "" NoConstraint
+    ResourceContentLengthReceived        :: SignalProxy "resource-content-length-received" "" NoConstraint
+    ResourceLoadFailed                   :: SignalProxy "resource-load-failed" "" NoConstraint
+    ResourceLoadFinished                 :: SignalProxy "resource-load-finished" "" NoConstraint
+    ResourceRequestStarting              :: SignalProxy "resource-request-starting" "" NoConstraint
+    ResourceResponseReceived             :: SignalProxy "resource-response-received" "" NoConstraint
+    Response                             :: SignalProxy "response" "" NoConstraint
+    ResponseReceived                     :: SignalProxy "response-received" "" NoConstraint
+    RetrieveSurrounding                  :: SignalProxy "retrieve-surrounding" "" NoConstraint
+    RowActivated                         :: SignalProxy "row-activated" "" NoConstraint
+    RowChanged                           :: SignalProxy "row-changed" "" NoConstraint
+    RowCollapsed                         :: SignalProxy "row-collapsed" "" NoConstraint
+    RowDeleted                           :: SignalProxy "row-deleted" "" NoConstraint
+    RowExpanded                          :: SignalProxy "row-expanded" "" NoConstraint
+    RowHasChildToggled                   :: SignalProxy "row-has-child-toggled" "" NoConstraint
+    RowInserted                          :: SignalProxy "row-inserted" "" NoConstraint
+    RowSelected                          :: SignalProxy "row-selected" "" NoConstraint
+    RunFileChooser                       :: SignalProxy "run-file-chooser" "" NoConstraint
+    ScaleChanged                         :: SignalProxy "scale-changed" "" NoConstraint
+    ScreenChanged                        :: SignalProxy "screen-changed" "" NoConstraint
+    ScriptAlert                          :: SignalProxy "script-alert" "" NoConstraint
+    ScriptConfirm                        :: SignalProxy "script-confirm" "" NoConstraint
+    ScriptPrompt                         :: SignalProxy "script-prompt" "" NoConstraint
+    ScrollChild                          :: SignalProxy "scroll-child" "" NoConstraint
+    ScrollEvent                          :: SignalProxy "scroll-event" "" NoConstraint
+    ScrollbarsPolicyChanged              :: SignalProxy "scrollbars-policy-changed" "" NoConstraint
+    SearchChanged                        :: SignalProxy "search-changed" "" NoConstraint
+    SearchShortcut                       :: SignalProxy "search-shortcut" "" NoConstraint
+    Select                               :: SignalProxy "select" "" NoConstraint
+    SelectAll                            :: SignalProxy "select-all" "" NoConstraint
+    SelectCursorItem                     :: SignalProxy "select-cursor-item" "" NoConstraint
+    SelectCursorParent                   :: SignalProxy "select-cursor-parent" "" NoConstraint
+    SelectCursorRow                      :: SignalProxy "select-cursor-row" "" NoConstraint
+    SelectPage                           :: SignalProxy "select-page" "" NoConstraint
+    SelectedChildrenChanged              :: SignalProxy "selected-children-changed" "" NoConstraint
+    SelectedRowsChanged                  :: SignalProxy "selected-rows-changed" "" NoConstraint
+    SelectionChanged                     :: SignalProxy "selection-changed" "" NoConstraint
+    SelectionClearEvent                  :: SignalProxy "selection-clear-event" "" NoConstraint
+    SelectionDone                        :: SignalProxy "selection-done" "" NoConstraint
+    SelectionGet                         :: SignalProxy "selection-get" "" NoConstraint
+    SelectionNotifyEvent                 :: SignalProxy "selection-notify-event" "" NoConstraint
+    SelectionReceived                    :: SignalProxy "selection-received" "" NoConstraint
+    SelectionRequestEvent                :: SignalProxy "selection-request-event" "" NoConstraint
+    SequenceStateChanged                 :: SignalProxy "sequence-state-changed" "" NoConstraint
+    SetAnchor                            :: SignalProxy "set-anchor" "" NoConstraint
+    SetFocus                             :: SignalProxy "set-focus" "" NoConstraint
+    SetFocusChild                        :: SignalProxy "set-focus-child" "" NoConstraint
+    ShouldApplyStyle                     :: SignalProxy "should-apply-style" "" NoConstraint
+    ShouldBeginEditing                   :: SignalProxy "should-begin-editing" "" NoConstraint
+    ShouldChangeSelectedRange            :: SignalProxy "should-change-selected-range" "" NoConstraint
+    ShouldDeleteRange                    :: SignalProxy "should-delete-range" "" NoConstraint
+    ShouldEndEditing                     :: SignalProxy "should-end-editing" "" NoConstraint
+    ShouldInsertNode                     :: SignalProxy "should-insert-node" "" NoConstraint
+    ShouldInsertText                     :: SignalProxy "should-insert-text" "" NoConstraint
+    ShouldShowDeleteInterfaceForElement  :: SignalProxy "should-show-delete-interface-for-element" "" NoConstraint
+    Show                                 :: SignalProxy "show" "" NoConstraint
+    ShowConnectToServer                  :: SignalProxy "show-connect-to-server" "" NoConstraint
+    ShowEnterLocation                    :: SignalProxy "show-enter-location" "" NoConstraint
+    ShowErrorMessage                     :: SignalProxy "show-error-message" "" NoConstraint
+    ShowHelp                             :: SignalProxy "show-help" "" NoConstraint
+    ShowHidden                           :: SignalProxy "show-hidden" "" NoConstraint
+    ShowMenu                             :: SignalProxy "show-menu" "" NoConstraint
+    ShowWindow                           :: SignalProxy "show-window" "" NoConstraint
+    SizeAllocate                         :: SignalProxy "size-allocate" "" NoConstraint
+    SizeChanged                          :: SignalProxy "size-changed" "" NoConstraint
+    SortColumnChanged                    :: SignalProxy "sort-column-changed" "" NoConstraint
+    StartInteractiveSearch               :: SignalProxy "start-interactive-search" "" NoConstraint
+    StateChanged                         :: SignalProxy "state-changed" "" NoConstraint
+    StateFlagsChanged                    :: SignalProxy "state-flags-changed" "" NoConstraint
+    StateSet                             :: SignalProxy "state-set" "" NoConstraint
+    StatusBarTextChanged                 :: SignalProxy "status-bar-text-changed" "" NoConstraint
+    StatusChanged                        :: SignalProxy "status-changed" "" NoConstraint
+    StopSearch                           :: SignalProxy "stop-search" "" NoConstraint
+    Stopped                              :: SignalProxy "stopped" "" NoConstraint
+    StyleChanged                         :: SignalProxy "style-changed" "" NoConstraint
+    StyleSet                             :: SignalProxy "style-set" "" NoConstraint
+    StyleUpdated                         :: SignalProxy "style-updated" "" NoConstraint
+    Swipe                                :: SignalProxy "swipe" "" NoConstraint
+    SwitchPage                           :: SignalProxy "switch-page" "" NoConstraint
+    TagAdded                             :: SignalProxy "tag-added" "" NoConstraint
+    TagChanged                           :: SignalProxy "tag-changed" "" NoConstraint
+    TagRemoved                           :: SignalProxy "tag-removed" "" NoConstraint
+    TestCollapseRow                      :: SignalProxy "test-collapse-row" "" NoConstraint
+    TestExpandRow                        :: SignalProxy "test-expand-row" "" NoConstraint
+    TextPopped                           :: SignalProxy "text-popped" "" NoConstraint
+    TextPushed                           :: SignalProxy "text-pushed" "" NoConstraint
+    TitleChanged                         :: SignalProxy "title-changed" "" NoConstraint
+    ToggleCursorChild                    :: SignalProxy "toggle-cursor-child" "" NoConstraint
+    ToggleCursorItem                     :: SignalProxy "toggle-cursor-item" "" NoConstraint
+    ToggleCursorRow                      :: SignalProxy "toggle-cursor-row" "" NoConstraint
+    ToggleCursorVisible                  :: SignalProxy "toggle-cursor-visible" "" NoConstraint
+    ToggleHandleFocus                    :: SignalProxy "toggle-handle-focus" "" NoConstraint
+    ToggleOverwrite                      :: SignalProxy "toggle-overwrite" "" NoConstraint
+    ToggleSizeAllocate                   :: SignalProxy "toggle-size-allocate" "" NoConstraint
+    ToggleSizeRequest                    :: SignalProxy "toggle-size-request" "" NoConstraint
+    Toggled                              :: SignalProxy "toggled" "" NoConstraint
+    ToolbarReconfigured                  :: SignalProxy "toolbar-reconfigured" "" NoConstraint
+    TouchEvent                           :: SignalProxy "touch-event" "" NoConstraint
+    Undo                                 :: SignalProxy "undo" "" NoConstraint
+    Unmap                                :: SignalProxy "unmap" "" NoConstraint
+    UnmapEvent                           :: SignalProxy "unmap-event" "" NoConstraint
+    Unrealize                            :: SignalProxy "unrealize" "" NoConstraint
+    UnselectAll                          :: SignalProxy "unselect-all" "" NoConstraint
+    UpFolder                             :: SignalProxy "up-folder" "" NoConstraint
+    Update                               :: SignalProxy "update" "" NoConstraint
+    UpdateCustomWidget                   :: SignalProxy "update-custom-widget" "" NoConstraint
+    UpdatePreview                        :: SignalProxy "update-preview" "" NoConstraint
+    UserChangedContents                  :: SignalProxy "user-changed-contents" "" NoConstraint
+    ValueChanged                         :: SignalProxy "value-changed" "" NoConstraint
+    ViewportAttributesChanged            :: SignalProxy "viewport-attributes-changed" "" NoConstraint
+    ViewportAttributesRecomputeRequested :: SignalProxy "viewport-attributes-recompute-requested" "" NoConstraint
+    VisibilityNotifyEvent                :: SignalProxy "visibility-notify-event" "" NoConstraint
+    WebViewReady                         :: SignalProxy "web-view-ready" "" NoConstraint
+    WindowAdded                          :: SignalProxy "window-added" "" NoConstraint
+    WindowObjectCleared                  :: SignalProxy "window-object-cleared" "" NoConstraint
+    WindowRemoved                        :: SignalProxy "window-removed" "" NoConstraint
+    WindowStateEvent                     :: SignalProxy "window-state-event" "" NoConstraint
+    Wrapped                              :: SignalProxy "wrapped" "" NoConstraint
