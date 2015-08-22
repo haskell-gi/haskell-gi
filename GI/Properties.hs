@@ -6,8 +6,10 @@ module GI.Properties
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM_, when, unless)
+import Control.Monad (forM, when, unless)
 import Data.List (intercalate)
+import Data.Maybe (catMaybes)
+import Data.Monoid ((<>))
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CInt, CUInt)
@@ -16,7 +18,6 @@ import GI.API
 import GI.Conversions
 import GI.Code
 import GI.GObject
-import GI.Inheritable
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
@@ -125,14 +126,17 @@ genPropertyConstructor pName prop = group $ do
 genObjectProperties :: Name -> Object -> CodeGen ()
 genObjectProperties n o = do
   isGO <- apiIsGObject n (APIObject o)
-  when isGO $
-       fullObjectPropertyList n o >>= genProperties n
+  -- We do not generate bindings for objects not descending from GObject.
+  when isGO $ genProperties n (objProperties o)
 
 genInterfaceProperties :: Name -> Interface -> CodeGen ()
 genInterfaceProperties n iface = do
   isGO <- apiIsGObject n (APIInterface iface)
-  when isGO $
-       fullInterfacePropertyList n iface >>= genProperties n
+  if isGO
+  then genProperties n (ifProperties iface)
+  else do
+    name <- upperName n
+    group . line $ "type instance AttributeList " ++ name ++ " = '[]"
 
 -- If the given accesor is available (indicated by available == True),
 -- generate a fully qualified accesor name, otherwise just return
@@ -145,21 +149,24 @@ accessorOrUndefined available accessor (Name ons on) cName =
       prefix <- qualifyWithSuffix "A." ons
       return $ prefix ++ accessor ++ on ++ cName
 
-genOneProperty :: Name -> Name -> Property -> ExcCodeGen ()
-genOneProperty n propOwner@(Name ons on) prop = do
-  name <- upperName n
-  propOwnerName <- upperName propOwner
+-- | The name of the type encoding the information for the property of
+-- the object.
+infoType :: Name -> Property -> CodeGen String
+infoType owner prop = do
+  name <- upperName owner
+  let cName = hyphensToCamelCase (propName prop)
+  return $ name ++ cName ++ "PropertyInfo"
+
+genOneProperty :: Name -> Property -> ExcCodeGen (Maybe String)
+genOneProperty owner prop = do
+  name <- upperName owner
   let cName = hyphensToCamelCase $ propName prop
-      pName = propOwnerName ++ cName
+      pName = name ++ cName
       flags = propFlags prop
       writable = ParamWritable `elem` flags &&
                  (ParamConstructOnly `notElem` flags)
       readable = ParamReadable `elem` flags
       constructOnly = ParamConstructOnly `elem` flags
-      owned = propOwner == n -- Whether n is the object which
-                             -- defined the property, will be False
-                             -- for properties inherited from parent
-                             -- classes.
 
   -- For properties the meaning of having transfer /= TransferNothing
   -- is not clear (what are the right semantics for GValue setters?),
@@ -170,24 +177,23 @@ genOneProperty n propOwner@(Name ons on) prop = do
                                ++ " has unsupported transfer type "
                                ++ show (propTransfer prop)
 
-  getter <- accessorOrUndefined readable "get" propOwner cName
-  setter <- accessorOrUndefined writable "set" propOwner cName
+  getter <- accessorOrUndefined readable "get" owner cName
+  setter <- accessorOrUndefined writable "set" owner cName
   constructor <- accessorOrUndefined (writable || constructOnly)
-                 "construct" propOwner cName
+                 "construct" owner cName
 
-  when owned $ do
-    unless (readable || writable || constructOnly) $
-         notImplementedError $ "Property is not readable, writable, or constructible: "
-                                 ++ show pName
+  unless (readable || writable || constructOnly) $
+       notImplementedError $ "Property is not readable, writable, or constructible: "
+                               ++ show pName
 
-    group $ do
-      line $ "-- VVV Prop \"" ++ propName prop ++ "\""
-      line $ "   -- Type: " ++ show (propType prop)
-      line $ "   -- Flags: " ++ show (propFlags prop)
+  group $ do
+    line $ "-- VVV Prop \"" ++ propName prop ++ "\""
+    line $ "   -- Type: " ++ show (propType prop)
+    line $ "   -- Flags: " ++ show (propFlags prop)
 
-    when readable $ genPropertyGetter n pName prop
-    when writable $ genPropertySetter n pName prop
-    when (writable || constructOnly) $ genPropertyConstructor pName prop
+  when readable $ genPropertyGetter owner pName prop
+  when writable $ genPropertySetter owner pName prop
+  when (writable || constructOnly) $ genPropertyConstructor pName prop
 
   outType <- if not readable
              then return "()"
@@ -196,16 +202,6 @@ genOneProperty n propOwner@(Name ons on) prop = do
                return $ if ' ' `elem` sOutType
                         then parenthesize sOutType
                         else sOutType
-
-  qualifiedLens <- do
-    prefix <- qualifyWithSuffix "A." ons
-    return $ prefix ++ lcFirst on ++ cName
-
-  when owned $ group $ do
-    line $ qualifiedLens ++ " :: "
-             ++ parenthesize (classConstraint name ++ " o")
-             ++ " => Attr \"" ++ cName ++ "\" o"
-    line $ qualifiedLens ++ " = undefined"
 
   -- Polymorphic _label style lens
   group $ do
@@ -218,31 +214,46 @@ genOneProperty n propOwner@(Name ons on) prop = do
                                            then parenthesize hInType
                                            else hInType
                        else "(~) ()"
-        attrWriteType | writable      = "SettableAndConstructibleAttr"
-                      | constructOnly = "ConstructOnlyAttr"
-                      | otherwise     = "ReadOnlyAttr"
-        instanceVars = "\"" ++ propName prop ++ "\" " ++ name
+        allowedOps = (if writable
+                      then ["AttrSet", "AttrConstruct"]
+                      else [])
+                     <> (if constructOnly
+                         then ["AttrConstruct"]
+                         else [])
+                     <> (if readable
+                         then ["AttrGet"]
+                         else [])
+    it <- infoType owner prop
 
-    line $ "instance HasAttr " ++ name ++ " \"" ++ propName prop ++ "\" where"
+    line $ "data " ++ it
+    line $ "instance AttrInfo " ++ it ++ " where"
     indent $ do
-            line $ "type AttrIsReadable " ++ instanceVars
-                     ++ " = " ++ show readable
-            line $ "type " ++ "AttrSetTypeConstraint " ++ instanceVars
+            line $ "type AttrAllowedOps " ++ it
+                     ++ " = '[" ++ intercalate ", " allowedOps ++ "]"
+            line $ "type AttrSetTypeConstraint " ++ it
                      ++ " = " ++ inConstraint
-            line $ "type " ++ "AttrSettableConstraint " ++ instanceVars
-                     ++ " = " ++ attrWriteType
-            line $ "type AttrGetType " ++ instanceVars
-                     ++ " = " ++ outType
-            line $ "attrLabel _ _ = \"" ++ name ++ ":" ++ cName ++ "\""
+            line $ "type AttrBaseTypeConstraint " ++ it
+                     ++ " = " ++ classConstraint name
+            line $ "type AttrGetType " ++ it ++ " = " ++ outType
+            line $ "type AttrLabel " ++ it ++ " = \""
+                     ++ name ++ "::" ++ propName prop ++ "\""
             line $ "attrGet _ = " ++ getter
             line $ "attrSet _ = " ++ setter
             line $ "attrConstruct _ = " ++ constructor
 
+    return . Just $ "'(\"" ++ propName prop ++ "\", " ++ it ++ ")"
 
-genProperties :: Name -> [(Name, Property)] -> CodeGen ()
+genProperties :: Name -> [Property] -> CodeGen ()
 genProperties n props = do
-  forM_ props $ \(owner, prop) -> do
-      handleCGExc (\err -> line $ "-- XXX Generation of property\""
-                             ++ propName prop
-                             ++ "\" failed: " ++ describeCGError err)
-                  (genOneProperty n owner prop)
+  name <- upperName n
+
+  successfulProps <- forM props $ \prop -> do
+      handleCGExc (\err -> do
+                     line $ "-- XXX Generation of property \""
+                              ++ propName prop ++ "\" of object \""
+                              ++ name ++ "\" failed: " ++ describeCGError err
+                     return Nothing )
+                  (genOneProperty n prop)
+
+  group $ line $ "type instance AttributeList " ++ name ++ " = '[ "
+            ++ intercalate ", " (catMaybes successfulProps) ++ "]"

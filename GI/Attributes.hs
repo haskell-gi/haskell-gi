@@ -42,8 +42,8 @@ genPropertyAttr :: String -> CodeGen ()
 genPropertyAttr pName = group $ do
   line $ "-- Property \"" ++ pName ++ "\""
   let name = hyphensToCamelCase pName
-  line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ pName ++ "\" o"
-  line $ "_" ++ lcFirst name ++ " = Attr"
+  line $ "_" ++ lcFirst name ++ " :: Proxy \"" ++ pName ++ "\""
+  line $ "_" ++ lcFirst name ++ " = Proxy"
 
 genProps :: (Name, API) -> CodeGen ()
 genProps (n, APIObject o) = genObjectProperties n o
@@ -54,14 +54,12 @@ genAllAttributes :: [(Name, API)] -> String -> CodeGen ()
 genAllAttributes allAPIs modulePrefix = do
   line "-- Generated code."
   blank
-  line "{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,"
-  line "    TypeFamilies, MultiParamTypeClasses, KindSignatures,"
-  line "    FlexibleInstances, UndecidableInstances, DataKinds #-}"
+  line "{-# LANGUAGE DataKinds #-}"
   blank
 
   line $ "module " ++ modulePrefix ++ "Properties where"
   blank
-  line $ "import " ++ modulePrefix ++ "Utils.Attributes"
+  line $ "import Data.Proxy (Proxy(..))"
   blank
 
   propNames <- findObjectPropNames allAPIs

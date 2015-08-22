@@ -1,6865 +1,6863 @@
 -- Generated code.
 
-{-# LANGUAGE ForeignFunctionInterface, ConstraintKinds,
-    TypeFamilies, MultiParamTypeClasses, KindSignatures,
-    FlexibleInstances, UndecidableInstances, DataKinds #-}
+{-# LANGUAGE DataKinds #-}
 
 module GI.Properties where
 
-import GI.Utils.Attributes
+import Data.Proxy (Proxy(..))
 
 -- Property "a-link"
-_aLink :: Attr "a-link" o
-_aLink = Attr
+_aLink :: Proxy "a-link"
+_aLink = Proxy
 
 
 -- Property "abbr"
-_abbr :: Attr "abbr" o
-_abbr = Attr
+_abbr :: Proxy "abbr"
+_abbr = Proxy
 
 
 -- Property "above-child"
-_aboveChild :: Attr "above-child" o
-_aboveChild = Attr
+_aboveChild :: Proxy "above-child"
+_aboveChild = Proxy
 
 
 -- Property "accel-closure"
-_accelClosure :: Attr "accel-closure" o
-_accelClosure = Attr
+_accelClosure :: Proxy "accel-closure"
+_accelClosure = Proxy
 
 
 -- Property "accel-group"
-_accelGroup :: Attr "accel-group" o
-_accelGroup = Attr
+_accelGroup :: Proxy "accel-group"
+_accelGroup = Proxy
 
 
 -- Property "accel-key"
-_accelKey :: Attr "accel-key" o
-_accelKey = Attr
+_accelKey :: Proxy "accel-key"
+_accelKey = Proxy
 
 
 -- Property "accel-mode"
-_accelMode :: Attr "accel-mode" o
-_accelMode = Attr
+_accelMode :: Proxy "accel-mode"
+_accelMode = Proxy
 
 
 -- Property "accel-mods"
-_accelMods :: Attr "accel-mods" o
-_accelMods = Attr
+_accelMods :: Proxy "accel-mods"
+_accelMods = Proxy
 
 
 -- Property "accel-path"
-_accelPath :: Attr "accel-path" o
-_accelPath = Attr
+_accelPath :: Proxy "accel-path"
+_accelPath = Proxy
 
 
 -- Property "accel-widget"
-_accelWidget :: Attr "accel-widget" o
-_accelWidget = Attr
+_accelWidget :: Proxy "accel-widget"
+_accelWidget = Proxy
 
 
 -- Property "accept"
-_accept :: Attr "accept" o
-_accept = Attr
+_accept :: Proxy "accept"
+_accept = Proxy
 
 
 -- Property "accept-charset"
-_acceptCharset :: Attr "accept-charset" o
-_acceptCharset = Attr
+_acceptCharset :: Proxy "accept-charset"
+_acceptCharset = Proxy
 
 
 -- Property "accept-focus"
-_acceptFocus :: Attr "accept-focus" o
-_acceptFocus = Attr
+_acceptFocus :: Proxy "accept-focus"
+_acceptFocus = Proxy
 
 
 -- Property "accepts-tab"
-_acceptsTab :: Attr "accepts-tab" o
-_acceptsTab = Attr
+_acceptsTab :: Proxy "accepts-tab"
+_acceptsTab = Proxy
 
 
 -- Property "access-key"
-_accessKey :: Attr "access-key" o
-_accessKey = Attr
+_accessKey :: Proxy "access-key"
+_accessKey = Proxy
 
 
 -- Property "accumulative-margin"
-_accumulativeMargin :: Attr "accumulative-margin" o
-_accumulativeMargin = Attr
+_accumulativeMargin :: Proxy "accumulative-margin"
+_accumulativeMargin = Proxy
 
 
 -- Property "action"
-_action :: Attr "action" o
-_action = Attr
+_action :: Proxy "action"
+_action = Proxy
 
 
 -- Property "action-group"
-_actionGroup :: Attr "action-group" o
-_actionGroup = Attr
+_actionGroup :: Proxy "action-group"
+_actionGroup = Proxy
 
 
 -- Property "action-name"
-_actionName :: Attr "action-name" o
-_actionName = Attr
+_actionName :: Proxy "action-name"
+_actionName = Proxy
 
 
 -- Property "action-target"
-_actionTarget :: Attr "action-target" o
-_actionTarget = Attr
+_actionTarget :: Proxy "action-target"
+_actionTarget = Proxy
 
 
 -- Property "activatable"
-_activatable :: Attr "activatable" o
-_activatable = Attr
+_activatable :: Proxy "activatable"
+_activatable = Proxy
 
 
 -- Property "activate-on-single-click"
-_activateOnSingleClick :: Attr "activate-on-single-click" o
-_activateOnSingleClick = Attr
+_activateOnSingleClick :: Proxy "activate-on-single-click"
+_activateOnSingleClick = Proxy
 
 
 -- Property "activates-default"
-_activatesDefault :: Attr "activates-default" o
-_activatesDefault = Attr
+_activatesDefault :: Proxy "activates-default"
+_activatesDefault = Proxy
 
 
 -- Property "active"
-_active :: Attr "active" o
-_active = Attr
+_active :: Proxy "active"
+_active = Proxy
 
 
 -- Property "active-cues"
-_activeCues :: Attr "active-cues" o
-_activeCues = Attr
+_activeCues :: Proxy "active-cues"
+_activeCues = Proxy
 
 
 -- Property "active-element"
-_activeElement :: Attr "active-element" o
-_activeElement = Attr
+_activeElement :: Proxy "active-element"
+_activeElement = Proxy
 
 
 -- Property "active-id"
-_activeId :: Attr "active-id" o
-_activeId = Attr
+_activeId :: Proxy "active-id"
+_activeId = Proxy
 
 
 -- Property "active-window"
-_activeWindow :: Attr "active-window" o
-_activeWindow = Attr
+_activeWindow :: Proxy "active-window"
+_activeWindow = Proxy
 
 
 -- Property "add-tearoffs"
-_addTearoffs :: Attr "add-tearoffs" o
-_addTearoffs = Attr
+_addTearoffs :: Proxy "add-tearoffs"
+_addTearoffs = Proxy
 
 
 -- Property "adjustment"
-_adjustment :: Attr "adjustment" o
-_adjustment = Attr
+_adjustment :: Proxy "adjustment"
+_adjustment = Proxy
 
 
 -- Property "align"
-_align :: Attr "align" o
-_align = Attr
+_align :: Proxy "align"
+_align = Proxy
 
 
 -- Property "align-set"
-_alignSet :: Attr "align-set" o
-_alignSet = Attr
+_alignSet :: Proxy "align-set"
+_alignSet = Proxy
 
 
 -- Property "align-widget"
-_alignWidget :: Attr "align-widget" o
-_alignWidget = Attr
+_alignWidget :: Proxy "align-widget"
+_alignWidget = Proxy
 
 
 -- Property "alignment"
-_alignment :: Attr "alignment" o
-_alignment = Attr
+_alignment :: Proxy "alignment"
+_alignment = Proxy
 
 
 -- Property "alink-color"
-_alinkColor :: Attr "alink-color" o
-_alinkColor = Attr
+_alinkColor :: Proxy "alink-color"
+_alinkColor = Proxy
 
 
 -- Property "allow-async"
-_allowAsync :: Attr "allow-async" o
-_allowAsync = Attr
+_allowAsync :: Proxy "allow-async"
+_allowAsync = Proxy
 
 
 -- Property "allows-eval"
-_allowsEval :: Attr "allows-eval" o
-_allowsEval = Attr
+_allowsEval :: Proxy "allows-eval"
+_allowsEval = Proxy
 
 
 -- Property "allows-inline-script"
-_allowsInlineScript :: Attr "allows-inline-script" o
-_allowsInlineScript = Attr
+_allowsInlineScript :: Proxy "allows-inline-script"
+_allowsInlineScript = Proxy
 
 
 -- Property "allows-inline-style"
-_allowsInlineStyle :: Attr "allows-inline-style" o
-_allowsInlineStyle = Attr
+_allowsInlineStyle :: Proxy "allows-inline-style"
+_allowsInlineStyle = Proxy
 
 
 -- Property "alpha"
-_alpha :: Attr "alpha" o
-_alpha = Attr
+_alpha :: Proxy "alpha"
+_alpha = Proxy
 
 
 -- Property "alt"
-_alt :: Attr "alt" o
-_alt = Attr
+_alt :: Proxy "alt"
+_alt = Proxy
 
 
 -- Property "alt-graph-key"
-_altGraphKey :: Attr "alt-graph-key" o
-_altGraphKey = Attr
+_altGraphKey :: Proxy "alt-graph-key"
+_altGraphKey = Proxy
 
 
 -- Property "alt-key"
-_altKey :: Attr "alt-key" o
-_altKey = Attr
+_altKey :: Proxy "alt-key"
+_altKey = Proxy
 
 
 -- Property "alternate-title"
-_alternateTitle :: Attr "alternate-title" o
-_alternateTitle = Attr
+_alternateTitle :: Proxy "alternate-title"
+_alternateTitle = Proxy
 
 
 -- Property "always-show-image"
-_alwaysShowImage :: Attr "always-show-image" o
-_alwaysShowImage = Attr
+_alwaysShowImage :: Proxy "always-show-image"
+_alwaysShowImage = Proxy
 
 
 -- Property "ancestor-origins"
-_ancestorOrigins :: Attr "ancestor-origins" o
-_ancestorOrigins = Attr
+_ancestorOrigins :: Proxy "ancestor-origins"
+_ancestorOrigins = Proxy
 
 
 -- Property "anchor-node"
-_anchorNode :: Attr "anchor-node" o
-_anchorNode = Attr
+_anchorNode :: Proxy "anchor-node"
+_anchorNode = Proxy
 
 
 -- Property "anchor-offset"
-_anchorOffset :: Attr "anchor-offset" o
-_anchorOffset = Attr
+_anchorOffset :: Proxy "anchor-offset"
+_anchorOffset = Proxy
 
 
 -- Property "anchors"
-_anchors :: Attr "anchors" o
-_anchors = Attr
+_anchors :: Proxy "anchors"
+_anchors = Proxy
 
 
 -- Property "angle"
-_angle :: Attr "angle" o
-_angle = Attr
+_angle :: Proxy "angle"
+_angle = Proxy
 
 
 -- Property "app-code-name"
-_appCodeName :: Attr "app-code-name" o
-_appCodeName = Attr
+_appCodeName :: Proxy "app-code-name"
+_appCodeName = Proxy
 
 
 -- Property "app-menu"
-_appMenu :: Attr "app-menu" o
-_appMenu = Attr
+_appMenu :: Proxy "app-menu"
+_appMenu = Proxy
 
 
 -- Property "app-name"
-_appName :: Attr "app-name" o
-_appName = Attr
+_appName :: Proxy "app-name"
+_appName = Proxy
 
 
 -- Property "app-paintable"
-_appPaintable :: Attr "app-paintable" o
-_appPaintable = Attr
+_appPaintable :: Proxy "app-paintable"
+_appPaintable = Proxy
 
 
 -- Property "app-version"
-_appVersion :: Attr "app-version" o
-_appVersion = Attr
+_appVersion :: Proxy "app-version"
+_appVersion = Proxy
 
 
 -- Property "applets"
-_applets :: Attr "applets" o
-_applets = Attr
+_applets :: Proxy "applets"
+_applets = Proxy
 
 
 -- Property "application"
-_application :: Attr "application" o
-_application = Attr
+_application :: Proxy "application"
+_application = Proxy
 
 
 -- Property "application-cache"
-_applicationCache :: Attr "application-cache" o
-_applicationCache = Attr
+_applicationCache :: Proxy "application-cache"
+_applicationCache = Proxy
 
 
 -- Property "apply-author-styles"
-_applyAuthorStyles :: Attr "apply-author-styles" o
-_applyAuthorStyles = Attr
+_applyAuthorStyles :: Proxy "apply-author-styles"
+_applyAuthorStyles = Proxy
 
 
 -- Property "archive"
-_archive :: Attr "archive" o
-_archive = Attr
+_archive :: Proxy "archive"
+_archive = Proxy
 
 
 -- Property "area"
-_area :: Attr "area" o
-_area = Attr
+_area :: Proxy "area"
+_area = Proxy
 
 
 -- Property "areas"
-_areas :: Attr "areas" o
-_areas = Attr
+_areas :: Proxy "areas"
+_areas = Proxy
 
 
 -- Property "arrow-type"
-_arrowType :: Attr "arrow-type" o
-_arrowType = Attr
+_arrowType :: Proxy "arrow-type"
+_arrowType = Proxy
 
 
 -- Property "artists"
-_artists :: Attr "artists" o
-_artists = Attr
+_artists :: Proxy "artists"
+_artists = Proxy
 
 
 -- Property "async"
-_async :: Attr "async" o
-_async = Attr
+_async :: Proxy "async"
+_async = Proxy
 
 
 -- Property "attach-widget"
-_attachWidget :: Attr "attach-widget" o
-_attachWidget = Attr
+_attachWidget :: Proxy "attach-widget"
+_attachWidget = Proxy
 
 
 -- Property "attached-to"
-_attachedTo :: Attr "attached-to" o
-_attachedTo = Attr
+_attachedTo :: Proxy "attached-to"
+_attachedTo = Proxy
 
 
 -- Property "attributes"
-_attributes :: Attr "attributes" o
-_attributes = Attr
+_attributes :: Proxy "attributes"
+_attributes = Proxy
 
 
 -- Property "audio-tracks"
-_audioTracks :: Attr "audio-tracks" o
-_audioTracks = Attr
+_audioTracks :: Proxy "audio-tracks"
+_audioTracks = Proxy
 
 
 -- Property "authors"
-_authors :: Attr "authors" o
-_authors = Attr
+_authors :: Proxy "authors"
+_authors = Proxy
 
 
 -- Property "auto-load-images"
-_autoLoadImages :: Attr "auto-load-images" o
-_autoLoadImages = Attr
+_autoLoadImages :: Proxy "auto-load-images"
+_autoLoadImages = Proxy
 
 
 -- Property "auto-render"
-_autoRender :: Attr "auto-render" o
-_autoRender = Attr
+_autoRender :: Proxy "auto-render"
+_autoRender = Proxy
 
 
 -- Property "auto-resize-window"
-_autoResizeWindow :: Attr "auto-resize-window" o
-_autoResizeWindow = Attr
+_autoResizeWindow :: Proxy "auto-resize-window"
+_autoResizeWindow = Proxy
 
 
 -- Property "auto-shrink-images"
-_autoShrinkImages :: Attr "auto-shrink-images" o
-_autoShrinkImages = Attr
+_autoShrinkImages :: Proxy "auto-shrink-images"
+_autoShrinkImages = Proxy
 
 
 -- Property "autocapitalize"
-_autocapitalize :: Attr "autocapitalize" o
-_autocapitalize = Attr
+_autocapitalize :: Proxy "autocapitalize"
+_autocapitalize = Proxy
 
 
 -- Property "autocomplete"
-_autocomplete :: Attr "autocomplete" o
-_autocomplete = Attr
+_autocomplete :: Proxy "autocomplete"
+_autocomplete = Proxy
 
 
 -- Property "autocorrect"
-_autocorrect :: Attr "autocorrect" o
-_autocorrect = Attr
+_autocorrect :: Proxy "autocorrect"
+_autocorrect = Proxy
 
 
 -- Property "autofocus"
-_autofocus :: Attr "autofocus" o
-_autofocus = Attr
+_autofocus :: Proxy "autofocus"
+_autofocus = Proxy
 
 
 -- Property "autoplay"
-_autoplay :: Attr "autoplay" o
-_autoplay = Attr
+_autoplay :: Proxy "autoplay"
+_autoplay = Proxy
 
 
 -- Property "avail-height"
-_availHeight :: Attr "avail-height" o
-_availHeight = Attr
+_availHeight :: Proxy "avail-height"
+_availHeight = Proxy
 
 
 -- Property "avail-left"
-_availLeft :: Attr "avail-left" o
-_availLeft = Attr
+_availLeft :: Proxy "avail-left"
+_availLeft = Proxy
 
 
 -- Property "avail-top"
-_availTop :: Attr "avail-top" o
-_availTop = Attr
+_availTop :: Proxy "avail-top"
+_availTop = Proxy
 
 
 -- Property "avail-width"
-_availWidth :: Attr "avail-width" o
-_availWidth = Attr
+_availWidth :: Proxy "avail-width"
+_availWidth = Proxy
 
 
 -- Property "available-height"
-_availableHeight :: Attr "available-height" o
-_availableHeight = Attr
+_availableHeight :: Proxy "available-height"
+_availableHeight = Proxy
 
 
 -- Property "available-width"
-_availableWidth :: Attr "available-width" o
-_availableWidth = Attr
+_availableWidth :: Proxy "available-width"
+_availableWidth = Proxy
 
 
 -- Property "axis"
-_axis :: Attr "axis" o
-_axis = Attr
+_axis :: Proxy "axis"
+_axis = Proxy
 
 
 -- Property "background"
-_background :: Attr "background" o
-_background = Attr
+_background :: Proxy "background"
+_background = Proxy
 
 
 -- Property "background-full-height"
-_backgroundFullHeight :: Attr "background-full-height" o
-_backgroundFullHeight = Attr
+_backgroundFullHeight :: Proxy "background-full-height"
+_backgroundFullHeight = Proxy
 
 
 -- Property "background-full-height-set"
-_backgroundFullHeightSet :: Attr "background-full-height-set" o
-_backgroundFullHeightSet = Attr
+_backgroundFullHeightSet :: Proxy "background-full-height-set"
+_backgroundFullHeightSet = Proxy
 
 
 -- Property "background-gdk"
-_backgroundGdk :: Attr "background-gdk" o
-_backgroundGdk = Attr
+_backgroundGdk :: Proxy "background-gdk"
+_backgroundGdk = Proxy
 
 
 -- Property "background-icon"
-_backgroundIcon :: Attr "background-icon" o
-_backgroundIcon = Attr
+_backgroundIcon :: Proxy "background-icon"
+_backgroundIcon = Proxy
 
 
 -- Property "background-icon-name"
-_backgroundIconName :: Attr "background-icon-name" o
-_backgroundIconName = Attr
+_backgroundIconName :: Proxy "background-icon-name"
+_backgroundIconName = Proxy
 
 
 -- Property "background-rgba"
-_backgroundRgba :: Attr "background-rgba" o
-_backgroundRgba = Attr
+_backgroundRgba :: Proxy "background-rgba"
+_backgroundRgba = Proxy
 
 
 -- Property "background-set"
-_backgroundSet :: Attr "background-set" o
-_backgroundSet = Attr
+_backgroundSet :: Proxy "background-set"
+_backgroundSet = Proxy
 
 
 -- Property "bad-input"
-_badInput :: Attr "bad-input" o
-_badInput = Attr
+_badInput :: Proxy "bad-input"
+_badInput = Proxy
 
 
 -- Property "base-node"
-_baseNode :: Attr "base-node" o
-_baseNode = Attr
+_baseNode :: Proxy "base-node"
+_baseNode = Proxy
 
 
 -- Property "base-offset"
-_baseOffset :: Attr "base-offset" o
-_baseOffset = Attr
+_baseOffset :: Proxy "base-offset"
+_baseOffset = Proxy
 
 
 -- Property "base-uri"
-_baseUri :: Attr "base-uri" o
-_baseUri = Attr
+_baseUri :: Proxy "base-uri"
+_baseUri = Proxy
 
 
 -- Property "baseline-position"
-_baselinePosition :: Attr "baseline-position" o
-_baselinePosition = Attr
+_baselinePosition :: Proxy "baseline-position"
+_baselinePosition = Proxy
 
 
 -- Property "baseline-row"
-_baselineRow :: Attr "baseline-row" o
-_baselineRow = Attr
+_baselineRow :: Proxy "baseline-row"
+_baselineRow = Proxy
 
 
 -- Property "behavior"
-_behavior :: Attr "behavior" o
-_behavior = Attr
+_behavior :: Proxy "behavior"
+_behavior = Proxy
 
 
 -- Property "bg-color"
-_bgColor :: Attr "bg-color" o
-_bgColor = Attr
+_bgColor :: Proxy "bg-color"
+_bgColor = Proxy
 
 
 -- Property "body"
-_body :: Attr "body" o
-_body = Attr
+_body :: Proxy "body"
+_body = Proxy
 
 
 -- Property "boolean-value"
-_booleanValue :: Attr "boolean-value" o
-_booleanValue = Attr
+_booleanValue :: Proxy "boolean-value"
+_booleanValue = Proxy
 
 
 -- Property "border"
-_border :: Attr "border" o
-_border = Attr
+_border :: Proxy "border"
+_border = Proxy
 
 
 -- Property "border-width"
-_borderWidth :: Attr "border-width" o
-_borderWidth = Attr
+_borderWidth :: Proxy "border-width"
+_borderWidth = Proxy
 
 
 -- Property "bottom-padding"
-_bottomPadding :: Attr "bottom-padding" o
-_bottomPadding = Attr
+_bottomPadding :: Proxy "bottom-padding"
+_bottomPadding = Proxy
 
 
 -- Property "bubbles"
-_bubbles :: Attr "bubbles" o
-_bubbles = Attr
+_bubbles :: Proxy "bubbles"
+_bubbles = Proxy
 
 
 -- Property "buffer"
-_buffer :: Attr "buffer" o
-_buffer = Attr
+_buffer :: Proxy "buffer"
+_buffer = Proxy
 
 
 -- Property "buffered"
-_buffered :: Attr "buffered" o
-_buffered = Attr
+_buffered :: Proxy "buffered"
+_buffered = Proxy
 
 
 -- Property "button"
-_button :: Attr "button" o
-_button = Attr
+_button :: Proxy "button"
+_button = Proxy
 
 
 -- Property "button-sensitivity"
-_buttonSensitivity :: Attr "button-sensitivity" o
-_buttonSensitivity = Attr
+_buttonSensitivity :: Proxy "button-sensitivity"
+_buttonSensitivity = Proxy
 
 
 -- Property "buttons"
-_buttons :: Attr "buttons" o
-_buttons = Attr
+_buttons :: Proxy "buttons"
+_buttons = Proxy
 
 
 -- Property "can-default"
-_canDefault :: Attr "can-default" o
-_canDefault = Attr
+_canDefault :: Proxy "can-default"
+_canDefault = Proxy
 
 
 -- Property "can-focus"
-_canFocus :: Attr "can-focus" o
-_canFocus = Attr
+_canFocus :: Proxy "can-focus"
+_canFocus = Proxy
 
 
 -- Property "cancel-bubble"
-_cancelBubble :: Attr "cancel-bubble" o
-_cancelBubble = Attr
+_cancelBubble :: Proxy "cancel-bubble"
+_cancelBubble = Proxy
 
 
 -- Property "cancel-button"
-_cancelButton :: Attr "cancel-button" o
-_cancelButton = Attr
+_cancelButton :: Proxy "cancel-button"
+_cancelButton = Proxy
 
 
 -- Property "cancelable"
-_cancelable :: Attr "cancelable" o
-_cancelable = Attr
+_cancelable :: Proxy "cancelable"
+_cancelable = Proxy
 
 
 -- Property "caps-lock-warning"
-_capsLockWarning :: Attr "caps-lock-warning" o
-_capsLockWarning = Attr
+_capsLockWarning :: Proxy "caps-lock-warning"
+_capsLockWarning = Proxy
 
 
 -- Property "caption"
-_caption :: Attr "caption" o
-_caption = Attr
+_caption :: Proxy "caption"
+_caption = Proxy
 
 
 -- Property "capture"
-_capture :: Attr "capture" o
-_capture = Attr
+_capture :: Proxy "capture"
+_capture = Proxy
 
 
 -- Property "cell-area"
-_cellArea :: Attr "cell-area" o
-_cellArea = Attr
+_cellArea :: Proxy "cell-area"
+_cellArea = Proxy
 
 
 -- Property "cell-area-context"
-_cellAreaContext :: Attr "cell-area-context" o
-_cellAreaContext = Attr
+_cellAreaContext :: Proxy "cell-area-context"
+_cellAreaContext = Proxy
 
 
 -- Property "cell-background"
-_cellBackground :: Attr "cell-background" o
-_cellBackground = Attr
+_cellBackground :: Proxy "cell-background"
+_cellBackground = Proxy
 
 
 -- Property "cell-background-gdk"
-_cellBackgroundGdk :: Attr "cell-background-gdk" o
-_cellBackgroundGdk = Attr
+_cellBackgroundGdk :: Proxy "cell-background-gdk"
+_cellBackgroundGdk = Proxy
 
 
 -- Property "cell-background-rgba"
-_cellBackgroundRgba :: Attr "cell-background-rgba" o
-_cellBackgroundRgba = Attr
+_cellBackgroundRgba :: Proxy "cell-background-rgba"
+_cellBackgroundRgba = Proxy
 
 
 -- Property "cell-background-set"
-_cellBackgroundSet :: Attr "cell-background-set" o
-_cellBackgroundSet = Attr
+_cellBackgroundSet :: Proxy "cell-background-set"
+_cellBackgroundSet = Proxy
 
 
 -- Property "cell-index"
-_cellIndex :: Attr "cell-index" o
-_cellIndex = Attr
+_cellIndex :: Proxy "cell-index"
+_cellIndex = Proxy
 
 
 -- Property "cell-padding"
-_cellPadding :: Attr "cell-padding" o
-_cellPadding = Attr
+_cellPadding :: Proxy "cell-padding"
+_cellPadding = Proxy
 
 
 -- Property "cell-spacing"
-_cellSpacing :: Attr "cell-spacing" o
-_cellSpacing = Attr
+_cellSpacing :: Proxy "cell-spacing"
+_cellSpacing = Proxy
 
 
 -- Property "cells"
-_cells :: Attr "cells" o
-_cells = Attr
+_cells :: Proxy "cells"
+_cells = Proxy
 
 
 -- Property "centered"
-_centered :: Attr "centered" o
-_centered = Attr
+_centered :: Proxy "centered"
+_centered = Proxy
 
 
 -- Property "ch"
-_ch :: Attr "ch" o
-_ch = Attr
+_ch :: Proxy "ch"
+_ch = Proxy
 
 
 -- Property "ch-off"
-_chOff :: Attr "ch-off" o
-_chOff = Attr
+_chOff :: Proxy "ch-off"
+_chOff = Proxy
 
 
 -- Property "challenge"
-_challenge :: Attr "challenge" o
-_challenge = Attr
+_challenge :: Proxy "challenge"
+_challenge = Proxy
 
 
 -- Property "char-code"
-_charCode :: Attr "char-code" o
-_charCode = Attr
+_charCode :: Proxy "char-code"
+_charCode = Proxy
 
 
 -- Property "character-set"
-_characterSet :: Attr "character-set" o
-_characterSet = Attr
+_characterSet :: Proxy "character-set"
+_characterSet = Proxy
 
 
 -- Property "charging"
-_charging :: Attr "charging" o
-_charging = Attr
+_charging :: Proxy "charging"
+_charging = Proxy
 
 
 -- Property "charging-time"
-_chargingTime :: Attr "charging-time" o
-_chargingTime = Attr
+_chargingTime :: Proxy "charging-time"
+_chargingTime = Proxy
 
 
 -- Property "charset"
-_charset :: Attr "charset" o
-_charset = Attr
+_charset :: Proxy "charset"
+_charset = Proxy
 
 
 -- Property "checked"
-_checked :: Attr "checked" o
-_checked = Attr
+_checked :: Proxy "checked"
+_checked = Proxy
 
 
 -- Property "child"
-_child :: Attr "child" o
-_child = Attr
+_child :: Proxy "child"
+_child = Proxy
 
 
 -- Property "child-detached"
-_childDetached :: Attr "child-detached" o
-_childDetached = Attr
+_childDetached :: Proxy "child-detached"
+_childDetached = Proxy
 
 
 -- Property "child-element-count"
-_childElementCount :: Attr "child-element-count" o
-_childElementCount = Attr
+_childElementCount :: Proxy "child-element-count"
+_childElementCount = Proxy
 
 
 -- Property "child-model"
-_childModel :: Attr "child-model" o
-_childModel = Attr
+_childModel :: Proxy "child-model"
+_childModel = Proxy
 
 
 -- Property "child-nodes"
-_childNodes :: Attr "child-nodes" o
-_childNodes = Attr
+_childNodes :: Proxy "child-nodes"
+_childNodes = Proxy
 
 
 -- Property "child-pack-direction"
-_childPackDirection :: Attr "child-pack-direction" o
-_childPackDirection = Attr
+_childPackDirection :: Proxy "child-pack-direction"
+_childPackDirection = Proxy
 
 
 -- Property "child-revealed"
-_childRevealed :: Attr "child-revealed" o
-_childRevealed = Attr
+_childRevealed :: Proxy "child-revealed"
+_childRevealed = Proxy
 
 
 -- Property "children"
-_children :: Attr "children" o
-_children = Attr
+_children :: Proxy "children"
+_children = Proxy
 
 
 -- Property "cite"
-_cite :: Attr "cite" o
-_cite = Attr
+_cite :: Proxy "cite"
+_cite = Proxy
 
 
 -- Property "class-list"
-_classList :: Attr "class-list" o
-_classList = Attr
+_classList :: Proxy "class-list"
+_classList = Proxy
 
 
 -- Property "class-name"
-_className :: Attr "class-name" o
-_className = Attr
+_className :: Proxy "class-name"
+_className = Proxy
 
 
 -- Property "clear"
-_clear :: Attr "clear" o
-_clear = Attr
+_clear :: Proxy "clear"
+_clear = Proxy
 
 
 -- Property "clickable"
-_clickable :: Attr "clickable" o
-_clickable = Attr
+_clickable :: Proxy "clickable"
+_clickable = Proxy
 
 
 -- Property "client-height"
-_clientHeight :: Attr "client-height" o
-_clientHeight = Attr
+_clientHeight :: Proxy "client-height"
+_clientHeight = Proxy
 
 
 -- Property "client-information"
-_clientInformation :: Attr "client-information" o
-_clientInformation = Attr
+_clientInformation :: Proxy "client-information"
+_clientInformation = Proxy
 
 
 -- Property "client-left"
-_clientLeft :: Attr "client-left" o
-_clientLeft = Attr
+_clientLeft :: Proxy "client-left"
+_clientLeft = Proxy
 
 
 -- Property "client-top"
-_clientTop :: Attr "client-top" o
-_clientTop = Attr
+_clientTop :: Proxy "client-top"
+_clientTop = Proxy
 
 
 -- Property "client-width"
-_clientWidth :: Attr "client-width" o
-_clientWidth = Attr
+_clientWidth :: Proxy "client-width"
+_clientWidth = Proxy
 
 
 -- Property "client-x"
-_clientX :: Attr "client-x" o
-_clientX = Attr
+_clientX :: Proxy "client-x"
+_clientX = Proxy
 
 
 -- Property "client-y"
-_clientY :: Attr "client-y" o
-_clientY = Attr
+_clientY :: Proxy "client-y"
+_clientY = Proxy
 
 
 -- Property "climb-rate"
-_climbRate :: Attr "climb-rate" o
-_climbRate = Attr
+_climbRate :: Proxy "climb-rate"
+_climbRate = Proxy
 
 
 -- Property "closed"
-_closed :: Attr "closed" o
-_closed = Attr
+_closed :: Proxy "closed"
+_closed = Proxy
 
 
 -- Property "code"
-_code :: Attr "code" o
-_code = Attr
+_code :: Proxy "code"
+_code = Proxy
 
 
 -- Property "code-base"
-_codeBase :: Attr "code-base" o
-_codeBase = Attr
+_codeBase :: Proxy "code-base"
+_codeBase = Proxy
 
 
 -- Property "code-type"
-_codeType :: Attr "code-type" o
-_codeType = Attr
+_codeType :: Proxy "code-type"
+_codeType = Proxy
 
 
 -- Property "col-span"
-_colSpan :: Attr "col-span" o
-_colSpan = Attr
+_colSpan :: Proxy "col-span"
+_colSpan = Proxy
 
 
 -- Property "collapsed"
-_collapsed :: Attr "collapsed" o
-_collapsed = Attr
+_collapsed :: Proxy "collapsed"
+_collapsed = Proxy
 
 
 -- Property "color"
-_color :: Attr "color" o
-_color = Attr
+_color :: Proxy "color"
+_color = Proxy
 
 
 -- Property "color-depth"
-_colorDepth :: Attr "color-depth" o
-_colorDepth = Attr
+_colorDepth :: Proxy "color-depth"
+_colorDepth = Proxy
 
 
 -- Property "color-hash"
-_colorHash :: Attr "color-hash" o
-_colorHash = Attr
+_colorHash :: Proxy "color-hash"
+_colorHash = Proxy
 
 
 -- Property "color-selection"
-_colorSelection :: Attr "color-selection" o
-_colorSelection = Attr
+_colorSelection :: Proxy "color-selection"
+_colorSelection = Proxy
 
 
 -- Property "cols"
-_cols :: Attr "cols" o
-_cols = Attr
+_cols :: Proxy "cols"
+_cols = Proxy
 
 
 -- Property "column-homogeneous"
-_columnHomogeneous :: Attr "column-homogeneous" o
-_columnHomogeneous = Attr
+_columnHomogeneous :: Proxy "column-homogeneous"
+_columnHomogeneous = Proxy
 
 
 -- Property "column-spacing"
-_columnSpacing :: Attr "column-spacing" o
-_columnSpacing = Attr
+_columnSpacing :: Proxy "column-spacing"
+_columnSpacing = Proxy
 
 
 -- Property "column-span-column"
-_columnSpanColumn :: Attr "column-span-column" o
-_columnSpanColumn = Attr
+_columnSpanColumn :: Proxy "column-span-column"
+_columnSpanColumn = Proxy
 
 
 -- Property "columns"
-_columns :: Attr "columns" o
-_columns = Attr
+_columns :: Proxy "columns"
+_columns = Proxy
 
 
 -- Property "comments"
-_comments :: Attr "comments" o
-_comments = Attr
+_comments :: Proxy "comments"
+_comments = Proxy
 
 
 -- Property "common-ancestor-container"
-_commonAncestorContainer :: Attr "common-ancestor-container" o
-_commonAncestorContainer = Attr
+_commonAncestorContainer :: Proxy "common-ancestor-container"
+_commonAncestorContainer = Proxy
 
 
 -- Property "compact"
-_compact :: Attr "compact" o
-_compact = Attr
+_compact :: Proxy "compact"
+_compact = Proxy
 
 
 -- Property "compat-mode"
-_compatMode :: Attr "compat-mode" o
-_compatMode = Attr
+_compatMode :: Proxy "compat-mode"
+_compatMode = Proxy
 
 
 -- Property "complete"
-_complete :: Attr "complete" o
-_complete = Attr
+_complete :: Proxy "complete"
+_complete = Proxy
 
 
 -- Property "completion"
-_completion :: Attr "completion" o
-_completion = Attr
+_completion :: Proxy "completion"
+_completion = Proxy
 
 
 -- Property "composite-child"
-_compositeChild :: Attr "composite-child" o
-_compositeChild = Attr
+_compositeChild :: Proxy "composite-child"
+_compositeChild = Proxy
 
 
 -- Property "connect-end"
-_connectEnd :: Attr "connect-end" o
-_connectEnd = Attr
+_connectEnd :: Proxy "connect-end"
+_connectEnd = Proxy
 
 
 -- Property "connect-start"
-_connectStart :: Attr "connect-start" o
-_connectStart = Attr
+_connectStart :: Proxy "connect-start"
+_connectStart = Proxy
 
 
 -- Property "console"
-_console :: Attr "console" o
-_console = Attr
+_console :: Proxy "console"
+_console = Proxy
 
 
 -- Property "content"
-_content :: Attr "content" o
-_content = Attr
+_content :: Proxy "content"
+_content = Proxy
 
 
 -- Property "content-document"
-_contentDocument :: Attr "content-document" o
-_contentDocument = Attr
+_contentDocument :: Proxy "content-document"
+_contentDocument = Proxy
 
 
 -- Property "content-editable"
-_contentEditable :: Attr "content-editable" o
-_contentEditable = Attr
+_contentEditable :: Proxy "content-editable"
+_contentEditable = Proxy
 
 
 -- Property "content-type"
-_contentType :: Attr "content-type" o
-_contentType = Attr
+_contentType :: Proxy "content-type"
+_contentType = Proxy
 
 
 -- Property "content-window"
-_contentWindow :: Attr "content-window" o
-_contentWindow = Attr
+_contentWindow :: Proxy "content-window"
+_contentWindow = Proxy
 
 
 -- Property "context"
-_context :: Attr "context" o
-_context = Attr
+_context :: Proxy "context"
+_context = Proxy
 
 
 -- Property "control"
-_control :: Attr "control" o
-_control = Attr
+_control :: Proxy "control"
+_control = Proxy
 
 
 -- Property "controller"
-_controller :: Attr "controller" o
-_controller = Attr
+_controller :: Proxy "controller"
+_controller = Proxy
 
 
 -- Property "controls"
-_controls :: Attr "controls" o
-_controls = Attr
+_controls :: Proxy "controls"
+_controls = Proxy
 
 
 -- Property "cookie"
-_cookie :: Attr "cookie" o
-_cookie = Attr
+_cookie :: Proxy "cookie"
+_cookie = Proxy
 
 
 -- Property "cookie-enabled"
-_cookieEnabled :: Attr "cookie-enabled" o
-_cookieEnabled = Attr
+_cookieEnabled :: Proxy "cookie-enabled"
+_cookieEnabled = Proxy
 
 
 -- Property "coords"
-_coords :: Attr "coords" o
-_coords = Attr
+_coords :: Proxy "coords"
+_coords = Proxy
 
 
 -- Property "copy-target-list"
-_copyTargetList :: Attr "copy-target-list" o
-_copyTargetList = Attr
+_copyTargetList :: Proxy "copy-target-list"
+_copyTargetList = Proxy
 
 
 -- Property "copyright"
-_copyright :: Attr "copyright" o
-_copyright = Attr
+_copyright :: Proxy "copyright"
+_copyright = Proxy
 
 
 -- Property "core-object"
-_coreObject :: Attr "core-object" o
-_coreObject = Attr
+_coreObject :: Proxy "core-object"
+_coreObject = Proxy
 
 
 -- Property "corrupted-video-frames"
-_corruptedVideoFrames :: Attr "corrupted-video-frames" o
-_corruptedVideoFrames = Attr
+_corruptedVideoFrames :: Proxy "corrupted-video-frames"
+_corruptedVideoFrames = Proxy
 
 
 -- Property "count"
-_count :: Attr "count" o
-_count = Attr
+_count :: Proxy "count"
+_count = Proxy
 
 
 -- Property "create-folders"
-_createFolders :: Attr "create-folders" o
-_createFolders = Attr
+_createFolders :: Proxy "create-folders"
+_createFolders = Proxy
 
 
 -- Property "creation-time"
-_creationTime :: Attr "creation-time" o
-_creationTime = Attr
+_creationTime :: Proxy "creation-time"
+_creationTime = Proxy
 
 
 -- Property "cross-origin"
-_crossOrigin :: Attr "cross-origin" o
-_crossOrigin = Attr
+_crossOrigin :: Proxy "cross-origin"
+_crossOrigin = Proxy
 
 
 -- Property "css"
-_css :: Attr "css" o
-_css = Attr
+_css :: Proxy "css"
+_css = Proxy
 
 
 -- Property "css-rules"
-_cssRules :: Attr "css-rules" o
-_cssRules = Attr
+_cssRules :: Proxy "css-rules"
+_cssRules = Proxy
 
 
 -- Property "css-text"
-_cssText :: Attr "css-text" o
-_cssText = Attr
+_cssText :: Proxy "css-text"
+_cssText = Proxy
 
 
 -- Property "css-value-type"
-_cssValueType :: Attr "css-value-type" o
-_cssValueType = Attr
+_cssValueType :: Proxy "css-value-type"
+_cssValueType = Proxy
 
 
 -- Property "ctrl-key"
-_ctrlKey :: Attr "ctrl-key" o
-_ctrlKey = Attr
+_ctrlKey :: Proxy "ctrl-key"
+_ctrlKey = Proxy
 
 
 -- Property "cues"
-_cues :: Attr "cues" o
-_cues = Attr
+_cues :: Proxy "cues"
+_cues = Proxy
 
 
 -- Property "current-alpha"
-_currentAlpha :: Attr "current-alpha" o
-_currentAlpha = Attr
+_currentAlpha :: Proxy "current-alpha"
+_currentAlpha = Proxy
 
 
 -- Property "current-color"
-_currentColor :: Attr "current-color" o
-_currentColor = Attr
+_currentColor :: Proxy "current-color"
+_currentColor = Proxy
 
 
 -- Property "current-node"
-_currentNode :: Attr "current-node" o
-_currentNode = Attr
+_currentNode :: Proxy "current-node"
+_currentNode = Proxy
 
 
 -- Property "current-page"
-_currentPage :: Attr "current-page" o
-_currentPage = Attr
+_currentPage :: Proxy "current-page"
+_currentPage = Proxy
 
 
 -- Property "current-rgba"
-_currentRgba :: Attr "current-rgba" o
-_currentRgba = Attr
+_currentRgba :: Proxy "current-rgba"
+_currentRgba = Proxy
 
 
 -- Property "current-script"
-_currentScript :: Attr "current-script" o
-_currentScript = Attr
+_currentScript :: Proxy "current-script"
+_currentScript = Proxy
 
 
 -- Property "current-size"
-_currentSize :: Attr "current-size" o
-_currentSize = Attr
+_currentSize :: Proxy "current-size"
+_currentSize = Proxy
 
 
 -- Property "current-src"
-_currentSrc :: Attr "current-src" o
-_currentSrc = Attr
+_currentSrc :: Proxy "current-src"
+_currentSrc = Proxy
 
 
 -- Property "current-target"
-_currentTarget :: Attr "current-target" o
-_currentTarget = Attr
+_currentTarget :: Proxy "current-target"
+_currentTarget = Proxy
 
 
 -- Property "current-time"
-_currentTime :: Attr "current-time" o
-_currentTime = Attr
+_currentTime :: Proxy "current-time"
+_currentTime = Proxy
 
 
 -- Property "current-value"
-_currentValue :: Attr "current-value" o
-_currentValue = Attr
+_currentValue :: Proxy "current-value"
+_currentValue = Proxy
 
 
 -- Property "cursive-font-family"
-_cursiveFontFamily :: Attr "cursive-font-family" o
-_cursiveFontFamily = Attr
+_cursiveFontFamily :: Proxy "cursive-font-family"
+_cursiveFontFamily = Proxy
 
 
 -- Property "cursor-position"
-_cursorPosition :: Attr "cursor-position" o
-_cursorPosition = Attr
+_cursorPosition :: Proxy "cursor-position"
+_cursorPosition = Proxy
 
 
 -- Property "cursor-visible"
-_cursorVisible :: Attr "cursor-visible" o
-_cursorVisible = Attr
+_cursorVisible :: Proxy "cursor-visible"
+_cursorVisible = Proxy
 
 
 -- Property "custom-encoding"
-_customEncoding :: Attr "custom-encoding" o
-_customEncoding = Attr
+_customEncoding :: Proxy "custom-encoding"
+_customEncoding = Proxy
 
 
 -- Property "custom-error"
-_customError :: Attr "custom-error" o
-_customError = Attr
+_customError :: Proxy "custom-error"
+_customError = Proxy
 
 
 -- Property "custom-tab-label"
-_customTabLabel :: Attr "custom-tab-label" o
-_customTabLabel = Attr
+_customTabLabel :: Proxy "custom-tab-label"
+_customTabLabel = Proxy
 
 
 -- Property "custom-title"
-_customTitle :: Attr "custom-title" o
-_customTitle = Attr
+_customTitle :: Proxy "custom-title"
+_customTitle = Proxy
 
 
 -- Property "data"
-_data :: Attr "data" o
-_data = Attr
+_data :: Proxy "data"
+_data = Proxy
 
 
 -- Property "date-time"
-_dateTime :: Attr "date-time" o
-_dateTime = Attr
+_dateTime :: Proxy "date-time"
+_dateTime = Proxy
 
 
 -- Property "day"
-_day :: Attr "day" o
-_day = Attr
+_day :: Proxy "day"
+_day = Proxy
 
 
 -- Property "declare"
-_declare :: Attr "declare" o
-_declare = Attr
+_declare :: Proxy "declare"
+_declare = Proxy
 
 
 -- Property "decorated"
-_decorated :: Attr "decorated" o
-_decorated = Attr
+_decorated :: Proxy "decorated"
+_decorated = Proxy
 
 
 -- Property "decoration-layout"
-_decorationLayout :: Attr "decoration-layout" o
-_decorationLayout = Attr
+_decorationLayout :: Proxy "decoration-layout"
+_decorationLayout = Proxy
 
 
 -- Property "decoration-layout-set"
-_decorationLayoutSet :: Attr "decoration-layout-set" o
-_decorationLayoutSet = Attr
+_decorationLayoutSet :: Proxy "decoration-layout-set"
+_decorationLayoutSet = Proxy
 
 
 -- Property "default-charset"
-_defaultCharset :: Attr "default-charset" o
-_defaultCharset = Attr
+_defaultCharset :: Proxy "default-charset"
+_defaultCharset = Proxy
 
 
 -- Property "default-checked"
-_defaultChecked :: Attr "default-checked" o
-_defaultChecked = Attr
+_defaultChecked :: Proxy "default-checked"
+_defaultChecked = Proxy
 
 
 -- Property "default-encoding"
-_defaultEncoding :: Attr "default-encoding" o
-_defaultEncoding = Attr
+_defaultEncoding :: Proxy "default-encoding"
+_defaultEncoding = Proxy
 
 
 -- Property "default-font-family"
-_defaultFontFamily :: Attr "default-font-family" o
-_defaultFontFamily = Attr
+_defaultFontFamily :: Proxy "default-font-family"
+_defaultFontFamily = Proxy
 
 
 -- Property "default-font-size"
-_defaultFontSize :: Attr "default-font-size" o
-_defaultFontSize = Attr
+_defaultFontSize :: Proxy "default-font-size"
+_defaultFontSize = Proxy
 
 
 -- Property "default-height"
-_defaultHeight :: Attr "default-height" o
-_defaultHeight = Attr
+_defaultHeight :: Proxy "default-height"
+_defaultHeight = Proxy
 
 
 -- Property "default-monospace-font-size"
-_defaultMonospaceFontSize :: Attr "default-monospace-font-size" o
-_defaultMonospaceFontSize = Attr
+_defaultMonospaceFontSize :: Proxy "default-monospace-font-size"
+_defaultMonospaceFontSize = Proxy
 
 
 -- Property "default-muted"
-_defaultMuted :: Attr "default-muted" o
-_defaultMuted = Attr
+_defaultMuted :: Proxy "default-muted"
+_defaultMuted = Proxy
 
 
 -- Property "default-page-setup"
-_defaultPageSetup :: Attr "default-page-setup" o
-_defaultPageSetup = Attr
+_defaultPageSetup :: Proxy "default-page-setup"
+_defaultPageSetup = Proxy
 
 
 -- Property "default-playback-rate"
-_defaultPlaybackRate :: Attr "default-playback-rate" o
-_defaultPlaybackRate = Attr
+_defaultPlaybackRate :: Proxy "default-playback-rate"
+_defaultPlaybackRate = Proxy
 
 
 -- Property "default-prevented"
-_defaultPrevented :: Attr "default-prevented" o
-_defaultPrevented = Attr
+_defaultPrevented :: Proxy "default-prevented"
+_defaultPrevented = Proxy
 
 
 -- Property "default-selected"
-_defaultSelected :: Attr "default-selected" o
-_defaultSelected = Attr
+_defaultSelected :: Proxy "default-selected"
+_defaultSelected = Proxy
 
 
 -- Property "default-status"
-_defaultStatus :: Attr "default-status" o
-_defaultStatus = Attr
+_defaultStatus :: Proxy "default-status"
+_defaultStatus = Proxy
 
 
 -- Property "default-text"
-_defaultText :: Attr "default-text" o
-_defaultText = Attr
+_defaultText :: Proxy "default-text"
+_defaultText = Proxy
 
 
 -- Property "default-value"
-_defaultValue :: Attr "default-value" o
-_defaultValue = Attr
+_defaultValue :: Proxy "default-value"
+_defaultValue = Proxy
 
 
 -- Property "default-view"
-_defaultView :: Attr "default-view" o
-_defaultView = Attr
+_defaultView :: Proxy "default-view"
+_defaultView = Proxy
 
 
 -- Property "default-width"
-_defaultWidth :: Attr "default-width" o
-_defaultWidth = Attr
+_defaultWidth :: Proxy "default-width"
+_defaultWidth = Proxy
 
 
 -- Property "defer"
-_defer :: Attr "defer" o
-_defer = Attr
+_defer :: Proxy "defer"
+_defer = Proxy
 
 
 -- Property "delay-factor"
-_delayFactor :: Attr "delay-factor" o
-_delayFactor = Attr
+_delayFactor :: Proxy "delay-factor"
+_delayFactor = Proxy
 
 
 -- Property "deletable"
-_deletable :: Attr "deletable" o
-_deletable = Attr
+_deletable :: Proxy "deletable"
+_deletable = Proxy
 
 
 -- Property "delta-mode"
-_deltaMode :: Attr "delta-mode" o
-_deltaMode = Attr
+_deltaMode :: Proxy "delta-mode"
+_deltaMode = Proxy
 
 
 -- Property "delta-x"
-_deltaX :: Attr "delta-x" o
-_deltaX = Attr
+_deltaX :: Proxy "delta-x"
+_deltaX = Proxy
 
 
 -- Property "delta-y"
-_deltaY :: Attr "delta-y" o
-_deltaY = Attr
+_deltaY :: Proxy "delta-y"
+_deltaY = Proxy
 
 
 -- Property "delta-z"
-_deltaZ :: Attr "delta-z" o
-_deltaZ = Attr
+_deltaZ :: Proxy "delta-z"
+_deltaZ = Proxy
 
 
 -- Property "description"
-_description :: Attr "description" o
-_description = Attr
+_description :: Proxy "description"
+_description = Proxy
 
 
 -- Property "design-mode"
-_designMode :: Attr "design-mode" o
-_designMode = Attr
+_designMode :: Proxy "design-mode"
+_designMode = Proxy
 
 
 -- Property "desktop-width"
-_desktopWidth :: Attr "desktop-width" o
-_desktopWidth = Attr
+_desktopWidth :: Proxy "desktop-width"
+_desktopWidth = Proxy
 
 
 -- Property "destination-uri"
-_destinationUri :: Attr "destination-uri" o
-_destinationUri = Attr
+_destinationUri :: Proxy "destination-uri"
+_destinationUri = Proxy
 
 
 -- Property "destroy-with-parent"
-_destroyWithParent :: Attr "destroy-with-parent" o
-_destroyWithParent = Attr
+_destroyWithParent :: Proxy "destroy-with-parent"
+_destroyWithParent = Proxy
 
 
 -- Property "detail"
-_detail :: Attr "detail" o
-_detail = Attr
+_detail :: Proxy "detail"
+_detail = Proxy
 
 
 -- Property "detail-height-rows"
-_detailHeightRows :: Attr "detail-height-rows" o
-_detailHeightRows = Attr
+_detailHeightRows :: Proxy "detail-height-rows"
+_detailHeightRows = Proxy
 
 
 -- Property "detail-width-chars"
-_detailWidthChars :: Attr "detail-width-chars" o
-_detailWidthChars = Attr
+_detailWidthChars :: Proxy "detail-width-chars"
+_detailWidthChars = Proxy
 
 
 -- Property "device-dpi"
-_deviceDpi :: Attr "device-dpi" o
-_deviceDpi = Attr
+_deviceDpi :: Proxy "device-dpi"
+_deviceDpi = Proxy
 
 
 -- Property "device-height"
-_deviceHeight :: Attr "device-height" o
-_deviceHeight = Attr
+_deviceHeight :: Proxy "device-height"
+_deviceHeight = Proxy
 
 
 -- Property "device-pixel-ratio"
-_devicePixelRatio :: Attr "device-pixel-ratio" o
-_devicePixelRatio = Attr
+_devicePixelRatio :: Proxy "device-pixel-ratio"
+_devicePixelRatio = Proxy
 
 
 -- Property "device-width"
-_deviceWidth :: Attr "device-width" o
-_deviceWidth = Attr
+_deviceWidth :: Proxy "device-width"
+_deviceWidth = Proxy
 
 
 -- Property "dialog"
-_dialog :: Attr "dialog" o
-_dialog = Attr
+_dialog :: Proxy "dialog"
+_dialog = Proxy
 
 
 -- Property "digits"
-_digits :: Attr "digits" o
-_digits = Attr
+_digits :: Proxy "digits"
+_digits = Proxy
 
 
 -- Property "dir"
-_dir :: Attr "dir" o
-_dir = Attr
+_dir :: Proxy "dir"
+_dir = Proxy
 
 
 -- Property "dir-name"
-_dirName :: Attr "dir-name" o
-_dirName = Attr
+_dirName :: Proxy "dir-name"
+_dirName = Proxy
 
 
 -- Property "direction"
-_direction :: Attr "direction" o
-_direction = Attr
+_direction :: Proxy "direction"
+_direction = Proxy
 
 
 -- Property "disabled"
-_disabled :: Attr "disabled" o
-_disabled = Attr
+_disabled :: Proxy "disabled"
+_disabled = Proxy
 
 
 -- Property "discharging-time"
-_dischargingTime :: Attr "discharging-time" o
-_dischargingTime = Attr
+_dischargingTime :: Proxy "discharging-time"
+_dischargingTime = Proxy
 
 
 -- Property "display-name"
-_displayName :: Attr "display-name" o
-_displayName = Attr
+_displayName :: Proxy "display-name"
+_displayName = Proxy
 
 
 -- Property "do-overwrite-confirmation"
-_doOverwriteConfirmation :: Attr "do-overwrite-confirmation" o
-_doOverwriteConfirmation = Attr
+_doOverwriteConfirmation :: Proxy "do-overwrite-confirmation"
+_doOverwriteConfirmation = Proxy
 
 
 -- Property "doctype"
-_doctype :: Attr "doctype" o
-_doctype = Attr
+_doctype :: Proxy "doctype"
+_doctype = Proxy
 
 
 -- Property "document"
-_document :: Attr "document" o
-_document = Attr
+_document :: Proxy "document"
+_document = Proxy
 
 
 -- Property "document-element"
-_documentElement :: Attr "document-element" o
-_documentElement = Attr
+_documentElement :: Proxy "document-element"
+_documentElement = Proxy
 
 
 -- Property "document-uri"
-_documentUri :: Attr "document-uri" o
-_documentUri = Attr
+_documentUri :: Proxy "document-uri"
+_documentUri = Proxy
 
 
 -- Property "documenters"
-_documenters :: Attr "documenters" o
-_documenters = Attr
+_documenters :: Proxy "documenters"
+_documenters = Proxy
 
 
 -- Property "dom-complete"
-_domComplete :: Attr "dom-complete" o
-_domComplete = Attr
+_domComplete :: Proxy "dom-complete"
+_domComplete = Proxy
 
 
 -- Property "dom-content-loaded-event-end"
-_domContentLoadedEventEnd :: Attr "dom-content-loaded-event-end" o
-_domContentLoadedEventEnd = Attr
+_domContentLoadedEventEnd :: Proxy "dom-content-loaded-event-end"
+_domContentLoadedEventEnd = Proxy
 
 
 -- Property "dom-content-loaded-event-start"
-_domContentLoadedEventStart :: Attr "dom-content-loaded-event-start" o
-_domContentLoadedEventStart = Attr
+_domContentLoadedEventStart :: Proxy "dom-content-loaded-event-start"
+_domContentLoadedEventStart = Proxy
 
 
 -- Property "dom-interactive"
-_domInteractive :: Attr "dom-interactive" o
-_domInteractive = Attr
+_domInteractive :: Proxy "dom-interactive"
+_domInteractive = Proxy
 
 
 -- Property "dom-loading"
-_domLoading :: Attr "dom-loading" o
-_domLoading = Attr
+_domLoading :: Proxy "dom-loading"
+_domLoading = Proxy
 
 
 -- Property "domain"
-_domain :: Attr "domain" o
-_domain = Attr
+_domain :: Proxy "domain"
+_domain = Proxy
 
 
 -- Property "domain-lookup-end"
-_domainLookupEnd :: Attr "domain-lookup-end" o
-_domainLookupEnd = Attr
+_domainLookupEnd :: Proxy "domain-lookup-end"
+_domainLookupEnd = Proxy
 
 
 -- Property "domain-lookup-start"
-_domainLookupStart :: Attr "domain-lookup-start" o
-_domainLookupStart = Attr
+_domainLookupStart :: Proxy "domain-lookup-start"
+_domainLookupStart = Proxy
 
 
 -- Property "double-buffered"
-_doubleBuffered :: Attr "double-buffered" o
-_doubleBuffered = Attr
+_doubleBuffered :: Proxy "double-buffered"
+_doubleBuffered = Proxy
 
 
 -- Property "download"
-_download :: Attr "download" o
-_download = Attr
+_download :: Proxy "download"
+_download = Proxy
 
 
 -- Property "draggable"
-_draggable :: Attr "draggable" o
-_draggable = Attr
+_draggable :: Proxy "draggable"
+_draggable = Proxy
 
 
 -- Property "draw"
-_draw :: Attr "draw" o
-_draw = Attr
+_draw :: Proxy "draw"
+_draw = Proxy
 
 
 -- Property "draw-as-radio"
-_drawAsRadio :: Attr "draw-as-radio" o
-_drawAsRadio = Attr
+_drawAsRadio :: Proxy "draw-as-radio"
+_drawAsRadio = Proxy
 
 
 -- Property "draw-indicator"
-_drawIndicator :: Attr "draw-indicator" o
-_drawIndicator = Attr
+_drawIndicator :: Proxy "draw-indicator"
+_drawIndicator = Proxy
 
 
 -- Property "draw-sensitive"
-_drawSensitive :: Attr "draw-sensitive" o
-_drawSensitive = Attr
+_drawSensitive :: Proxy "draw-sensitive"
+_drawSensitive = Proxy
 
 
 -- Property "draw-value"
-_drawValue :: Attr "draw-value" o
-_drawValue = Attr
+_drawValue :: Proxy "draw-value"
+_drawValue = Proxy
 
 
 -- Property "dropped-video-frames"
-_droppedVideoFrames :: Attr "dropped-video-frames" o
-_droppedVideoFrames = Attr
+_droppedVideoFrames :: Proxy "dropped-video-frames"
+_droppedVideoFrames = Proxy
 
 
 -- Property "duration"
-_duration :: Attr "duration" o
-_duration = Attr
+_duration :: Proxy "duration"
+_duration = Proxy
 
 
 -- Property "edit-widget"
-_editWidget :: Attr "edit-widget" o
-_editWidget = Attr
+_editWidget :: Proxy "edit-widget"
+_editWidget = Proxy
 
 
 -- Property "editable"
-_editable :: Attr "editable" o
-_editable = Attr
+_editable :: Proxy "editable"
+_editable = Proxy
 
 
 -- Property "editable-set"
-_editableSet :: Attr "editable-set" o
-_editableSet = Attr
+_editableSet :: Proxy "editable-set"
+_editableSet = Proxy
 
 
 -- Property "edited-cell"
-_editedCell :: Attr "edited-cell" o
-_editedCell = Attr
+_editedCell :: Proxy "edited-cell"
+_editedCell = Proxy
 
 
 -- Property "editing"
-_editing :: Attr "editing" o
-_editing = Attr
+_editing :: Proxy "editing"
+_editing = Proxy
 
 
 -- Property "editing-behavior"
-_editingBehavior :: Attr "editing-behavior" o
-_editingBehavior = Attr
+_editingBehavior :: Proxy "editing-behavior"
+_editingBehavior = Proxy
 
 
 -- Property "editing-canceled"
-_editingCanceled :: Attr "editing-canceled" o
-_editingCanceled = Attr
+_editingCanceled :: Proxy "editing-canceled"
+_editingCanceled = Proxy
 
 
 -- Property "elements"
-_elements :: Attr "elements" o
-_elements = Attr
+_elements :: Proxy "elements"
+_elements = Proxy
 
 
 -- Property "ellipsize"
-_ellipsize :: Attr "ellipsize" o
-_ellipsize = Attr
+_ellipsize :: Proxy "ellipsize"
+_ellipsize = Proxy
 
 
 -- Property "ellipsize-set"
-_ellipsizeSet :: Attr "ellipsize-set" o
-_ellipsizeSet = Attr
+_ellipsizeSet :: Proxy "ellipsize-set"
+_ellipsizeSet = Proxy
 
 
 -- Property "embed-page-setup"
-_embedPageSetup :: Attr "embed-page-setup" o
-_embedPageSetup = Attr
+_embedPageSetup :: Proxy "embed-page-setup"
+_embedPageSetup = Proxy
 
 
 -- Property "embedded"
-_embedded :: Attr "embedded" o
-_embedded = Attr
+_embedded :: Proxy "embedded"
+_embedded = Proxy
 
 
 -- Property "embeds"
-_embeds :: Attr "embeds" o
-_embeds = Attr
+_embeds :: Proxy "embeds"
+_embeds = Proxy
 
 
 -- Property "enable-accelerated-compositing"
-_enableAcceleratedCompositing :: Attr "enable-accelerated-compositing" o
-_enableAcceleratedCompositing = Attr
+_enableAcceleratedCompositing :: Proxy "enable-accelerated-compositing"
+_enableAcceleratedCompositing = Proxy
 
 
 -- Property "enable-caret-browsing"
-_enableCaretBrowsing :: Attr "enable-caret-browsing" o
-_enableCaretBrowsing = Attr
+_enableCaretBrowsing :: Proxy "enable-caret-browsing"
+_enableCaretBrowsing = Proxy
 
 
 -- Property "enable-default-context-menu"
-_enableDefaultContextMenu :: Attr "enable-default-context-menu" o
-_enableDefaultContextMenu = Attr
+_enableDefaultContextMenu :: Proxy "enable-default-context-menu"
+_enableDefaultContextMenu = Proxy
 
 
 -- Property "enable-developer-extras"
-_enableDeveloperExtras :: Attr "enable-developer-extras" o
-_enableDeveloperExtras = Attr
+_enableDeveloperExtras :: Proxy "enable-developer-extras"
+_enableDeveloperExtras = Proxy
 
 
 -- Property "enable-display-of-insecure-content"
-_enableDisplayOfInsecureContent :: Attr "enable-display-of-insecure-content" o
-_enableDisplayOfInsecureContent = Attr
+_enableDisplayOfInsecureContent :: Proxy "enable-display-of-insecure-content"
+_enableDisplayOfInsecureContent = Proxy
 
 
 -- Property "enable-dns-prefetching"
-_enableDnsPrefetching :: Attr "enable-dns-prefetching" o
-_enableDnsPrefetching = Attr
+_enableDnsPrefetching :: Proxy "enable-dns-prefetching"
+_enableDnsPrefetching = Proxy
 
 
 -- Property "enable-dom-paste"
-_enableDomPaste :: Attr "enable-dom-paste" o
-_enableDomPaste = Attr
+_enableDomPaste :: Proxy "enable-dom-paste"
+_enableDomPaste = Proxy
 
 
 -- Property "enable-file-access-from-file-uris"
-_enableFileAccessFromFileUris :: Attr "enable-file-access-from-file-uris" o
-_enableFileAccessFromFileUris = Attr
+_enableFileAccessFromFileUris :: Proxy "enable-file-access-from-file-uris"
+_enableFileAccessFromFileUris = Proxy
 
 
 -- Property "enable-frame-flattening"
-_enableFrameFlattening :: Attr "enable-frame-flattening" o
-_enableFrameFlattening = Attr
+_enableFrameFlattening :: Proxy "enable-frame-flattening"
+_enableFrameFlattening = Proxy
 
 
 -- Property "enable-fullscreen"
-_enableFullscreen :: Attr "enable-fullscreen" o
-_enableFullscreen = Attr
+_enableFullscreen :: Proxy "enable-fullscreen"
+_enableFullscreen = Proxy
 
 
 -- Property "enable-grid-lines"
-_enableGridLines :: Attr "enable-grid-lines" o
-_enableGridLines = Attr
+_enableGridLines :: Proxy "enable-grid-lines"
+_enableGridLines = Proxy
 
 
 -- Property "enable-html5-database"
-_enableHtml5Database :: Attr "enable-html5-database" o
-_enableHtml5Database = Attr
+_enableHtml5Database :: Proxy "enable-html5-database"
+_enableHtml5Database = Proxy
 
 
 -- Property "enable-html5-local-storage"
-_enableHtml5LocalStorage :: Attr "enable-html5-local-storage" o
-_enableHtml5LocalStorage = Attr
+_enableHtml5LocalStorage :: Proxy "enable-html5-local-storage"
+_enableHtml5LocalStorage = Proxy
 
 
 -- Property "enable-hyperlink-auditing"
-_enableHyperlinkAuditing :: Attr "enable-hyperlink-auditing" o
-_enableHyperlinkAuditing = Attr
+_enableHyperlinkAuditing :: Proxy "enable-hyperlink-auditing"
+_enableHyperlinkAuditing = Proxy
 
 
 -- Property "enable-java-applet"
-_enableJavaApplet :: Attr "enable-java-applet" o
-_enableJavaApplet = Attr
+_enableJavaApplet :: Proxy "enable-java-applet"
+_enableJavaApplet = Proxy
 
 
 -- Property "enable-media-stream"
-_enableMediaStream :: Attr "enable-media-stream" o
-_enableMediaStream = Attr
+_enableMediaStream :: Proxy "enable-media-stream"
+_enableMediaStream = Proxy
 
 
 -- Property "enable-mediasource"
-_enableMediasource :: Attr "enable-mediasource" o
-_enableMediasource = Attr
+_enableMediasource :: Proxy "enable-mediasource"
+_enableMediasource = Proxy
 
 
 -- Property "enable-offline-web-application-cache"
-_enableOfflineWebApplicationCache :: Attr "enable-offline-web-application-cache" o
-_enableOfflineWebApplicationCache = Attr
+_enableOfflineWebApplicationCache :: Proxy "enable-offline-web-application-cache"
+_enableOfflineWebApplicationCache = Proxy
 
 
 -- Property "enable-page-cache"
-_enablePageCache :: Attr "enable-page-cache" o
-_enablePageCache = Attr
+_enablePageCache :: Proxy "enable-page-cache"
+_enablePageCache = Proxy
 
 
 -- Property "enable-plugins"
-_enablePlugins :: Attr "enable-plugins" o
-_enablePlugins = Attr
+_enablePlugins :: Proxy "enable-plugins"
+_enablePlugins = Proxy
 
 
 -- Property "enable-popup"
-_enablePopup :: Attr "enable-popup" o
-_enablePopup = Attr
+_enablePopup :: Proxy "enable-popup"
+_enablePopup = Proxy
 
 
 -- Property "enable-private-browsing"
-_enablePrivateBrowsing :: Attr "enable-private-browsing" o
-_enablePrivateBrowsing = Attr
+_enablePrivateBrowsing :: Proxy "enable-private-browsing"
+_enablePrivateBrowsing = Proxy
 
 
 -- Property "enable-running-of-insecure-content"
-_enableRunningOfInsecureContent :: Attr "enable-running-of-insecure-content" o
-_enableRunningOfInsecureContent = Attr
+_enableRunningOfInsecureContent :: Proxy "enable-running-of-insecure-content"
+_enableRunningOfInsecureContent = Proxy
 
 
 -- Property "enable-scripts"
-_enableScripts :: Attr "enable-scripts" o
-_enableScripts = Attr
+_enableScripts :: Proxy "enable-scripts"
+_enableScripts = Proxy
 
 
 -- Property "enable-search"
-_enableSearch :: Attr "enable-search" o
-_enableSearch = Attr
+_enableSearch :: Proxy "enable-search"
+_enableSearch = Proxy
 
 
 -- Property "enable-site-specific-quirks"
-_enableSiteSpecificQuirks :: Attr "enable-site-specific-quirks" o
-_enableSiteSpecificQuirks = Attr
+_enableSiteSpecificQuirks :: Proxy "enable-site-specific-quirks"
+_enableSiteSpecificQuirks = Proxy
 
 
 -- Property "enable-smooth-scrolling"
-_enableSmoothScrolling :: Attr "enable-smooth-scrolling" o
-_enableSmoothScrolling = Attr
+_enableSmoothScrolling :: Proxy "enable-smooth-scrolling"
+_enableSmoothScrolling = Proxy
 
 
 -- Property "enable-spatial-navigation"
-_enableSpatialNavigation :: Attr "enable-spatial-navigation" o
-_enableSpatialNavigation = Attr
+_enableSpatialNavigation :: Proxy "enable-spatial-navigation"
+_enableSpatialNavigation = Proxy
 
 
 -- Property "enable-spell-checking"
-_enableSpellChecking :: Attr "enable-spell-checking" o
-_enableSpellChecking = Attr
+_enableSpellChecking :: Proxy "enable-spell-checking"
+_enableSpellChecking = Proxy
 
 
 -- Property "enable-tree-lines"
-_enableTreeLines :: Attr "enable-tree-lines" o
-_enableTreeLines = Attr
+_enableTreeLines :: Proxy "enable-tree-lines"
+_enableTreeLines = Proxy
 
 
 -- Property "enable-universal-access-from-file-uris"
-_enableUniversalAccessFromFileUris :: Attr "enable-universal-access-from-file-uris" o
-_enableUniversalAccessFromFileUris = Attr
+_enableUniversalAccessFromFileUris :: Proxy "enable-universal-access-from-file-uris"
+_enableUniversalAccessFromFileUris = Proxy
 
 
 -- Property "enable-webaudio"
-_enableWebaudio :: Attr "enable-webaudio" o
-_enableWebaudio = Attr
+_enableWebaudio :: Proxy "enable-webaudio"
+_enableWebaudio = Proxy
 
 
 -- Property "enable-webgl"
-_enableWebgl :: Attr "enable-webgl" o
-_enableWebgl = Attr
+_enableWebgl :: Proxy "enable-webgl"
+_enableWebgl = Proxy
 
 
 -- Property "enable-xss-auditor"
-_enableXssAuditor :: Attr "enable-xss-auditor" o
-_enableXssAuditor = Attr
+_enableXssAuditor :: Proxy "enable-xss-auditor"
+_enableXssAuditor = Proxy
 
 
 -- Property "enabled"
-_enabled :: Attr "enabled" o
-_enabled = Attr
+_enabled :: Proxy "enabled"
+_enabled = Proxy
 
 
 -- Property "enabled-plugin"
-_enabledPlugin :: Attr "enabled-plugin" o
-_enabledPlugin = Attr
+_enabledPlugin :: Proxy "enabled-plugin"
+_enabledPlugin = Proxy
 
 
 -- Property "encoding"
-_encoding :: Attr "encoding" o
-_encoding = Attr
+_encoding :: Proxy "encoding"
+_encoding = Proxy
 
 
 -- Property "enctype"
-_enctype :: Attr "enctype" o
-_enctype = Attr
+_enctype :: Proxy "enctype"
+_enctype = Proxy
 
 
 -- Property "end-container"
-_endContainer :: Attr "end-container" o
-_endContainer = Attr
+_endContainer :: Proxy "end-container"
+_endContainer = Proxy
 
 
 -- Property "end-offset"
-_endOffset :: Attr "end-offset" o
-_endOffset = Attr
+_endOffset :: Proxy "end-offset"
+_endOffset = Proxy
 
 
 -- Property "end-time"
-_endTime :: Attr "end-time" o
-_endTime = Attr
+_endTime :: Proxy "end-time"
+_endTime = Proxy
 
 
 -- Property "ended"
-_ended :: Attr "ended" o
-_ended = Attr
+_ended :: Proxy "ended"
+_ended = Proxy
 
 
 -- Property "enforce-96-dpi"
-_enforce96Dpi :: Attr "enforce-96-dpi" o
-_enforce96Dpi = Attr
+_enforce96Dpi :: Proxy "enforce-96-dpi"
+_enforce96Dpi = Proxy
 
 
 -- Property "entities"
-_entities :: Attr "entities" o
-_entities = Attr
+_entities :: Proxy "entities"
+_entities = Proxy
 
 
 -- Property "entry-text-column"
-_entryTextColumn :: Attr "entry-text-column" o
-_entryTextColumn = Attr
+_entryTextColumn :: Proxy "entry-text-column"
+_entryTextColumn = Proxy
 
 
 -- Property "entry-type"
-_entryType :: Attr "entry-type" o
-_entryType = Attr
+_entryType :: Proxy "entry-type"
+_entryType = Proxy
 
 
 -- Property "error"
-_error :: Attr "error" o
-_error = Attr
+_error :: Proxy "error"
+_error = Proxy
 
 
 -- Property "event"
-_event :: Attr "event" o
-_event = Attr
+_event :: Proxy "event"
+_event = Proxy
 
 
 -- Property "event-phase"
-_eventPhase :: Attr "event-phase" o
-_eventPhase = Attr
+_eventPhase :: Proxy "event-phase"
+_eventPhase = Proxy
 
 
 -- Property "events"
-_events :: Attr "events" o
-_events = Attr
+_events :: Proxy "events"
+_events = Proxy
 
 
 -- Property "exclusive"
-_exclusive :: Attr "exclusive" o
-_exclusive = Attr
+_exclusive :: Proxy "exclusive"
+_exclusive = Proxy
 
 
 -- Property "expand"
-_expand :: Attr "expand" o
-_expand = Attr
+_expand :: Proxy "expand"
+_expand = Proxy
 
 
 -- Property "expand-entity-references"
-_expandEntityReferences :: Attr "expand-entity-references" o
-_expandEntityReferences = Attr
+_expandEntityReferences :: Proxy "expand-entity-references"
+_expandEntityReferences = Proxy
 
 
 -- Property "expanded"
-_expanded :: Attr "expanded" o
-_expanded = Attr
+_expanded :: Proxy "expanded"
+_expanded = Proxy
 
 
 -- Property "expander-column"
-_expanderColumn :: Attr "expander-column" o
-_expanderColumn = Attr
+_expanderColumn :: Proxy "expander-column"
+_expanderColumn = Proxy
 
 
 -- Property "expected-size"
-_expectedSize :: Attr "expected-size" o
-_expectedSize = Attr
+_expectedSize :: Proxy "expected-size"
+_expectedSize = Proxy
 
 
 -- Property "export-filename"
-_exportFilename :: Attr "export-filename" o
-_exportFilename = Attr
+_exportFilename :: Proxy "export-filename"
+_exportFilename = Proxy
 
 
 -- Property "extent-node"
-_extentNode :: Attr "extent-node" o
-_extentNode = Attr
+_extentNode :: Proxy "extent-node"
+_extentNode = Proxy
 
 
 -- Property "extent-offset"
-_extentOffset :: Attr "extent-offset" o
-_extentOffset = Attr
+_extentOffset :: Proxy "extent-offset"
+_extentOffset = Proxy
 
 
 -- Property "extra-widget"
-_extraWidget :: Attr "extra-widget" o
-_extraWidget = Attr
+_extraWidget :: Proxy "extra-widget"
+_extraWidget = Proxy
 
 
 -- Property "face"
-_face :: Attr "face" o
-_face = Attr
+_face :: Proxy "face"
+_face = Proxy
 
 
 -- Property "fallback"
-_fallback :: Attr "fallback" o
-_fallback = Attr
+_fallback :: Proxy "fallback"
+_fallback = Proxy
 
 
 -- Property "fallback-set"
-_fallbackSet :: Attr "fallback-set" o
-_fallbackSet = Attr
+_fallbackSet :: Proxy "fallback-set"
+_fallbackSet = Proxy
 
 
 -- Property "family"
-_family :: Attr "family" o
-_family = Attr
+_family :: Proxy "family"
+_family = Proxy
 
 
 -- Property "family-set"
-_familySet :: Attr "family-set" o
-_familySet = Attr
+_familySet :: Proxy "family-set"
+_familySet = Proxy
 
 
 -- Property "fantasy-font-family"
-_fantasyFontFamily :: Attr "fantasy-font-family" o
-_fantasyFontFamily = Attr
+_fantasyFontFamily :: Proxy "fantasy-font-family"
+_fantasyFontFamily = Proxy
 
 
 -- Property "fetch-start"
-_fetchStart :: Attr "fetch-start" o
-_fetchStart = Attr
+_fetchStart :: Proxy "fetch-start"
+_fetchStart = Proxy
 
 
 -- Property "fg-color"
-_fgColor :: Attr "fg-color" o
-_fgColor = Attr
+_fgColor :: Proxy "fg-color"
+_fgColor = Proxy
 
 
 -- Property "file"
-_file :: Attr "file" o
-_file = Attr
+_file :: Proxy "file"
+_file = Proxy
 
 
 -- Property "filename"
-_filename :: Attr "filename" o
-_filename = Attr
+_filename :: Proxy "filename"
+_filename = Proxy
 
 
 -- Property "files"
-_files :: Attr "files" o
-_files = Attr
+_files :: Proxy "files"
+_files = Proxy
 
 
 -- Property "fill-level"
-_fillLevel :: Attr "fill-level" o
-_fillLevel = Attr
+_fillLevel :: Proxy "fill-level"
+_fillLevel = Proxy
 
 
 -- Property "filter"
-_filter :: Attr "filter" o
-_filter = Attr
+_filter :: Proxy "filter"
+_filter = Proxy
 
 
 -- Property "first-child"
-_firstChild :: Attr "first-child" o
-_firstChild = Attr
+_firstChild :: Proxy "first-child"
+_firstChild = Proxy
 
 
 -- Property "first-element-child"
-_firstElementChild :: Attr "first-element-child" o
-_firstElementChild = Attr
+_firstElementChild :: Proxy "first-element-child"
+_firstElementChild = Proxy
 
 
 -- Property "first-empty-region-index"
-_firstEmptyRegionIndex :: Attr "first-empty-region-index" o
-_firstEmptyRegionIndex = Attr
+_firstEmptyRegionIndex :: Proxy "first-empty-region-index"
+_firstEmptyRegionIndex = Proxy
 
 
 -- Property "fit-model"
-_fitModel :: Attr "fit-model" o
-_fitModel = Attr
+_fitModel :: Proxy "fit-model"
+_fitModel = Proxy
 
 
 -- Property "fixed-height-mode"
-_fixedHeightMode :: Attr "fixed-height-mode" o
-_fixedHeightMode = Attr
+_fixedHeightMode :: Proxy "fixed-height-mode"
+_fixedHeightMode = Proxy
 
 
 -- Property "fixed-width"
-_fixedWidth :: Attr "fixed-width" o
-_fixedWidth = Attr
+_fixedWidth :: Proxy "fixed-width"
+_fixedWidth = Proxy
 
 
 -- Property "focus-cell"
-_focusCell :: Attr "focus-cell" o
-_focusCell = Attr
+_focusCell :: Proxy "focus-cell"
+_focusCell = Proxy
 
 
 -- Property "focus-node"
-_focusNode :: Attr "focus-node" o
-_focusNode = Attr
+_focusNode :: Proxy "focus-node"
+_focusNode = Proxy
 
 
 -- Property "focus-offset"
-_focusOffset :: Attr "focus-offset" o
-_focusOffset = Attr
+_focusOffset :: Proxy "focus-offset"
+_focusOffset = Proxy
 
 
 -- Property "focus-on-click"
-_focusOnClick :: Attr "focus-on-click" o
-_focusOnClick = Attr
+_focusOnClick :: Proxy "focus-on-click"
+_focusOnClick = Proxy
 
 
 -- Property "focus-on-map"
-_focusOnMap :: Attr "focus-on-map" o
-_focusOnMap = Attr
+_focusOnMap :: Proxy "focus-on-map"
+_focusOnMap = Proxy
 
 
 -- Property "focus-visible"
-_focusVisible :: Attr "focus-visible" o
-_focusVisible = Attr
+_focusVisible :: Proxy "focus-visible"
+_focusVisible = Proxy
 
 
 -- Property "follow-state"
-_followState :: Attr "follow-state" o
-_followState = Attr
+_followState :: Proxy "follow-state"
+_followState = Proxy
 
 
 -- Property "font"
-_font :: Attr "font" o
-_font = Attr
+_font :: Proxy "font"
+_font = Proxy
 
 
 -- Property "font-desc"
-_fontDesc :: Attr "font-desc" o
-_fontDesc = Attr
+_fontDesc :: Proxy "font-desc"
+_fontDesc = Proxy
 
 
 -- Property "font-name"
-_fontName :: Attr "font-name" o
-_fontName = Attr
+_fontName :: Proxy "font-name"
+_fontName = Proxy
 
 
 -- Property "foreground"
-_foreground :: Attr "foreground" o
-_foreground = Attr
+_foreground :: Proxy "foreground"
+_foreground = Proxy
 
 
 -- Property "foreground-gdk"
-_foregroundGdk :: Attr "foreground-gdk" o
-_foregroundGdk = Attr
+_foregroundGdk :: Proxy "foreground-gdk"
+_foregroundGdk = Proxy
 
 
 -- Property "foreground-rgba"
-_foregroundRgba :: Attr "foreground-rgba" o
-_foregroundRgba = Attr
+_foregroundRgba :: Proxy "foreground-rgba"
+_foregroundRgba = Proxy
 
 
 -- Property "foreground-set"
-_foregroundSet :: Attr "foreground-set" o
-_foregroundSet = Attr
+_foregroundSet :: Proxy "foreground-set"
+_foregroundSet = Proxy
 
 
 -- Property "form"
-_form :: Attr "form" o
-_form = Attr
+_form :: Proxy "form"
+_form = Proxy
 
 
 -- Property "form-action"
-_formAction :: Attr "form-action" o
-_formAction = Attr
+_formAction :: Proxy "form-action"
+_formAction = Proxy
 
 
 -- Property "form-enctype"
-_formEnctype :: Attr "form-enctype" o
-_formEnctype = Attr
+_formEnctype :: Proxy "form-enctype"
+_formEnctype = Proxy
 
 
 -- Property "form-method"
-_formMethod :: Attr "form-method" o
-_formMethod = Attr
+_formMethod :: Proxy "form-method"
+_formMethod = Proxy
 
 
 -- Property "form-no-validate"
-_formNoValidate :: Attr "form-no-validate" o
-_formNoValidate = Attr
+_formNoValidate :: Proxy "form-no-validate"
+_formNoValidate = Proxy
 
 
 -- Property "form-target"
-_formTarget :: Attr "form-target" o
-_formTarget = Attr
+_formTarget :: Proxy "form-target"
+_formTarget = Proxy
 
 
 -- Property "forms"
-_forms :: Attr "forms" o
-_forms = Attr
+_forms :: Proxy "forms"
+_forms = Proxy
 
 
 -- Property "fraction"
-_fraction :: Attr "fraction" o
-_fraction = Attr
+_fraction :: Proxy "fraction"
+_fraction = Proxy
 
 
 -- Property "frame"
-_frame :: Attr "frame" o
-_frame = Attr
+_frame :: Proxy "frame"
+_frame = Proxy
 
 
 -- Property "frame-border"
-_frameBorder :: Attr "frame-border" o
-_frameBorder = Attr
+_frameBorder :: Proxy "frame-border"
+_frameBorder = Proxy
 
 
 -- Property "frame-element"
-_frameElement :: Attr "frame-element" o
-_frameElement = Attr
+_frameElement :: Proxy "frame-element"
+_frameElement = Proxy
 
 
 -- Property "frame-name"
-_frameName :: Attr "frame-name" o
-_frameName = Attr
+_frameName :: Proxy "frame-name"
+_frameName = Proxy
 
 
 -- Property "frames"
-_frames :: Attr "frames" o
-_frames = Attr
+_frames :: Proxy "frames"
+_frames = Proxy
 
 
 -- Property "from-element"
-_fromElement :: Attr "from-element" o
-_fromElement = Attr
+_fromElement :: Proxy "from-element"
+_fromElement = Proxy
 
 
 -- Property "full-content-zoom"
-_fullContentZoom :: Attr "full-content-zoom" o
-_fullContentZoom = Attr
+_fullContentZoom :: Proxy "full-content-zoom"
+_fullContentZoom = Proxy
 
 
 -- Property "fullscreen"
-_fullscreen :: Attr "fullscreen" o
-_fullscreen = Attr
+_fullscreen :: Proxy "fullscreen"
+_fullscreen = Proxy
 
 
 -- Property "geolocation"
-_geolocation :: Attr "geolocation" o
-_geolocation = Attr
+_geolocation :: Proxy "geolocation"
+_geolocation = Proxy
 
 
 -- Property "gfile"
-_gfile :: Attr "gfile" o
-_gfile = Attr
+_gfile :: Proxy "gfile"
+_gfile = Proxy
 
 
 -- Property "gicon"
-_gicon :: Attr "gicon" o
-_gicon = Attr
+_gicon :: Proxy "gicon"
+_gicon = Proxy
 
 
 -- Property "gravity"
-_gravity :: Attr "gravity" o
-_gravity = Attr
+_gravity :: Proxy "gravity"
+_gravity = Proxy
 
 
 -- Property "group"
-_group :: Attr "group" o
-_group = Attr
+_group :: Proxy "group"
+_group = Proxy
 
 
 -- Property "group-name"
-_groupName :: Attr "group-name" o
-_groupName = Attr
+_groupName :: Proxy "group-name"
+_groupName = Proxy
 
 
 -- Property "gtk-alternative-button-order"
-_gtkAlternativeButtonOrder :: Attr "gtk-alternative-button-order" o
-_gtkAlternativeButtonOrder = Attr
+_gtkAlternativeButtonOrder :: Proxy "gtk-alternative-button-order"
+_gtkAlternativeButtonOrder = Proxy
 
 
 -- Property "gtk-alternative-sort-arrows"
-_gtkAlternativeSortArrows :: Attr "gtk-alternative-sort-arrows" o
-_gtkAlternativeSortArrows = Attr
+_gtkAlternativeSortArrows :: Proxy "gtk-alternative-sort-arrows"
+_gtkAlternativeSortArrows = Proxy
 
 
 -- Property "gtk-application-prefer-dark-theme"
-_gtkApplicationPreferDarkTheme :: Attr "gtk-application-prefer-dark-theme" o
-_gtkApplicationPreferDarkTheme = Attr
+_gtkApplicationPreferDarkTheme :: Proxy "gtk-application-prefer-dark-theme"
+_gtkApplicationPreferDarkTheme = Proxy
 
 
 -- Property "gtk-auto-mnemonics"
-_gtkAutoMnemonics :: Attr "gtk-auto-mnemonics" o
-_gtkAutoMnemonics = Attr
+_gtkAutoMnemonics :: Proxy "gtk-auto-mnemonics"
+_gtkAutoMnemonics = Proxy
 
 
 -- Property "gtk-button-images"
-_gtkButtonImages :: Attr "gtk-button-images" o
-_gtkButtonImages = Attr
+_gtkButtonImages :: Proxy "gtk-button-images"
+_gtkButtonImages = Proxy
 
 
 -- Property "gtk-can-change-accels"
-_gtkCanChangeAccels :: Attr "gtk-can-change-accels" o
-_gtkCanChangeAccels = Attr
+_gtkCanChangeAccels :: Proxy "gtk-can-change-accels"
+_gtkCanChangeAccels = Proxy
 
 
 -- Property "gtk-color-palette"
-_gtkColorPalette :: Attr "gtk-color-palette" o
-_gtkColorPalette = Attr
+_gtkColorPalette :: Proxy "gtk-color-palette"
+_gtkColorPalette = Proxy
 
 
 -- Property "gtk-color-scheme"
-_gtkColorScheme :: Attr "gtk-color-scheme" o
-_gtkColorScheme = Attr
+_gtkColorScheme :: Proxy "gtk-color-scheme"
+_gtkColorScheme = Proxy
 
 
 -- Property "gtk-cursor-blink"
-_gtkCursorBlink :: Attr "gtk-cursor-blink" o
-_gtkCursorBlink = Attr
+_gtkCursorBlink :: Proxy "gtk-cursor-blink"
+_gtkCursorBlink = Proxy
 
 
 -- Property "gtk-cursor-blink-time"
-_gtkCursorBlinkTime :: Attr "gtk-cursor-blink-time" o
-_gtkCursorBlinkTime = Attr
+_gtkCursorBlinkTime :: Proxy "gtk-cursor-blink-time"
+_gtkCursorBlinkTime = Proxy
 
 
 -- Property "gtk-cursor-blink-timeout"
-_gtkCursorBlinkTimeout :: Attr "gtk-cursor-blink-timeout" o
-_gtkCursorBlinkTimeout = Attr
+_gtkCursorBlinkTimeout :: Proxy "gtk-cursor-blink-timeout"
+_gtkCursorBlinkTimeout = Proxy
 
 
 -- Property "gtk-cursor-theme-name"
-_gtkCursorThemeName :: Attr "gtk-cursor-theme-name" o
-_gtkCursorThemeName = Attr
+_gtkCursorThemeName :: Proxy "gtk-cursor-theme-name"
+_gtkCursorThemeName = Proxy
 
 
 -- Property "gtk-cursor-theme-size"
-_gtkCursorThemeSize :: Attr "gtk-cursor-theme-size" o
-_gtkCursorThemeSize = Attr
+_gtkCursorThemeSize :: Proxy "gtk-cursor-theme-size"
+_gtkCursorThemeSize = Proxy
 
 
 -- Property "gtk-decoration-layout"
-_gtkDecorationLayout :: Attr "gtk-decoration-layout" o
-_gtkDecorationLayout = Attr
+_gtkDecorationLayout :: Proxy "gtk-decoration-layout"
+_gtkDecorationLayout = Proxy
 
 
 -- Property "gtk-dialogs-use-header"
-_gtkDialogsUseHeader :: Attr "gtk-dialogs-use-header" o
-_gtkDialogsUseHeader = Attr
+_gtkDialogsUseHeader :: Proxy "gtk-dialogs-use-header"
+_gtkDialogsUseHeader = Proxy
 
 
 -- Property "gtk-dnd-drag-threshold"
-_gtkDndDragThreshold :: Attr "gtk-dnd-drag-threshold" o
-_gtkDndDragThreshold = Attr
+_gtkDndDragThreshold :: Proxy "gtk-dnd-drag-threshold"
+_gtkDndDragThreshold = Proxy
 
 
 -- Property "gtk-double-click-distance"
-_gtkDoubleClickDistance :: Attr "gtk-double-click-distance" o
-_gtkDoubleClickDistance = Attr
+_gtkDoubleClickDistance :: Proxy "gtk-double-click-distance"
+_gtkDoubleClickDistance = Proxy
 
 
 -- Property "gtk-double-click-time"
-_gtkDoubleClickTime :: Attr "gtk-double-click-time" o
-_gtkDoubleClickTime = Attr
+_gtkDoubleClickTime :: Proxy "gtk-double-click-time"
+_gtkDoubleClickTime = Proxy
 
 
 -- Property "gtk-enable-accels"
-_gtkEnableAccels :: Attr "gtk-enable-accels" o
-_gtkEnableAccels = Attr
+_gtkEnableAccels :: Proxy "gtk-enable-accels"
+_gtkEnableAccels = Proxy
 
 
 -- Property "gtk-enable-animations"
-_gtkEnableAnimations :: Attr "gtk-enable-animations" o
-_gtkEnableAnimations = Attr
+_gtkEnableAnimations :: Proxy "gtk-enable-animations"
+_gtkEnableAnimations = Proxy
 
 
 -- Property "gtk-enable-event-sounds"
-_gtkEnableEventSounds :: Attr "gtk-enable-event-sounds" o
-_gtkEnableEventSounds = Attr
+_gtkEnableEventSounds :: Proxy "gtk-enable-event-sounds"
+_gtkEnableEventSounds = Proxy
 
 
 -- Property "gtk-enable-input-feedback-sounds"
-_gtkEnableInputFeedbackSounds :: Attr "gtk-enable-input-feedback-sounds" o
-_gtkEnableInputFeedbackSounds = Attr
+_gtkEnableInputFeedbackSounds :: Proxy "gtk-enable-input-feedback-sounds"
+_gtkEnableInputFeedbackSounds = Proxy
 
 
 -- Property "gtk-enable-mnemonics"
-_gtkEnableMnemonics :: Attr "gtk-enable-mnemonics" o
-_gtkEnableMnemonics = Attr
+_gtkEnableMnemonics :: Proxy "gtk-enable-mnemonics"
+_gtkEnableMnemonics = Proxy
 
 
 -- Property "gtk-enable-primary-paste"
-_gtkEnablePrimaryPaste :: Attr "gtk-enable-primary-paste" o
-_gtkEnablePrimaryPaste = Attr
+_gtkEnablePrimaryPaste :: Proxy "gtk-enable-primary-paste"
+_gtkEnablePrimaryPaste = Proxy
 
 
 -- Property "gtk-enable-tooltips"
-_gtkEnableTooltips :: Attr "gtk-enable-tooltips" o
-_gtkEnableTooltips = Attr
+_gtkEnableTooltips :: Proxy "gtk-enable-tooltips"
+_gtkEnableTooltips = Proxy
 
 
 -- Property "gtk-entry-password-hint-timeout"
-_gtkEntryPasswordHintTimeout :: Attr "gtk-entry-password-hint-timeout" o
-_gtkEntryPasswordHintTimeout = Attr
+_gtkEntryPasswordHintTimeout :: Proxy "gtk-entry-password-hint-timeout"
+_gtkEntryPasswordHintTimeout = Proxy
 
 
 -- Property "gtk-entry-select-on-focus"
-_gtkEntrySelectOnFocus :: Attr "gtk-entry-select-on-focus" o
-_gtkEntrySelectOnFocus = Attr
+_gtkEntrySelectOnFocus :: Proxy "gtk-entry-select-on-focus"
+_gtkEntrySelectOnFocus = Proxy
 
 
 -- Property "gtk-error-bell"
-_gtkErrorBell :: Attr "gtk-error-bell" o
-_gtkErrorBell = Attr
+_gtkErrorBell :: Proxy "gtk-error-bell"
+_gtkErrorBell = Proxy
 
 
 -- Property "gtk-fallback-icon-theme"
-_gtkFallbackIconTheme :: Attr "gtk-fallback-icon-theme" o
-_gtkFallbackIconTheme = Attr
+_gtkFallbackIconTheme :: Proxy "gtk-fallback-icon-theme"
+_gtkFallbackIconTheme = Proxy
 
 
 -- Property "gtk-file-chooser-backend"
-_gtkFileChooserBackend :: Attr "gtk-file-chooser-backend" o
-_gtkFileChooserBackend = Attr
+_gtkFileChooserBackend :: Proxy "gtk-file-chooser-backend"
+_gtkFileChooserBackend = Proxy
 
 
 -- Property "gtk-font-name"
-_gtkFontName :: Attr "gtk-font-name" o
-_gtkFontName = Attr
+_gtkFontName :: Proxy "gtk-font-name"
+_gtkFontName = Proxy
 
 
 -- Property "gtk-fontconfig-timestamp"
-_gtkFontconfigTimestamp :: Attr "gtk-fontconfig-timestamp" o
-_gtkFontconfigTimestamp = Attr
+_gtkFontconfigTimestamp :: Proxy "gtk-fontconfig-timestamp"
+_gtkFontconfigTimestamp = Proxy
 
 
 -- Property "gtk-icon-sizes"
-_gtkIconSizes :: Attr "gtk-icon-sizes" o
-_gtkIconSizes = Attr
+_gtkIconSizes :: Proxy "gtk-icon-sizes"
+_gtkIconSizes = Proxy
 
 
 -- Property "gtk-icon-theme-name"
-_gtkIconThemeName :: Attr "gtk-icon-theme-name" o
-_gtkIconThemeName = Attr
+_gtkIconThemeName :: Proxy "gtk-icon-theme-name"
+_gtkIconThemeName = Proxy
 
 
 -- Property "gtk-im-module"
-_gtkImModule :: Attr "gtk-im-module" o
-_gtkImModule = Attr
+_gtkImModule :: Proxy "gtk-im-module"
+_gtkImModule = Proxy
 
 
 -- Property "gtk-im-preedit-style"
-_gtkImPreeditStyle :: Attr "gtk-im-preedit-style" o
-_gtkImPreeditStyle = Attr
+_gtkImPreeditStyle :: Proxy "gtk-im-preedit-style"
+_gtkImPreeditStyle = Proxy
 
 
 -- Property "gtk-im-status-style"
-_gtkImStatusStyle :: Attr "gtk-im-status-style" o
-_gtkImStatusStyle = Attr
+_gtkImStatusStyle :: Proxy "gtk-im-status-style"
+_gtkImStatusStyle = Proxy
 
 
 -- Property "gtk-key-theme-name"
-_gtkKeyThemeName :: Attr "gtk-key-theme-name" o
-_gtkKeyThemeName = Attr
+_gtkKeyThemeName :: Proxy "gtk-key-theme-name"
+_gtkKeyThemeName = Proxy
 
 
 -- Property "gtk-keynav-cursor-only"
-_gtkKeynavCursorOnly :: Attr "gtk-keynav-cursor-only" o
-_gtkKeynavCursorOnly = Attr
+_gtkKeynavCursorOnly :: Proxy "gtk-keynav-cursor-only"
+_gtkKeynavCursorOnly = Proxy
 
 
 -- Property "gtk-keynav-wrap-around"
-_gtkKeynavWrapAround :: Attr "gtk-keynav-wrap-around" o
-_gtkKeynavWrapAround = Attr
+_gtkKeynavWrapAround :: Proxy "gtk-keynav-wrap-around"
+_gtkKeynavWrapAround = Proxy
 
 
 -- Property "gtk-label-select-on-focus"
-_gtkLabelSelectOnFocus :: Attr "gtk-label-select-on-focus" o
-_gtkLabelSelectOnFocus = Attr
+_gtkLabelSelectOnFocus :: Proxy "gtk-label-select-on-focus"
+_gtkLabelSelectOnFocus = Proxy
 
 
 -- Property "gtk-long-press-time"
-_gtkLongPressTime :: Attr "gtk-long-press-time" o
-_gtkLongPressTime = Attr
+_gtkLongPressTime :: Proxy "gtk-long-press-time"
+_gtkLongPressTime = Proxy
 
 
 -- Property "gtk-menu-bar-accel"
-_gtkMenuBarAccel :: Attr "gtk-menu-bar-accel" o
-_gtkMenuBarAccel = Attr
+_gtkMenuBarAccel :: Proxy "gtk-menu-bar-accel"
+_gtkMenuBarAccel = Proxy
 
 
 -- Property "gtk-menu-bar-popup-delay"
-_gtkMenuBarPopupDelay :: Attr "gtk-menu-bar-popup-delay" o
-_gtkMenuBarPopupDelay = Attr
+_gtkMenuBarPopupDelay :: Proxy "gtk-menu-bar-popup-delay"
+_gtkMenuBarPopupDelay = Proxy
 
 
 -- Property "gtk-menu-images"
-_gtkMenuImages :: Attr "gtk-menu-images" o
-_gtkMenuImages = Attr
+_gtkMenuImages :: Proxy "gtk-menu-images"
+_gtkMenuImages = Proxy
 
 
 -- Property "gtk-menu-popdown-delay"
-_gtkMenuPopdownDelay :: Attr "gtk-menu-popdown-delay" o
-_gtkMenuPopdownDelay = Attr
+_gtkMenuPopdownDelay :: Proxy "gtk-menu-popdown-delay"
+_gtkMenuPopdownDelay = Proxy
 
 
 -- Property "gtk-menu-popup-delay"
-_gtkMenuPopupDelay :: Attr "gtk-menu-popup-delay" o
-_gtkMenuPopupDelay = Attr
+_gtkMenuPopupDelay :: Proxy "gtk-menu-popup-delay"
+_gtkMenuPopupDelay = Proxy
 
 
 -- Property "gtk-modules"
-_gtkModules :: Attr "gtk-modules" o
-_gtkModules = Attr
+_gtkModules :: Proxy "gtk-modules"
+_gtkModules = Proxy
 
 
 -- Property "gtk-primary-button-warps-slider"
-_gtkPrimaryButtonWarpsSlider :: Attr "gtk-primary-button-warps-slider" o
-_gtkPrimaryButtonWarpsSlider = Attr
+_gtkPrimaryButtonWarpsSlider :: Proxy "gtk-primary-button-warps-slider"
+_gtkPrimaryButtonWarpsSlider = Proxy
 
 
 -- Property "gtk-print-backends"
-_gtkPrintBackends :: Attr "gtk-print-backends" o
-_gtkPrintBackends = Attr
+_gtkPrintBackends :: Proxy "gtk-print-backends"
+_gtkPrintBackends = Proxy
 
 
 -- Property "gtk-print-preview-command"
-_gtkPrintPreviewCommand :: Attr "gtk-print-preview-command" o
-_gtkPrintPreviewCommand = Attr
+_gtkPrintPreviewCommand :: Proxy "gtk-print-preview-command"
+_gtkPrintPreviewCommand = Proxy
 
 
 -- Property "gtk-recent-files-enabled"
-_gtkRecentFilesEnabled :: Attr "gtk-recent-files-enabled" o
-_gtkRecentFilesEnabled = Attr
+_gtkRecentFilesEnabled :: Proxy "gtk-recent-files-enabled"
+_gtkRecentFilesEnabled = Proxy
 
 
 -- Property "gtk-recent-files-limit"
-_gtkRecentFilesLimit :: Attr "gtk-recent-files-limit" o
-_gtkRecentFilesLimit = Attr
+_gtkRecentFilesLimit :: Proxy "gtk-recent-files-limit"
+_gtkRecentFilesLimit = Proxy
 
 
 -- Property "gtk-recent-files-max-age"
-_gtkRecentFilesMaxAge :: Attr "gtk-recent-files-max-age" o
-_gtkRecentFilesMaxAge = Attr
+_gtkRecentFilesMaxAge :: Proxy "gtk-recent-files-max-age"
+_gtkRecentFilesMaxAge = Proxy
 
 
 -- Property "gtk-scrolled-window-placement"
-_gtkScrolledWindowPlacement :: Attr "gtk-scrolled-window-placement" o
-_gtkScrolledWindowPlacement = Attr
+_gtkScrolledWindowPlacement :: Proxy "gtk-scrolled-window-placement"
+_gtkScrolledWindowPlacement = Proxy
 
 
 -- Property "gtk-shell-shows-app-menu"
-_gtkShellShowsAppMenu :: Attr "gtk-shell-shows-app-menu" o
-_gtkShellShowsAppMenu = Attr
+_gtkShellShowsAppMenu :: Proxy "gtk-shell-shows-app-menu"
+_gtkShellShowsAppMenu = Proxy
 
 
 -- Property "gtk-shell-shows-desktop"
-_gtkShellShowsDesktop :: Attr "gtk-shell-shows-desktop" o
-_gtkShellShowsDesktop = Attr
+_gtkShellShowsDesktop :: Proxy "gtk-shell-shows-desktop"
+_gtkShellShowsDesktop = Proxy
 
 
 -- Property "gtk-shell-shows-menubar"
-_gtkShellShowsMenubar :: Attr "gtk-shell-shows-menubar" o
-_gtkShellShowsMenubar = Attr
+_gtkShellShowsMenubar :: Proxy "gtk-shell-shows-menubar"
+_gtkShellShowsMenubar = Proxy
 
 
 -- Property "gtk-show-input-method-menu"
-_gtkShowInputMethodMenu :: Attr "gtk-show-input-method-menu" o
-_gtkShowInputMethodMenu = Attr
+_gtkShowInputMethodMenu :: Proxy "gtk-show-input-method-menu"
+_gtkShowInputMethodMenu = Proxy
 
 
 -- Property "gtk-show-unicode-menu"
-_gtkShowUnicodeMenu :: Attr "gtk-show-unicode-menu" o
-_gtkShowUnicodeMenu = Attr
+_gtkShowUnicodeMenu :: Proxy "gtk-show-unicode-menu"
+_gtkShowUnicodeMenu = Proxy
 
 
 -- Property "gtk-sound-theme-name"
-_gtkSoundThemeName :: Attr "gtk-sound-theme-name" o
-_gtkSoundThemeName = Attr
+_gtkSoundThemeName :: Proxy "gtk-sound-theme-name"
+_gtkSoundThemeName = Proxy
 
 
 -- Property "gtk-split-cursor"
-_gtkSplitCursor :: Attr "gtk-split-cursor" o
-_gtkSplitCursor = Attr
+_gtkSplitCursor :: Proxy "gtk-split-cursor"
+_gtkSplitCursor = Proxy
 
 
 -- Property "gtk-theme-name"
-_gtkThemeName :: Attr "gtk-theme-name" o
-_gtkThemeName = Attr
+_gtkThemeName :: Proxy "gtk-theme-name"
+_gtkThemeName = Proxy
 
 
 -- Property "gtk-timeout-expand"
-_gtkTimeoutExpand :: Attr "gtk-timeout-expand" o
-_gtkTimeoutExpand = Attr
+_gtkTimeoutExpand :: Proxy "gtk-timeout-expand"
+_gtkTimeoutExpand = Proxy
 
 
 -- Property "gtk-timeout-initial"
-_gtkTimeoutInitial :: Attr "gtk-timeout-initial" o
-_gtkTimeoutInitial = Attr
+_gtkTimeoutInitial :: Proxy "gtk-timeout-initial"
+_gtkTimeoutInitial = Proxy
 
 
 -- Property "gtk-timeout-repeat"
-_gtkTimeoutRepeat :: Attr "gtk-timeout-repeat" o
-_gtkTimeoutRepeat = Attr
+_gtkTimeoutRepeat :: Proxy "gtk-timeout-repeat"
+_gtkTimeoutRepeat = Proxy
 
 
 -- Property "gtk-titlebar-double-click"
-_gtkTitlebarDoubleClick :: Attr "gtk-titlebar-double-click" o
-_gtkTitlebarDoubleClick = Attr
+_gtkTitlebarDoubleClick :: Proxy "gtk-titlebar-double-click"
+_gtkTitlebarDoubleClick = Proxy
 
 
 -- Property "gtk-titlebar-middle-click"
-_gtkTitlebarMiddleClick :: Attr "gtk-titlebar-middle-click" o
-_gtkTitlebarMiddleClick = Attr
+_gtkTitlebarMiddleClick :: Proxy "gtk-titlebar-middle-click"
+_gtkTitlebarMiddleClick = Proxy
 
 
 -- Property "gtk-titlebar-right-click"
-_gtkTitlebarRightClick :: Attr "gtk-titlebar-right-click" o
-_gtkTitlebarRightClick = Attr
+_gtkTitlebarRightClick :: Proxy "gtk-titlebar-right-click"
+_gtkTitlebarRightClick = Proxy
 
 
 -- Property "gtk-toolbar-icon-size"
-_gtkToolbarIconSize :: Attr "gtk-toolbar-icon-size" o
-_gtkToolbarIconSize = Attr
+_gtkToolbarIconSize :: Proxy "gtk-toolbar-icon-size"
+_gtkToolbarIconSize = Proxy
 
 
 -- Property "gtk-toolbar-style"
-_gtkToolbarStyle :: Attr "gtk-toolbar-style" o
-_gtkToolbarStyle = Attr
+_gtkToolbarStyle :: Proxy "gtk-toolbar-style"
+_gtkToolbarStyle = Proxy
 
 
 -- Property "gtk-tooltip-browse-mode-timeout"
-_gtkTooltipBrowseModeTimeout :: Attr "gtk-tooltip-browse-mode-timeout" o
-_gtkTooltipBrowseModeTimeout = Attr
+_gtkTooltipBrowseModeTimeout :: Proxy "gtk-tooltip-browse-mode-timeout"
+_gtkTooltipBrowseModeTimeout = Proxy
 
 
 -- Property "gtk-tooltip-browse-timeout"
-_gtkTooltipBrowseTimeout :: Attr "gtk-tooltip-browse-timeout" o
-_gtkTooltipBrowseTimeout = Attr
+_gtkTooltipBrowseTimeout :: Proxy "gtk-tooltip-browse-timeout"
+_gtkTooltipBrowseTimeout = Proxy
 
 
 -- Property "gtk-tooltip-timeout"
-_gtkTooltipTimeout :: Attr "gtk-tooltip-timeout" o
-_gtkTooltipTimeout = Attr
+_gtkTooltipTimeout :: Proxy "gtk-tooltip-timeout"
+_gtkTooltipTimeout = Proxy
 
 
 -- Property "gtk-touchscreen-mode"
-_gtkTouchscreenMode :: Attr "gtk-touchscreen-mode" o
-_gtkTouchscreenMode = Attr
+_gtkTouchscreenMode :: Proxy "gtk-touchscreen-mode"
+_gtkTouchscreenMode = Proxy
 
 
 -- Property "gtk-visible-focus"
-_gtkVisibleFocus :: Attr "gtk-visible-focus" o
-_gtkVisibleFocus = Attr
+_gtkVisibleFocus :: Proxy "gtk-visible-focus"
+_gtkVisibleFocus = Proxy
 
 
 -- Property "gtk-xft-antialias"
-_gtkXftAntialias :: Attr "gtk-xft-antialias" o
-_gtkXftAntialias = Attr
+_gtkXftAntialias :: Proxy "gtk-xft-antialias"
+_gtkXftAntialias = Proxy
 
 
 -- Property "gtk-xft-dpi"
-_gtkXftDpi :: Attr "gtk-xft-dpi" o
-_gtkXftDpi = Attr
+_gtkXftDpi :: Proxy "gtk-xft-dpi"
+_gtkXftDpi = Proxy
 
 
 -- Property "gtk-xft-hinting"
-_gtkXftHinting :: Attr "gtk-xft-hinting" o
-_gtkXftHinting = Attr
+_gtkXftHinting :: Proxy "gtk-xft-hinting"
+_gtkXftHinting = Proxy
 
 
 -- Property "gtk-xft-hintstyle"
-_gtkXftHintstyle :: Attr "gtk-xft-hintstyle" o
-_gtkXftHintstyle = Attr
+_gtkXftHintstyle :: Proxy "gtk-xft-hintstyle"
+_gtkXftHintstyle = Proxy
 
 
 -- Property "gtk-xft-rgba"
-_gtkXftRgba :: Attr "gtk-xft-rgba" o
-_gtkXftRgba = Attr
+_gtkXftRgba :: Proxy "gtk-xft-rgba"
+_gtkXftRgba = Proxy
 
 
 -- Property "hadjustment"
-_hadjustment :: Attr "hadjustment" o
-_hadjustment = Attr
+_hadjustment :: Proxy "hadjustment"
+_hadjustment = Proxy
 
 
 -- Property "halign"
-_halign :: Attr "halign" o
-_halign = Attr
+_halign :: Proxy "halign"
+_halign = Proxy
 
 
 -- Property "handle-position"
-_handlePosition :: Attr "handle-position" o
-_handlePosition = Attr
+_handlePosition :: Proxy "handle-position"
+_handlePosition = Proxy
 
 
 -- Property "has-alpha"
-_hasAlpha :: Attr "has-alpha" o
-_hasAlpha = Attr
+_hasAlpha :: Proxy "has-alpha"
+_hasAlpha = Proxy
 
 
 -- Property "has-default"
-_hasDefault :: Attr "has-default" o
-_hasDefault = Attr
+_hasDefault :: Proxy "has-default"
+_hasDefault = Proxy
 
 
 -- Property "has-depth-buffer"
-_hasDepthBuffer :: Attr "has-depth-buffer" o
-_hasDepthBuffer = Attr
+_hasDepthBuffer :: Proxy "has-depth-buffer"
+_hasDepthBuffer = Proxy
 
 
 -- Property "has-entry"
-_hasEntry :: Attr "has-entry" o
-_hasEntry = Attr
+_hasEntry :: Proxy "has-entry"
+_hasEntry = Proxy
 
 
 -- Property "has-focus"
-_hasFocus :: Attr "has-focus" o
-_hasFocus = Attr
+_hasFocus :: Proxy "has-focus"
+_hasFocus = Proxy
 
 
 -- Property "has-frame"
-_hasFrame :: Attr "has-frame" o
-_hasFrame = Attr
+_hasFrame :: Proxy "has-frame"
+_hasFrame = Proxy
 
 
 -- Property "has-opacity-control"
-_hasOpacityControl :: Attr "has-opacity-control" o
-_hasOpacityControl = Attr
+_hasOpacityControl :: Proxy "has-opacity-control"
+_hasOpacityControl = Proxy
 
 
 -- Property "has-origin"
-_hasOrigin :: Attr "has-origin" o
-_hasOrigin = Attr
+_hasOrigin :: Proxy "has-origin"
+_hasOrigin = Proxy
 
 
 -- Property "has-palette"
-_hasPalette :: Attr "has-palette" o
-_hasPalette = Attr
+_hasPalette :: Proxy "has-palette"
+_hasPalette = Proxy
 
 
 -- Property "has-resize-grip"
-_hasResizeGrip :: Attr "has-resize-grip" o
-_hasResizeGrip = Attr
+_hasResizeGrip :: Proxy "has-resize-grip"
+_hasResizeGrip = Proxy
 
 
 -- Property "has-selection"
-_hasSelection :: Attr "has-selection" o
-_hasSelection = Attr
+_hasSelection :: Proxy "has-selection"
+_hasSelection = Proxy
 
 
 -- Property "has-stencil-buffer"
-_hasStencilBuffer :: Attr "has-stencil-buffer" o
-_hasStencilBuffer = Attr
+_hasStencilBuffer :: Proxy "has-stencil-buffer"
+_hasStencilBuffer = Proxy
 
 
 -- Property "has-subtitle"
-_hasSubtitle :: Attr "has-subtitle" o
-_hasSubtitle = Attr
+_hasSubtitle :: Proxy "has-subtitle"
+_hasSubtitle = Proxy
 
 
 -- Property "has-tooltip"
-_hasTooltip :: Attr "has-tooltip" o
-_hasTooltip = Attr
+_hasTooltip :: Proxy "has-tooltip"
+_hasTooltip = Proxy
 
 
 -- Property "has-toplevel-focus"
-_hasToplevelFocus :: Attr "has-toplevel-focus" o
-_hasToplevelFocus = Attr
+_hasToplevelFocus :: Proxy "has-toplevel-focus"
+_hasToplevelFocus = Proxy
 
 
 -- Property "hash"
-_hash :: Attr "hash" o
-_hash = Attr
+_hash :: Proxy "hash"
+_hash = Proxy
 
 
 -- Property "head"
-_head :: Attr "head" o
-_head = Attr
+_head :: Proxy "head"
+_head = Proxy
 
 
 -- Property "header-relief"
-_headerRelief :: Attr "header-relief" o
-_headerRelief = Attr
+_headerRelief :: Proxy "header-relief"
+_headerRelief = Proxy
 
 
 -- Property "headers"
-_headers :: Attr "headers" o
-_headers = Attr
+_headers :: Proxy "headers"
+_headers = Proxy
 
 
 -- Property "headers-clickable"
-_headersClickable :: Attr "headers-clickable" o
-_headersClickable = Attr
+_headersClickable :: Proxy "headers-clickable"
+_headersClickable = Proxy
 
 
 -- Property "headers-visible"
-_headersVisible :: Attr "headers-visible" o
-_headersVisible = Attr
+_headersVisible :: Proxy "headers-visible"
+_headersVisible = Proxy
 
 
 -- Property "heading"
-_heading :: Attr "heading" o
-_heading = Attr
+_heading :: Proxy "heading"
+_heading = Proxy
 
 
 -- Property "height"
-_height :: Attr "height" o
-_height = Attr
+_height :: Proxy "height"
+_height = Proxy
 
 
 -- Property "height-request"
-_heightRequest :: Attr "height-request" o
-_heightRequest = Attr
+_heightRequest :: Proxy "height-request"
+_heightRequest = Proxy
 
 
 -- Property "help-button"
-_helpButton :: Attr "help-button" o
-_helpButton = Attr
+_helpButton :: Proxy "help-button"
+_helpButton = Proxy
 
 
 -- Property "hexpand"
-_hexpand :: Attr "hexpand" o
-_hexpand = Attr
+_hexpand :: Proxy "hexpand"
+_hexpand = Proxy
 
 
 -- Property "hexpand-set"
-_hexpandSet :: Attr "hexpand-set" o
-_hexpandSet = Attr
+_hexpandSet :: Proxy "hexpand-set"
+_hexpandSet = Proxy
 
 
 -- Property "hhomogeneous"
-_hhomogeneous :: Attr "hhomogeneous" o
-_hhomogeneous = Attr
+_hhomogeneous :: Proxy "hhomogeneous"
+_hhomogeneous = Proxy
 
 
 -- Property "hidden"
-_hidden :: Attr "hidden" o
-_hidden = Attr
+_hidden :: Proxy "hidden"
+_hidden = Proxy
 
 
 -- Property "hide-if-empty"
-_hideIfEmpty :: Attr "hide-if-empty" o
-_hideIfEmpty = Attr
+_hideIfEmpty :: Proxy "hide-if-empty"
+_hideIfEmpty = Proxy
 
 
 -- Property "hide-titlebar-when-maximized"
-_hideTitlebarWhenMaximized :: Attr "hide-titlebar-when-maximized" o
-_hideTitlebarWhenMaximized = Attr
+_hideTitlebarWhenMaximized :: Proxy "hide-titlebar-when-maximized"
+_hideTitlebarWhenMaximized = Proxy
 
 
 -- Property "history"
-_history :: Attr "history" o
-_history = Attr
+_history :: Proxy "history"
+_history = Proxy
 
 
 -- Property "homogeneous"
-_homogeneous :: Attr "homogeneous" o
-_homogeneous = Attr
+_homogeneous :: Proxy "homogeneous"
+_homogeneous = Proxy
 
 
 -- Property "horizontal-scrollbar-policy"
-_horizontalScrollbarPolicy :: Attr "horizontal-scrollbar-policy" o
-_horizontalScrollbarPolicy = Attr
+_horizontalScrollbarPolicy :: Proxy "horizontal-scrollbar-policy"
+_horizontalScrollbarPolicy = Proxy
 
 
 -- Property "host"
-_host :: Attr "host" o
-_host = Attr
+_host :: Proxy "host"
+_host = Proxy
 
 
 -- Property "hostname"
-_hostname :: Attr "hostname" o
-_hostname = Attr
+_hostname :: Proxy "hostname"
+_hostname = Proxy
 
 
 -- Property "hover-expand"
-_hoverExpand :: Attr "hover-expand" o
-_hoverExpand = Attr
+_hoverExpand :: Proxy "hover-expand"
+_hoverExpand = Proxy
 
 
 -- Property "hover-selection"
-_hoverSelection :: Attr "hover-selection" o
-_hoverSelection = Attr
+_hoverSelection :: Proxy "hover-selection"
+_hoverSelection = Proxy
 
 
 -- Property "href"
-_href :: Attr "href" o
-_href = Attr
+_href :: Proxy "href"
+_href = Proxy
 
 
 -- Property "hreflang"
-_hreflang :: Attr "hreflang" o
-_hreflang = Attr
+_hreflang :: Proxy "hreflang"
+_hreflang = Proxy
 
 
 -- Property "hscroll-policy"
-_hscrollPolicy :: Attr "hscroll-policy" o
-_hscrollPolicy = Attr
+_hscrollPolicy :: Proxy "hscroll-policy"
+_hscrollPolicy = Proxy
 
 
 -- Property "hscrollbar-policy"
-_hscrollbarPolicy :: Attr "hscrollbar-policy" o
-_hscrollbarPolicy = Attr
+_hscrollbarPolicy :: Proxy "hscrollbar-policy"
+_hscrollbarPolicy = Proxy
 
 
 -- Property "hspace"
-_hspace :: Attr "hspace" o
-_hspace = Attr
+_hspace :: Proxy "hspace"
+_hspace = Proxy
 
 
 -- Property "html-for"
-_htmlFor :: Attr "html-for" o
-_htmlFor = Attr
+_htmlFor :: Proxy "html-for"
+_htmlFor = Proxy
 
 
 -- Property "html5-local-storage-database-path"
-_html5LocalStorageDatabasePath :: Attr "html5-local-storage-database-path" o
-_html5LocalStorageDatabasePath = Attr
+_html5LocalStorageDatabasePath :: Proxy "html5-local-storage-database-path"
+_html5LocalStorageDatabasePath = Proxy
 
 
 -- Property "http-equiv"
-_httpEquiv :: Attr "http-equiv" o
-_httpEquiv = Attr
+_httpEquiv :: Proxy "http-equiv"
+_httpEquiv = Proxy
 
 
 -- Property "icon"
-_icon :: Attr "icon" o
-_icon = Attr
+_icon :: Proxy "icon"
+_icon = Proxy
 
 
 -- Property "icon-name"
-_iconName :: Attr "icon-name" o
-_iconName = Attr
+_iconName :: Proxy "icon-name"
+_iconName = Proxy
 
 
 -- Property "icon-set"
-_iconSet :: Attr "icon-set" o
-_iconSet = Attr
+_iconSet :: Proxy "icon-set"
+_iconSet = Proxy
 
 
 -- Property "icon-size"
-_iconSize :: Attr "icon-size" o
-_iconSize = Attr
+_iconSize :: Proxy "icon-size"
+_iconSize = Proxy
 
 
 -- Property "icon-size-set"
-_iconSizeSet :: Attr "icon-size-set" o
-_iconSizeSet = Attr
+_iconSizeSet :: Proxy "icon-size-set"
+_iconSizeSet = Proxy
 
 
 -- Property "icon-uri"
-_iconUri :: Attr "icon-uri" o
-_iconUri = Attr
+_iconUri :: Proxy "icon-uri"
+_iconUri = Proxy
 
 
 -- Property "icon-widget"
-_iconWidget :: Attr "icon-widget" o
-_iconWidget = Attr
+_iconWidget :: Proxy "icon-widget"
+_iconWidget = Proxy
 
 
 -- Property "iconic"
-_iconic :: Attr "iconic" o
-_iconic = Attr
+_iconic :: Proxy "iconic"
+_iconic = Proxy
 
 
 -- Property "icons"
-_icons :: Attr "icons" o
-_icons = Attr
+_icons :: Proxy "icons"
+_icons = Proxy
 
 
 -- Property "id"
-_id :: Attr "id" o
-_id = Attr
+_id :: Proxy "id"
+_id = Proxy
 
 
 -- Property "id-column"
-_idColumn :: Attr "id-column" o
-_idColumn = Attr
+_idColumn :: Proxy "id-column"
+_idColumn = Proxy
 
 
 -- Property "identifier"
-_identifier :: Attr "identifier" o
-_identifier = Attr
+_identifier :: Proxy "identifier"
+_identifier = Proxy
 
 
 -- Property "ignore-hidden"
-_ignoreHidden :: Attr "ignore-hidden" o
-_ignoreHidden = Attr
+_ignoreHidden :: Proxy "ignore-hidden"
+_ignoreHidden = Proxy
 
 
 -- Property "im-context"
-_imContext :: Attr "im-context" o
-_imContext = Attr
+_imContext :: Proxy "im-context"
+_imContext = Proxy
 
 
 -- Property "im-module"
-_imModule :: Attr "im-module" o
-_imModule = Attr
+_imModule :: Proxy "im-module"
+_imModule = Proxy
 
 
 -- Property "image"
-_image :: Attr "image" o
-_image = Attr
+_image :: Proxy "image"
+_image = Proxy
 
 
 -- Property "image-position"
-_imagePosition :: Attr "image-position" o
-_imagePosition = Attr
+_imagePosition :: Proxy "image-position"
+_imagePosition = Proxy
 
 
 -- Property "image-uri"
-_imageUri :: Attr "image-uri" o
-_imageUri = Attr
+_imageUri :: Proxy "image-uri"
+_imageUri = Proxy
 
 
 -- Property "images"
-_images :: Attr "images" o
-_images = Attr
+_images :: Proxy "images"
+_images = Proxy
 
 
 -- Property "implementation"
-_implementation :: Attr "implementation" o
-_implementation = Attr
+_implementation :: Proxy "implementation"
+_implementation = Proxy
 
 
 -- Property "inconsistent"
-_inconsistent :: Attr "inconsistent" o
-_inconsistent = Attr
+_inconsistent :: Proxy "inconsistent"
+_inconsistent = Proxy
 
 
 -- Property "incremental"
-_incremental :: Attr "incremental" o
-_incremental = Attr
+_incremental :: Proxy "incremental"
+_incremental = Proxy
 
 
 -- Property "indent"
-_indent :: Attr "indent" o
-_indent = Attr
+_indent :: Proxy "indent"
+_indent = Proxy
 
 
 -- Property "indent-set"
-_indentSet :: Attr "indent-set" o
-_indentSet = Attr
+_indentSet :: Proxy "indent-set"
+_indentSet = Proxy
 
 
 -- Property "indeterminate"
-_indeterminate :: Attr "indeterminate" o
-_indeterminate = Attr
+_indeterminate :: Proxy "indeterminate"
+_indeterminate = Proxy
 
 
 -- Property "index"
-_index :: Attr "index" o
-_index = Attr
+_index :: Proxy "index"
+_index = Proxy
 
 
 -- Property "indicator-size"
-_indicatorSize :: Attr "indicator-size" o
-_indicatorSize = Attr
+_indicatorSize :: Proxy "indicator-size"
+_indicatorSize = Proxy
 
 
 -- Property "initial-scale-factor"
-_initialScaleFactor :: Attr "initial-scale-factor" o
-_initialScaleFactor = Attr
+_initialScaleFactor :: Proxy "initial-scale-factor"
+_initialScaleFactor = Proxy
 
 
 -- Property "inline-completion"
-_inlineCompletion :: Attr "inline-completion" o
-_inlineCompletion = Attr
+_inlineCompletion :: Proxy "inline-completion"
+_inlineCompletion = Proxy
 
 
 -- Property "inline-selection"
-_inlineSelection :: Attr "inline-selection" o
-_inlineSelection = Attr
+_inlineSelection :: Proxy "inline-selection"
+_inlineSelection = Proxy
 
 
 -- Property "inner-border"
-_innerBorder :: Attr "inner-border" o
-_innerBorder = Attr
+_innerBorder :: Proxy "inner-border"
+_innerBorder = Proxy
 
 
 -- Property "inner-height"
-_innerHeight :: Attr "inner-height" o
-_innerHeight = Attr
+_innerHeight :: Proxy "inner-height"
+_innerHeight = Proxy
 
 
 -- Property "inner-html"
-_innerHtml :: Attr "inner-html" o
-_innerHtml = Attr
+_innerHtml :: Proxy "inner-html"
+_innerHtml = Proxy
 
 
 -- Property "inner-node"
-_innerNode :: Attr "inner-node" o
-_innerNode = Attr
+_innerNode :: Proxy "inner-node"
+_innerNode = Proxy
 
 
 -- Property "inner-text"
-_innerText :: Attr "inner-text" o
-_innerText = Attr
+_innerText :: Proxy "inner-text"
+_innerText = Proxy
 
 
 -- Property "inner-width"
-_innerWidth :: Attr "inner-width" o
-_innerWidth = Attr
+_innerWidth :: Proxy "inner-width"
+_innerWidth = Proxy
 
 
 -- Property "input-encoding"
-_inputEncoding :: Attr "input-encoding" o
-_inputEncoding = Attr
+_inputEncoding :: Proxy "input-encoding"
+_inputEncoding = Proxy
 
 
 -- Property "input-hints"
-_inputHints :: Attr "input-hints" o
-_inputHints = Attr
+_inputHints :: Proxy "input-hints"
+_inputHints = Proxy
 
 
 -- Property "input-purpose"
-_inputPurpose :: Attr "input-purpose" o
-_inputPurpose = Attr
+_inputPurpose :: Proxy "input-purpose"
+_inputPurpose = Proxy
 
 
 -- Property "inspected-uri"
-_inspectedUri :: Attr "inspected-uri" o
-_inspectedUri = Attr
+_inspectedUri :: Proxy "inspected-uri"
+_inspectedUri = Proxy
 
 
 -- Property "internal-subset"
-_internalSubset :: Attr "internal-subset" o
-_internalSubset = Attr
+_internalSubset :: Proxy "internal-subset"
+_internalSubset = Proxy
 
 
 -- Property "invalid-iterator-state"
-_invalidIteratorState :: Attr "invalid-iterator-state" o
-_invalidIteratorState = Attr
+_invalidIteratorState :: Proxy "invalid-iterator-state"
+_invalidIteratorState = Proxy
 
 
 -- Property "inverted"
-_inverted :: Attr "inverted" o
-_inverted = Attr
+_inverted :: Proxy "inverted"
+_inverted = Proxy
 
 
 -- Property "invisible"
-_invisible :: Attr "invisible" o
-_invisible = Attr
+_invisible :: Proxy "invisible"
+_invisible = Proxy
 
 
 -- Property "invisible-char"
-_invisibleChar :: Attr "invisible-char" o
-_invisibleChar = Attr
+_invisibleChar :: Proxy "invisible-char"
+_invisibleChar = Proxy
 
 
 -- Property "invisible-char-set"
-_invisibleCharSet :: Attr "invisible-char-set" o
-_invisibleCharSet = Attr
+_invisibleCharSet :: Proxy "invisible-char-set"
+_invisibleCharSet = Proxy
 
 
 -- Property "invisible-set"
-_invisibleSet :: Attr "invisible-set" o
-_invisibleSet = Attr
+_invisibleSet :: Proxy "invisible-set"
+_invisibleSet = Proxy
 
 
 -- Property "is-active"
-_isActive :: Attr "is-active" o
-_isActive = Attr
+_isActive :: Proxy "is-active"
+_isActive = Proxy
 
 
 -- Property "is-collapsed"
-_isCollapsed :: Attr "is-collapsed" o
-_isCollapsed = Attr
+_isCollapsed :: Proxy "is-collapsed"
+_isCollapsed = Proxy
 
 
 -- Property "is-content-editable"
-_isContentEditable :: Attr "is-content-editable" o
-_isContentEditable = Attr
+_isContentEditable :: Proxy "is-content-editable"
+_isContentEditable = Proxy
 
 
 -- Property "is-expanded"
-_isExpanded :: Attr "is-expanded" o
-_isExpanded = Attr
+_isExpanded :: Proxy "is-expanded"
+_isExpanded = Proxy
 
 
 -- Property "is-expander"
-_isExpander :: Attr "is-expander" o
-_isExpander = Attr
+_isExpander :: Proxy "is-expander"
+_isExpander = Proxy
 
 
 -- Property "is-focus"
-_isFocus :: Attr "is-focus" o
-_isFocus = Attr
+_isFocus :: Proxy "is-focus"
+_isFocus = Proxy
 
 
 -- Property "is-id"
-_isId :: Attr "is-id" o
-_isId = Attr
+_isId :: Proxy "is-id"
+_isId = Proxy
 
 
 -- Property "is-important"
-_isImportant :: Attr "is-important" o
-_isImportant = Attr
+_isImportant :: Proxy "is-important"
+_isImportant = Proxy
 
 
 -- Property "is-locked"
-_isLocked :: Attr "is-locked" o
-_isLocked = Attr
+_isLocked :: Proxy "is-locked"
+_isLocked = Proxy
 
 
 -- Property "is-map"
-_isMap :: Attr "is-map" o
-_isMap = Attr
+_isMap :: Proxy "is-map"
+_isMap = Proxy
 
 
 -- Property "is-maximized"
-_isMaximized :: Attr "is-maximized" o
-_isMaximized = Attr
+_isMaximized :: Proxy "is-maximized"
+_isMaximized = Proxy
 
 
 -- Property "is-showing"
-_isShowing :: Attr "is-showing" o
-_isShowing = Attr
+_isShowing :: Proxy "is-showing"
+_isShowing = Proxy
 
 
 -- Property "item-orientation"
-_itemOrientation :: Attr "item-orientation" o
-_itemOrientation = Attr
+_itemOrientation :: Proxy "item-orientation"
+_itemOrientation = Proxy
 
 
 -- Property "item-padding"
-_itemPadding :: Attr "item-padding" o
-_itemPadding = Attr
+_itemPadding :: Proxy "item-padding"
+_itemPadding = Proxy
 
 
 -- Property "item-width"
-_itemWidth :: Attr "item-width" o
-_itemWidth = Attr
+_itemWidth :: Proxy "item-width"
+_itemWidth = Proxy
 
 
 -- Property "javascript-can-access-clipboard"
-_javascriptCanAccessClipboard :: Attr "javascript-can-access-clipboard" o
-_javascriptCanAccessClipboard = Attr
+_javascriptCanAccessClipboard :: Proxy "javascript-can-access-clipboard"
+_javascriptCanAccessClipboard = Proxy
 
 
 -- Property "javascript-can-open-windows-automatically"
-_javascriptCanOpenWindowsAutomatically :: Attr "javascript-can-open-windows-automatically" o
-_javascriptCanOpenWindowsAutomatically = Attr
+_javascriptCanOpenWindowsAutomatically :: Proxy "javascript-can-open-windows-automatically"
+_javascriptCanOpenWindowsAutomatically = Proxy
 
 
 -- Property "javascript-profiling-enabled"
-_javascriptProfilingEnabled :: Attr "javascript-profiling-enabled" o
-_javascriptProfilingEnabled = Attr
+_javascriptProfilingEnabled :: Proxy "javascript-profiling-enabled"
+_javascriptProfilingEnabled = Proxy
 
 
 -- Property "job-name"
-_jobName :: Attr "job-name" o
-_jobName = Attr
+_jobName :: Proxy "job-name"
+_jobName = Proxy
 
 
 -- Property "js-heap-size-limit"
-_jsHeapSizeLimit :: Attr "js-heap-size-limit" o
-_jsHeapSizeLimit = Attr
+_jsHeapSizeLimit :: Proxy "js-heap-size-limit"
+_jsHeapSizeLimit = Proxy
 
 
 -- Property "justification"
-_justification :: Attr "justification" o
-_justification = Attr
+_justification :: Proxy "justification"
+_justification = Proxy
 
 
 -- Property "justification-set"
-_justificationSet :: Attr "justification-set" o
-_justificationSet = Attr
+_justificationSet :: Proxy "justification-set"
+_justificationSet = Proxy
 
 
 -- Property "justify"
-_justify :: Attr "justify" o
-_justify = Attr
+_justify :: Proxy "justify"
+_justify = Proxy
 
 
 -- Property "key-code"
-_keyCode :: Attr "key-code" o
-_keyCode = Attr
+_keyCode :: Proxy "key-code"
+_keyCode = Proxy
 
 
 -- Property "key-identifier"
-_keyIdentifier :: Attr "key-identifier" o
-_keyIdentifier = Attr
+_keyIdentifier :: Proxy "key-identifier"
+_keyIdentifier = Proxy
 
 
 -- Property "key-location"
-_keyLocation :: Attr "key-location" o
-_keyLocation = Attr
+_keyLocation :: Proxy "key-location"
+_keyLocation = Proxy
 
 
 -- Property "keycode"
-_keycode :: Attr "keycode" o
-_keycode = Attr
+_keycode :: Proxy "keycode"
+_keycode = Proxy
 
 
 -- Property "keytype"
-_keytype :: Attr "keytype" o
-_keytype = Attr
+_keytype :: Proxy "keytype"
+_keytype = Proxy
 
 
 -- Property "kind"
-_kind :: Attr "kind" o
-_kind = Attr
+_kind :: Proxy "kind"
+_kind = Proxy
 
 
 -- Property "kinetic-scrolling"
-_kineticScrolling :: Attr "kinetic-scrolling" o
-_kineticScrolling = Attr
+_kineticScrolling :: Proxy "kinetic-scrolling"
+_kineticScrolling = Proxy
 
 
 -- Property "label"
-_label :: Attr "label" o
-_label = Attr
+_label :: Proxy "label"
+_label = Proxy
 
 
 -- Property "label-fill"
-_labelFill :: Attr "label-fill" o
-_labelFill = Attr
+_labelFill :: Proxy "label-fill"
+_labelFill = Proxy
 
 
 -- Property "label-widget"
-_labelWidget :: Attr "label-widget" o
-_labelWidget = Attr
+_labelWidget :: Proxy "label-widget"
+_labelWidget = Proxy
 
 
 -- Property "label-xalign"
-_labelXalign :: Attr "label-xalign" o
-_labelXalign = Attr
+_labelXalign :: Proxy "label-xalign"
+_labelXalign = Proxy
 
 
 -- Property "label-yalign"
-_labelYalign :: Attr "label-yalign" o
-_labelYalign = Attr
+_labelYalign :: Proxy "label-yalign"
+_labelYalign = Proxy
 
 
 -- Property "labels"
-_labels :: Attr "labels" o
-_labels = Attr
+_labels :: Proxy "labels"
+_labels = Proxy
 
 
 -- Property "lang"
-_lang :: Attr "lang" o
-_lang = Attr
+_lang :: Proxy "lang"
+_lang = Proxy
 
 
 -- Property "language"
-_language :: Attr "language" o
-_language = Attr
+_language :: Proxy "language"
+_language = Proxy
 
 
 -- Property "language-set"
-_languageSet :: Attr "language-set" o
-_languageSet = Attr
+_languageSet :: Proxy "language-set"
+_languageSet = Proxy
 
 
 -- Property "last-child"
-_lastChild :: Attr "last-child" o
-_lastChild = Attr
+_lastChild :: Proxy "last-child"
+_lastChild = Proxy
 
 
 -- Property "last-element-child"
-_lastElementChild :: Attr "last-element-child" o
-_lastElementChild = Attr
+_lastElementChild :: Proxy "last-element-child"
+_lastElementChild = Proxy
 
 
 -- Property "last-modified"
-_lastModified :: Attr "last-modified" o
-_lastModified = Attr
+_lastModified :: Proxy "last-modified"
+_lastModified = Proxy
 
 
 -- Property "last-visited-time"
-_lastVisitedTime :: Attr "last-visited-time" o
-_lastVisitedTime = Attr
+_lastVisitedTime :: Proxy "last-visited-time"
+_lastVisitedTime = Proxy
 
 
 -- Property "layer-x"
-_layerX :: Attr "layer-x" o
-_layerX = Attr
+_layerX :: Proxy "layer-x"
+_layerX = Proxy
 
 
 -- Property "layer-y"
-_layerY :: Attr "layer-y" o
-_layerY = Attr
+_layerY :: Proxy "layer-y"
+_layerY = Proxy
 
 
 -- Property "layout-style"
-_layoutStyle :: Attr "layout-style" o
-_layoutStyle = Attr
+_layoutStyle :: Proxy "layout-style"
+_layoutStyle = Proxy
 
 
 -- Property "left-gravity"
-_leftGravity :: Attr "left-gravity" o
-_leftGravity = Attr
+_leftGravity :: Proxy "left-gravity"
+_leftGravity = Proxy
 
 
 -- Property "left-margin"
-_leftMargin :: Attr "left-margin" o
-_leftMargin = Attr
+_leftMargin :: Proxy "left-margin"
+_leftMargin = Proxy
 
 
 -- Property "left-margin-set"
-_leftMarginSet :: Attr "left-margin-set" o
-_leftMarginSet = Attr
+_leftMarginSet :: Proxy "left-margin-set"
+_leftMarginSet = Proxy
 
 
 -- Property "left-padding"
-_leftPadding :: Attr "left-padding" o
-_leftPadding = Attr
+_leftPadding :: Proxy "left-padding"
+_leftPadding = Proxy
 
 
 -- Property "length"
-_length :: Attr "length" o
-_length = Attr
+_length :: Proxy "length"
+_length = Proxy
 
 
 -- Property "letter-spacing"
-_letterSpacing :: Attr "letter-spacing" o
-_letterSpacing = Attr
+_letterSpacing :: Proxy "letter-spacing"
+_letterSpacing = Proxy
 
 
 -- Property "letter-spacing-set"
-_letterSpacingSet :: Attr "letter-spacing-set" o
-_letterSpacingSet = Attr
+_letterSpacingSet :: Proxy "letter-spacing-set"
+_letterSpacingSet = Proxy
 
 
 -- Property "level"
-_level :: Attr "level" o
-_level = Attr
+_level :: Proxy "level"
+_level = Proxy
 
 
 -- Property "level-indentation"
-_levelIndentation :: Attr "level-indentation" o
-_levelIndentation = Attr
+_levelIndentation :: Proxy "level-indentation"
+_levelIndentation = Proxy
 
 
 -- Property "license"
-_license :: Attr "license" o
-_license = Attr
+_license :: Proxy "license"
+_license = Proxy
 
 
 -- Property "license-type"
-_licenseType :: Attr "license-type" o
-_licenseType = Attr
+_licenseType :: Proxy "license-type"
+_licenseType = Proxy
 
 
 -- Property "limit"
-_limit :: Attr "limit" o
-_limit = Attr
+_limit :: Proxy "limit"
+_limit = Proxy
 
 
 -- Property "line"
-_line :: Attr "line" o
-_line = Attr
+_line :: Proxy "line"
+_line = Proxy
 
 
 -- Property "lines"
-_lines :: Attr "lines" o
-_lines = Attr
+_lines :: Proxy "lines"
+_lines = Proxy
 
 
 -- Property "link"
-_link :: Attr "link" o
-_link = Attr
+_link :: Proxy "link"
+_link = Proxy
 
 
 -- Property "link-color"
-_linkColor :: Attr "link-color" o
-_linkColor = Attr
+_linkColor :: Proxy "link-color"
+_linkColor = Proxy
 
 
 -- Property "link-uri"
-_linkUri :: Attr "link-uri" o
-_linkUri = Attr
+_linkUri :: Proxy "link-uri"
+_linkUri = Proxy
 
 
 -- Property "links"
-_links :: Attr "links" o
-_links = Attr
+_links :: Proxy "links"
+_links = Proxy
 
 
 -- Property "list"
-_list :: Attr "list" o
-_list = Attr
+_list :: Proxy "list"
+_list = Proxy
 
 
 -- Property "load-event-end"
-_loadEventEnd :: Attr "load-event-end" o
-_loadEventEnd = Attr
+_loadEventEnd :: Proxy "load-event-end"
+_loadEventEnd = Proxy
 
 
 -- Property "load-event-start"
-_loadEventStart :: Attr "load-event-start" o
-_loadEventStart = Attr
+_loadEventStart :: Proxy "load-event-start"
+_loadEventStart = Proxy
 
 
 -- Property "load-status"
-_loadStatus :: Attr "load-status" o
-_loadStatus = Attr
+_loadStatus :: Proxy "load-status"
+_loadStatus = Proxy
 
 
 -- Property "local-name"
-_localName :: Attr "local-name" o
-_localName = Attr
+_localName :: Proxy "local-name"
+_localName = Proxy
 
 
 -- Property "local-only"
-_localOnly :: Attr "local-only" o
-_localOnly = Attr
+_localOnly :: Proxy "local-only"
+_localOnly = Proxy
 
 
 -- Property "local-storage"
-_localStorage :: Attr "local-storage" o
-_localStorage = Attr
+_localStorage :: Proxy "local-storage"
+_localStorage = Proxy
 
 
 -- Property "location"
-_location :: Attr "location" o
-_location = Attr
+_location :: Proxy "location"
+_location = Proxy
 
 
 -- Property "locationbar"
-_locationbar :: Attr "locationbar" o
-_locationbar = Attr
+_locationbar :: Proxy "locationbar"
+_locationbar = Proxy
 
 
 -- Property "locationbar-visible"
-_locationbarVisible :: Attr "locationbar-visible" o
-_locationbarVisible = Attr
+_locationbarVisible :: Proxy "locationbar-visible"
+_locationbarVisible = Proxy
 
 
 -- Property "logo"
-_logo :: Attr "logo" o
-_logo = Attr
+_logo :: Proxy "logo"
+_logo = Proxy
 
 
 -- Property "logo-icon-name"
-_logoIconName :: Attr "logo-icon-name" o
-_logoIconName = Attr
+_logoIconName :: Proxy "logo-icon-name"
+_logoIconName = Proxy
 
 
 -- Property "long-desc"
-_longDesc :: Attr "long-desc" o
-_longDesc = Attr
+_longDesc :: Proxy "long-desc"
+_longDesc = Proxy
 
 
 -- Property "loop"
-_loop :: Attr "loop" o
-_loop = Attr
+_loop :: Proxy "loop"
+_loop = Proxy
 
 
 -- Property "lower"
-_lower :: Attr "lower" o
-_lower = Attr
+_lower :: Proxy "lower"
+_lower = Proxy
 
 
 -- Property "lower-stepper-sensitivity"
-_lowerStepperSensitivity :: Attr "lower-stepper-sensitivity" o
-_lowerStepperSensitivity = Attr
+_lowerStepperSensitivity :: Proxy "lower-stepper-sensitivity"
+_lowerStepperSensitivity = Proxy
 
 
 -- Property "lowsrc"
-_lowsrc :: Attr "lowsrc" o
-_lowsrc = Attr
+_lowsrc :: Proxy "lowsrc"
+_lowsrc = Proxy
 
 
 -- Property "manifest"
-_manifest :: Attr "manifest" o
-_manifest = Attr
+_manifest :: Proxy "manifest"
+_manifest = Proxy
 
 
 -- Property "margin"
-_margin :: Attr "margin" o
-_margin = Attr
+_margin :: Proxy "margin"
+_margin = Proxy
 
 
 -- Property "margin-bottom"
-_marginBottom :: Attr "margin-bottom" o
-_marginBottom = Attr
+_marginBottom :: Proxy "margin-bottom"
+_marginBottom = Proxy
 
 
 -- Property "margin-end"
-_marginEnd :: Attr "margin-end" o
-_marginEnd = Attr
+_marginEnd :: Proxy "margin-end"
+_marginEnd = Proxy
 
 
 -- Property "margin-height"
-_marginHeight :: Attr "margin-height" o
-_marginHeight = Attr
+_marginHeight :: Proxy "margin-height"
+_marginHeight = Proxy
 
 
 -- Property "margin-left"
-_marginLeft :: Attr "margin-left" o
-_marginLeft = Attr
+_marginLeft :: Proxy "margin-left"
+_marginLeft = Proxy
 
 
 -- Property "margin-right"
-_marginRight :: Attr "margin-right" o
-_marginRight = Attr
+_marginRight :: Proxy "margin-right"
+_marginRight = Proxy
 
 
 -- Property "margin-start"
-_marginStart :: Attr "margin-start" o
-_marginStart = Attr
+_marginStart :: Proxy "margin-start"
+_marginStart = Proxy
 
 
 -- Property "margin-top"
-_marginTop :: Attr "margin-top" o
-_marginTop = Attr
+_marginTop :: Proxy "margin-top"
+_marginTop = Proxy
 
 
 -- Property "margin-width"
-_marginWidth :: Attr "margin-width" o
-_marginWidth = Attr
+_marginWidth :: Proxy "margin-width"
+_marginWidth = Proxy
 
 
 -- Property "markup"
-_markup :: Attr "markup" o
-_markup = Attr
+_markup :: Proxy "markup"
+_markup = Proxy
 
 
 -- Property "markup-column"
-_markupColumn :: Attr "markup-column" o
-_markupColumn = Attr
+_markupColumn :: Proxy "markup-column"
+_markupColumn = Proxy
 
 
 -- Property "matches"
-_matches :: Attr "matches" o
-_matches = Attr
+_matches :: Proxy "matches"
+_matches = Proxy
 
 
 -- Property "max"
-_max :: Attr "max" o
-_max = Attr
+_max :: Proxy "max"
+_max = Proxy
 
 
 -- Property "max-children-per-line"
-_maxChildrenPerLine :: Attr "max-children-per-line" o
-_maxChildrenPerLine = Attr
+_maxChildrenPerLine :: Proxy "max-children-per-line"
+_maxChildrenPerLine = Proxy
 
 
 -- Property "max-length"
-_maxLength :: Attr "max-length" o
-_maxLength = Attr
+_maxLength :: Proxy "max-length"
+_maxLength = Proxy
 
 
 -- Property "max-position"
-_maxPosition :: Attr "max-position" o
-_maxPosition = Attr
+_maxPosition :: Proxy "max-position"
+_maxPosition = Proxy
 
 
 -- Property "max-value"
-_maxValue :: Attr "max-value" o
-_maxValue = Attr
+_maxValue :: Proxy "max-value"
+_maxValue = Proxy
 
 
 -- Property "max-width"
-_maxWidth :: Attr "max-width" o
-_maxWidth = Attr
+_maxWidth :: Proxy "max-width"
+_maxWidth = Proxy
 
 
 -- Property "max-width-chars"
-_maxWidthChars :: Attr "max-width-chars" o
-_maxWidthChars = Attr
+_maxWidthChars :: Proxy "max-width-chars"
+_maxWidthChars = Proxy
 
 
 -- Property "maximum-scale-factor"
-_maximumScaleFactor :: Attr "maximum-scale-factor" o
-_maximumScaleFactor = Attr
+_maximumScaleFactor :: Proxy "maximum-scale-factor"
+_maximumScaleFactor = Proxy
 
 
 -- Property "media"
-_media :: Attr "media" o
-_media = Attr
+_media :: Proxy "media"
+_media = Proxy
 
 
 -- Property "media-group"
-_mediaGroup :: Attr "media-group" o
-_mediaGroup = Attr
+_mediaGroup :: Proxy "media-group"
+_mediaGroup = Proxy
 
 
 -- Property "media-playback-allows-inline"
-_mediaPlaybackAllowsInline :: Attr "media-playback-allows-inline" o
-_mediaPlaybackAllowsInline = Attr
+_mediaPlaybackAllowsInline :: Proxy "media-playback-allows-inline"
+_mediaPlaybackAllowsInline = Proxy
 
 
 -- Property "media-playback-requires-user-gesture"
-_mediaPlaybackRequiresUserGesture :: Attr "media-playback-requires-user-gesture" o
-_mediaPlaybackRequiresUserGesture = Attr
+_mediaPlaybackRequiresUserGesture :: Proxy "media-playback-requires-user-gesture"
+_mediaPlaybackRequiresUserGesture = Proxy
 
 
 -- Property "media-text"
-_mediaText :: Attr "media-text" o
-_mediaText = Attr
+_mediaText :: Proxy "media-text"
+_mediaText = Proxy
 
 
 -- Property "media-uri"
-_mediaUri :: Attr "media-uri" o
-_mediaUri = Attr
+_mediaUri :: Proxy "media-uri"
+_mediaUri = Proxy
 
 
 -- Property "menu"
-_menu :: Attr "menu" o
-_menu = Attr
+_menu :: Proxy "menu"
+_menu = Proxy
 
 
 -- Property "menu-model"
-_menuModel :: Attr "menu-model" o
-_menuModel = Attr
+_menuModel :: Proxy "menu-model"
+_menuModel = Proxy
 
 
 -- Property "menu-name"
-_menuName :: Attr "menu-name" o
-_menuName = Attr
+_menuName :: Proxy "menu-name"
+_menuName = Proxy
 
 
 -- Property "menubar"
-_menubar :: Attr "menubar" o
-_menubar = Attr
+_menubar :: Proxy "menubar"
+_menubar = Proxy
 
 
 -- Property "menubar-visible"
-_menubarVisible :: Attr "menubar-visible" o
-_menubarVisible = Attr
+_menubarVisible :: Proxy "menubar-visible"
+_menubarVisible = Proxy
 
 
 -- Property "message"
-_message :: Attr "message" o
-_message = Attr
+_message :: Proxy "message"
+_message = Proxy
 
 
 -- Property "message-area"
-_messageArea :: Attr "message-area" o
-_messageArea = Attr
+_messageArea :: Proxy "message-area"
+_messageArea = Proxy
 
 
 -- Property "message-type"
-_messageType :: Attr "message-type" o
-_messageType = Attr
+_messageType :: Proxy "message-type"
+_messageType = Proxy
 
 
 -- Property "meta-key"
-_metaKey :: Attr "meta-key" o
-_metaKey = Attr
+_metaKey :: Proxy "meta-key"
+_metaKey = Proxy
 
 
 -- Property "method"
-_method :: Attr "method" o
-_method = Attr
+_method :: Proxy "method"
+_method = Proxy
 
 
 -- Property "mime-type"
-_mimeType :: Attr "mime-type" o
-_mimeType = Attr
+_mimeType :: Proxy "mime-type"
+_mimeType = Proxy
 
 
 -- Property "mime-types"
-_mimeTypes :: Attr "mime-types" o
-_mimeTypes = Attr
+_mimeTypes :: Proxy "mime-types"
+_mimeTypes = Proxy
 
 
 -- Property "min"
-_min :: Attr "min" o
-_min = Attr
+_min :: Proxy "min"
+_min = Proxy
 
 
 -- Property "min-children-per-line"
-_minChildrenPerLine :: Attr "min-children-per-line" o
-_minChildrenPerLine = Attr
+_minChildrenPerLine :: Proxy "min-children-per-line"
+_minChildrenPerLine = Proxy
 
 
 -- Property "min-content-height"
-_minContentHeight :: Attr "min-content-height" o
-_minContentHeight = Attr
+_minContentHeight :: Proxy "min-content-height"
+_minContentHeight = Proxy
 
 
 -- Property "min-content-width"
-_minContentWidth :: Attr "min-content-width" o
-_minContentWidth = Attr
+_minContentWidth :: Proxy "min-content-width"
+_minContentWidth = Proxy
 
 
 -- Property "min-position"
-_minPosition :: Attr "min-position" o
-_minPosition = Attr
+_minPosition :: Proxy "min-position"
+_minPosition = Proxy
 
 
 -- Property "min-value"
-_minValue :: Attr "min-value" o
-_minValue = Attr
+_minValue :: Proxy "min-value"
+_minValue = Proxy
 
 
 -- Property "min-width"
-_minWidth :: Attr "min-width" o
-_minWidth = Attr
+_minWidth :: Proxy "min-width"
+_minWidth = Proxy
 
 
 -- Property "minimum-font-size"
-_minimumFontSize :: Attr "minimum-font-size" o
-_minimumFontSize = Attr
+_minimumFontSize :: Proxy "minimum-font-size"
+_minimumFontSize = Proxy
 
 
 -- Property "minimum-height"
-_minimumHeight :: Attr "minimum-height" o
-_minimumHeight = Attr
+_minimumHeight :: Proxy "minimum-height"
+_minimumHeight = Proxy
 
 
 -- Property "minimum-key-length"
-_minimumKeyLength :: Attr "minimum-key-length" o
-_minimumKeyLength = Attr
+_minimumKeyLength :: Proxy "minimum-key-length"
+_minimumKeyLength = Proxy
 
 
 -- Property "minimum-logical-font-size"
-_minimumLogicalFontSize :: Attr "minimum-logical-font-size" o
-_minimumLogicalFontSize = Attr
+_minimumLogicalFontSize :: Proxy "minimum-logical-font-size"
+_minimumLogicalFontSize = Proxy
 
 
 -- Property "minimum-scale-factor"
-_minimumScaleFactor :: Attr "minimum-scale-factor" o
-_minimumScaleFactor = Attr
+_minimumScaleFactor :: Proxy "minimum-scale-factor"
+_minimumScaleFactor = Proxy
 
 
 -- Property "minimum-width"
-_minimumWidth :: Attr "minimum-width" o
-_minimumWidth = Attr
+_minimumWidth :: Proxy "minimum-width"
+_minimumWidth = Proxy
 
 
 -- Property "mnemonic-keyval"
-_mnemonicKeyval :: Attr "mnemonic-keyval" o
-_mnemonicKeyval = Attr
+_mnemonicKeyval :: Proxy "mnemonic-keyval"
+_mnemonicKeyval = Proxy
 
 
 -- Property "mnemonic-widget"
-_mnemonicWidget :: Attr "mnemonic-widget" o
-_mnemonicWidget = Attr
+_mnemonicWidget :: Proxy "mnemonic-widget"
+_mnemonicWidget = Proxy
 
 
 -- Property "mnemonics-visible"
-_mnemonicsVisible :: Attr "mnemonics-visible" o
-_mnemonicsVisible = Attr
+_mnemonicsVisible :: Proxy "mnemonics-visible"
+_mnemonicsVisible = Proxy
 
 
 -- Property "modal"
-_modal :: Attr "modal" o
-_modal = Attr
+_modal :: Proxy "modal"
+_modal = Proxy
 
 
 -- Property "mode"
-_mode :: Attr "mode" o
-_mode = Attr
+_mode :: Proxy "mode"
+_mode = Proxy
 
 
 -- Property "model"
-_model :: Attr "model" o
-_model = Attr
+_model :: Proxy "model"
+_model = Proxy
 
 
 -- Property "modifier-mask"
-_modifierMask :: Attr "modifier-mask" o
-_modifierMask = Attr
+_modifierMask :: Proxy "modifier-mask"
+_modifierMask = Proxy
 
 
 -- Property "modifier-state"
-_modifierState :: Attr "modifier-state" o
-_modifierState = Attr
+_modifierState :: Proxy "modifier-state"
+_modifierState = Proxy
 
 
 -- Property "monitor"
-_monitor :: Attr "monitor" o
-_monitor = Attr
+_monitor :: Proxy "monitor"
+_monitor = Proxy
 
 
 -- Property "monospace"
-_monospace :: Attr "monospace" o
-_monospace = Attr
+_monospace :: Proxy "monospace"
+_monospace = Proxy
 
 
 -- Property "monospace-font-family"
-_monospaceFontFamily :: Attr "monospace-font-family" o
-_monospaceFontFamily = Attr
+_monospaceFontFamily :: Proxy "monospace-font-family"
+_monospaceFontFamily = Proxy
 
 
 -- Property "month"
-_month :: Attr "month" o
-_month = Attr
+_month :: Proxy "month"
+_month = Proxy
 
 
 -- Property "multiple"
-_multiple :: Attr "multiple" o
-_multiple = Attr
+_multiple :: Proxy "multiple"
+_multiple = Proxy
 
 
 -- Property "muted"
-_muted :: Attr "muted" o
-_muted = Attr
+_muted :: Proxy "muted"
+_muted = Proxy
 
 
 -- Property "n-columns"
-_nColumns :: Attr "n-columns" o
-_nColumns = Attr
+_nColumns :: Proxy "n-columns"
+_nColumns = Proxy
 
 
 -- Property "n-pages"
-_nPages :: Attr "n-pages" o
-_nPages = Attr
+_nPages :: Proxy "n-pages"
+_nPages = Proxy
 
 
 -- Property "n-pages-to-print"
-_nPagesToPrint :: Attr "n-pages-to-print" o
-_nPagesToPrint = Attr
+_nPagesToPrint :: Proxy "n-pages-to-print"
+_nPagesToPrint = Proxy
 
 
 -- Property "n-points"
-_nPoints :: Attr "n-points" o
-_nPoints = Attr
+_nPoints :: Proxy "n-points"
+_nPoints = Proxy
 
 
 -- Property "n-rows"
-_nRows :: Attr "n-rows" o
-_nRows = Attr
+_nRows :: Proxy "n-rows"
+_nRows = Proxy
 
 
 -- Property "name"
-_name :: Attr "name" o
-_name = Attr
+_name :: Proxy "name"
+_name = Proxy
 
 
 -- Property "names"
-_names :: Attr "names" o
-_names = Attr
+_names :: Proxy "names"
+_names = Proxy
 
 
 -- Property "namespace-uri"
-_namespaceUri :: Attr "namespace-uri" o
-_namespaceUri = Attr
+_namespaceUri :: Proxy "namespace-uri"
+_namespaceUri = Proxy
 
 
 -- Property "natural-height"
-_naturalHeight :: Attr "natural-height" o
-_naturalHeight = Attr
+_naturalHeight :: Proxy "natural-height"
+_naturalHeight = Proxy
 
 
 -- Property "natural-width"
-_naturalWidth :: Attr "natural-width" o
-_naturalWidth = Attr
+_naturalWidth :: Proxy "natural-width"
+_naturalWidth = Proxy
 
 
 -- Property "navigation"
-_navigation :: Attr "navigation" o
-_navigation = Attr
+_navigation :: Proxy "navigation"
+_navigation = Proxy
 
 
 -- Property "navigation-start"
-_navigationStart :: Attr "navigation-start" o
-_navigationStart = Attr
+_navigationStart :: Proxy "navigation-start"
+_navigationStart = Proxy
 
 
 -- Property "navigator"
-_navigator :: Attr "navigator" o
-_navigator = Attr
+_navigator :: Proxy "navigator"
+_navigator = Proxy
 
 
 -- Property "network-request"
-_networkRequest :: Attr "network-request" o
-_networkRequest = Attr
+_networkRequest :: Proxy "network-request"
+_networkRequest = Proxy
 
 
 -- Property "network-response"
-_networkResponse :: Attr "network-response" o
-_networkResponse = Attr
+_networkResponse :: Proxy "network-response"
+_networkResponse = Proxy
 
 
 -- Property "network-state"
-_networkState :: Attr "network-state" o
-_networkState = Attr
+_networkState :: Proxy "network-state"
+_networkState = Proxy
 
 
 -- Property "next-element-sibling"
-_nextElementSibling :: Attr "next-element-sibling" o
-_nextElementSibling = Attr
+_nextElementSibling :: Proxy "next-element-sibling"
+_nextElementSibling = Proxy
 
 
 -- Property "next-sibling"
-_nextSibling :: Attr "next-sibling" o
-_nextSibling = Attr
+_nextSibling :: Proxy "next-sibling"
+_nextSibling = Proxy
 
 
 -- Property "no-href"
-_noHref :: Attr "no-href" o
-_noHref = Attr
+_noHref :: Proxy "no-href"
+_noHref = Proxy
 
 
 -- Property "no-month-change"
-_noMonthChange :: Attr "no-month-change" o
-_noMonthChange = Attr
+_noMonthChange :: Proxy "no-month-change"
+_noMonthChange = Proxy
 
 
 -- Property "no-resize"
-_noResize :: Attr "no-resize" o
-_noResize = Attr
+_noResize :: Proxy "no-resize"
+_noResize = Proxy
 
 
 -- Property "no-shade"
-_noShade :: Attr "no-shade" o
-_noShade = Attr
+_noShade :: Proxy "no-shade"
+_noShade = Proxy
 
 
 -- Property "no-show-all"
-_noShowAll :: Attr "no-show-all" o
-_noShowAll = Attr
+_noShowAll :: Proxy "no-show-all"
+_noShowAll = Proxy
 
 
 -- Property "no-validate"
-_noValidate :: Attr "no-validate" o
-_noValidate = Attr
+_noValidate :: Proxy "no-validate"
+_noValidate = Proxy
 
 
 -- Property "no-wrap"
-_noWrap :: Attr "no-wrap" o
-_noWrap = Attr
+_noWrap :: Proxy "no-wrap"
+_noWrap = Proxy
 
 
 -- Property "node-name"
-_nodeName :: Attr "node-name" o
-_nodeName = Attr
+_nodeName :: Proxy "node-name"
+_nodeName = Proxy
 
 
 -- Property "node-type"
-_nodeType :: Attr "node-type" o
-_nodeType = Attr
+_nodeType :: Proxy "node-type"
+_nodeType = Proxy
 
 
 -- Property "node-value"
-_nodeValue :: Attr "node-value" o
-_nodeValue = Attr
+_nodeValue :: Proxy "node-value"
+_nodeValue = Proxy
 
 
 -- Property "nonce"
-_nonce :: Attr "nonce" o
-_nonce = Attr
+_nonce :: Proxy "nonce"
+_nonce = Proxy
 
 
 -- Property "notations"
-_notations :: Attr "notations" o
-_notations = Attr
+_notations :: Proxy "notations"
+_notations = Proxy
 
 
 -- Property "number-value"
-_numberValue :: Attr "number-value" o
-_numberValue = Attr
+_numberValue :: Proxy "number-value"
+_numberValue = Proxy
 
 
 -- Property "numeric"
-_numeric :: Attr "numeric" o
-_numeric = Attr
+_numeric :: Proxy "numeric"
+_numeric = Proxy
 
 
 -- Property "obey-child"
-_obeyChild :: Attr "obey-child" o
-_obeyChild = Attr
+_obeyChild :: Proxy "obey-child"
+_obeyChild = Proxy
 
 
 -- Property "object"
-_object :: Attr "object" o
-_object = Attr
+_object :: Proxy "object"
+_object = Proxy
 
 
 -- Property "offscreen-buffering"
-_offscreenBuffering :: Attr "offscreen-buffering" o
-_offscreenBuffering = Attr
+_offscreenBuffering :: Proxy "offscreen-buffering"
+_offscreenBuffering = Proxy
 
 
 -- Property "offset-height"
-_offsetHeight :: Attr "offset-height" o
-_offsetHeight = Attr
+_offsetHeight :: Proxy "offset-height"
+_offsetHeight = Proxy
 
 
 -- Property "offset-left"
-_offsetLeft :: Attr "offset-left" o
-_offsetLeft = Attr
+_offsetLeft :: Proxy "offset-left"
+_offsetLeft = Proxy
 
 
 -- Property "offset-parent"
-_offsetParent :: Attr "offset-parent" o
-_offsetParent = Attr
+_offsetParent :: Proxy "offset-parent"
+_offsetParent = Proxy
 
 
 -- Property "offset-top"
-_offsetTop :: Attr "offset-top" o
-_offsetTop = Attr
+_offsetTop :: Proxy "offset-top"
+_offsetTop = Proxy
 
 
 -- Property "offset-width"
-_offsetWidth :: Attr "offset-width" o
-_offsetWidth = Attr
+_offsetWidth :: Proxy "offset-width"
+_offsetWidth = Proxy
 
 
 -- Property "offset-x"
-_offsetX :: Attr "offset-x" o
-_offsetX = Attr
+_offsetX :: Proxy "offset-x"
+_offsetX = Proxy
 
 
 -- Property "offset-y"
-_offsetY :: Attr "offset-y" o
-_offsetY = Attr
+_offsetY :: Proxy "offset-y"
+_offsetY = Proxy
 
 
 -- Property "ok-button"
-_okButton :: Attr "ok-button" o
-_okButton = Attr
+_okButton :: Proxy "ok-button"
+_okButton = Proxy
 
 
 -- Property "on-line"
-_onLine :: Attr "on-line" o
-_onLine = Attr
+_onLine :: Proxy "on-line"
+_onLine = Proxy
 
 
 -- Property "opacity"
-_opacity :: Attr "opacity" o
-_opacity = Attr
+_opacity :: Proxy "opacity"
+_opacity = Proxy
 
 
 -- Property "open"
-_open :: Attr "open" o
-_open = Attr
+_open :: Proxy "open"
+_open = Proxy
 
 
 -- Property "open-flags"
-_openFlags :: Attr "open-flags" o
-_openFlags = Attr
+_openFlags :: Proxy "open-flags"
+_openFlags = Proxy
 
 
 -- Property "opener"
-_opener :: Attr "opener" o
-_opener = Attr
+_opener :: Proxy "opener"
+_opener = Proxy
 
 
 -- Property "options"
-_options :: Attr "options" o
-_options = Attr
+_options :: Proxy "options"
+_options = Proxy
 
 
 -- Property "orientation"
-_orientation :: Attr "orientation" o
-_orientation = Attr
+_orientation :: Proxy "orientation"
+_orientation = Proxy
 
 
 -- Property "origin"
-_origin :: Attr "origin" o
-_origin = Attr
+_origin :: Proxy "origin"
+_origin = Proxy
 
 
 -- Property "original-uri"
-_originalUri :: Attr "original-uri" o
-_originalUri = Attr
+_originalUri :: Proxy "original-uri"
+_originalUri = Proxy
 
 
 -- Property "outer-height"
-_outerHeight :: Attr "outer-height" o
-_outerHeight = Attr
+_outerHeight :: Proxy "outer-height"
+_outerHeight = Proxy
 
 
 -- Property "outer-html"
-_outerHtml :: Attr "outer-html" o
-_outerHtml = Attr
+_outerHtml :: Proxy "outer-html"
+_outerHtml = Proxy
 
 
 -- Property "outer-text"
-_outerText :: Attr "outer-text" o
-_outerText = Attr
+_outerText :: Proxy "outer-text"
+_outerText = Proxy
 
 
 -- Property "outer-width"
-_outerWidth :: Attr "outer-width" o
-_outerWidth = Attr
+_outerWidth :: Proxy "outer-width"
+_outerWidth = Proxy
 
 
 -- Property "overlay-scrolling"
-_overlayScrolling :: Attr "overlay-scrolling" o
-_overlayScrolling = Attr
+_overlayScrolling :: Proxy "overlay-scrolling"
+_overlayScrolling = Proxy
 
 
 -- Property "overset"
-_overset :: Attr "overset" o
-_overset = Attr
+_overset :: Proxy "overset"
+_overset = Proxy
 
 
 -- Property "overwrite"
-_overwrite :: Attr "overwrite" o
-_overwrite = Attr
+_overwrite :: Proxy "overwrite"
+_overwrite = Proxy
 
 
 -- Property "overwrite-mode"
-_overwriteMode :: Attr "overwrite-mode" o
-_overwriteMode = Attr
+_overwriteMode :: Proxy "overwrite-mode"
+_overwriteMode = Proxy
 
 
 -- Property "owner-document"
-_ownerDocument :: Attr "owner-document" o
-_ownerDocument = Attr
+_ownerDocument :: Proxy "owner-document"
+_ownerDocument = Proxy
 
 
 -- Property "owner-element"
-_ownerElement :: Attr "owner-element" o
-_ownerElement = Attr
+_ownerElement :: Proxy "owner-element"
+_ownerElement = Proxy
 
 
 -- Property "owner-node"
-_ownerNode :: Attr "owner-node" o
-_ownerNode = Attr
+_ownerNode :: Proxy "owner-node"
+_ownerNode = Proxy
 
 
 -- Property "owner-rule"
-_ownerRule :: Attr "owner-rule" o
-_ownerRule = Attr
+_ownerRule :: Proxy "owner-rule"
+_ownerRule = Proxy
 
 
 -- Property "pack-direction"
-_packDirection :: Attr "pack-direction" o
-_packDirection = Attr
+_packDirection :: Proxy "pack-direction"
+_packDirection = Proxy
 
 
 -- Property "page"
-_page :: Attr "page" o
-_page = Attr
+_page :: Proxy "page"
+_page = Proxy
 
 
 -- Property "page-increment"
-_pageIncrement :: Attr "page-increment" o
-_pageIncrement = Attr
+_pageIncrement :: Proxy "page-increment"
+_pageIncrement = Proxy
 
 
 -- Property "page-size"
-_pageSize :: Attr "page-size" o
-_pageSize = Attr
+_pageSize :: Proxy "page-size"
+_pageSize = Proxy
 
 
 -- Property "page-x"
-_pageX :: Attr "page-x" o
-_pageX = Attr
+_pageX :: Proxy "page-x"
+_pageX = Proxy
 
 
 -- Property "page-x-offset"
-_pageXOffset :: Attr "page-x-offset" o
-_pageXOffset = Attr
+_pageXOffset :: Proxy "page-x-offset"
+_pageXOffset = Proxy
 
 
 -- Property "page-y"
-_pageY :: Attr "page-y" o
-_pageY = Attr
+_pageY :: Proxy "page-y"
+_pageY = Proxy
 
 
 -- Property "page-y-offset"
-_pageYOffset :: Attr "page-y-offset" o
-_pageYOffset = Attr
+_pageYOffset :: Proxy "page-y-offset"
+_pageYOffset = Proxy
 
 
 -- Property "paint-clock"
-_paintClock :: Attr "paint-clock" o
-_paintClock = Attr
+_paintClock :: Proxy "paint-clock"
+_paintClock = Proxy
 
 
 -- Property "paragraph-background"
-_paragraphBackground :: Attr "paragraph-background" o
-_paragraphBackground = Attr
+_paragraphBackground :: Proxy "paragraph-background"
+_paragraphBackground = Proxy
 
 
 -- Property "paragraph-background-gdk"
-_paragraphBackgroundGdk :: Attr "paragraph-background-gdk" o
-_paragraphBackgroundGdk = Attr
+_paragraphBackgroundGdk :: Proxy "paragraph-background-gdk"
+_paragraphBackgroundGdk = Proxy
 
 
 -- Property "paragraph-background-rgba"
-_paragraphBackgroundRgba :: Attr "paragraph-background-rgba" o
-_paragraphBackgroundRgba = Attr
+_paragraphBackgroundRgba :: Proxy "paragraph-background-rgba"
+_paragraphBackgroundRgba = Proxy
 
 
 -- Property "paragraph-background-set"
-_paragraphBackgroundSet :: Attr "paragraph-background-set" o
-_paragraphBackgroundSet = Attr
+_paragraphBackgroundSet :: Proxy "paragraph-background-set"
+_paragraphBackgroundSet = Proxy
 
 
 -- Property "parent"
-_parent :: Attr "parent" o
-_parent = Attr
+_parent :: Proxy "parent"
+_parent = Proxy
 
 
 -- Property "parent-element"
-_parentElement :: Attr "parent-element" o
-_parentElement = Attr
+_parentElement :: Proxy "parent-element"
+_parentElement = Proxy
 
 
 -- Property "parent-node"
-_parentNode :: Attr "parent-node" o
-_parentNode = Attr
+_parentNode :: Proxy "parent-node"
+_parentNode = Proxy
 
 
 -- Property "parent-rule"
-_parentRule :: Attr "parent-rule" o
-_parentRule = Attr
+_parentRule :: Proxy "parent-rule"
+_parentRule = Proxy
 
 
 -- Property "parent-style-sheet"
-_parentStyleSheet :: Attr "parent-style-sheet" o
-_parentStyleSheet = Attr
+_parentStyleSheet :: Proxy "parent-style-sheet"
+_parentStyleSheet = Proxy
 
 
 -- Property "paste-target-list"
-_pasteTargetList :: Attr "paste-target-list" o
-_pasteTargetList = Attr
+_pasteTargetList :: Proxy "paste-target-list"
+_pasteTargetList = Proxy
 
 
 -- Property "path"
-_path :: Attr "path" o
-_path = Attr
+_path :: Proxy "path"
+_path = Proxy
 
 
 -- Property "pathname"
-_pathname :: Attr "pathname" o
-_pathname = Attr
+_pathname :: Proxy "pathname"
+_pathname = Proxy
 
 
 -- Property "pattern"
-_pattern :: Attr "pattern" o
-_pattern = Attr
+_pattern :: Proxy "pattern"
+_pattern = Proxy
 
 
 -- Property "pattern-mismatch"
-_patternMismatch :: Attr "pattern-mismatch" o
-_patternMismatch = Attr
+_patternMismatch :: Proxy "pattern-mismatch"
+_patternMismatch = Proxy
 
 
 -- Property "pause-on-exit"
-_pauseOnExit :: Attr "pause-on-exit" o
-_pauseOnExit = Attr
+_pauseOnExit :: Proxy "pause-on-exit"
+_pauseOnExit = Proxy
 
 
 -- Property "paused"
-_paused :: Attr "paused" o
-_paused = Attr
+_paused :: Proxy "paused"
+_paused = Proxy
 
 
 -- Property "performance"
-_performance :: Attr "performance" o
-_performance = Attr
+_performance :: Proxy "performance"
+_performance = Proxy
 
 
 -- Property "permission"
-_permission :: Attr "permission" o
-_permission = Attr
+_permission :: Proxy "permission"
+_permission = Proxy
 
 
 -- Property "personalbar"
-_personalbar :: Attr "personalbar" o
-_personalbar = Attr
+_personalbar :: Proxy "personalbar"
+_personalbar = Proxy
 
 
 -- Property "ping"
-_ping :: Attr "ping" o
-_ping = Attr
+_ping :: Proxy "ping"
+_ping = Proxy
 
 
 -- Property "pixbuf"
-_pixbuf :: Attr "pixbuf" o
-_pixbuf = Attr
+_pixbuf :: Proxy "pixbuf"
+_pixbuf = Proxy
 
 
 -- Property "pixbuf-animation"
-_pixbufAnimation :: Attr "pixbuf-animation" o
-_pixbufAnimation = Attr
+_pixbufAnimation :: Proxy "pixbuf-animation"
+_pixbufAnimation = Proxy
 
 
 -- Property "pixbuf-column"
-_pixbufColumn :: Attr "pixbuf-column" o
-_pixbufColumn = Attr
+_pixbufColumn :: Proxy "pixbuf-column"
+_pixbufColumn = Proxy
 
 
 -- Property "pixbuf-expander-closed"
-_pixbufExpanderClosed :: Attr "pixbuf-expander-closed" o
-_pixbufExpanderClosed = Attr
+_pixbufExpanderClosed :: Proxy "pixbuf-expander-closed"
+_pixbufExpanderClosed = Proxy
 
 
 -- Property "pixbuf-expander-open"
-_pixbufExpanderOpen :: Attr "pixbuf-expander-open" o
-_pixbufExpanderOpen = Attr
+_pixbufExpanderOpen :: Proxy "pixbuf-expander-open"
+_pixbufExpanderOpen = Proxy
 
 
 -- Property "pixel-depth"
-_pixelDepth :: Attr "pixel-depth" o
-_pixelDepth = Attr
+_pixelDepth :: Proxy "pixel-depth"
+_pixelDepth = Proxy
 
 
 -- Property "pixel-size"
-_pixelSize :: Attr "pixel-size" o
-_pixelSize = Attr
+_pixelSize :: Proxy "pixel-size"
+_pixelSize = Proxy
 
 
 -- Property "pixels-above-lines"
-_pixelsAboveLines :: Attr "pixels-above-lines" o
-_pixelsAboveLines = Attr
+_pixelsAboveLines :: Proxy "pixels-above-lines"
+_pixelsAboveLines = Proxy
 
 
 -- Property "pixels-above-lines-set"
-_pixelsAboveLinesSet :: Attr "pixels-above-lines-set" o
-_pixelsAboveLinesSet = Attr
+_pixelsAboveLinesSet :: Proxy "pixels-above-lines-set"
+_pixelsAboveLinesSet = Proxy
 
 
 -- Property "pixels-below-lines"
-_pixelsBelowLines :: Attr "pixels-below-lines" o
-_pixelsBelowLines = Attr
+_pixelsBelowLines :: Proxy "pixels-below-lines"
+_pixelsBelowLines = Proxy
 
 
 -- Property "pixels-below-lines-set"
-_pixelsBelowLinesSet :: Attr "pixels-below-lines-set" o
-_pixelsBelowLinesSet = Attr
+_pixelsBelowLinesSet :: Proxy "pixels-below-lines-set"
+_pixelsBelowLinesSet = Proxy
 
 
 -- Property "pixels-inside-wrap"
-_pixelsInsideWrap :: Attr "pixels-inside-wrap" o
-_pixelsInsideWrap = Attr
+_pixelsInsideWrap :: Proxy "pixels-inside-wrap"
+_pixelsInsideWrap = Proxy
 
 
 -- Property "pixels-inside-wrap-set"
-_pixelsInsideWrapSet :: Attr "pixels-inside-wrap-set" o
-_pixelsInsideWrapSet = Attr
+_pixelsInsideWrapSet :: Proxy "pixels-inside-wrap-set"
+_pixelsInsideWrapSet = Proxy
 
 
 -- Property "placeholder"
-_placeholder :: Attr "placeholder" o
-_placeholder = Attr
+_placeholder :: Proxy "placeholder"
+_placeholder = Proxy
 
 
 -- Property "placeholder-text"
-_placeholderText :: Attr "placeholder-text" o
-_placeholderText = Attr
+_placeholderText :: Proxy "placeholder-text"
+_placeholderText = Proxy
 
 
 -- Property "platform"
-_platform :: Attr "platform" o
-_platform = Attr
+_platform :: Proxy "platform"
+_platform = Proxy
 
 
 -- Property "playback-rate"
-_playbackRate :: Attr "playback-rate" o
-_playbackRate = Attr
+_playbackRate :: Proxy "playback-rate"
+_playbackRate = Proxy
 
 
 -- Property "playback-state"
-_playbackState :: Attr "playback-state" o
-_playbackState = Attr
+_playbackState :: Proxy "playback-state"
+_playbackState = Proxy
 
 
 -- Property "played"
-_played :: Attr "played" o
-_played = Attr
+_played :: Proxy "played"
+_played = Proxy
 
 
 -- Property "plugins"
-_plugins :: Attr "plugins" o
-_plugins = Attr
+_plugins :: Proxy "plugins"
+_plugins = Proxy
 
 
 -- Property "pointer-before-reference-node"
-_pointerBeforeReferenceNode :: Attr "pointer-before-reference-node" o
-_pointerBeforeReferenceNode = Attr
+_pointerBeforeReferenceNode :: Proxy "pointer-before-reference-node"
+_pointerBeforeReferenceNode = Proxy
 
 
 -- Property "pointing-to"
-_pointingTo :: Attr "pointing-to" o
-_pointingTo = Attr
+_pointingTo :: Proxy "pointing-to"
+_pointingTo = Proxy
 
 
 -- Property "popover"
-_popover :: Attr "popover" o
-_popover = Attr
+_popover :: Proxy "popover"
+_popover = Proxy
 
 
 -- Property "populate-all"
-_populateAll :: Attr "populate-all" o
-_populateAll = Attr
+_populateAll :: Proxy "populate-all"
+_populateAll = Proxy
 
 
 -- Property "popup"
-_popup :: Attr "popup" o
-_popup = Attr
+_popup :: Proxy "popup"
+_popup = Proxy
 
 
 -- Property "popup-completion"
-_popupCompletion :: Attr "popup-completion" o
-_popupCompletion = Attr
+_popupCompletion :: Proxy "popup-completion"
+_popupCompletion = Proxy
 
 
 -- Property "popup-fixed-width"
-_popupFixedWidth :: Attr "popup-fixed-width" o
-_popupFixedWidth = Attr
+_popupFixedWidth :: Proxy "popup-fixed-width"
+_popupFixedWidth = Proxy
 
 
 -- Property "popup-set-width"
-_popupSetWidth :: Attr "popup-set-width" o
-_popupSetWidth = Attr
+_popupSetWidth :: Proxy "popup-set-width"
+_popupSetWidth = Proxy
 
 
 -- Property "popup-shown"
-_popupShown :: Attr "popup-shown" o
-_popupShown = Attr
+_popupShown :: Proxy "popup-shown"
+_popupShown = Proxy
 
 
 -- Property "popup-single-match"
-_popupSingleMatch :: Attr "popup-single-match" o
-_popupSingleMatch = Attr
+_popupSingleMatch :: Proxy "popup-single-match"
+_popupSingleMatch = Proxy
 
 
 -- Property "port"
-_port :: Attr "port" o
-_port = Attr
+_port :: Proxy "port"
+_port = Proxy
 
 
 -- Property "position"
-_position :: Attr "position" o
-_position = Attr
+_position :: Proxy "position"
+_position = Proxy
 
 
 -- Property "position-set"
-_positionSet :: Attr "position-set" o
-_positionSet = Attr
+_positionSet :: Proxy "position-set"
+_positionSet = Proxy
 
 
 -- Property "poster"
-_poster :: Attr "poster" o
-_poster = Attr
+_poster :: Proxy "poster"
+_poster = Proxy
 
 
 -- Property "preferred-stylesheet-set"
-_preferredStylesheetSet :: Attr "preferred-stylesheet-set" o
-_preferredStylesheetSet = Attr
+_preferredStylesheetSet :: Proxy "preferred-stylesheet-set"
+_preferredStylesheetSet = Proxy
 
 
 -- Property "prefix"
-_prefix :: Attr "prefix" o
-_prefix = Attr
+_prefix :: Proxy "prefix"
+_prefix = Proxy
 
 
 -- Property "preload"
-_preload :: Attr "preload" o
-_preload = Attr
+_preload :: Proxy "preload"
+_preload = Proxy
 
 
 -- Property "preview-text"
-_previewText :: Attr "preview-text" o
-_previewText = Attr
+_previewText :: Proxy "preview-text"
+_previewText = Proxy
 
 
 -- Property "preview-widget"
-_previewWidget :: Attr "preview-widget" o
-_previewWidget = Attr
+_previewWidget :: Proxy "preview-widget"
+_previewWidget = Proxy
 
 
 -- Property "preview-widget-active"
-_previewWidgetActive :: Attr "preview-widget-active" o
-_previewWidgetActive = Attr
+_previewWidgetActive :: Proxy "preview-widget-active"
+_previewWidgetActive = Proxy
 
 
 -- Property "previous-element-sibling"
-_previousElementSibling :: Attr "previous-element-sibling" o
-_previousElementSibling = Attr
+_previousElementSibling :: Proxy "previous-element-sibling"
+_previousElementSibling = Proxy
 
 
 -- Property "previous-sibling"
-_previousSibling :: Attr "previous-sibling" o
-_previousSibling = Attr
+_previousSibling :: Proxy "previous-sibling"
+_previousSibling = Proxy
 
 
 -- Property "primary-icon-activatable"
-_primaryIconActivatable :: Attr "primary-icon-activatable" o
-_primaryIconActivatable = Attr
+_primaryIconActivatable :: Proxy "primary-icon-activatable"
+_primaryIconActivatable = Proxy
 
 
 -- Property "primary-icon-gicon"
-_primaryIconGicon :: Attr "primary-icon-gicon" o
-_primaryIconGicon = Attr
+_primaryIconGicon :: Proxy "primary-icon-gicon"
+_primaryIconGicon = Proxy
 
 
 -- Property "primary-icon-name"
-_primaryIconName :: Attr "primary-icon-name" o
-_primaryIconName = Attr
+_primaryIconName :: Proxy "primary-icon-name"
+_primaryIconName = Proxy
 
 
 -- Property "primary-icon-pixbuf"
-_primaryIconPixbuf :: Attr "primary-icon-pixbuf" o
-_primaryIconPixbuf = Attr
+_primaryIconPixbuf :: Proxy "primary-icon-pixbuf"
+_primaryIconPixbuf = Proxy
 
 
 -- Property "primary-icon-sensitive"
-_primaryIconSensitive :: Attr "primary-icon-sensitive" o
-_primaryIconSensitive = Attr
+_primaryIconSensitive :: Proxy "primary-icon-sensitive"
+_primaryIconSensitive = Proxy
 
 
 -- Property "primary-icon-stock"
-_primaryIconStock :: Attr "primary-icon-stock" o
-_primaryIconStock = Attr
+_primaryIconStock :: Proxy "primary-icon-stock"
+_primaryIconStock = Proxy
 
 
 -- Property "primary-icon-storage-type"
-_primaryIconStorageType :: Attr "primary-icon-storage-type" o
-_primaryIconStorageType = Attr
+_primaryIconStorageType :: Proxy "primary-icon-storage-type"
+_primaryIconStorageType = Proxy
 
 
 -- Property "primary-icon-tooltip-markup"
-_primaryIconTooltipMarkup :: Attr "primary-icon-tooltip-markup" o
-_primaryIconTooltipMarkup = Attr
+_primaryIconTooltipMarkup :: Proxy "primary-icon-tooltip-markup"
+_primaryIconTooltipMarkup = Proxy
 
 
 -- Property "primary-icon-tooltip-text"
-_primaryIconTooltipText :: Attr "primary-icon-tooltip-text" o
-_primaryIconTooltipText = Attr
+_primaryIconTooltipText :: Proxy "primary-icon-tooltip-text"
+_primaryIconTooltipText = Proxy
 
 
 -- Property "print-backgrounds"
-_printBackgrounds :: Attr "print-backgrounds" o
-_printBackgrounds = Attr
+_printBackgrounds :: Proxy "print-backgrounds"
+_printBackgrounds = Proxy
 
 
 -- Property "print-settings"
-_printSettings :: Attr "print-settings" o
-_printSettings = Attr
+_printSettings :: Proxy "print-settings"
+_printSettings = Proxy
 
 
 -- Property "product"
-_product :: Attr "product" o
-_product = Attr
+_product :: Proxy "product"
+_product = Proxy
 
 
 -- Property "product-sub"
-_productSub :: Attr "product-sub" o
-_productSub = Attr
+_productSub :: Proxy "product-sub"
+_productSub = Proxy
 
 
 -- Property "profile"
-_profile :: Attr "profile" o
-_profile = Attr
+_profile :: Proxy "profile"
+_profile = Proxy
 
 
 -- Property "program-name"
-_programName :: Attr "program-name" o
-_programName = Attr
+_programName :: Proxy "program-name"
+_programName = Proxy
 
 
 -- Property "progress"
-_progress :: Attr "progress" o
-_progress = Attr
+_progress :: Proxy "progress"
+_progress = Proxy
 
 
 -- Property "progress-fraction"
-_progressFraction :: Attr "progress-fraction" o
-_progressFraction = Attr
+_progressFraction :: Proxy "progress-fraction"
+_progressFraction = Proxy
 
 
 -- Property "progress-pulse-step"
-_progressPulseStep :: Attr "progress-pulse-step" o
-_progressPulseStep = Attr
+_progressPulseStep :: Proxy "progress-pulse-step"
+_progressPulseStep = Proxy
 
 
 -- Property "propagation-phase"
-_propagationPhase :: Attr "propagation-phase" o
-_propagationPhase = Attr
+_propagationPhase :: Proxy "propagation-phase"
+_propagationPhase = Proxy
 
 
 -- Property "protocol"
-_protocol :: Attr "protocol" o
-_protocol = Attr
+_protocol :: Proxy "protocol"
+_protocol = Proxy
 
 
 -- Property "public-id"
-_publicId :: Attr "public-id" o
-_publicId = Attr
+_publicId :: Proxy "public-id"
+_publicId = Proxy
 
 
 -- Property "pulse"
-_pulse :: Attr "pulse" o
-_pulse = Attr
+_pulse :: Proxy "pulse"
+_pulse = Proxy
 
 
 -- Property "pulse-step"
-_pulseStep :: Attr "pulse-step" o
-_pulseStep = Attr
+_pulseStep :: Proxy "pulse-step"
+_pulseStep = Proxy
 
 
 -- Property "radio"
-_radio :: Attr "radio" o
-_radio = Attr
+_radio :: Proxy "radio"
+_radio = Proxy
 
 
 -- Property "range-count"
-_rangeCount :: Attr "range-count" o
-_rangeCount = Attr
+_rangeCount :: Proxy "range-count"
+_rangeCount = Proxy
 
 
 -- Property "range-overflow"
-_rangeOverflow :: Attr "range-overflow" o
-_rangeOverflow = Attr
+_rangeOverflow :: Proxy "range-overflow"
+_rangeOverflow = Proxy
 
 
 -- Property "range-underflow"
-_rangeUnderflow :: Attr "range-underflow" o
-_rangeUnderflow = Attr
+_rangeUnderflow :: Proxy "range-underflow"
+_rangeUnderflow = Proxy
 
 
 -- Property "ratio"
-_ratio :: Attr "ratio" o
-_ratio = Attr
+_ratio :: Proxy "ratio"
+_ratio = Proxy
 
 
 -- Property "read-only"
-_readOnly :: Attr "read-only" o
-_readOnly = Attr
+_readOnly :: Proxy "read-only"
+_readOnly = Proxy
 
 
 -- Property "ready-state"
-_readyState :: Attr "ready-state" o
-_readyState = Attr
+_readyState :: Proxy "ready-state"
+_readyState = Proxy
 
 
 -- Property "reason"
-_reason :: Attr "reason" o
-_reason = Attr
+_reason :: Proxy "reason"
+_reason = Proxy
 
 
 -- Property "receives-default"
-_receivesDefault :: Attr "receives-default" o
-_receivesDefault = Attr
+_receivesDefault :: Proxy "receives-default"
+_receivesDefault = Proxy
 
 
 -- Property "recent-manager"
-_recentManager :: Attr "recent-manager" o
-_recentManager = Attr
+_recentManager :: Proxy "recent-manager"
+_recentManager = Proxy
 
 
 -- Property "redirect-count"
-_redirectCount :: Attr "redirect-count" o
-_redirectCount = Attr
+_redirectCount :: Proxy "redirect-count"
+_redirectCount = Proxy
 
 
 -- Property "redirect-end"
-_redirectEnd :: Attr "redirect-end" o
-_redirectEnd = Attr
+_redirectEnd :: Proxy "redirect-end"
+_redirectEnd = Proxy
 
 
 -- Property "redirect-start"
-_redirectStart :: Attr "redirect-start" o
-_redirectStart = Attr
+_redirectStart :: Proxy "redirect-start"
+_redirectStart = Proxy
 
 
 -- Property "reference-node"
-_referenceNode :: Attr "reference-node" o
-_referenceNode = Attr
+_referenceNode :: Proxy "reference-node"
+_referenceNode = Proxy
 
 
 -- Property "referrer"
-_referrer :: Attr "referrer" o
-_referrer = Attr
+_referrer :: Proxy "referrer"
+_referrer = Proxy
 
 
 -- Property "register-session"
-_registerSession :: Attr "register-session" o
-_registerSession = Attr
+_registerSession :: Proxy "register-session"
+_registerSession = Proxy
 
 
 -- Property "rel"
-_rel :: Attr "rel" o
-_rel = Attr
+_rel :: Proxy "rel"
+_rel = Proxy
 
 
 -- Property "related-action"
-_relatedAction :: Attr "related-action" o
-_relatedAction = Attr
+_relatedAction :: Proxy "related-action"
+_relatedAction = Proxy
 
 
 -- Property "related-target"
-_relatedTarget :: Attr "related-target" o
-_relatedTarget = Attr
+_relatedTarget :: Proxy "related-target"
+_relatedTarget = Proxy
 
 
 -- Property "relative-to"
-_relativeTo :: Attr "relative-to" o
-_relativeTo = Attr
+_relativeTo :: Proxy "relative-to"
+_relativeTo = Proxy
 
 
 -- Property "relief"
-_relief :: Attr "relief" o
-_relief = Attr
+_relief :: Proxy "relief"
+_relief = Proxy
 
 
 -- Property "renderer"
-_renderer :: Attr "renderer" o
-_renderer = Attr
+_renderer :: Proxy "renderer"
+_renderer = Proxy
 
 
 -- Property "reorderable"
-_reorderable :: Attr "reorderable" o
-_reorderable = Attr
+_reorderable :: Proxy "reorderable"
+_reorderable = Proxy
 
 
 -- Property "report-ur-is"
-_reportUrIs :: Attr "report-ur-is" o
-_reportUrIs = Attr
+_reportUrIs :: Proxy "report-ur-is"
+_reportUrIs = Proxy
 
 
 -- Property "request-start"
-_requestStart :: Attr "request-start" o
-_requestStart = Attr
+_requestStart :: Proxy "request-start"
+_requestStart = Proxy
 
 
 -- Property "required"
-_required :: Attr "required" o
-_required = Attr
+_required :: Proxy "required"
+_required = Proxy
 
 
 -- Property "reserve-toggle-size"
-_reserveToggleSize :: Attr "reserve-toggle-size" o
-_reserveToggleSize = Attr
+_reserveToggleSize :: Proxy "reserve-toggle-size"
+_reserveToggleSize = Proxy
 
 
 -- Property "reset-style-inheritance"
-_resetStyleInheritance :: Attr "reset-style-inheritance" o
-_resetStyleInheritance = Attr
+_resetStyleInheritance :: Proxy "reset-style-inheritance"
+_resetStyleInheritance = Proxy
 
 
 -- Property "resizable"
-_resizable :: Attr "resizable" o
-_resizable = Attr
+_resizable :: Proxy "resizable"
+_resizable = Proxy
 
 
 -- Property "resizable-text-areas"
-_resizableTextAreas :: Attr "resizable-text-areas" o
-_resizableTextAreas = Attr
+_resizableTextAreas :: Proxy "resizable-text-areas"
+_resizableTextAreas = Proxy
 
 
 -- Property "resize-grip-visible"
-_resizeGripVisible :: Attr "resize-grip-visible" o
-_resizeGripVisible = Attr
+_resizeGripVisible :: Proxy "resize-grip-visible"
+_resizeGripVisible = Proxy
 
 
 -- Property "resize-mode"
-_resizeMode :: Attr "resize-mode" o
-_resizeMode = Attr
+_resizeMode :: Proxy "resize-mode"
+_resizeMode = Proxy
 
 
 -- Property "resize-toplevel"
-_resizeToplevel :: Attr "resize-toplevel" o
-_resizeToplevel = Attr
+_resizeToplevel :: Proxy "resize-toplevel"
+_resizeToplevel = Proxy
 
 
 -- Property "resource"
-_resource :: Attr "resource" o
-_resource = Attr
+_resource :: Proxy "resource"
+_resource = Proxy
 
 
 -- Property "respect-image-orientation"
-_respectImageOrientation :: Attr "respect-image-orientation" o
-_respectImageOrientation = Attr
+_respectImageOrientation :: Proxy "respect-image-orientation"
+_respectImageOrientation = Proxy
 
 
 -- Property "response-end"
-_responseEnd :: Attr "response-end" o
-_responseEnd = Attr
+_responseEnd :: Proxy "response-end"
+_responseEnd = Proxy
 
 
 -- Property "response-start"
-_responseStart :: Attr "response-start" o
-_responseStart = Attr
+_responseStart :: Proxy "response-start"
+_responseStart = Proxy
 
 
 -- Property "restrict-to-fill-level"
-_restrictToFillLevel :: Attr "restrict-to-fill-level" o
-_restrictToFillLevel = Attr
+_restrictToFillLevel :: Proxy "restrict-to-fill-level"
+_restrictToFillLevel = Proxy
 
 
 -- Property "result-type"
-_resultType :: Attr "result-type" o
-_resultType = Attr
+_resultType :: Proxy "result-type"
+_resultType = Proxy
 
 
 -- Property "return-value"
-_returnValue :: Attr "return-value" o
-_returnValue = Attr
+_returnValue :: Proxy "return-value"
+_returnValue = Proxy
 
 
 -- Property "rev"
-_rev :: Attr "rev" o
-_rev = Attr
+_rev :: Proxy "rev"
+_rev = Proxy
 
 
 -- Property "reveal-child"
-_revealChild :: Attr "reveal-child" o
-_revealChild = Attr
+_revealChild :: Proxy "reveal-child"
+_revealChild = Proxy
 
 
 -- Property "reversed"
-_reversed :: Attr "reversed" o
-_reversed = Attr
+_reversed :: Proxy "reversed"
+_reversed = Proxy
 
 
 -- Property "rgba"
-_rgba :: Attr "rgba" o
-_rgba = Attr
+_rgba :: Proxy "rgba"
+_rgba = Proxy
 
 
 -- Property "right-justified"
-_rightJustified :: Attr "right-justified" o
-_rightJustified = Attr
+_rightJustified :: Proxy "right-justified"
+_rightJustified = Proxy
 
 
 -- Property "right-margin"
-_rightMargin :: Attr "right-margin" o
-_rightMargin = Attr
+_rightMargin :: Proxy "right-margin"
+_rightMargin = Proxy
 
 
 -- Property "right-margin-set"
-_rightMarginSet :: Attr "right-margin-set" o
-_rightMarginSet = Attr
+_rightMarginSet :: Proxy "right-margin-set"
+_rightMarginSet = Proxy
 
 
 -- Property "right-padding"
-_rightPadding :: Attr "right-padding" o
-_rightPadding = Attr
+_rightPadding :: Proxy "right-padding"
+_rightPadding = Proxy
 
 
 -- Property "rise"
-_rise :: Attr "rise" o
-_rise = Attr
+_rise :: Proxy "rise"
+_rise = Proxy
 
 
 -- Property "rise-set"
-_riseSet :: Attr "rise-set" o
-_riseSet = Attr
+_riseSet :: Proxy "rise-set"
+_riseSet = Proxy
 
 
 -- Property "role"
-_role :: Attr "role" o
-_role = Attr
+_role :: Proxy "role"
+_role = Proxy
 
 
 -- Property "root"
-_root :: Attr "root" o
-_root = Attr
+_root :: Proxy "root"
+_root = Proxy
 
 
 -- Property "round-digits"
-_roundDigits :: Attr "round-digits" o
-_roundDigits = Attr
+_roundDigits :: Proxy "round-digits"
+_roundDigits = Proxy
 
 
 -- Property "row-homogeneous"
-_rowHomogeneous :: Attr "row-homogeneous" o
-_rowHomogeneous = Attr
+_rowHomogeneous :: Proxy "row-homogeneous"
+_rowHomogeneous = Proxy
 
 
 -- Property "row-index"
-_rowIndex :: Attr "row-index" o
-_rowIndex = Attr
+_rowIndex :: Proxy "row-index"
+_rowIndex = Proxy
 
 
 -- Property "row-spacing"
-_rowSpacing :: Attr "row-spacing" o
-_rowSpacing = Attr
+_rowSpacing :: Proxy "row-spacing"
+_rowSpacing = Proxy
 
 
 -- Property "row-span"
-_rowSpan :: Attr "row-span" o
-_rowSpan = Attr
+_rowSpan :: Proxy "row-span"
+_rowSpan = Proxy
 
 
 -- Property "row-span-column"
-_rowSpanColumn :: Attr "row-span-column" o
-_rowSpanColumn = Attr
+_rowSpanColumn :: Proxy "row-span-column"
+_rowSpanColumn = Proxy
 
 
 -- Property "rows"
-_rows :: Attr "rows" o
-_rows = Attr
+_rows :: Proxy "rows"
+_rows = Proxy
 
 
 -- Property "rubber-banding"
-_rubberBanding :: Attr "rubber-banding" o
-_rubberBanding = Attr
+_rubberBanding :: Proxy "rubber-banding"
+_rubberBanding = Proxy
 
 
 -- Property "rules"
-_rules :: Attr "rules" o
-_rules = Attr
+_rules :: Proxy "rules"
+_rules = Proxy
 
 
 -- Property "rules-hint"
-_rulesHint :: Attr "rules-hint" o
-_rulesHint = Attr
+_rulesHint :: Proxy "rules-hint"
+_rulesHint = Proxy
 
 
 -- Property "sandbox"
-_sandbox :: Attr "sandbox" o
-_sandbox = Attr
+_sandbox :: Proxy "sandbox"
+_sandbox = Proxy
 
 
 -- Property "sans-serif-font-family"
-_sansSerifFontFamily :: Attr "sans-serif-font-family" o
-_sansSerifFontFamily = Attr
+_sansSerifFontFamily :: Proxy "sans-serif-font-family"
+_sansSerifFontFamily = Proxy
 
 
 -- Property "scale"
-_scale :: Attr "scale" o
-_scale = Attr
+_scale :: Proxy "scale"
+_scale = Proxy
 
 
 -- Property "scale-factor"
-_scaleFactor :: Attr "scale-factor" o
-_scaleFactor = Attr
+_scaleFactor :: Proxy "scale-factor"
+_scaleFactor = Proxy
 
 
 -- Property "scale-set"
-_scaleSet :: Attr "scale-set" o
-_scaleSet = Attr
+_scaleSet :: Proxy "scale-set"
+_scaleSet = Proxy
 
 
 -- Property "scheme"
-_scheme :: Attr "scheme" o
-_scheme = Attr
+_scheme :: Proxy "scheme"
+_scheme = Proxy
 
 
 -- Property "scope"
-_scope :: Attr "scope" o
-_scope = Attr
+_scope :: Proxy "scope"
+_scope = Proxy
 
 
 -- Property "screen"
-_screen :: Attr "screen" o
-_screen = Attr
+_screen :: Proxy "screen"
+_screen = Proxy
 
 
 -- Property "screen-left"
-_screenLeft :: Attr "screen-left" o
-_screenLeft = Attr
+_screenLeft :: Proxy "screen-left"
+_screenLeft = Proxy
 
 
 -- Property "screen-top"
-_screenTop :: Attr "screen-top" o
-_screenTop = Attr
+_screenTop :: Proxy "screen-top"
+_screenTop = Proxy
 
 
 -- Property "screen-x"
-_screenX :: Attr "screen-x" o
-_screenX = Attr
+_screenX :: Proxy "screen-x"
+_screenX = Proxy
 
 
 -- Property "screen-y"
-_screenY :: Attr "screen-y" o
-_screenY = Attr
+_screenY :: Proxy "screen-y"
+_screenY = Proxy
 
 
 -- Property "scripts"
-_scripts :: Attr "scripts" o
-_scripts = Attr
+_scripts :: Proxy "scripts"
+_scripts = Proxy
 
 
 -- Property "scroll-amount"
-_scrollAmount :: Attr "scroll-amount" o
-_scrollAmount = Attr
+_scrollAmount :: Proxy "scroll-amount"
+_scrollAmount = Proxy
 
 
 -- Property "scroll-delay"
-_scrollDelay :: Attr "scroll-delay" o
-_scrollDelay = Attr
+_scrollDelay :: Proxy "scroll-delay"
+_scrollDelay = Proxy
 
 
 -- Property "scroll-height"
-_scrollHeight :: Attr "scroll-height" o
-_scrollHeight = Attr
+_scrollHeight :: Proxy "scroll-height"
+_scrollHeight = Proxy
 
 
 -- Property "scroll-left"
-_scrollLeft :: Attr "scroll-left" o
-_scrollLeft = Attr
+_scrollLeft :: Proxy "scroll-left"
+_scrollLeft = Proxy
 
 
 -- Property "scroll-offset"
-_scrollOffset :: Attr "scroll-offset" o
-_scrollOffset = Attr
+_scrollOffset :: Proxy "scroll-offset"
+_scrollOffset = Proxy
 
 
 -- Property "scroll-top"
-_scrollTop :: Attr "scroll-top" o
-_scrollTop = Attr
+_scrollTop :: Proxy "scroll-top"
+_scrollTop = Proxy
 
 
 -- Property "scroll-width"
-_scrollWidth :: Attr "scroll-width" o
-_scrollWidth = Attr
+_scrollWidth :: Proxy "scroll-width"
+_scrollWidth = Proxy
 
 
 -- Property "scroll-x"
-_scrollX :: Attr "scroll-x" o
-_scrollX = Attr
+_scrollX :: Proxy "scroll-x"
+_scrollX = Proxy
 
 
 -- Property "scroll-y"
-_scrollY :: Attr "scroll-y" o
-_scrollY = Attr
+_scrollY :: Proxy "scroll-y"
+_scrollY = Proxy
 
 
 -- Property "scrollable"
-_scrollable :: Attr "scrollable" o
-_scrollable = Attr
+_scrollable :: Proxy "scrollable"
+_scrollable = Proxy
 
 
 -- Property "scrollbar-visible"
-_scrollbarVisible :: Attr "scrollbar-visible" o
-_scrollbarVisible = Attr
+_scrollbarVisible :: Proxy "scrollbar-visible"
+_scrollbarVisible = Proxy
 
 
 -- Property "scrollbars"
-_scrollbars :: Attr "scrollbars" o
-_scrollbars = Attr
+_scrollbars :: Proxy "scrollbars"
+_scrollbars = Proxy
 
 
 -- Property "scrolling"
-_scrolling :: Attr "scrolling" o
-_scrolling = Attr
+_scrolling :: Proxy "scrolling"
+_scrolling = Proxy
 
 
 -- Property "seamless"
-_seamless :: Attr "seamless" o
-_seamless = Attr
+_seamless :: Proxy "seamless"
+_seamless = Proxy
 
 
 -- Property "search"
-_search :: Attr "search" o
-_search = Attr
+_search :: Proxy "search"
+_search = Proxy
 
 
 -- Property "search-column"
-_searchColumn :: Attr "search-column" o
-_searchColumn = Attr
+_searchColumn :: Proxy "search-column"
+_searchColumn = Proxy
 
 
 -- Property "search-mode"
-_searchMode :: Attr "search-mode" o
-_searchMode = Attr
+_searchMode :: Proxy "search-mode"
+_searchMode = Proxy
 
 
 -- Property "search-mode-enabled"
-_searchModeEnabled :: Attr "search-mode-enabled" o
-_searchModeEnabled = Attr
+_searchModeEnabled :: Proxy "search-mode-enabled"
+_searchModeEnabled = Proxy
 
 
 -- Property "secondary-icon-activatable"
-_secondaryIconActivatable :: Attr "secondary-icon-activatable" o
-_secondaryIconActivatable = Attr
+_secondaryIconActivatable :: Proxy "secondary-icon-activatable"
+_secondaryIconActivatable = Proxy
 
 
 -- Property "secondary-icon-gicon"
-_secondaryIconGicon :: Attr "secondary-icon-gicon" o
-_secondaryIconGicon = Attr
+_secondaryIconGicon :: Proxy "secondary-icon-gicon"
+_secondaryIconGicon = Proxy
 
 
 -- Property "secondary-icon-name"
-_secondaryIconName :: Attr "secondary-icon-name" o
-_secondaryIconName = Attr
+_secondaryIconName :: Proxy "secondary-icon-name"
+_secondaryIconName = Proxy
 
 
 -- Property "secondary-icon-pixbuf"
-_secondaryIconPixbuf :: Attr "secondary-icon-pixbuf" o
-_secondaryIconPixbuf = Attr
+_secondaryIconPixbuf :: Proxy "secondary-icon-pixbuf"
+_secondaryIconPixbuf = Proxy
 
 
 -- Property "secondary-icon-sensitive"
-_secondaryIconSensitive :: Attr "secondary-icon-sensitive" o
-_secondaryIconSensitive = Attr
+_secondaryIconSensitive :: Proxy "secondary-icon-sensitive"
+_secondaryIconSensitive = Proxy
 
 
 -- Property "secondary-icon-stock"
-_secondaryIconStock :: Attr "secondary-icon-stock" o
-_secondaryIconStock = Attr
+_secondaryIconStock :: Proxy "secondary-icon-stock"
+_secondaryIconStock = Proxy
 
 
 -- Property "secondary-icon-storage-type"
-_secondaryIconStorageType :: Attr "secondary-icon-storage-type" o
-_secondaryIconStorageType = Attr
+_secondaryIconStorageType :: Proxy "secondary-icon-storage-type"
+_secondaryIconStorageType = Proxy
 
 
 -- Property "secondary-icon-tooltip-markup"
-_secondaryIconTooltipMarkup :: Attr "secondary-icon-tooltip-markup" o
-_secondaryIconTooltipMarkup = Attr
+_secondaryIconTooltipMarkup :: Proxy "secondary-icon-tooltip-markup"
+_secondaryIconTooltipMarkup = Proxy
 
 
 -- Property "secondary-icon-tooltip-text"
-_secondaryIconTooltipText :: Attr "secondary-icon-tooltip-text" o
-_secondaryIconTooltipText = Attr
+_secondaryIconTooltipText :: Proxy "secondary-icon-tooltip-text"
+_secondaryIconTooltipText = Proxy
 
 
 -- Property "secondary-text"
-_secondaryText :: Attr "secondary-text" o
-_secondaryText = Attr
+_secondaryText :: Proxy "secondary-text"
+_secondaryText = Proxy
 
 
 -- Property "secondary-use-markup"
-_secondaryUseMarkup :: Attr "secondary-use-markup" o
-_secondaryUseMarkup = Attr
+_secondaryUseMarkup :: Proxy "secondary-use-markup"
+_secondaryUseMarkup = Proxy
 
 
 -- Property "section-row-index"
-_sectionRowIndex :: Attr "section-row-index" o
-_sectionRowIndex = Attr
+_sectionRowIndex :: Proxy "section-row-index"
+_sectionRowIndex = Proxy
 
 
 -- Property "secure-connection-start"
-_secureConnectionStart :: Attr "secure-connection-start" o
-_secureConnectionStart = Attr
+_secureConnectionStart :: Proxy "secure-connection-start"
+_secureConnectionStart = Proxy
 
 
 -- Property "security-origin"
-_securityOrigin :: Attr "security-origin" o
-_securityOrigin = Attr
+_securityOrigin :: Proxy "security-origin"
+_securityOrigin = Proxy
 
 
 -- Property "security-policy"
-_securityPolicy :: Attr "security-policy" o
-_securityPolicy = Attr
+_securityPolicy :: Proxy "security-policy"
+_securityPolicy = Proxy
 
 
 -- Property "seekable"
-_seekable :: Attr "seekable" o
-_seekable = Attr
+_seekable :: Proxy "seekable"
+_seekable = Proxy
 
 
 -- Property "seeking"
-_seeking :: Attr "seeking" o
-_seeking = Attr
+_seeking :: Proxy "seeking"
+_seeking = Proxy
 
 
 -- Property "select-multiple"
-_selectMultiple :: Attr "select-multiple" o
-_selectMultiple = Attr
+_selectMultiple :: Proxy "select-multiple"
+_selectMultiple = Proxy
 
 
 -- Property "selectable"
-_selectable :: Attr "selectable" o
-_selectable = Attr
+_selectable :: Proxy "selectable"
+_selectable = Proxy
 
 
 -- Property "selected"
-_selected :: Attr "selected" o
-_selected = Attr
+_selected :: Proxy "selected"
+_selected = Proxy
 
 
 -- Property "selected-files"
-_selectedFiles :: Attr "selected-files" o
-_selectedFiles = Attr
+_selectedFiles :: Proxy "selected-files"
+_selectedFiles = Proxy
 
 
 -- Property "selected-index"
-_selectedIndex :: Attr "selected-index" o
-_selectedIndex = Attr
+_selectedIndex :: Proxy "selected-index"
+_selectedIndex = Proxy
 
 
 -- Property "selected-options"
-_selectedOptions :: Attr "selected-options" o
-_selectedOptions = Attr
+_selectedOptions :: Proxy "selected-options"
+_selectedOptions = Proxy
 
 
 -- Property "selected-stylesheet-set"
-_selectedStylesheetSet :: Attr "selected-stylesheet-set" o
-_selectedStylesheetSet = Attr
+_selectedStylesheetSet :: Proxy "selected-stylesheet-set"
+_selectedStylesheetSet = Proxy
 
 
 -- Property "selection-bound"
-_selectionBound :: Attr "selection-bound" o
-_selectionBound = Attr
+_selectionBound :: Proxy "selection-bound"
+_selectionBound = Proxy
 
 
 -- Property "selection-direction"
-_selectionDirection :: Attr "selection-direction" o
-_selectionDirection = Attr
+_selectionDirection :: Proxy "selection-direction"
+_selectionDirection = Proxy
 
 
 -- Property "selection-end"
-_selectionEnd :: Attr "selection-end" o
-_selectionEnd = Attr
+_selectionEnd :: Proxy "selection-end"
+_selectionEnd = Proxy
 
 
 -- Property "selection-mode"
-_selectionMode :: Attr "selection-mode" o
-_selectionMode = Attr
+_selectionMode :: Proxy "selection-mode"
+_selectionMode = Proxy
 
 
 -- Property "selection-start"
-_selectionStart :: Attr "selection-start" o
-_selectionStart = Attr
+_selectionStart :: Proxy "selection-start"
+_selectionStart = Proxy
 
 
 -- Property "self"
-_self :: Attr "self" o
-_self = Attr
+_self :: Proxy "self"
+_self = Proxy
 
 
 -- Property "self-scrolling"
-_selfScrolling :: Attr "self-scrolling" o
-_selfScrolling = Attr
+_selfScrolling :: Proxy "self-scrolling"
+_selfScrolling = Proxy
 
 
 -- Property "sensitive"
-_sensitive :: Attr "sensitive" o
-_sensitive = Attr
+_sensitive :: Proxy "sensitive"
+_sensitive = Proxy
 
 
 -- Property "serif-font-family"
-_serifFontFamily :: Attr "serif-font-family" o
-_serifFontFamily = Attr
+_serifFontFamily :: Proxy "serif-font-family"
+_serifFontFamily = Proxy
 
 
 -- Property "session-storage"
-_sessionStorage :: Attr "session-storage" o
-_sessionStorage = Attr
+_sessionStorage :: Proxy "session-storage"
+_sessionStorage = Proxy
 
 
 -- Property "settings"
-_settings :: Attr "settings" o
-_settings = Attr
+_settings :: Proxy "settings"
+_settings = Proxy
 
 
 -- Property "shadow-type"
-_shadowType :: Attr "shadow-type" o
-_shadowType = Attr
+_shadowType :: Proxy "shadow-type"
+_shadowType = Proxy
 
 
 -- Property "shape"
-_shape :: Attr "shape" o
-_shape = Attr
+_shape :: Proxy "shape"
+_shape = Proxy
 
 
 -- Property "sheet"
-_sheet :: Attr "sheet" o
-_sheet = Attr
+_sheet :: Proxy "sheet"
+_sheet = Proxy
 
 
 -- Property "shift-key"
-_shiftKey :: Attr "shift-key" o
-_shiftKey = Attr
+_shiftKey :: Proxy "shift-key"
+_shiftKey = Proxy
 
 
 -- Property "short-label"
-_shortLabel :: Attr "short-label" o
-_shortLabel = Attr
+_shortLabel :: Proxy "short-label"
+_shortLabel = Proxy
 
 
 -- Property "show-all"
-_showAll :: Attr "show-all" o
-_showAll = Attr
+_showAll :: Proxy "show-all"
+_showAll = Proxy
 
 
 -- Property "show-arrow"
-_showArrow :: Attr "show-arrow" o
-_showArrow = Attr
+_showArrow :: Proxy "show-arrow"
+_showArrow = Proxy
 
 
 -- Property "show-border"
-_showBorder :: Attr "show-border" o
-_showBorder = Attr
+_showBorder :: Proxy "show-border"
+_showBorder = Proxy
 
 
 -- Property "show-close-button"
-_showCloseButton :: Attr "show-close-button" o
-_showCloseButton = Attr
+_showCloseButton :: Proxy "show-close-button"
+_showCloseButton = Proxy
 
 
 -- Property "show-connect-to-server"
-_showConnectToServer :: Attr "show-connect-to-server" o
-_showConnectToServer = Attr
+_showConnectToServer :: Proxy "show-connect-to-server"
+_showConnectToServer = Proxy
 
 
 -- Property "show-day-names"
-_showDayNames :: Attr "show-day-names" o
-_showDayNames = Attr
+_showDayNames :: Proxy "show-day-names"
+_showDayNames = Proxy
 
 
 -- Property "show-default"
-_showDefault :: Attr "show-default" o
-_showDefault = Attr
+_showDefault :: Proxy "show-default"
+_showDefault = Proxy
 
 
 -- Property "show-default-item"
-_showDefaultItem :: Attr "show-default-item" o
-_showDefaultItem = Attr
+_showDefaultItem :: Proxy "show-default-item"
+_showDefaultItem = Proxy
 
 
 -- Property "show-desktop"
-_showDesktop :: Attr "show-desktop" o
-_showDesktop = Attr
+_showDesktop :: Proxy "show-desktop"
+_showDesktop = Proxy
 
 
 -- Property "show-details"
-_showDetails :: Attr "show-details" o
-_showDetails = Attr
+_showDetails :: Proxy "show-details"
+_showDetails = Proxy
 
 
 -- Property "show-dialog-item"
-_showDialogItem :: Attr "show-dialog-item" o
-_showDialogItem = Attr
+_showDialogItem :: Proxy "show-dialog-item"
+_showDialogItem = Proxy
 
 
 -- Property "show-editor"
-_showEditor :: Attr "show-editor" o
-_showEditor = Attr
+_showEditor :: Proxy "show-editor"
+_showEditor = Proxy
 
 
 -- Property "show-enter-location"
-_showEnterLocation :: Attr "show-enter-location" o
-_showEnterLocation = Attr
+_showEnterLocation :: Proxy "show-enter-location"
+_showEnterLocation = Proxy
 
 
 -- Property "show-expanders"
-_showExpanders :: Attr "show-expanders" o
-_showExpanders = Attr
+_showExpanders :: Proxy "show-expanders"
+_showExpanders = Proxy
 
 
 -- Property "show-fallback"
-_showFallback :: Attr "show-fallback" o
-_showFallback = Attr
+_showFallback :: Proxy "show-fallback"
+_showFallback = Proxy
 
 
 -- Property "show-fill-level"
-_showFillLevel :: Attr "show-fill-level" o
-_showFillLevel = Attr
+_showFillLevel :: Proxy "show-fill-level"
+_showFillLevel = Proxy
 
 
 -- Property "show-heading"
-_showHeading :: Attr "show-heading" o
-_showHeading = Attr
+_showHeading :: Proxy "show-heading"
+_showHeading = Proxy
 
 
 -- Property "show-hidden"
-_showHidden :: Attr "show-hidden" o
-_showHidden = Attr
+_showHidden :: Proxy "show-hidden"
+_showHidden = Proxy
 
 
 -- Property "show-icons"
-_showIcons :: Attr "show-icons" o
-_showIcons = Attr
+_showIcons :: Proxy "show-icons"
+_showIcons = Proxy
 
 
 -- Property "show-menubar"
-_showMenubar :: Attr "show-menubar" o
-_showMenubar = Attr
+_showMenubar :: Proxy "show-menubar"
+_showMenubar = Proxy
 
 
 -- Property "show-not-found"
-_showNotFound :: Attr "show-not-found" o
-_showNotFound = Attr
+_showNotFound :: Proxy "show-not-found"
+_showNotFound = Proxy
 
 
 -- Property "show-numbers"
-_showNumbers :: Attr "show-numbers" o
-_showNumbers = Attr
+_showNumbers :: Proxy "show-numbers"
+_showNumbers = Proxy
 
 
 -- Property "show-other"
-_showOther :: Attr "show-other" o
-_showOther = Attr
+_showOther :: Proxy "show-other"
+_showOther = Proxy
 
 
 -- Property "show-preview-entry"
-_showPreviewEntry :: Attr "show-preview-entry" o
-_showPreviewEntry = Attr
+_showPreviewEntry :: Proxy "show-preview-entry"
+_showPreviewEntry = Proxy
 
 
 -- Property "show-private"
-_showPrivate :: Attr "show-private" o
-_showPrivate = Attr
+_showPrivate :: Proxy "show-private"
+_showPrivate = Proxy
 
 
 -- Property "show-progress"
-_showProgress :: Attr "show-progress" o
-_showProgress = Attr
+_showProgress :: Proxy "show-progress"
+_showProgress = Proxy
 
 
 -- Property "show-recommended"
-_showRecommended :: Attr "show-recommended" o
-_showRecommended = Attr
+_showRecommended :: Proxy "show-recommended"
+_showRecommended = Proxy
 
 
 -- Property "show-size"
-_showSize :: Attr "show-size" o
-_showSize = Attr
+_showSize :: Proxy "show-size"
+_showSize = Proxy
 
 
 -- Property "show-style"
-_showStyle :: Attr "show-style" o
-_showStyle = Attr
+_showStyle :: Proxy "show-style"
+_showStyle = Proxy
 
 
 -- Property "show-tabs"
-_showTabs :: Attr "show-tabs" o
-_showTabs = Attr
+_showTabs :: Proxy "show-tabs"
+_showTabs = Proxy
 
 
 -- Property "show-text"
-_showText :: Attr "show-text" o
-_showText = Attr
+_showText :: Proxy "show-text"
+_showText = Proxy
 
 
 -- Property "show-tips"
-_showTips :: Attr "show-tips" o
-_showTips = Attr
+_showTips :: Proxy "show-tips"
+_showTips = Proxy
 
 
 -- Property "show-week-numbers"
-_showWeekNumbers :: Attr "show-week-numbers" o
-_showWeekNumbers = Attr
+_showWeekNumbers :: Proxy "show-week-numbers"
+_showWeekNumbers = Proxy
 
 
 -- Property "single-line-mode"
-_singleLineMode :: Attr "single-line-mode" o
-_singleLineMode = Attr
+_singleLineMode :: Proxy "single-line-mode"
+_singleLineMode = Proxy
 
 
 -- Property "single-node-value"
-_singleNodeValue :: Attr "single-node-value" o
-_singleNodeValue = Attr
+_singleNodeValue :: Proxy "single-node-value"
+_singleNodeValue = Proxy
 
 
 -- Property "single-paragraph-mode"
-_singleParagraphMode :: Attr "single-paragraph-mode" o
-_singleParagraphMode = Attr
+_singleParagraphMode :: Proxy "single-paragraph-mode"
+_singleParagraphMode = Proxy
 
 
 -- Property "size"
-_size :: Attr "size" o
-_size = Attr
+_size :: Proxy "size"
+_size = Proxy
 
 
 -- Property "size-points"
-_sizePoints :: Attr "size-points" o
-_sizePoints = Attr
+_sizePoints :: Proxy "size-points"
+_sizePoints = Proxy
 
 
 -- Property "size-set"
-_sizeSet :: Attr "size-set" o
-_sizeSet = Attr
+_sizeSet :: Proxy "size-set"
+_sizeSet = Proxy
 
 
 -- Property "sizing"
-_sizing :: Attr "sizing" o
-_sizing = Attr
+_sizing :: Proxy "sizing"
+_sizing = Proxy
 
 
 -- Property "skip-pager-hint"
-_skipPagerHint :: Attr "skip-pager-hint" o
-_skipPagerHint = Attr
+_skipPagerHint :: Proxy "skip-pager-hint"
+_skipPagerHint = Proxy
 
 
 -- Property "skip-taskbar-hint"
-_skipTaskbarHint :: Attr "skip-taskbar-hint" o
-_skipTaskbarHint = Attr
+_skipTaskbarHint :: Proxy "skip-taskbar-hint"
+_skipTaskbarHint = Proxy
 
 
 -- Property "snap-edge"
-_snapEdge :: Attr "snap-edge" o
-_snapEdge = Attr
+_snapEdge :: Proxy "snap-edge"
+_snapEdge = Proxy
 
 
 -- Property "snap-edge-set"
-_snapEdgeSet :: Attr "snap-edge-set" o
-_snapEdgeSet = Attr
+_snapEdgeSet :: Proxy "snap-edge-set"
+_snapEdgeSet = Proxy
 
 
 -- Property "snap-to-lines"
-_snapToLines :: Attr "snap-to-lines" o
-_snapToLines = Attr
+_snapToLines :: Proxy "snap-to-lines"
+_snapToLines = Proxy
 
 
 -- Property "snap-to-ticks"
-_snapToTicks :: Attr "snap-to-ticks" o
-_snapToTicks = Attr
+_snapToTicks :: Proxy "snap-to-ticks"
+_snapToTicks = Proxy
 
 
 -- Property "snapshot-length"
-_snapshotLength :: Attr "snapshot-length" o
-_snapshotLength = Attr
+_snapshotLength :: Proxy "snapshot-length"
+_snapshotLength = Proxy
 
 
 -- Property "socket-window"
-_socketWindow :: Attr "socket-window" o
-_socketWindow = Attr
+_socketWindow :: Proxy "socket-window"
+_socketWindow = Proxy
 
 
 -- Property "sort-column-id"
-_sortColumnId :: Attr "sort-column-id" o
-_sortColumnId = Attr
+_sortColumnId :: Proxy "sort-column-id"
+_sortColumnId = Proxy
 
 
 -- Property "sort-indicator"
-_sortIndicator :: Attr "sort-indicator" o
-_sortIndicator = Attr
+_sortIndicator :: Proxy "sort-indicator"
+_sortIndicator = Proxy
 
 
 -- Property "sort-order"
-_sortOrder :: Attr "sort-order" o
-_sortOrder = Attr
+_sortOrder :: Proxy "sort-order"
+_sortOrder = Proxy
 
 
 -- Property "sort-type"
-_sortType :: Attr "sort-type" o
-_sortType = Attr
+_sortType :: Proxy "sort-type"
+_sortType = Proxy
 
 
 -- Property "spacing"
-_spacing :: Attr "spacing" o
-_spacing = Attr
+_spacing :: Proxy "spacing"
+_spacing = Proxy
 
 
 -- Property "span"
-_span :: Attr "span" o
-_span = Attr
+_span :: Proxy "span"
+_span = Proxy
 
 
 -- Property "specified"
-_specified :: Attr "specified" o
-_specified = Attr
+_specified :: Proxy "specified"
+_specified = Proxy
 
 
 -- Property "spell-checking-languages"
-_spellCheckingLanguages :: Attr "spell-checking-languages" o
-_spellCheckingLanguages = Attr
+_spellCheckingLanguages :: Proxy "spell-checking-languages"
+_spellCheckingLanguages = Proxy
 
 
 -- Property "spellcheck"
-_spellcheck :: Attr "spellcheck" o
-_spellcheck = Attr
+_spellcheck :: Proxy "spellcheck"
+_spellcheck = Proxy
 
 
 -- Property "src"
-_src :: Attr "src" o
-_src = Attr
+_src :: Proxy "src"
+_src = Proxy
 
 
 -- Property "src-element"
-_srcElement :: Attr "src-element" o
-_srcElement = Attr
+_srcElement :: Proxy "src-element"
+_srcElement = Proxy
 
 
 -- Property "srcdoc"
-_srcdoc :: Attr "srcdoc" o
-_srcdoc = Attr
+_srcdoc :: Proxy "srcdoc"
+_srcdoc = Proxy
 
 
 -- Property "srcset"
-_srcset :: Attr "srcset" o
-_srcset = Attr
+_srcset :: Proxy "srcset"
+_srcset = Proxy
 
 
 -- Property "stack"
-_stack :: Attr "stack" o
-_stack = Attr
+_stack :: Proxy "stack"
+_stack = Proxy
 
 
 -- Property "standby"
-_standby :: Attr "standby" o
-_standby = Attr
+_standby :: Proxy "standby"
+_standby = Proxy
 
 
 -- Property "start"
-_start :: Attr "start" o
-_start = Attr
+_start :: Proxy "start"
+_start = Proxy
 
 
 -- Property "start-container"
-_startContainer :: Attr "start-container" o
-_startContainer = Attr
+_startContainer :: Proxy "start-container"
+_startContainer = Proxy
 
 
 -- Property "start-offset"
-_startOffset :: Attr "start-offset" o
-_startOffset = Attr
+_startOffset :: Proxy "start-offset"
+_startOffset = Proxy
 
 
 -- Property "start-time"
-_startTime :: Attr "start-time" o
-_startTime = Attr
+_startTime :: Proxy "start-time"
+_startTime = Proxy
 
 
 -- Property "startup-id"
-_startupId :: Attr "startup-id" o
-_startupId = Attr
+_startupId :: Proxy "startup-id"
+_startupId = Proxy
 
 
 -- Property "state"
-_state :: Attr "state" o
-_state = Attr
+_state :: Proxy "state"
+_state = Proxy
 
 
 -- Property "status"
-_status :: Attr "status" o
-_status = Attr
+_status :: Proxy "status"
+_status = Proxy
 
 
 -- Property "status-string"
-_statusString :: Attr "status-string" o
-_statusString = Attr
+_statusString :: Proxy "status-string"
+_statusString = Proxy
 
 
 -- Property "statusbar"
-_statusbar :: Attr "statusbar" o
-_statusbar = Attr
+_statusbar :: Proxy "statusbar"
+_statusbar = Proxy
 
 
 -- Property "statusbar-visible"
-_statusbarVisible :: Attr "statusbar-visible" o
-_statusbarVisible = Attr
+_statusbarVisible :: Proxy "statusbar-visible"
+_statusbarVisible = Proxy
 
 
 -- Property "step"
-_step :: Attr "step" o
-_step = Attr
+_step :: Proxy "step"
+_step = Proxy
 
 
 -- Property "step-increment"
-_stepIncrement :: Attr "step-increment" o
-_stepIncrement = Attr
+_stepIncrement :: Proxy "step-increment"
+_stepIncrement = Proxy
 
 
 -- Property "step-mismatch"
-_stepMismatch :: Attr "step-mismatch" o
-_stepMismatch = Attr
+_stepMismatch :: Proxy "step-mismatch"
+_stepMismatch = Proxy
 
 
 -- Property "stock"
-_stock :: Attr "stock" o
-_stock = Attr
+_stock :: Proxy "stock"
+_stock = Proxy
 
 
 -- Property "stock-detail"
-_stockDetail :: Attr "stock-detail" o
-_stockDetail = Attr
+_stockDetail :: Proxy "stock-detail"
+_stockDetail = Proxy
 
 
 -- Property "stock-id"
-_stockId :: Attr "stock-id" o
-_stockId = Attr
+_stockId :: Proxy "stock-id"
+_stockId = Proxy
 
 
 -- Property "stock-size"
-_stockSize :: Attr "stock-size" o
-_stockSize = Attr
+_stockSize :: Proxy "stock-size"
+_stockSize = Proxy
 
 
 -- Property "storage-type"
-_storageType :: Attr "storage-type" o
-_storageType = Attr
+_storageType :: Proxy "storage-type"
+_storageType = Proxy
 
 
 -- Property "stretch"
-_stretch :: Attr "stretch" o
-_stretch = Attr
+_stretch :: Proxy "stretch"
+_stretch = Proxy
 
 
 -- Property "stretch-set"
-_stretchSet :: Attr "stretch-set" o
-_stretchSet = Attr
+_stretchSet :: Proxy "stretch-set"
+_stretchSet = Proxy
 
 
 -- Property "strikethrough"
-_strikethrough :: Attr "strikethrough" o
-_strikethrough = Attr
+_strikethrough :: Proxy "strikethrough"
+_strikethrough = Proxy
 
 
 -- Property "strikethrough-rgba"
-_strikethroughRgba :: Attr "strikethrough-rgba" o
-_strikethroughRgba = Attr
+_strikethroughRgba :: Proxy "strikethrough-rgba"
+_strikethroughRgba = Proxy
 
 
 -- Property "strikethrough-rgba-set"
-_strikethroughRgbaSet :: Attr "strikethrough-rgba-set" o
-_strikethroughRgbaSet = Attr
+_strikethroughRgbaSet :: Proxy "strikethrough-rgba-set"
+_strikethroughRgbaSet = Proxy
 
 
 -- Property "strikethrough-set"
-_strikethroughSet :: Attr "strikethrough-set" o
-_strikethroughSet = Attr
+_strikethroughSet :: Proxy "strikethrough-set"
+_strikethroughSet = Proxy
 
 
 -- Property "string-value"
-_stringValue :: Attr "string-value" o
-_stringValue = Attr
+_stringValue :: Proxy "string-value"
+_stringValue = Proxy
 
 
 -- Property "style"
-_style :: Attr "style" o
-_style = Attr
+_style :: Proxy "style"
+_style = Proxy
 
 
 -- Property "style-context"
-_styleContext :: Attr "style-context" o
-_styleContext = Attr
+_styleContext :: Proxy "style-context"
+_styleContext = Proxy
 
 
 -- Property "style-media"
-_styleMedia :: Attr "style-media" o
-_styleMedia = Attr
+_styleMedia :: Proxy "style-media"
+_styleMedia = Proxy
 
 
 -- Property "style-set"
-_styleSet :: Attr "style-set" o
-_styleSet = Attr
+_styleSet :: Proxy "style-set"
+_styleSet = Proxy
 
 
 -- Property "style-sheets"
-_styleSheets :: Attr "style-sheets" o
-_styleSheets = Attr
+_styleSheets :: Proxy "style-sheets"
+_styleSheets = Proxy
 
 
 -- Property "submenu"
-_submenu :: Attr "submenu" o
-_submenu = Attr
+_submenu :: Proxy "submenu"
+_submenu = Proxy
 
 
 -- Property "subtitle"
-_subtitle :: Attr "subtitle" o
-_subtitle = Attr
+_subtitle :: Proxy "subtitle"
+_subtitle = Proxy
 
 
 -- Property "suffixes"
-_suffixes :: Attr "suffixes" o
-_suffixes = Attr
+_suffixes :: Proxy "suffixes"
+_suffixes = Proxy
 
 
 -- Property "suggested-filename"
-_suggestedFilename :: Attr "suggested-filename" o
-_suggestedFilename = Attr
+_suggestedFilename :: Proxy "suggested-filename"
+_suggestedFilename = Proxy
 
 
 -- Property "summary"
-_summary :: Attr "summary" o
-_summary = Attr
+_summary :: Proxy "summary"
+_summary = Proxy
 
 
 -- Property "support-selection"
-_supportSelection :: Attr "support-selection" o
-_supportSelection = Attr
+_supportSelection :: Proxy "support-selection"
+_supportSelection = Proxy
 
 
 -- Property "surface"
-_surface :: Attr "surface" o
-_surface = Attr
+_surface :: Proxy "surface"
+_surface = Proxy
 
 
 -- Property "system-id"
-_systemId :: Attr "system-id" o
-_systemId = Attr
+_systemId :: Proxy "system-id"
+_systemId = Proxy
 
 
 -- Property "t-bodies"
-_tBodies :: Attr "t-bodies" o
-_tBodies = Attr
+_tBodies :: Proxy "t-bodies"
+_tBodies = Proxy
 
 
 -- Property "t-foot"
-_tFoot :: Attr "t-foot" o
-_tFoot = Attr
+_tFoot :: Proxy "t-foot"
+_tFoot = Proxy
 
 
 -- Property "t-head"
-_tHead :: Attr "t-head" o
-_tHead = Attr
+_tHead :: Proxy "t-head"
+_tHead = Proxy
 
 
 -- Property "tab-index"
-_tabIndex :: Attr "tab-index" o
-_tabIndex = Attr
+_tabIndex :: Proxy "tab-index"
+_tabIndex = Proxy
 
 
 -- Property "tab-key-cycles-through-elements"
-_tabKeyCyclesThroughElements :: Attr "tab-key-cycles-through-elements" o
-_tabKeyCyclesThroughElements = Attr
+_tabKeyCyclesThroughElements :: Proxy "tab-key-cycles-through-elements"
+_tabKeyCyclesThroughElements = Proxy
 
 
 -- Property "tab-pos"
-_tabPos :: Attr "tab-pos" o
-_tabPos = Attr
+_tabPos :: Proxy "tab-pos"
+_tabPos = Proxy
 
 
 -- Property "tabs"
-_tabs :: Attr "tabs" o
-_tabs = Attr
+_tabs :: Proxy "tabs"
+_tabs = Proxy
 
 
 -- Property "tabs-set"
-_tabsSet :: Attr "tabs-set" o
-_tabsSet = Attr
+_tabsSet :: Proxy "tabs-set"
+_tabsSet = Proxy
 
 
 -- Property "tag-name"
-_tagName :: Attr "tag-name" o
-_tagName = Attr
+_tagName :: Proxy "tag-name"
+_tagName = Proxy
 
 
 -- Property "tag-table"
-_tagTable :: Attr "tag-table" o
-_tagTable = Attr
+_tagTable :: Proxy "tag-table"
+_tagTable = Proxy
 
 
 -- Property "take-focus"
-_takeFocus :: Attr "take-focus" o
-_takeFocus = Attr
+_takeFocus :: Proxy "take-focus"
+_takeFocus = Proxy
 
 
 -- Property "target"
-_target :: Attr "target" o
-_target = Attr
+_target :: Proxy "target"
+_target = Proxy
 
 
 -- Property "target-frame"
-_targetFrame :: Attr "target-frame" o
-_targetFrame = Attr
+_targetFrame :: Proxy "target-frame"
+_targetFrame = Proxy
 
 
 -- Property "tearoff-state"
-_tearoffState :: Attr "tearoff-state" o
-_tearoffState = Attr
+_tearoffState :: Proxy "tearoff-state"
+_tearoffState = Proxy
 
 
 -- Property "tearoff-title"
-_tearoffTitle :: Attr "tearoff-title" o
-_tearoffTitle = Attr
+_tearoffTitle :: Proxy "tearoff-title"
+_tearoffTitle = Proxy
 
 
 -- Property "text"
-_text :: Attr "text" o
-_text = Attr
+_text :: Proxy "text"
+_text = Proxy
 
 
 -- Property "text-column"
-_textColumn :: Attr "text-column" o
-_textColumn = Attr
+_textColumn :: Proxy "text-column"
+_textColumn = Proxy
 
 
 -- Property "text-content"
-_textContent :: Attr "text-content" o
-_textContent = Attr
+_textContent :: Proxy "text-content"
+_textContent = Proxy
 
 
 -- Property "text-length"
-_textLength :: Attr "text-length" o
-_textLength = Attr
+_textLength :: Proxy "text-length"
+_textLength = Proxy
 
 
 -- Property "text-lock"
-_textLock :: Attr "text-lock" o
-_textLock = Attr
+_textLock :: Proxy "text-lock"
+_textLock = Proxy
 
 
 -- Property "text-tracks"
-_textTracks :: Attr "text-tracks" o
-_textTracks = Attr
+_textTracks :: Proxy "text-tracks"
+_textTracks = Proxy
 
 
 -- Property "text-unlock"
-_textUnlock :: Attr "text-unlock" o
-_textUnlock = Attr
+_textUnlock :: Proxy "text-unlock"
+_textUnlock = Proxy
 
 
 -- Property "text-xalign"
-_textXalign :: Attr "text-xalign" o
-_textXalign = Attr
+_textXalign :: Proxy "text-xalign"
+_textXalign = Proxy
 
 
 -- Property "text-yalign"
-_textYalign :: Attr "text-yalign" o
-_textYalign = Attr
+_textYalign :: Proxy "text-yalign"
+_textYalign = Proxy
 
 
 -- Property "time-stamp"
-_timeStamp :: Attr "time-stamp" o
-_timeStamp = Attr
+_timeStamp :: Proxy "time-stamp"
+_timeStamp = Proxy
 
 
 -- Property "timeline-profiling-enabled"
-_timelineProfilingEnabled :: Attr "timeline-profiling-enabled" o
-_timelineProfilingEnabled = Attr
+_timelineProfilingEnabled :: Proxy "timeline-profiling-enabled"
+_timelineProfilingEnabled = Proxy
 
 
 -- Property "timestamp"
-_timestamp :: Attr "timestamp" o
-_timestamp = Attr
+_timestamp :: Proxy "timestamp"
+_timestamp = Proxy
 
 
 -- Property "timing"
-_timing :: Attr "timing" o
-_timing = Attr
+_timing :: Proxy "timing"
+_timing = Proxy
 
 
 -- Property "title"
-_title :: Attr "title" o
-_title = Attr
+_title :: Proxy "title"
+_title = Proxy
 
 
 -- Property "to-element"
-_toElement :: Attr "to-element" o
-_toElement = Attr
+_toElement :: Proxy "to-element"
+_toElement = Proxy
 
 
 -- Property "too-long"
-_tooLong :: Attr "too-long" o
-_tooLong = Attr
+_tooLong :: Proxy "too-long"
+_tooLong = Proxy
 
 
 -- Property "toolbar"
-_toolbar :: Attr "toolbar" o
-_toolbar = Attr
+_toolbar :: Proxy "toolbar"
+_toolbar = Proxy
 
 
 -- Property "toolbar-style"
-_toolbarStyle :: Attr "toolbar-style" o
-_toolbarStyle = Attr
+_toolbarStyle :: Proxy "toolbar-style"
+_toolbarStyle = Proxy
 
 
 -- Property "toolbar-visible"
-_toolbarVisible :: Attr "toolbar-visible" o
-_toolbarVisible = Attr
+_toolbarVisible :: Proxy "toolbar-visible"
+_toolbarVisible = Proxy
 
 
 -- Property "tooltip"
-_tooltip :: Attr "tooltip" o
-_tooltip = Attr
+_tooltip :: Proxy "tooltip"
+_tooltip = Proxy
 
 
 -- Property "tooltip-column"
-_tooltipColumn :: Attr "tooltip-column" o
-_tooltipColumn = Attr
+_tooltipColumn :: Proxy "tooltip-column"
+_tooltipColumn = Proxy
 
 
 -- Property "tooltip-lock"
-_tooltipLock :: Attr "tooltip-lock" o
-_tooltipLock = Attr
+_tooltipLock :: Proxy "tooltip-lock"
+_tooltipLock = Proxy
 
 
 -- Property "tooltip-markup"
-_tooltipMarkup :: Attr "tooltip-markup" o
-_tooltipMarkup = Attr
+_tooltipMarkup :: Proxy "tooltip-markup"
+_tooltipMarkup = Proxy
 
 
 -- Property "tooltip-not-authorized"
-_tooltipNotAuthorized :: Attr "tooltip-not-authorized" o
-_tooltipNotAuthorized = Attr
+_tooltipNotAuthorized :: Proxy "tooltip-not-authorized"
+_tooltipNotAuthorized = Proxy
 
 
 -- Property "tooltip-text"
-_tooltipText :: Attr "tooltip-text" o
-_tooltipText = Attr
+_tooltipText :: Proxy "tooltip-text"
+_tooltipText = Proxy
 
 
 -- Property "tooltip-unlock"
-_tooltipUnlock :: Attr "tooltip-unlock" o
-_tooltipUnlock = Attr
+_tooltipUnlock :: Proxy "tooltip-unlock"
+_tooltipUnlock = Proxy
 
 
 -- Property "top"
-_top :: Attr "top" o
-_top = Attr
+_top :: Proxy "top"
+_top = Proxy
 
 
 -- Property "top-padding"
-_topPadding :: Attr "top-padding" o
-_topPadding = Attr
+_topPadding :: Proxy "top-padding"
+_topPadding = Proxy
 
 
 -- Property "total-frame-delay"
-_totalFrameDelay :: Attr "total-frame-delay" o
-_totalFrameDelay = Attr
+_totalFrameDelay :: Proxy "total-frame-delay"
+_totalFrameDelay = Proxy
 
 
 -- Property "total-js-heap-size"
-_totalJsHeapSize :: Attr "total-js-heap-size" o
-_totalJsHeapSize = Attr
+_totalJsHeapSize :: Proxy "total-js-heap-size"
+_totalJsHeapSize = Proxy
 
 
 -- Property "total-size"
-_totalSize :: Attr "total-size" o
-_totalSize = Attr
+_totalSize :: Proxy "total-size"
+_totalSize = Proxy
 
 
 -- Property "total-video-frames"
-_totalVideoFrames :: Attr "total-video-frames" o
-_totalVideoFrames = Attr
+_totalVideoFrames :: Proxy "total-video-frames"
+_totalVideoFrames = Proxy
 
 
 -- Property "touch-only"
-_touchOnly :: Attr "touch-only" o
-_touchOnly = Attr
+_touchOnly :: Proxy "touch-only"
+_touchOnly = Proxy
 
 
 -- Property "track"
-_track :: Attr "track" o
-_track = Attr
+_track :: Proxy "track"
+_track = Proxy
 
 
 -- Property "track-print-status"
-_trackPrintStatus :: Attr "track-print-status" o
-_trackPrintStatus = Attr
+_trackPrintStatus :: Proxy "track-print-status"
+_trackPrintStatus = Proxy
 
 
 -- Property "track-visited-links"
-_trackVisitedLinks :: Attr "track-visited-links" o
-_trackVisitedLinks = Attr
+_trackVisitedLinks :: Proxy "track-visited-links"
+_trackVisitedLinks = Proxy
 
 
 -- Property "transient-for"
-_transientFor :: Attr "transient-for" o
-_transientFor = Attr
+_transientFor :: Proxy "transient-for"
+_transientFor = Proxy
 
 
 -- Property "transition-duration"
-_transitionDuration :: Attr "transition-duration" o
-_transitionDuration = Attr
+_transitionDuration :: Proxy "transition-duration"
+_transitionDuration = Proxy
 
 
 -- Property "transition-running"
-_transitionRunning :: Attr "transition-running" o
-_transitionRunning = Attr
+_transitionRunning :: Proxy "transition-running"
+_transitionRunning = Proxy
 
 
 -- Property "transition-type"
-_transitionType :: Attr "transition-type" o
-_transitionType = Attr
+_transitionType :: Proxy "transition-type"
+_transitionType = Proxy
 
 
 -- Property "transitions-enabled"
-_transitionsEnabled :: Attr "transitions-enabled" o
-_transitionsEnabled = Attr
+_transitionsEnabled :: Proxy "transitions-enabled"
+_transitionsEnabled = Proxy
 
 
 -- Property "translate"
-_translate :: Attr "translate" o
-_translate = Attr
+_translate :: Proxy "translate"
+_translate = Proxy
 
 
 -- Property "translation-domain"
-_translationDomain :: Attr "translation-domain" o
-_translationDomain = Attr
+_translationDomain :: Proxy "translation-domain"
+_translationDomain = Proxy
 
 
 -- Property "translator-credits"
-_translatorCredits :: Attr "translator-credits" o
-_translatorCredits = Attr
+_translatorCredits :: Proxy "translator-credits"
+_translatorCredits = Proxy
 
 
 -- Property "transparent"
-_transparent :: Attr "transparent" o
-_transparent = Attr
+_transparent :: Proxy "transparent"
+_transparent = Proxy
 
 
 -- Property "true-speed"
-_trueSpeed :: Attr "true-speed" o
-_trueSpeed = Attr
+_trueSpeed :: Proxy "true-speed"
+_trueSpeed = Proxy
 
 
 -- Property "truncate-multiline"
-_truncateMultiline :: Attr "truncate-multiline" o
-_truncateMultiline = Attr
+_truncateMultiline :: Proxy "truncate-multiline"
+_truncateMultiline = Proxy
 
 
 -- Property "type"
-_type :: Attr "type" o
-_type = Attr
+_type :: Proxy "type"
+_type = Proxy
 
 
 -- Property "type-hint"
-_typeHint :: Attr "type-hint" o
-_typeHint = Attr
+_typeHint :: Proxy "type-hint"
+_typeHint = Proxy
 
 
 -- Property "type-mismatch"
-_typeMismatch :: Attr "type-mismatch" o
-_typeMismatch = Attr
+_typeMismatch :: Proxy "type-mismatch"
+_typeMismatch = Proxy
 
 
 -- Property "ui"
-_ui :: Attr "ui" o
-_ui = Attr
+_ui :: Proxy "ui"
+_ui = Proxy
 
 
 -- Property "underline"
-_underline :: Attr "underline" o
-_underline = Attr
+_underline :: Proxy "underline"
+_underline = Proxy
 
 
 -- Property "underline-rgba"
-_underlineRgba :: Attr "underline-rgba" o
-_underlineRgba = Attr
+_underlineRgba :: Proxy "underline-rgba"
+_underlineRgba = Proxy
 
 
 -- Property "underline-rgba-set"
-_underlineRgbaSet :: Attr "underline-rgba-set" o
-_underlineRgbaSet = Attr
+_underlineRgbaSet :: Proxy "underline-rgba-set"
+_underlineRgbaSet = Proxy
 
 
 -- Property "underline-set"
-_underlineSet :: Attr "underline-set" o
-_underlineSet = Attr
+_underlineSet :: Proxy "underline-set"
+_underlineSet = Proxy
 
 
 -- Property "unit"
-_unit :: Attr "unit" o
-_unit = Attr
+_unit :: Proxy "unit"
+_unit = Proxy
 
 
 -- Property "unload-event-end"
-_unloadEventEnd :: Attr "unload-event-end" o
-_unloadEventEnd = Attr
+_unloadEventEnd :: Proxy "unload-event-end"
+_unloadEventEnd = Proxy
 
 
 -- Property "unload-event-start"
-_unloadEventStart :: Attr "unload-event-start" o
-_unloadEventStart = Attr
+_unloadEventStart :: Proxy "unload-event-start"
+_unloadEventStart = Proxy
 
 
 -- Property "update-policy"
-_updatePolicy :: Attr "update-policy" o
-_updatePolicy = Attr
+_updatePolicy :: Proxy "update-policy"
+_updatePolicy = Proxy
 
 
 -- Property "upper"
-_upper :: Attr "upper" o
-_upper = Attr
+_upper :: Proxy "upper"
+_upper = Proxy
 
 
 -- Property "upper-stepper-sensitivity"
-_upperStepperSensitivity :: Attr "upper-stepper-sensitivity" o
-_upperStepperSensitivity = Attr
+_upperStepperSensitivity :: Proxy "upper-stepper-sensitivity"
+_upperStepperSensitivity = Proxy
 
 
 -- Property "urgency-hint"
-_urgencyHint :: Attr "urgency-hint" o
-_urgencyHint = Attr
+_urgencyHint :: Proxy "urgency-hint"
+_urgencyHint = Proxy
 
 
 -- Property "uri"
-_uri :: Attr "uri" o
-_uri = Attr
+_uri :: Proxy "uri"
+_uri = Proxy
 
 
 -- Property "url"
-_url :: Attr "url" o
-_url = Attr
+_url :: Proxy "url"
+_url = Proxy
 
 
 -- Property "use-action-appearance"
-_useActionAppearance :: Attr "use-action-appearance" o
-_useActionAppearance = Attr
+_useActionAppearance :: Proxy "use-action-appearance"
+_useActionAppearance = Proxy
 
 
 -- Property "use-alpha"
-_useAlpha :: Attr "use-alpha" o
-_useAlpha = Attr
+_useAlpha :: Proxy "use-alpha"
+_useAlpha = Proxy
 
 
 -- Property "use-fallback"
-_useFallback :: Attr "use-fallback" o
-_useFallback = Attr
+_useFallback :: Proxy "use-fallback"
+_useFallback = Proxy
 
 
 -- Property "use-font"
-_useFont :: Attr "use-font" o
-_useFont = Attr
+_useFont :: Proxy "use-font"
+_useFont = Proxy
 
 
 -- Property "use-full-page"
-_useFullPage :: Attr "use-full-page" o
-_useFullPage = Attr
+_useFullPage :: Proxy "use-full-page"
+_useFullPage = Proxy
 
 
 -- Property "use-header-bar"
-_useHeaderBar :: Attr "use-header-bar" o
-_useHeaderBar = Attr
+_useHeaderBar :: Proxy "use-header-bar"
+_useHeaderBar = Proxy
 
 
 -- Property "use-map"
-_useMap :: Attr "use-map" o
-_useMap = Attr
+_useMap :: Proxy "use-map"
+_useMap = Proxy
 
 
 -- Property "use-markup"
-_useMarkup :: Attr "use-markup" o
-_useMarkup = Attr
+_useMarkup :: Proxy "use-markup"
+_useMarkup = Proxy
 
 
 -- Property "use-popover"
-_usePopover :: Attr "use-popover" o
-_usePopover = Attr
+_usePopover :: Proxy "use-popover"
+_usePopover = Proxy
 
 
 -- Property "use-preview-label"
-_usePreviewLabel :: Attr "use-preview-label" o
-_usePreviewLabel = Attr
+_usePreviewLabel :: Proxy "use-preview-label"
+_usePreviewLabel = Proxy
 
 
 -- Property "use-size"
-_useSize :: Attr "use-size" o
-_useSize = Attr
+_useSize :: Proxy "use-size"
+_useSize = Proxy
 
 
 -- Property "use-stock"
-_useStock :: Attr "use-stock" o
-_useStock = Attr
+_useStock :: Proxy "use-stock"
+_useStock = Proxy
 
 
 -- Property "use-symbolic"
-_useSymbolic :: Attr "use-symbolic" o
-_useSymbolic = Attr
+_useSymbolic :: Proxy "use-symbolic"
+_useSymbolic = Proxy
 
 
 -- Property "use-underline"
-_useUnderline :: Attr "use-underline" o
-_useUnderline = Attr
+_useUnderline :: Proxy "use-underline"
+_useUnderline = Proxy
 
 
 -- Property "used-js-heap-size"
-_usedJsHeapSize :: Attr "used-js-heap-size" o
-_usedJsHeapSize = Attr
+_usedJsHeapSize :: Proxy "used-js-heap-size"
+_usedJsHeapSize = Proxy
 
 
 -- Property "user-agent"
-_userAgent :: Attr "user-agent" o
-_userAgent = Attr
+_userAgent :: Proxy "user-agent"
+_userAgent = Proxy
 
 
 -- Property "user-scalable"
-_userScalable :: Attr "user-scalable" o
-_userScalable = Attr
+_userScalable :: Proxy "user-scalable"
+_userScalable = Proxy
 
 
 -- Property "user-stylesheet-uri"
-_userStylesheetUri :: Attr "user-stylesheet-uri" o
-_userStylesheetUri = Attr
+_userStylesheetUri :: Proxy "user-stylesheet-uri"
+_userStylesheetUri = Proxy
 
 
 -- Property "v-align"
-_vAlign :: Attr "v-align" o
-_vAlign = Attr
+_vAlign :: Proxy "v-align"
+_vAlign = Proxy
 
 
 -- Property "v-link"
-_vLink :: Attr "v-link" o
-_vLink = Attr
+_vLink :: Proxy "v-link"
+_vLink = Proxy
 
 
 -- Property "vadjustment"
-_vadjustment :: Attr "vadjustment" o
-_vadjustment = Attr
+_vadjustment :: Proxy "vadjustment"
+_vadjustment = Proxy
 
 
 -- Property "valid"
-_valid :: Attr "valid" o
-_valid = Attr
+_valid :: Proxy "valid"
+_valid = Proxy
 
 
 -- Property "validation-message"
-_validationMessage :: Attr "validation-message" o
-_validationMessage = Attr
+_validationMessage :: Proxy "validation-message"
+_validationMessage = Proxy
 
 
 -- Property "validity"
-_validity :: Attr "validity" o
-_validity = Attr
+_validity :: Proxy "validity"
+_validity = Proxy
 
 
 -- Property "valign"
-_valign :: Attr "valign" o
-_valign = Attr
+_valign :: Proxy "valign"
+_valign = Proxy
 
 
 -- Property "value"
-_value :: Attr "value" o
-_value = Attr
+_value :: Proxy "value"
+_value = Proxy
 
 
 -- Property "value-as-number"
-_valueAsNumber :: Attr "value-as-number" o
-_valueAsNumber = Attr
+_valueAsNumber :: Proxy "value-as-number"
+_valueAsNumber = Proxy
 
 
 -- Property "value-missing"
-_valueMissing :: Attr "value-missing" o
-_valueMissing = Attr
+_valueMissing :: Proxy "value-missing"
+_valueMissing = Proxy
 
 
 -- Property "value-pos"
-_valuePos :: Attr "value-pos" o
-_valuePos = Attr
+_valuePos :: Proxy "value-pos"
+_valuePos = Proxy
 
 
 -- Property "value-type"
-_valueType :: Attr "value-type" o
-_valueType = Attr
+_valueType :: Proxy "value-type"
+_valueType = Proxy
 
 
 -- Property "variant"
-_variant :: Attr "variant" o
-_variant = Attr
+_variant :: Proxy "variant"
+_variant = Proxy
 
 
 -- Property "variant-set"
-_variantSet :: Attr "variant-set" o
-_variantSet = Attr
+_variantSet :: Proxy "variant-set"
+_variantSet = Proxy
 
 
 -- Property "vendor"
-_vendor :: Attr "vendor" o
-_vendor = Attr
+_vendor :: Proxy "vendor"
+_vendor = Proxy
 
 
 -- Property "vendor-sub"
-_vendorSub :: Attr "vendor-sub" o
-_vendorSub = Attr
+_vendorSub :: Proxy "vendor-sub"
+_vendorSub = Proxy
 
 
 -- Property "version"
-_version :: Attr "version" o
-_version = Attr
+_version :: Proxy "version"
+_version = Proxy
 
 
 -- Property "vertical"
-_vertical :: Attr "vertical" o
-_vertical = Attr
+_vertical :: Proxy "vertical"
+_vertical = Proxy
 
 
 -- Property "vertical-scrollbar-policy"
-_verticalScrollbarPolicy :: Attr "vertical-scrollbar-policy" o
-_verticalScrollbarPolicy = Attr
+_verticalScrollbarPolicy :: Proxy "vertical-scrollbar-policy"
+_verticalScrollbarPolicy = Proxy
 
 
 -- Property "vexpand"
-_vexpand :: Attr "vexpand" o
-_vexpand = Attr
+_vexpand :: Proxy "vexpand"
+_vexpand = Proxy
 
 
 -- Property "vexpand-set"
-_vexpandSet :: Attr "vexpand-set" o
-_vexpandSet = Attr
+_vexpandSet :: Proxy "vexpand-set"
+_vexpandSet = Proxy
 
 
 -- Property "vhomogeneous"
-_vhomogeneous :: Attr "vhomogeneous" o
-_vhomogeneous = Attr
+_vhomogeneous :: Proxy "vhomogeneous"
+_vhomogeneous = Proxy
 
 
 -- Property "video-height"
-_videoHeight :: Attr "video-height" o
-_videoHeight = Attr
+_videoHeight :: Proxy "video-height"
+_videoHeight = Proxy
 
 
 -- Property "video-tracks"
-_videoTracks :: Attr "video-tracks" o
-_videoTracks = Attr
+_videoTracks :: Proxy "video-tracks"
+_videoTracks = Proxy
 
 
 -- Property "video-width"
-_videoWidth :: Attr "video-width" o
-_videoWidth = Attr
+_videoWidth :: Proxy "video-width"
+_videoWidth = Proxy
 
 
 -- Property "view"
-_view :: Attr "view" o
-_view = Attr
+_view :: Proxy "view"
+_view = Proxy
 
 
 -- Property "view-mode"
-_viewMode :: Attr "view-mode" o
-_viewMode = Attr
+_viewMode :: Proxy "view-mode"
+_viewMode = Proxy
 
 
 -- Property "viewport-attributes"
-_viewportAttributes :: Attr "viewport-attributes" o
-_viewportAttributes = Attr
+_viewportAttributes :: Proxy "viewport-attributes"
+_viewportAttributes = Proxy
 
 
 -- Property "virtual-root"
-_virtualRoot :: Attr "virtual-root" o
-_virtualRoot = Attr
+_virtualRoot :: Proxy "virtual-root"
+_virtualRoot = Proxy
 
 
 -- Property "visibility"
-_visibility :: Attr "visibility" o
-_visibility = Attr
+_visibility :: Proxy "visibility"
+_visibility = Proxy
 
 
 -- Property "visibility-state"
-_visibilityState :: Attr "visibility-state" o
-_visibilityState = Attr
+_visibilityState :: Proxy "visibility-state"
+_visibilityState = Proxy
 
 
 -- Property "visible"
-_visible :: Attr "visible" o
-_visible = Attr
+_visible :: Proxy "visible"
+_visible = Proxy
 
 
 -- Property "visible-child"
-_visibleChild :: Attr "visible-child" o
-_visibleChild = Attr
+_visibleChild :: Proxy "visible-child"
+_visibleChild = Proxy
 
 
 -- Property "visible-child-name"
-_visibleChildName :: Attr "visible-child-name" o
-_visibleChildName = Attr
+_visibleChildName :: Proxy "visible-child-name"
+_visibleChildName = Proxy
 
 
 -- Property "visible-horizontal"
-_visibleHorizontal :: Attr "visible-horizontal" o
-_visibleHorizontal = Attr
+_visibleHorizontal :: Proxy "visible-horizontal"
+_visibleHorizontal = Proxy
 
 
 -- Property "visible-overflown"
-_visibleOverflown :: Attr "visible-overflown" o
-_visibleOverflown = Attr
+_visibleOverflown :: Proxy "visible-overflown"
+_visibleOverflown = Proxy
 
 
 -- Property "visible-submenu"
-_visibleSubmenu :: Attr "visible-submenu" o
-_visibleSubmenu = Attr
+_visibleSubmenu :: Proxy "visible-submenu"
+_visibleSubmenu = Proxy
 
 
 -- Property "visible-vertical"
-_visibleVertical :: Attr "visible-vertical" o
-_visibleVertical = Attr
+_visibleVertical :: Proxy "visible-vertical"
+_visibleVertical = Proxy
 
 
 -- Property "visible-window"
-_visibleWindow :: Attr "visible-window" o
-_visibleWindow = Attr
+_visibleWindow :: Proxy "visible-window"
+_visibleWindow = Proxy
 
 
 -- Property "visited"
-_visited :: Attr "visited" o
-_visited = Attr
+_visited :: Proxy "visited"
+_visited = Proxy
 
 
 -- Property "vlink-color"
-_vlinkColor :: Attr "vlink-color" o
-_vlinkColor = Attr
+_vlinkColor :: Proxy "vlink-color"
+_vlinkColor = Proxy
 
 
 -- Property "volume"
-_volume :: Attr "volume" o
-_volume = Attr
+_volume :: Proxy "volume"
+_volume = Proxy
 
 
 -- Property "vscroll-policy"
-_vscrollPolicy :: Attr "vscroll-policy" o
-_vscrollPolicy = Attr
+_vscrollPolicy :: Proxy "vscroll-policy"
+_vscrollPolicy = Proxy
 
 
 -- Property "vscrollbar-policy"
-_vscrollbarPolicy :: Attr "vscrollbar-policy" o
-_vscrollbarPolicy = Attr
+_vscrollbarPolicy :: Proxy "vscrollbar-policy"
+_vscrollbarPolicy = Proxy
 
 
 -- Property "vspace"
-_vspace :: Attr "vspace" o
-_vspace = Attr
+_vspace :: Proxy "vspace"
+_vspace = Proxy
 
 
 -- Property "web-database-quota"
-_webDatabaseQuota :: Attr "web-database-quota" o
-_webDatabaseQuota = Attr
+_webDatabaseQuota :: Proxy "web-database-quota"
+_webDatabaseQuota = Proxy
 
 
 -- Property "web-database-usage"
-_webDatabaseUsage :: Attr "web-database-usage" o
-_webDatabaseUsage = Attr
+_webDatabaseUsage :: Proxy "web-database-usage"
+_webDatabaseUsage = Proxy
 
 
 -- Property "web-inspector"
-_webInspector :: Attr "web-inspector" o
-_webInspector = Attr
+_webInspector :: Proxy "web-inspector"
+_webInspector = Proxy
 
 
 -- Property "web-view"
-_webView :: Attr "web-view" o
-_webView = Attr
+_webView :: Proxy "web-view"
+_webView = Proxy
 
 
 -- Property "webkit-audio-decoded-byte-count"
-_webkitAudioDecodedByteCount :: Attr "webkit-audio-decoded-byte-count" o
-_webkitAudioDecodedByteCount = Attr
+_webkitAudioDecodedByteCount :: Proxy "webkit-audio-decoded-byte-count"
+_webkitAudioDecodedByteCount = Proxy
 
 
 -- Property "webkit-battery"
-_webkitBattery :: Attr "webkit-battery" o
-_webkitBattery = Attr
+_webkitBattery :: Proxy "webkit-battery"
+_webkitBattery = Proxy
 
 
 -- Property "webkit-closed-captions-visible"
-_webkitClosedCaptionsVisible :: Attr "webkit-closed-captions-visible" o
-_webkitClosedCaptionsVisible = Attr
+_webkitClosedCaptionsVisible :: Proxy "webkit-closed-captions-visible"
+_webkitClosedCaptionsVisible = Proxy
 
 
 -- Property "webkit-current-full-screen-element"
-_webkitCurrentFullScreenElement :: Attr "webkit-current-full-screen-element" o
-_webkitCurrentFullScreenElement = Attr
+_webkitCurrentFullScreenElement :: Proxy "webkit-current-full-screen-element"
+_webkitCurrentFullScreenElement = Proxy
 
 
 -- Property "webkit-current-playback-target-is-wireless"
-_webkitCurrentPlaybackTargetIsWireless :: Attr "webkit-current-playback-target-is-wireless" o
-_webkitCurrentPlaybackTargetIsWireless = Attr
+_webkitCurrentPlaybackTargetIsWireless :: Proxy "webkit-current-playback-target-is-wireless"
+_webkitCurrentPlaybackTargetIsWireless = Proxy
 
 
 -- Property "webkit-decoded-frame-count"
-_webkitDecodedFrameCount :: Attr "webkit-decoded-frame-count" o
-_webkitDecodedFrameCount = Attr
+_webkitDecodedFrameCount :: Proxy "webkit-decoded-frame-count"
+_webkitDecodedFrameCount = Proxy
 
 
 -- Property "webkit-direction-inverted-from-device"
-_webkitDirectionInvertedFromDevice :: Attr "webkit-direction-inverted-from-device" o
-_webkitDirectionInvertedFromDevice = Attr
+_webkitDirectionInvertedFromDevice :: Proxy "webkit-direction-inverted-from-device"
+_webkitDirectionInvertedFromDevice = Proxy
 
 
 -- Property "webkit-displaying-fullscreen"
-_webkitDisplayingFullscreen :: Attr "webkit-displaying-fullscreen" o
-_webkitDisplayingFullscreen = Attr
+_webkitDisplayingFullscreen :: Proxy "webkit-displaying-fullscreen"
+_webkitDisplayingFullscreen = Proxy
 
 
 -- Property "webkit-dropped-frame-count"
-_webkitDroppedFrameCount :: Attr "webkit-dropped-frame-count" o
-_webkitDroppedFrameCount = Attr
+_webkitDroppedFrameCount :: Proxy "webkit-dropped-frame-count"
+_webkitDroppedFrameCount = Proxy
 
 
 -- Property "webkit-force"
-_webkitForce :: Attr "webkit-force" o
-_webkitForce = Attr
+_webkitForce :: Proxy "webkit-force"
+_webkitForce = Proxy
 
 
 -- Property "webkit-full-screen-keyboard-input-allowed"
-_webkitFullScreenKeyboardInputAllowed :: Attr "webkit-full-screen-keyboard-input-allowed" o
-_webkitFullScreenKeyboardInputAllowed = Attr
+_webkitFullScreenKeyboardInputAllowed :: Proxy "webkit-full-screen-keyboard-input-allowed"
+_webkitFullScreenKeyboardInputAllowed = Proxy
 
 
 -- Property "webkit-fullscreen-element"
-_webkitFullscreenElement :: Attr "webkit-fullscreen-element" o
-_webkitFullscreenElement = Attr
+_webkitFullscreenElement :: Proxy "webkit-fullscreen-element"
+_webkitFullscreenElement = Proxy
 
 
 -- Property "webkit-fullscreen-enabled"
-_webkitFullscreenEnabled :: Attr "webkit-fullscreen-enabled" o
-_webkitFullscreenEnabled = Attr
+_webkitFullscreenEnabled :: Proxy "webkit-fullscreen-enabled"
+_webkitFullscreenEnabled = Proxy
 
 
 -- Property "webkit-grammar"
-_webkitGrammar :: Attr "webkit-grammar" o
-_webkitGrammar = Attr
+_webkitGrammar :: Proxy "webkit-grammar"
+_webkitGrammar = Proxy
 
 
 -- Property "webkit-has-closed-captions"
-_webkitHasClosedCaptions :: Attr "webkit-has-closed-captions" o
-_webkitHasClosedCaptions = Attr
+_webkitHasClosedCaptions :: Proxy "webkit-has-closed-captions"
+_webkitHasClosedCaptions = Proxy
 
 
 -- Property "webkit-is-full-screen"
-_webkitIsFullScreen :: Attr "webkit-is-full-screen" o
-_webkitIsFullScreen = Attr
+_webkitIsFullScreen :: Proxy "webkit-is-full-screen"
+_webkitIsFullScreen = Proxy
 
 
 -- Property "webkit-movement-x"
-_webkitMovementX :: Attr "webkit-movement-x" o
-_webkitMovementX = Attr
+_webkitMovementX :: Proxy "webkit-movement-x"
+_webkitMovementX = Proxy
 
 
 -- Property "webkit-movement-y"
-_webkitMovementY :: Attr "webkit-movement-y" o
-_webkitMovementY = Attr
+_webkitMovementY :: Proxy "webkit-movement-y"
+_webkitMovementY = Proxy
 
 
 -- Property "webkit-persistent-storage"
-_webkitPersistentStorage :: Attr "webkit-persistent-storage" o
-_webkitPersistentStorage = Attr
+_webkitPersistentStorage :: Proxy "webkit-persistent-storage"
+_webkitPersistentStorage = Proxy
 
 
 -- Property "webkit-pointer-lock-element"
-_webkitPointerLockElement :: Attr "webkit-pointer-lock-element" o
-_webkitPointerLockElement = Attr
+_webkitPointerLockElement :: Proxy "webkit-pointer-lock-element"
+_webkitPointerLockElement = Proxy
 
 
 -- Property "webkit-preserves-pitch"
-_webkitPreservesPitch :: Attr "webkit-preserves-pitch" o
-_webkitPreservesPitch = Attr
+_webkitPreservesPitch :: Proxy "webkit-preserves-pitch"
+_webkitPreservesPitch = Proxy
 
 
 -- Property "webkit-radius-x"
-_webkitRadiusX :: Attr "webkit-radius-x" o
-_webkitRadiusX = Attr
+_webkitRadiusX :: Proxy "webkit-radius-x"
+_webkitRadiusX = Proxy
 
 
 -- Property "webkit-radius-y"
-_webkitRadiusY :: Attr "webkit-radius-y" o
-_webkitRadiusY = Attr
+_webkitRadiusY :: Proxy "webkit-radius-y"
+_webkitRadiusY = Proxy
 
 
 -- Property "webkit-region-overset"
-_webkitRegionOverset :: Attr "webkit-region-overset" o
-_webkitRegionOverset = Attr
+_webkitRegionOverset :: Proxy "webkit-region-overset"
+_webkitRegionOverset = Proxy
 
 
 -- Property "webkit-relative-path"
-_webkitRelativePath :: Attr "webkit-relative-path" o
-_webkitRelativePath = Attr
+_webkitRelativePath :: Proxy "webkit-relative-path"
+_webkitRelativePath = Proxy
 
 
 -- Property "webkit-rotation-angle"
-_webkitRotationAngle :: Attr "webkit-rotation-angle" o
-_webkitRotationAngle = Attr
+_webkitRotationAngle :: Proxy "webkit-rotation-angle"
+_webkitRotationAngle = Proxy
 
 
 -- Property "webkit-speech"
-_webkitSpeech :: Attr "webkit-speech" o
-_webkitSpeech = Attr
+_webkitSpeech :: Proxy "webkit-speech"
+_webkitSpeech = Proxy
 
 
 -- Property "webkit-storage-info"
-_webkitStorageInfo :: Attr "webkit-storage-info" o
-_webkitStorageInfo = Attr
+_webkitStorageInfo :: Proxy "webkit-storage-info"
+_webkitStorageInfo = Proxy
 
 
 -- Property "webkit-supports-fullscreen"
-_webkitSupportsFullscreen :: Attr "webkit-supports-fullscreen" o
-_webkitSupportsFullscreen = Attr
+_webkitSupportsFullscreen :: Proxy "webkit-supports-fullscreen"
+_webkitSupportsFullscreen = Proxy
 
 
 -- Property "webkit-temporary-storage"
-_webkitTemporaryStorage :: Attr "webkit-temporary-storage" o
-_webkitTemporaryStorage = Attr
+_webkitTemporaryStorage :: Proxy "webkit-temporary-storage"
+_webkitTemporaryStorage = Proxy
 
 
 -- Property "webkit-video-decoded-byte-count"
-_webkitVideoDecodedByteCount :: Attr "webkit-video-decoded-byte-count" o
-_webkitVideoDecodedByteCount = Attr
+_webkitVideoDecodedByteCount :: Proxy "webkit-video-decoded-byte-count"
+_webkitVideoDecodedByteCount = Proxy
 
 
 -- Property "webkit-wireless-video-playback-disabled"
-_webkitWirelessVideoPlaybackDisabled :: Attr "webkit-wireless-video-playback-disabled" o
-_webkitWirelessVideoPlaybackDisabled = Attr
+_webkitWirelessVideoPlaybackDisabled :: Proxy "webkit-wireless-video-playback-disabled"
+_webkitWirelessVideoPlaybackDisabled = Proxy
 
 
 -- Property "webkitdirectory"
-_webkitdirectory :: Attr "webkitdirectory" o
-_webkitdirectory = Attr
+_webkitdirectory :: Proxy "webkitdirectory"
+_webkitdirectory = Proxy
 
 
 -- Property "webkitdropzone"
-_webkitdropzone :: Attr "webkitdropzone" o
-_webkitdropzone = Attr
+_webkitdropzone :: Proxy "webkitdropzone"
+_webkitdropzone = Proxy
 
 
 -- Property "website"
-_website :: Attr "website" o
-_website = Attr
+_website :: Proxy "website"
+_website = Proxy
 
 
 -- Property "website-label"
-_websiteLabel :: Attr "website-label" o
-_websiteLabel = Attr
+_websiteLabel :: Proxy "website-label"
+_websiteLabel = Proxy
 
 
 -- Property "weight"
-_weight :: Attr "weight" o
-_weight = Attr
+_weight :: Proxy "weight"
+_weight = Proxy
 
 
 -- Property "weight-set"
-_weightSet :: Attr "weight-set" o
-_weightSet = Attr
+_weightSet :: Proxy "weight-set"
+_weightSet = Proxy
 
 
 -- Property "what-to-show"
-_whatToShow :: Attr "what-to-show" o
-_whatToShow = Attr
+_whatToShow :: Proxy "what-to-show"
+_whatToShow = Proxy
 
 
 -- Property "wheel-delta"
-_wheelDelta :: Attr "wheel-delta" o
-_wheelDelta = Attr
+_wheelDelta :: Proxy "wheel-delta"
+_wheelDelta = Proxy
 
 
 -- Property "wheel-delta-x"
-_wheelDeltaX :: Attr "wheel-delta-x" o
-_wheelDeltaX = Attr
+_wheelDeltaX :: Proxy "wheel-delta-x"
+_wheelDeltaX = Proxy
 
 
 -- Property "wheel-delta-y"
-_wheelDeltaY :: Attr "wheel-delta-y" o
-_wheelDeltaY = Attr
+_wheelDeltaY :: Proxy "wheel-delta-y"
+_wheelDeltaY = Proxy
 
 
 -- Property "which"
-_which :: Attr "which" o
-_which = Attr
+_which :: Proxy "which"
+_which = Proxy
 
 
 -- Property "whole-text"
-_wholeText :: Attr "whole-text" o
-_wholeText = Attr
+_wholeText :: Proxy "whole-text"
+_wholeText = Proxy
 
 
 -- Property "wide-handle"
-_wideHandle :: Attr "wide-handle" o
-_wideHandle = Attr
+_wideHandle :: Proxy "wide-handle"
+_wideHandle = Proxy
 
 
 -- Property "widget"
-_widget :: Attr "widget" o
-_widget = Attr
+_widget :: Proxy "widget"
+_widget = Proxy
 
 
 -- Property "width"
-_width :: Attr "width" o
-_width = Attr
+_width :: Proxy "width"
+_width = Proxy
 
 
 -- Property "width-chars"
-_widthChars :: Attr "width-chars" o
-_widthChars = Attr
+_widthChars :: Proxy "width-chars"
+_widthChars = Proxy
 
 
 -- Property "width-request"
-_widthRequest :: Attr "width-request" o
-_widthRequest = Attr
+_widthRequest :: Proxy "width-request"
+_widthRequest = Proxy
 
 
 -- Property "will-validate"
-_willValidate :: Attr "will-validate" o
-_willValidate = Attr
+_willValidate :: Proxy "will-validate"
+_willValidate = Proxy
 
 
 -- Property "window"
-_window :: Attr "window" o
-_window = Attr
+_window :: Proxy "window"
+_window = Proxy
 
 
 -- Property "window-features"
-_windowFeatures :: Attr "window-features" o
-_windowFeatures = Attr
+_windowFeatures :: Proxy "window-features"
+_windowFeatures = Proxy
 
 
 -- Property "window-placement"
-_windowPlacement :: Attr "window-placement" o
-_windowPlacement = Attr
+_windowPlacement :: Proxy "window-placement"
+_windowPlacement = Proxy
 
 
 -- Property "window-placement-set"
-_windowPlacementSet :: Attr "window-placement-set" o
-_windowPlacementSet = Attr
+_windowPlacementSet :: Proxy "window-placement-set"
+_windowPlacementSet = Proxy
 
 
 -- Property "window-position"
-_windowPosition :: Attr "window-position" o
-_windowPosition = Attr
+_windowPosition :: Proxy "window-position"
+_windowPosition = Proxy
 
 
 -- Property "wrap"
-_wrap :: Attr "wrap" o
-_wrap = Attr
+_wrap :: Proxy "wrap"
+_wrap = Proxy
 
 
 -- Property "wrap-license"
-_wrapLicense :: Attr "wrap-license" o
-_wrapLicense = Attr
+_wrapLicense :: Proxy "wrap-license"
+_wrapLicense = Proxy
 
 
 -- Property "wrap-mode"
-_wrapMode :: Attr "wrap-mode" o
-_wrapMode = Attr
+_wrapMode :: Proxy "wrap-mode"
+_wrapMode = Proxy
 
 
 -- Property "wrap-mode-set"
-_wrapModeSet :: Attr "wrap-mode-set" o
-_wrapModeSet = Attr
+_wrapModeSet :: Proxy "wrap-mode-set"
+_wrapModeSet = Proxy
 
 
 -- Property "wrap-width"
-_wrapWidth :: Attr "wrap-width" o
-_wrapWidth = Attr
+_wrapWidth :: Proxy "wrap-width"
+_wrapWidth = Proxy
 
 
 -- Property "x"
-_x :: Attr "x" o
-_x = Attr
+_x :: Proxy "x"
+_x = Proxy
 
 
 -- Property "x-offset"
-_xOffset :: Attr "x-offset" o
-_xOffset = Attr
+_xOffset :: Proxy "x-offset"
+_xOffset = Proxy
 
 
 -- Property "xalign"
-_xalign :: Attr "xalign" o
-_xalign = Attr
+_xalign :: Proxy "xalign"
+_xalign = Proxy
 
 
 -- Property "xml-encoding"
-_xmlEncoding :: Attr "xml-encoding" o
-_xmlEncoding = Attr
+_xmlEncoding :: Proxy "xml-encoding"
+_xmlEncoding = Proxy
 
 
 -- Property "xml-standalone"
-_xmlStandalone :: Attr "xml-standalone" o
-_xmlStandalone = Attr
+_xmlStandalone :: Proxy "xml-standalone"
+_xmlStandalone = Proxy
 
 
 -- Property "xml-version"
-_xmlVersion :: Attr "xml-version" o
-_xmlVersion = Attr
+_xmlVersion :: Proxy "xml-version"
+_xmlVersion = Proxy
 
 
 -- Property "xpad"
-_xpad :: Attr "xpad" o
-_xpad = Attr
+_xpad :: Proxy "xpad"
+_xpad = Proxy
 
 
 -- Property "xscale"
-_xscale :: Attr "xscale" o
-_xscale = Attr
+_xscale :: Proxy "xscale"
+_xscale = Proxy
 
 
 -- Property "y"
-_y :: Attr "y" o
-_y = Attr
+_y :: Proxy "y"
+_y = Proxy
 
 
 -- Property "yalign"
-_yalign :: Attr "yalign" o
-_yalign = Attr
+_yalign :: Proxy "yalign"
+_yalign = Proxy
 
 
 -- Property "year"
-_year :: Attr "year" o
-_year = Attr
+_year :: Proxy "year"
+_year = Proxy
 
 
 -- Property "ypad"
-_ypad :: Attr "ypad" o
-_ypad = Attr
+_ypad :: Proxy "ypad"
+_ypad = Proxy
 
 
 -- Property "yscale"
-_yscale :: Attr "yscale" o
-_yscale = Attr
+_yscale :: Proxy "yscale"
+_yscale = Proxy
 
 
 -- Property "zoom-level"
-_zoomLevel :: Attr "zoom-level" o
-_zoomLevel = Attr
+_zoomLevel :: Proxy "zoom-level"
+_zoomLevel = Proxy
 
 
 -- Property "zoom-step"
-_zoomStep :: Attr "zoom-step" o
-_zoomStep = Attr
+_zoomStep :: Proxy "zoom-step"
+_zoomStep = Proxy
 
 

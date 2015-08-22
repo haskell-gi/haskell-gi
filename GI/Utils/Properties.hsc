@@ -75,6 +75,7 @@ import Control.Monad ((>=>))
 
 import qualified Data.ByteString.Char8 as B
 import Data.Text (Text)
+import Data.Proxy (Proxy(..))
 
 import GI.Utils.BasicTypes
 import GI.Utils.BasicConversions
@@ -83,6 +84,7 @@ import GI.Utils.Attributes
 import GI.Utils.GParamSpec (newGParamSpecFromPtr)
 import GI.Utils.GValue
 import GI.Utils.GVariant (newGVariantFromPtr)
+import GI.Utils.Overloading (ResolveAttribute, HasAttr)
 import GI.Utils.Signals (SignalConnectMode, connectSignalFunPtr, HasSignal(..), SignalHandlerId)
 
 import GHC.TypeLits
@@ -99,7 +101,7 @@ foreign import ccall "dbg_g_object_newv" g_object_newv ::
 -- attributes. AttrOps are always constructible, so we don't need to
 -- enforce constraints here.
 new :: forall o. GObject o => (ForeignPtr o -> o) ->
-       [AttrOp 'SetAndConstructOp o 'AttrNew] -> IO o
+       [AttrOp o 'AttrConstruct] -> IO o
 new constructor attrs = do
   props <- mapM construct attrs
   let nprops = length props
@@ -119,10 +121,13 @@ new constructor attrs = do
   mapM_ (touchManagedPtr . snd) props
   wrapObject constructor (result :: Ptr o)
   where
-    construct :: AttrOp 'SetAndConstructOp o 'AttrNew ->
+    resolve :: proxy attr -> Proxy (ResolveAttribute attr o)
+    resolve _ = Proxy
+
+    construct :: AttrOp o 'AttrConstruct ->
                  IO (String, GValue)
-    construct (attr := x) = attrConstruct attr x
-    construct (attr :=> x) = x >>= attrConstruct attr
+    construct (attr := x) = attrConstruct (resolve attr) x
+    construct (attr :=> x) = x >>= attrConstruct (resolve attr)
 
     gvalueSize = #size GValue
     gparameterSize = #size GParameter
@@ -148,8 +153,8 @@ new constructor attrs = do
            freeStrings (n-1) (dataPtr `plusPtr` gparameterSize)
 
 -- | Proxy for "notify::property-name" signals.
-data PropertyNotify (s :: Symbol) slot where
-  PropertyNotify :: Attr slot o -> PropertyNotify "notify::*" slot
+data PropertyNotify (s :: Symbol) (slot :: Symbol) where
+  PropertyNotify :: proxy slot -> PropertyNotify "notify::*" slot
 
 -- GHC warns about orphan instances here, we suppress the warning above.
 instance GObject o => HasSignal "notify::*" o where
@@ -170,8 +175,6 @@ type GObjectNotifyCallbackC = Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
 
 foreign import ccall "wrapper"
     mkGObjectNotifyCallback :: GObjectNotifyCallbackC -> IO (FunPtr GObjectNotifyCallbackC)
-
-data Proxy (s :: k) = Proxy
 
 -- | Connect the given notify callback for a GObject.
 connectGObjectNotify :: forall o slot proxy signal. (GObject o, KnownSymbol slot) =>

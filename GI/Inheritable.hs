@@ -1,8 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module GI.Inheritable
-    ( fullObjectPropertyList
-    , fullInterfacePropertyList
-    , fullObjectSignalList
+    ( fullObjectSignalList
     , fullInterfaceSignalList
     ) where
 
@@ -22,11 +20,6 @@ class Inheritable i where
     ifInheritables :: Interface -> [i]
     objInheritables :: Object -> [i]
     iName :: i -> String
-
-instance Inheritable Property where
-    ifInheritables = ifProperties
-    objInheritables = objProperties
-    iName = propName
 
 instance Inheritable Signal where
     ifInheritables = ifSignals
@@ -95,14 +88,6 @@ removeDuplicates inheritables =
       filterTainted :: [(String, (Bool, Name, i))] -> [(Name, i)]
       filterTainted xs =
           [(name, prop) | (_, (tainted, name, prop)) <- xs, not tainted]
-
-fullObjectPropertyList :: Name -> Object -> CodeGen [(Name, Property)]
-fullObjectPropertyList n o = fullObjectInheritableList n o >>=
-                         removeDuplicates
-
-fullInterfacePropertyList :: Name -> Interface -> CodeGen [(Name, Property)]
-fullInterfacePropertyList n i = fullInterfaceInheritableList n i >>=
-                            removeDuplicates
 
 fullObjectSignalList :: Name -> Object -> CodeGen [(Name, Signal)]
 fullObjectSignalList n o = fullObjectInheritableList n o >>=

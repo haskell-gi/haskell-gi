@@ -135,40 +135,48 @@ testPolymorphicLenses parent message = do
                   _transientFor := parent,
                   _iconName := "dialog-information"]
 
-  -- This should fail to compile with
-{-
-    No instance for (HasAttr String "Buttons")
-      arising from a use of `:='
-    ...
-    (among others)
--}
-  -- set message [ _buttons := ButtonsTypeOk ]
-
   get messageBox _messageArea >>= castTo Box >>= \case
     Just _ -> return ()
     Nothing -> error "Could not convert message area to Box"
 
+  -- This should fail to compile with
+{-
+    Couldn't match type ‘'GI.Utils.Overloading.DoesNotHaveAttribute
+                           "Error: attribute" "authors" "not found for type" MessageDialog’
+                   with ‘'GI.Utils.Overloading.HasAttribute’
+-}
+  -- set messageBox [ _authors := undefined ]
+
   -- Should fail to compile, with
 {-
-    No instance for (ReadOnlyAttr 'AttrSet) arising from a use of `:='
-    ...
+      Couldn't match type ‘'GI.Utils.Attributes.AttrOpNotAllowed
+                           "Error: operation "
+                           'AttrSet
+                           " not allowed for attribute type "
+                           "MessageDialog::message-area"’
+                   with ‘'GI.Utils.Attributes.OpIsAllowed’
 -}
   -- set messageBox [_messageArea := undefined]
 
   -- Should fail to compile, with
 {-
-    No instance for (ConstructOnlyAttr 'AttrSet)
-      arising from a use of `:='
-    ...
+    Couldn't match type ‘'GI.Utils.Attributes.AttrOpNotAllowed
+                           "Error: operation "
+                           'AttrSet
+                           " not allowed for attribute type "
+                           "MessageDialog::buttons"’
+                   with ‘'GI.Utils.Attributes.OpIsAllowed’
 -}
   -- set messageBox [_buttons := ButtonsTypeYesNo]
 
   -- This should fail to compile with
 {-
-    Couldn't match type 'False with 'True
-    Expected type: 'True
-      Actual type: AttrIsReadable "Child" MessageDialog
-
+    Couldn't match type ‘'GI.Utils.Attributes.AttrOpNotAllowed
+                           "Error: operation "
+                           'AttrGet
+                           " not allowed for attribute type "
+                           "Container::child"’
+                   with ‘'GI.Utils.Attributes.OpIsAllowed’
 -}
   -- get messageBox _child
 
