@@ -146,12 +146,12 @@ processMod options ovs name = do
              codeToString code
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Attributes"
-  (attrDeps, attrCode) <- genCode cfg (genAttributes name apis modPrefix)
+  (attrDeps, attrCode) <- genCode cfg (genAttributes name apis modPrefix modDeps)
   writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
             codeToString attrCode
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
-  (sigDeps, signalCode) <- genCode cfg (genSignalInstances name apis modPrefix)
+  (sigDeps, signalCode) <- genCode cfg (genSignalInstances name apis modPrefix modDeps)
   writeFile (joinPath [dirPrefix, nm ++ "Signals.hs"]) $
             codeToString signalCode
 

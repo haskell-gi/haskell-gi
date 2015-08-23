@@ -9,6 +9,7 @@ module GI.Code
     , codeToString
     , loadDependency
     , getDeps
+    , Deps
     , getAPIs
     , injectAPIs
     , recurse

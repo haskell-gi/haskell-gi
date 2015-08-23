@@ -45,11 +45,6 @@ genPropertyAttr pName = group $ do
   line $ "_" ++ lcFirst name ++ " :: Proxy \"" ++ pName ++ "\""
   line $ "_" ++ lcFirst name ++ " = Proxy"
 
-genProps :: (Name, API) -> CodeGen ()
-genProps (n, APIObject o) = genObjectProperties n o
-genProps (n, APIInterface i) = genInterfaceProperties n i
-genProps _ = return ()
-
 genAllAttributes :: [(Name, API)] -> String -> CodeGen ()
 genAllAttributes allAPIs modulePrefix = do
   line "-- Generated code."
@@ -67,8 +62,13 @@ genAllAttributes allAPIs modulePrefix = do
       genPropertyAttr name
       blank
 
-genAttributes :: String -> [(Name, API)] -> String -> CodeGen ()
-genAttributes name apis modulePrefix = do
+genProps :: (Name, API) -> CodeGen ()
+genProps (n, APIObject o) = genObjectProperties n o
+genProps (n, APIInterface i) = genInterfaceProperties n i
+genProps _ = return ()
+
+genAttributes :: String -> [(Name, API)] -> String -> Deps -> CodeGen ()
+genAttributes name apis modulePrefix modDeps = do
   let mp = (modulePrefix ++)
       nm = ucFirst name
 
@@ -76,13 +76,13 @@ genAttributes name apis modulePrefix = do
 
   -- Providing orphan instances is the whole point of these modules,
   -- tell GHC that this is fine.
-  line "{-# OPTIONS_GHC -fno-warn-orphans #-}"
+  line "{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-imports #-}"
   blank
 
   genPrelude (nm ++ "Attributes") modulePrefix
 
-  deps <- S.toList <$> getDeps
-  forM_ deps $ \i -> when (i /= name) $ do
+  attrDeps <- getDeps
+  forM_ (S.toList (S.union attrDeps modDeps)) $ \i -> when (i /= name) $ do
     line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
     line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
              ++ ucFirst i ++ "A"

@@ -7,7 +7,6 @@ module GI.OverloadedSignals
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when)
-import Control.Monad.Writer (tell)
 
 import Data.List (intercalate)
 import qualified Data.Set as S
@@ -109,12 +108,10 @@ genSignals _ = return ()
 
 -- | Generate the HasSignal instances, so the generic overloaded
 -- signal connectors are available.
-genSignalInstances :: String -> [(Name, API)] -> String -> CodeGen ()
-genSignalInstances name apis modulePrefix = do
+genSignalInstances :: String -> [(Name, API)] -> String -> Deps -> CodeGen ()
+genSignalInstances name apis modulePrefix deps = do
   let mp = (modulePrefix ++)
       nm = ucFirst name
-
-  code <- recurse' $ forM_ apis genSignals
 
   line   "-- Generated code."
   blank
@@ -135,12 +132,13 @@ genSignalInstances name apis modulePrefix = do
   line   "import GI.Utils.Overloading"
   blank
 
-  deps <- S.toList <$> getDeps
-  forM_ deps $ \i -> when (i /= name) $
-    line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
+  -- Import all instances from our dependencies, so they are
+  -- reexported and thus available when importing this module.
+  forM_ (S.toList deps) $ \i -> when (i /= name) $
+    line $ "import " ++ mp (ucFirst i) ++ "Signals ()"
   blank
 
   line $ "import " ++ modulePrefix ++ nm
   blank
 
-  tell code
+  forM_ apis genSignals
