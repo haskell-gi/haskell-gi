@@ -215,13 +215,13 @@ genOneProperty owner prop = do
                                            else hInType
                        else "(~) ()"
         allowedOps = (if writable
-                      then ["AttrSet", "AttrConstruct"]
+                      then ["'AttrSet", "'AttrConstruct"]
                       else [])
                      <> (if constructOnly
-                         then ["AttrConstruct"]
+                         then ["'AttrConstruct"]
                          else [])
                      <> (if readable
-                         then ["AttrGet"]
+                         then ["'AttrGet"]
                          else [])
     it <- infoType owner prop
 
@@ -229,7 +229,7 @@ genOneProperty owner prop = do
     line $ "instance AttrInfo " ++ it ++ " where"
     indent $ do
             line $ "type AttrAllowedOps " ++ it
-                     ++ " = '[" ++ intercalate ", " allowedOps ++ "]"
+                     ++ " = '[ " ++ intercalate ", " allowedOps ++ "]"
             line $ "type AttrSetTypeConstraint " ++ it
                      ++ " = " ++ inConstraint
             line $ "type AttrBaseTypeConstraint " ++ it
