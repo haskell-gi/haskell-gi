@@ -239,15 +239,29 @@ testTimeout = do
                 return False
   putStrLn "+++ Timeout test done"
 
--- ScopeTypeAsync callback test
-testMenuPopup :: IO ()
-testMenuPopup = do
-  putStrLn "*** ScopeTypeAsync test"
+-- Build the menu for the ScopeTypeAsync callback test. We build the
+-- menu once and then reuse it every time we need to pop it up. In
+-- addition to being more efficient this way, if we create a fresh
+-- menu every time we need to show it (in testMenuPopup below) it
+-- would get destroyed (and thus disappear suddenly without user
+-- action) whenever the garbage collector runs, since there are no
+-- references left to the menu on the Haskell side once testMenuPopup
+-- exits.
+buildPopupMenu :: IO Menu
+buildPopupMenu = do
+  putStrLn "*** Building popup menu"
   menuitem <- new MenuItem [_label := "TestAsync"]
+  on menuitem Activate $ putStrLn "Menuitem activated!"
   menu <- new Menu []
   menuShellAppend menu menuitem
   widgetShowAll menu
-  putStrLn "*** Menu constructed"
+  putStrLn "+++ Menu constructed"
+  return menu
+
+-- ScopeTypeAsync callback test
+testMenuPopup :: Menu -> IO ()
+testMenuPopup menu = do
+  putStrLn "*** ScopeTypeAsync test"
   curtime <- getCurrentEventTime
   menuPopup menu noWidget noWidget (Just positionFunc) 0 curtime
   putStrLn "+++ ScopeTypeAsync test done"
@@ -411,7 +425,8 @@ main = do
 
         popupButton <- new Button [_label := "_Pop-up menu",
                                    _useUnderline := True]
-        on popupButton Clicked $ testMenuPopup
+        menu <- buildPopupMenu
+        on popupButton Clicked (testMenuPopup menu)
         containerAdd grid popupButton
 
         testBoxedOutArgs
