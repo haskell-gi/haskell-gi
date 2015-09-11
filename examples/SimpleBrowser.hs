@@ -3,6 +3,7 @@ import BasicPrelude hiding (on, error)
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import GI.GtkSignals ()
+import qualified GI.GLib as GLib
 import GI.WebKit
 import GI.WebKitSignals ()
 import GI.WebKitAttributes ()
@@ -11,6 +12,8 @@ import GI.Properties
 import GI.Signals
 import GI.Utils.Base
 
+import System.Mem (performGC)
+
 import Data.Text (pack)
 import System.Environment (getProgName)
 
@@ -18,6 +21,15 @@ main :: IO ()
 main = do
   progName <- pack <$> getProgName
   args <- getArgs
+
+  -- We periodically perform a GC, in order to test that the
+  -- finalizers are not pointing to invalid regions.
+  _ <- GLib.timeoutAdd 0 5000 $ do
+         putStrLn "** (T) Going into GC"
+         performGC
+         putStrLn "** GC done"
+         return True
+
   _ <- Gtk.init $ Just (progName : args)
 
   win <- new Window [_type := WindowTypeToplevel,

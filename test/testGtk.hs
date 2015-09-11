@@ -15,6 +15,8 @@ import GI.Utils.Base
 
 import Foreign.C
 
+import System.Mem (performGC)
+
 import qualified Data.ByteString.Char8 as B
 import Data.Text (pack, unpack)
 import Data.Word
@@ -359,6 +361,14 @@ main = do
         restArgs <- Gtk.init $ Just $ progName:["--g-fatal-warnings"]
         when (restArgs /= Just [progName]) $
              error "gtk_init did not process --g-fatal-warnings"
+
+        -- We periodically perform a GC, in order to test that the
+        -- finalizers are not pointing to invalid regions.
+        _ <- GLib.timeoutAdd 0 5000 $ do
+               putStrLn "** (T) Going into GC"
+               performGC
+               putStrLn "** GC done"
+               return True
 
         -- Here "_type" is a polymorphic lens, valid for any object
         -- with a "type" (GObject) property. If one wants to be more
