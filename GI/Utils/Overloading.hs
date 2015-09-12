@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators, KindSignatures, DataKinds, PolyKinds,
              TypeFamilies, UndecidableInstances, EmptyDataDecls,
-             MultiParamTypeClasses, FlexibleInstances #-}
+             MultiParamTypeClasses, FlexibleInstances, ConstraintKinds #-}
 
 -- | Helpers for dealing with `GObject`s.
 

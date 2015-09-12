@@ -16,7 +16,11 @@ module GI.SymbolNaming
 
 import Data.Char (toLower, toUpper)
 import Data.List (isPrefixOf)
+#if !MIN_VERSION_base(4,8,0)
+import Data.Monoid (Monoid, (<>))
+#else
 import Data.Monoid ((<>))
+#endif
 import Data.String (IsString)
 
 import GI.API

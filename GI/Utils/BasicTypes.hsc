@@ -25,7 +25,6 @@ module GI.Utils.BasicTypes
      -- * Memory management
 
     , ForeignPtrNewtype
-    , newtypeToForeignPtr
     , BoxedObject(..)
     , BoxedEnum(..)
     , GObject(..)
@@ -49,12 +48,7 @@ module GI.Utils.BasicTypes
     , GDestroyNotify
     ) where
 
-#if __GLASGOW_HASKELL__ < 710
-import Data.Coerce (Coercible, coerce)
-#else
-import Unsafe.Coerce (unsafeCoerce)
-#endif
-
+import Data.Coerce (Coercible)
 import Data.Word
 import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr)
@@ -134,21 +128,12 @@ gtypeObject = GType #const G_TYPE_OBJECT
 -- > newtype Foo = Foo (ForeignPtr Foo)
 --
 -- which is the typical shape of wrapped 'GObject's.
-#if __GLASGOW_HASKELL__ < 710
-type ForeignPtrNewtype a = Coercible a (ForeignPtr a)
-#else
-class ForeignPtrNewtype a where {}
-instance ForeignPtrNewtype a where {}
-#endif
-
--- | Coerce the given type to a `ForeignPtr`.
-#if __GLASGOW_HASKELL__ < 710
-newtypeToForeignPtr :: ForeignPtrNewtype a => a -> ForeignPtr a
-newtypeToForeignPtr = coerce
-#else
-newtypeToForeignPtr :: a -> ForeignPtr a
-newtypeToForeignPtr = unsafeCoerce
-#endif
+type ForeignPtrNewtype a = Coercible a (ForeignPtr ())
+-- Notice that the Coercible here is to ForeignPtr (), instead of
+-- "ForeignPtr a", which would be the most natural thing. Both are
+-- representationally equivalent, so this is not a big deal. This is
+-- to work around a problem in ghc 7.10:
+-- https://ghc.haskell.org/trac/ghc/ticket/10715
 
 -- | Wrapped boxed structures, identified by their `GType`.
 class ForeignPtrNewtype a => BoxedObject a where

@@ -7,6 +7,7 @@ module GI.CodeGen
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+import Data.Traversable (traverse)
 #endif
 import Control.Monad (forM, forM_, when, unless, filterM)
 import Control.Monad.Writer (tell)
@@ -368,7 +369,7 @@ genInterface n iface = do
   else group $ do
     let cls = classConstraint name'
     line $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
-    line $ "instance IsDescendantOf " ++ name' ++ " o => " ++ cls ++ " o"
+    line $ "instance (ForeignPtrNewtype o, IsDescendantOf " ++ name' ++ " o) => " ++ cls ++ " o"
     line $ "type instance ParentTypes " ++ name' ++ " = '[]"
 
   -- Methods
