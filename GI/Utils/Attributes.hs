@@ -105,7 +105,7 @@ module GI.Utils.Attributes (
 import Data.Proxy (Proxy(..))
 
 import GI.Utils.GValue (GValue(..))
-import GI.Utils.Overloading (HasAttribute, ResolveAttribute)
+import GI.Utils.Overloading (ResolveAttribute)
 
 import GHC.TypeLits
 import GHC.Exts (Constraint)
@@ -161,24 +161,21 @@ data AttrOpTag = AttrGet | AttrSet | AttrConstruct
 -- | Constructors for the different operations allowed on an attribute.
 data AttrOp obj (tag :: AttrOpTag) where
     -- Assign a value to an attribute
-    (:=)  :: (HasAttribute attr obj,
-              info ~ ResolveAttribute attr obj,
+    (:=)  :: (info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               AttrOpAllowed tag info,
               (AttrSetTypeConstraint info) b) =>
              proxy (attr :: Symbol) -> b -> AttrOp obj tag
     -- Assign the result of an IO action to an attribute
-    (:=>) :: (HasAttribute attr obj,
-              info ~ ResolveAttribute attr obj,
+    (:=>) :: (info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               AttrOpAllowed tag info,
               (AttrSetTypeConstraint info) b) =>
              proxy (attr :: Symbol) -> IO b -> AttrOp obj tag
     -- Apply an update function to an attribute
-    (:~)  :: (HasAttribute attr obj,
-              info ~ ResolveAttribute attr obj,
+    (:~)  :: (info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
@@ -188,8 +185,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               a ~ (AttrGetType info)) =>
              proxy (attr :: Symbol) -> (a -> b) -> AttrOp obj tag
     -- Apply an IO update function to an attribute
-    (:~>) :: (HasAttribute attr obj,
-              info ~ ResolveAttribute attr obj,
+    (:~>) :: (info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
@@ -199,8 +195,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               a ~ (AttrGetType info)) =>
              proxy (attr :: Symbol) -> (a -> IO b) -> AttrOp obj tag
     -- Assign a value to an attribute with the object as an argument
-    (::=) :: (HasAttribute attr obj,
-              info ~ ResolveAttribute attr obj,
+    (::=) :: (info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
@@ -209,8 +204,7 @@ data AttrOp obj (tag :: AttrOpTag) where
              proxy (attr :: Symbol) -> (obj -> b) -> AttrOp obj tag
     -- Apply an update function to an attribute with the object as an
     -- argument
-    (::~) :: (HasAttribute attr obj,
-              info ~ ResolveAttribute attr obj,
+    (::~) :: (info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,

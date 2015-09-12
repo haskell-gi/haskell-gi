@@ -6,9 +6,8 @@ module GI.Properties
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM, when, unless)
+import Control.Monad (forM_, when, unless)
 import Data.List (intercalate)
-import Data.Maybe (catMaybes)
 import Data.Monoid ((<>))
 
 import Foreign.Storable (sizeOf)
@@ -18,7 +17,8 @@ import GI.API
 import GI.Conversions
 import GI.Code
 import GI.GObject
-import GI.SymbolNaming
+import GI.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
+import GI.SymbolNaming (upperNameWithSuffix, upperName, classConstraint, qualifyWithSuffix, hyphensToCamelCase)
 import GI.Type
 import GI.Util
 import GI.Internal.ArgInfo (Transfer(..))
@@ -127,16 +127,20 @@ genObjectProperties :: Name -> Object -> CodeGen ()
 genObjectProperties n o = do
   isGO <- apiIsGObject n (APIObject o)
   -- We do not generate bindings for objects not descending from GObject.
-  when isGO $ genProperties n (objProperties o)
+  when isGO $ do
+    allProps <- fullObjectPropertyList n o >>=
+                mapM (\(owner, prop) -> do
+                        pi <- infoType owner prop
+                        return $ "'(\"" ++ propName prop ++ "\", " ++ pi ++ ")")
+    genProperties n (objProperties o) allProps
 
 genInterfaceProperties :: Name -> Interface -> CodeGen ()
 genInterfaceProperties n iface = do
-  isGO <- apiIsGObject n (APIInterface iface)
-  if isGO
-  then genProperties n (ifProperties iface)
-  else do
-    name <- upperName n
-    group . line $ "type instance AttributeList " ++ name ++ " = '[]"
+  allProps <- fullInterfacePropertyList n iface >>=
+                mapM (\(owner, prop) -> do
+                        pi <- infoType owner prop
+                        return $ "'(\"" ++ propName prop ++ "\", " ++ pi ++ ")")
+  genProperties n (ifProperties iface) allProps
 
 -- If the given accesor is available (indicated by available == True),
 -- generate a fully qualified accesor name, otherwise just return
@@ -153,11 +157,11 @@ accessorOrUndefined available accessor (Name ons on) cName =
 -- the object.
 infoType :: Name -> Property -> CodeGen String
 infoType owner prop = do
-  name <- upperName owner
+  name <- upperNameWithSuffix "A." owner
   let cName = hyphensToCamelCase (propName prop)
   return $ name ++ cName ++ "PropertyInfo"
 
-genOneProperty :: Name -> Property -> ExcCodeGen (Maybe String)
+genOneProperty :: Name -> Property -> ExcCodeGen ()
 genOneProperty owner prop = do
   name <- upperName owner
   let cName = hyphensToCamelCase $ propName prop
@@ -241,19 +245,35 @@ genOneProperty owner prop = do
             line $ "attrSet _ = " ++ setter
             line $ "attrConstruct _ = " ++ constructor
 
-    return . Just $ "'(\"" ++ propName prop ++ "\", " ++ it ++ ")"
+-- | Generate a placeholder property for those cases in which code
+-- generation failed.
+genPlaceholderProperty :: Name -> Property -> CodeGen ()
+genPlaceholderProperty owner prop = do
+  line $ "-- XXX Placeholder"
+  it <- infoType owner prop
+  line $ "data " ++ it
+  line $ "instance AttrInfo " ++ it ++ " where"
+  indent $ do
+    line $ "type AttrAllowedOps " ++ it ++ " = '[]"
+    line $ "type AttrSetTypeConstraint " ++ it ++ " = (~) ()"
+    line $ "type AttrBaseTypeConstraint " ++ it ++ " = (~) ()"
+    line $ "type AttrGetType " ++ it ++ " = ()"
+    line $ "type AttrLabel " ++ it ++ " = \"\""
+    line $ "attrGet = undefined"
+    line $ "attrSet = undefined"
+    line $ "attrConstruct = undefined"
 
-genProperties :: Name -> [Property] -> CodeGen ()
-genProperties n props = do
+genProperties :: Name -> [Property] -> [String] -> CodeGen ()
+genProperties n ownedProps allProps = do
   name <- upperName n
 
-  successfulProps <- forM props $ \prop -> do
+  forM_ ownedProps $ \prop -> do
       handleCGExc (\err -> do
                      line $ "-- XXX Generation of property \""
                               ++ propName prop ++ "\" of object \""
                               ++ name ++ "\" failed: " ++ describeCGError err
-                     return Nothing )
+                     genPlaceholderProperty n prop)
                   (genOneProperty n prop)
 
   group $ line $ "type instance AttributeList " ++ name ++ " = '[ "
-            ++ intercalate ", " (catMaybes successfulProps) ++ "]"
+            ++ intercalate ", " allProps ++ "]"

@@ -6,6 +6,7 @@ module GI.SymbolNaming
     , lcFirst
     , lowerName
     , upperName
+    , upperNameWithSuffix
     , noName
     , escapeReserved
     , classConstraint
@@ -42,9 +43,9 @@ lowerName (Name _ s) = return $ concat . rename $ split '_' s
       ucFirst' "" = "_"
       ucFirst' x = ucFirst x
 
-upperName :: Name -> CodeGen String
-upperName (Name ns s) = do
-          prefix <- qualify ns
+upperNameWithSuffix :: String -> Name -> CodeGen String
+upperNameWithSuffix suffix (Name ns s) = do
+          prefix <- qualifyWithSuffix suffix ns
           return $ prefix ++ uppered
     where uppered = concatMap ucFirst' $ split '_' $ sanitize s
           -- Move leading underscores to the end (for example in
@@ -55,10 +56,13 @@ upperName (Name ns s) = do
           ucFirst' "" = "_"
           ucFirst' x = ucFirst x
 
--- Return a qualified prefix for the given namespace. In case the
+upperName :: Name -> CodeGen String
+upperName = upperNameWithSuffix "."
+
+-- | Return a qualified prefix for the given namespace. In case the
 -- namespace corresponds to the current module the empty string is
 -- returned, otherwise the namespace ++ suffix is returned. Suffix is
--- typically just ".", see "qualify" below.
+-- typically just ".", see `qualify` below.
 qualifyWithSuffix :: String -> String -> CodeGen String
 qualifyWithSuffix suffix ns = do
      cfg <- config
@@ -69,17 +73,19 @@ qualifyWithSuffix suffix ns = do
                          -- as a dependency of this module.
        return $ ucFirst ns ++ suffix
 
-qualify:: String -> CodeGen String
+-- | Return the qualified namespace (ns ++ "." or "", depending on
+-- whether ns is the current namespace).
+qualify :: String -> CodeGen String
 qualify = qualifyWithSuffix "."
 
--- Save a bit of typing for optional arguments in the case that we
+-- | Save a bit of typing for optional arguments in the case that we
 -- want to pass Nothing.
 noName :: String -> CodeGen ()
 noName name' = group $ do
                  line $ "no" ++ name' ++ " :: Maybe " ++ name'
                  line $ "no" ++ name' ++ " = Nothing"
 
--- For a string of the form "one-sample-string" return "OneSampleString"
+-- | For a string of the form "one-sample-string" return "OneSampleString"
 hyphensToCamelCase :: String -> String
 hyphensToCamelCase str = concatMap ucFirst $ split '-' str
 

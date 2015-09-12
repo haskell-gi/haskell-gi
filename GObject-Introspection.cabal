@@ -65,6 +65,7 @@ Executable haskell-gi
       GI.Conversions,
       GI.GObject,
       GI.GType,
+      GI.Inheritance,
       GI.OverloadedSignals,
       GI.Overrides,
       GI.PkgConfig,

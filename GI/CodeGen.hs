@@ -10,7 +10,7 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM, forM_, when, unless, filterM)
 import Control.Monad.Writer (tell)
-import Data.List (intercalate)
+import Data.List (intercalate, nub)
 import Data.Tuple (swap)
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
@@ -24,6 +24,7 @@ import GI.Callable (genCallable)
 import GI.Constant (genConstant)
 import GI.Code
 import GI.GObject
+import GI.Inheritance (instanceTree)
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
                   ignoreStruct)
@@ -321,24 +322,10 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
 
   noName name'
 
-  -- Type safe casting
+  -- Type safe casting to parent objects, and implemented interfaces.
   isIU <- isInitiallyUnowned t
-  -- Filter out interfaces inherited from the parent GObject. This is
-  -- not strictly necessary, but reduces redundancy of the generated
-  -- list of ancestor types.
-  oIfs <- case objParent o of
-            Nothing -> return (objInterfaces o)
-            Just p -> do
-              parentAPI <- findAPIByName p
-              case parentAPI of
-                APIObject po ->
-                    return $ filter (`notElem` (objInterfaces po))
-                               (objInterfaces o)
-                _ -> error $ "Parent Object of " ++ name' ++ " not an Object!"
-  -- And in case we do have a parent, that goes in the front, so it
-  -- gets tried first when doing overloading resolution.
-  let parents = maybe oIfs (: oIfs) (objParent o)
-  genGObjectCasts isIU n (objTypeInit o) parents
+  parents <- instanceTree n
+  genGObjectCasts isIU n (objTypeInit o) (parents ++ objInterfaces o)
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) ->
@@ -374,8 +361,10 @@ genInterface n iface = do
   then do
     let cn_ = fromMaybe (error "GObject derived interface without a type!") (ifTypeInit iface)
     isIU <- apiIsInitiallyUnowned n (APIInterface iface)
-    gobjectInterfaces <- filterM nameIsGObject (ifPrerequisites iface)
-    genGObjectCasts isIU n cn_ gobjectInterfaces
+    gobjectPrereqs <- filterM nameIsGObject (ifPrerequisites iface)
+    allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
+    let uniqueParents = nub (concat allParents)
+    genGObjectCasts isIU n cn_ uniqueParents
   else group $ do
     let cls = classConstraint name'
     line $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
@@ -392,7 +381,7 @@ genInterface n iface = do
                       ++ "-- Error was : " ++ describeCGError e))
          (genMethod n mn f)
 
-  -- And finally signals
+  -- Signals
   forM_ (ifSignals iface) $ \s ->
       handleCGExc
       (\e -> line ("-- XXX Could not generate signal "

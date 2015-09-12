@@ -17,9 +17,8 @@ module GI.Utils.Overloading
 
     -- * Looking up signals in parent types
     , SignalList
-    , HasSignal
     , ResolveSignal
-    , GenericSignals
+    , HasSignal
     ) where
 
 import GHC.Exts (Constraint)
@@ -29,12 +28,6 @@ import GHC.TypeLits
 type family JoinLists (as :: [a]) (bs :: [a]) :: [a] where
     JoinLists '[] bs = bs
     JoinLists (a ': as) bs = a ': JoinLists as bs
-
--- | Concat the given lists.
-type family ConcatLists (ls :: [[a]]) :: [a] where
-    ConcatLists '[] = '[]
-    ConcatLists ('[] ': ls) = ConcatLists ls
-    ConcatLists ((x ': xs) ': ls) = x ': (ConcatLists (xs ': ls))
 
 -- | Look in the given list of (symbol, tag) tuples for the tag
 -- corresponding to the given symbol. If not found return the given
@@ -56,18 +49,12 @@ type family CheckForAncestorType t (a :: *) (as :: [*]) :: AncestorCheck * * whe
     CheckForAncestorType t a (a ': as) = 'HasAncestor a t
     CheckForAncestorType t a (b ': as) = CheckForAncestorType t a as
 
--- | Collect the list of ancestors of a given set of types, including
--- the types themselves.
-type family Ancestors (a :: [*]) :: [*] where
-    Ancestors '[] = '[]
-    -- We split off this case for better error messages.
-    Ancestors (t ': '[]) = t ': Ancestors (ParentTypes t)
-    Ancestors (t ': ts) = t ': Ancestors (JoinLists (ParentTypes t) ts)
-
 -- | Check that a type is in the list of `GObjectParents` of another
 -- `GObject`-derived type.
 type family IsDescendantOf (parent :: *) (descendant :: *) :: Constraint where
-    IsDescendantOf p d = CheckForAncestorType d p (Ancestors '[d]) ~ 'HasAncestor p d
+    -- Every object is defined to be a descendant of itself.
+    IsDescendantOf d d = () ~ ()
+    IsDescendantOf p d = CheckForAncestorType d p (ParentTypes d) ~ 'HasAncestor p d
 
 -- | The direct parents of this object: its direct parent type, if any,
 -- and the interfaces it implements. The interfaces inherited from
@@ -80,17 +67,6 @@ type family ParentTypes a :: [*]
 -- of the attribute. This type will be an instance of `AttrInfo`.
 type family AttributeList a :: [(Symbol, *)]
 
--- | Get the list of attributes recursively, given a list of types.
-type family CollectParentAttributes (ps :: [a]) :: [[(Symbol, *)]] where
-    CollectParentAttributes '[] = '[]
-    CollectParentAttributes (p ': ps) = CollectAttributes p ':
-                                        CollectParentAttributes ps
-
--- | Collect all attributes of a type, including those defined by
--- the parents.
-type family CollectAttributes (a :: *) where
-    CollectAttributes a = ConcatLists (AttributeList a ': CollectParentAttributes (ParentTypes a))
-
 -- | Datatype returned when the attribute is not found, hopefully making
 -- the resulting error messages somewhat clearer.
 data UnknownAttribute (msg1 :: Symbol) (s :: Symbol) (msg2 :: Symbol) (o :: *)
@@ -98,7 +74,7 @@ data UnknownAttribute (msg1 :: Symbol) (s :: Symbol) (msg2 :: Symbol) (o :: *)
 -- | Return the type encoding the attribute information for a given
 -- type and attribute.
 type family ResolveAttribute (s :: Symbol) (o :: *) :: * where
-    ResolveAttribute s o = FindElement s (CollectAttributes o)
+    ResolveAttribute s o = FindElement s (AttributeList o)
                            (UnknownAttribute "Error: could not find attribute" s "for object" o)
 
 -- | Whether a given type is in the given list. If found, return
@@ -114,7 +90,7 @@ data AttributeCheck a t = HasAttribute
 
 -- | A constraint imposing that the given object has the given attribute.
 type family HasAttribute (attr :: Symbol) (o :: *) where
-    HasAttribute attr o = IsElem attr (CollectAttributes o)
+    HasAttribute attr o = IsElem attr (AttributeList o)
                           'HasAttribute
                           ('DoesNotHaveAttribute "Error: attribute" attr "not found for type" o)
                           ~ 'HasAttribute
@@ -129,17 +105,6 @@ instance HasAttribute attr o => HasAttr attr o
 -- the signal. This type will be an instance of `SignalInfo`.
 type family SignalList a :: [(Symbol, *)]
 
--- | Get the list of signals recursively, given a list of types.
-type family CollectParentSignals (ps :: [a]) :: [[(Symbol, *)]] where
-    CollectParentSignals '[] = '[]
-    CollectParentSignals (p ': ps) = CollectSignals p ':
-                                     CollectParentSignals ps
-
--- | Collect all signals defined for a type, including those defined by
--- the parents.
-type family CollectSignals (a :: *) where
-    CollectSignals a = ConcatLists (SignalList a ': CollectParentSignals (ParentTypes a))
-
 -- | Datatype returned when the signal is not found, hopefully making
 -- the resulting error messages somewhat clearer.
 data UnknownSignal (msg1 :: Symbol) (s :: Symbol) (msg2 :: Symbol) (o :: *)
@@ -147,8 +112,7 @@ data UnknownSignal (msg1 :: Symbol) (s :: Symbol) (msg2 :: Symbol) (o :: *)
 -- | Return the type encoding the signal information for a given
 -- type and signal.
 type family ResolveSignal (s :: Symbol) (o :: *) :: * where
-    ResolveSignal s o = FindElement s (JoinLists (SignalList GenericSignals)
-                                                 (CollectSignals o))
+    ResolveSignal s o = FindElement s (SignalList o)
                         (UnknownSignal "Error: could not find signal" s "for object" o)
 
 -- | Isomorphic to Bool, but having some extra debug information.
@@ -158,12 +122,7 @@ data SignalCheck s t = HasSignal
 -- | A constraint enforcing that the signal exists for the given
 -- object, or one of its ancestors.
 type family HasSignal (s :: Symbol) (o :: *) where
-    HasSignal s o = IsElem s (JoinLists (SignalList GenericSignals)
-                                        (CollectSignals o))
+    HasSignal s o = IsElem s (SignalList o)
                     'HasSignal
                     ('DoesNotHaveSignal "Error: signal" s "not found for type" o)
                     ~ 'HasSignal
-
--- | Giving an instance of `SignalList` for this type will add the
--- signal to every type.
-data GenericSignals

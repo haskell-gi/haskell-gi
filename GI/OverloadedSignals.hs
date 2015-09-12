@@ -14,6 +14,7 @@ import qualified Data.Set as S
 import GI.API
 import GI.Code
 import GI.GObject (apiIsGObject)
+import GI.Inheritance (fullObjectSignalList, fullInterfaceSignalList)
 import GI.Signal (signalHaskellName)
 import GI.SymbolNaming (ucFirst, upperName)
 import GI.Util (padTo)
@@ -62,12 +63,18 @@ genOverloadedSignalConnectors allAPIs modulePrefix = do
         line $ padTo (maxLength + 1) (ucFirst (signalHaskellName sn)) ++
                  ":: SignalProxy \"" ++ sn ++ "\" \"\" NoConstraint"
 
+-- | Qualified name for the "(sigName, info)" tag for a given signal.
+signalInfoName :: Name -> Signal -> CodeGen String
+signalInfoName n signal = do
+  n' <- upperName n
+  return $ n' ++ (ucFirst . signalHaskellName . sigName) signal ++ "SignalInfo"
+
 -- | Generate the given signal instance for the given API object.
-genInstance :: Name -> Signal -> CodeGen String
+genInstance :: Name -> Signal -> CodeGen ()
 genInstance owner signal = group $ do
   name <- upperName owner
   let sn = (ucFirst . signalHaskellName . sigName) signal
-      si = name ++ sn ++ "SignalInfo"
+  si <- signalInfoName owner signal
   line $ "data " ++ si
   line $ "instance SignalInfo " ++ si ++ " where"
   indent $ do
@@ -75,30 +82,43 @@ genInstance owner signal = group $ do
           cbHaskellType = signalConnectorName ++ "Callback"
       line $ "type HaskellCallbackType " ++ si ++ " = " ++ cbHaskellType
       line $ "connectSignal _ = " ++ "connect" ++ name ++ sn
-  return $ "'(\"" ++ sigName signal ++ "\", " ++ si ++ ")"
 
--- | HasSignal instances for GObject objects.
+-- | Signal instances for (GObject-derived) objects.
 genObjectSignals :: Name -> Object -> CodeGen ()
 genObjectSignals n o = do
   name <- upperName n
   isGO <- apiIsGObject n (APIObject o)
-  -- We only generate code for GObject-derived APIObjects.
   when isGO $ do
-       infos <- mapM (genInstance n) (objSignals o)
+       mapM_ (genInstance n) (objSignals o)
+       infos <- fullObjectSignalList n o >>=
+                mapM (\(owner, signal) -> do
+                      si <- signalInfoName owner signal
+                      return $ "'(\"" ++ sigName signal ++ "\", " ++ si ++ ")")
+       -- The "notify::[property]" signal is a generic signal used for
+       -- connecting to property notifications.
+       let allSignals = infos ++
+                        ["'(\"notify::[property]\", GObjectNotifySignalInfo)"]
        group . line $ "type instance SignalList " ++ name ++
-             " = '[ " ++ intercalate ", " infos ++ "]"
+             " = '[ " ++ intercalate ", " allSignals ++ "]"
 
--- | HasSignal instances for GObject interfaces.
+-- | Signal instances for interfaces.
 genInterfaceSignals :: Name -> Interface -> CodeGen ()
 genInterfaceSignals n iface = do
   name <- upperName n
+  mapM_ (genInstance n) (ifSignals iface)
+  infos <- fullInterfaceSignalList n iface >>=
+           mapM (\(owner, signal) -> do
+                   si <- signalInfoName owner signal
+                   return $ "'(\"" ++ sigName signal ++ "\", " ++ si ++ ")")
   isGO <- apiIsGObject n (APIInterface iface)
-  if isGO
-  then do
-    infos <- mapM (genInstance n) (ifSignals iface)
-    group . line $ "type instance SignalList " ++ name ++
-              " = '[ " ++ intercalate ", " infos ++ "]"
-  else group . line $ "type instance SignalList " ++ name ++ " = '[]"
+  -- The "notify::[property]" signal is a generic signal used for
+  -- connecting to property notifications of a GObject.
+  let allSignals =
+          if isGO
+          then infos ++ ["'(\"notify::[property]\", GObjectNotifySignalInfo)"]
+          else infos
+  group . line $ "type instance SignalList " ++ name ++
+            " = '[ " ++ intercalate ", " allSignals ++ "]"
 
 -- | Generate HasSignal instances for a given API element.
 genSignals :: (Name, API) -> CodeGen ()
@@ -106,7 +126,7 @@ genSignals (n, APIObject o) = genObjectSignals n o
 genSignals (n, APIInterface i) = genInterfaceSignals n i
 genSignals _ = return ()
 
--- | Generate the HasSignal instances, so the generic overloaded
+-- | Generate the signal information instances, so the generic overloaded
 -- signal connectors are available.
 genSignalInstances :: String -> [(Name, API)] -> String -> Deps -> CodeGen ()
 genSignalInstances name apis modulePrefix deps = do
@@ -128,14 +148,16 @@ genSignalInstances name apis modulePrefix deps = do
   line $ "module " ++ mp nm ++ "Signals where"
   blank
 
+  line   "import GI.Utils.Properties (GObjectNotifySignalInfo)"
   line   "import GI.Utils.Signals"
   line   "import GI.Utils.Overloading"
   blank
 
-  -- Import all instances from our dependencies, so they are
-  -- reexported and thus available when importing this module.
-  forM_ (S.toList deps) $ \i -> when (i /= name) $
-    line $ "import " ++ mp (ucFirst i) ++ "Signals ()"
+  -- Import dependencies, including instances for their overloaded
+  -- signals, so they are implicitly reexported and they do not need
+  -- to be included explicitly from client code.
+  forM_ (S.toList deps) $ \i -> when (i /= name) $ do
+    line $ "import qualified " ++ mp (ucFirst i) ++ "Signals as " ++ ucFirst i
   blank
 
   line $ "import " ++ modulePrefix ++ nm

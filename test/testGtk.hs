@@ -143,9 +143,21 @@ testPolymorphicLenses parent message = do
 
   -- This should fail to compile with
 {-
-    Couldn't match type ‘'GI.Utils.Overloading.DoesNotHaveAttribute
-                           "Error: attribute" "authors" "not found for type" MessageDialog’
-                   with ‘'GI.Utils.Overloading.HasAttribute’
+    Couldn't match type ‘GI.Utils.Attributes.AttrOpIsAllowed
+                           'AttrSet
+                           (AttrAllowedOps
+                              (GI.Utils.Overloading.UnknownAttribute
+                                 "Error: could not find attribute"
+                                 "authors"
+                                 "for object"
+                                 MessageDialog))
+                           (AttrLabel
+                              (GI.Utils.Overloading.UnknownAttribute
+                                 "Error: could not find attribute"
+                                 "authors"
+                                 "for object"
+                                 MessageDialog))’
+                   with ‘'GI.Utils.Attributes.OpIsAllowed’
 -}
   -- set messageBox [ _authors := undefined ]
 

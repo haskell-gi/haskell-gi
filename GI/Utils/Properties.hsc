@@ -7,6 +7,7 @@ module GI.Utils.Properties
     ( new
 
     , PropertyNotify(..)
+    , GObjectNotifySignalInfo
 
     , setObjectPropertyString
     , setObjectPropertyStringArray
@@ -85,8 +86,7 @@ import GI.Utils.Attributes
 import GI.Utils.GParamSpec (newGParamSpecFromPtr)
 import GI.Utils.GValue
 import GI.Utils.GVariant (newGVariantFromPtr)
-import GI.Utils.Overloading (ResolveAttribute, HasAttr, SignalList,
-                             GenericSignals)
+import GI.Utils.Overloading (ResolveAttribute, HasAttr)
 import GI.Utils.Signals (SignalConnectMode, SignalHandlerId,
                          connectSignalFunPtr,
                          SignalInfo(HaskellCallbackType, connectSignal))
@@ -160,10 +160,11 @@ new constructor attrs = do
 -- | Proxy for "notify::property-name" signals.
 data PropertyNotify (s :: Symbol) (propName :: Symbol) (constraint :: * -> Constraint) where
   PropertyNotify :: KnownSymbol propName => proxy propName ->
-                    PropertyNotify "notify::*" propName (HasAttr propName)
+                    PropertyNotify "notify::[property]" propName (HasAttr propName)
 
-type instance SignalList GenericSignals = '[ '("notify::*", GObjectNotifySignalInfo)]
-
+-- | Connection information for a "notify" signal indicating that a
+-- specific property changed (see `PropertyNotify` for the relevant
+-- constructor).
 data GObjectNotifySignalInfo
 instance SignalInfo GObjectNotifySignalInfo where
   type HaskellCallbackType GObjectNotifySignalInfo = GObjectNotifyCallback

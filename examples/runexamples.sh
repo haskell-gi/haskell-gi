@@ -11,5 +11,5 @@ time cabal build
 
 export G_SLICE="debug-blocks"
 export MALLOC_CHECK_=2
-export HASKELL_GI_DEBUG_MEM=1
+#export HASKELL_GI_DEBUG_MEM=1
 dist/build/SimpleBrowser/SimpleBrowser
