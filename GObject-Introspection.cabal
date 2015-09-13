@@ -1,5 +1,5 @@
 Name:                GObject-Introspection
-Version:             0.5
+Version:             0.7
 Synopsis:            Generate Haskell bindings for GObject-Introspection capable libraries
 Description:         Generate Haskell bindings for GObject-Introspection capable libraries. This includes most notably Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
 Homepage:            https://github.com/garetxe/haskell-gi
