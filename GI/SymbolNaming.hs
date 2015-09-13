@@ -75,7 +75,7 @@ noName name' = group $ do
                  line $ "no" ++ name' ++ " :: Maybe " ++ name'
                  line $ "no" ++ name' ++ " = Nothing"
 
--- For a string of the form "one-sample-string" return "OneSampleString"
+-- | For a string of the form "one-sample-string" return "OneSampleString"
 hyphensToCamelCase :: String -> String
 hyphensToCamelCase str = concatMap ucFirst $ split '-' str
 

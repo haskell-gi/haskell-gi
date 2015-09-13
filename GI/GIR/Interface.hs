@@ -6,6 +6,7 @@ module GI.GIR.Interface
     ) where
 
 import Data.Maybe (mapMaybe)
+import Data.Text (Text)
 import Text.XML (Element)
 
 import GI.GIR.BasicTypes (ParseContext, Name, nameInCurrentNS)
@@ -21,7 +22,7 @@ data Interface = Interface {
         ifProperties :: [Property],
         ifSignals :: [Signal],
         ifPrerequisites :: [Name],
-        ifTypeInit :: Maybe String,
+        ifTypeInit :: Maybe Text,
         ifMethods :: [(Name, Function)],
         ifDeprecated :: Maybe DeprecationInfo
     } deriving Show

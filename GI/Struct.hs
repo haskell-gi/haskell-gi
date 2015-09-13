@@ -11,6 +11,7 @@ import Control.Monad (forM_, unless)
 
 import Data.List (isSuffixOf)
 import Data.Maybe (mapMaybe)
+import Data.Text (unpack)
 
 import GI.API
 import GI.Conversions
@@ -29,7 +30,7 @@ ignoreStruct (Name _ name) s = isGTypeStruct s ||
 -- struct field.
 fieldCallbackType :: String -> Field -> String
 fieldCallbackType structName field = structName
-                                     ++ (underscoresToCamelCase .
+                                     ++ (underscoresToCamelCase . unpack .
                                          fieldName) field
                                      ++ "FieldCallback"
 
@@ -77,7 +78,7 @@ buildFieldGetter n@(Name ns _) field = do
   hType <- show <$> haskellType (fieldType field)
   fType <- show <$> foreignType (fieldType field)
   unless ("Private" `isSuffixOf` hType) $ do
-     fName <- upperName $ Name ns (fieldName field)
+     fName <- upperName $ Name ns (unpack . fieldName $ field)
      let getter = lcFirst name' ++ "Read" ++ fName
      line $ getter ++ " :: " ++ name' ++ " -> IO " ++
                  if ' ' `elem` hType
@@ -98,6 +99,6 @@ genStructFields n s = do
 
   forM_ (structFields s) $ \field -> group $
       handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
-                               ":" ++ fieldName field ++ "\" :: " ++
+                               ":" ++ unpack (fieldName field) ++ "\" :: " ++
                                describeCGError e))
                   (buildFieldGetter n field)

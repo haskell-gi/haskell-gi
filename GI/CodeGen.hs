@@ -44,17 +44,17 @@ genFunction n (Function symbol callable flags) = do
                         , "\n-- Error was : "] ++) . describeCGError)
         (genCallable n symbol callable (FunctionThrows `elem` flags))
 
-genBoxedObject :: Name -> String -> CodeGen ()
+genBoxedObject :: Name -> Text -> CodeGen ()
 genBoxedObject n typeInit = do
     name' <- upperName n
 
     group $ do
-        line $ "foreign import ccall \"" ++ typeInit ++ "\" c_" ++
-                typeInit ++ " :: "
+        line $ "foreign import ccall \"" ++ T.unpack typeInit ++ "\" c_" ++
+                T.unpack typeInit ++ " :: "
         indent $ line "IO GType"
     group $ do
         line $ "instance BoxedObject " ++ name' ++ " where"
-        indent $ line $ "boxedType _ = c_" ++ typeInit
+        indent $ line $ "boxedType _ = c_" ++ T.unpack typeInit
 
 genBoxedEnum :: Name -> Text -> CodeGen ()
 genBoxedEnum n typeInit = do
@@ -303,19 +303,19 @@ genGObjectType iT n = do
           line $ "instance " ++ klass ancestor' ++ " " ++ name'
 
 -- Type casting with type checking
-genGObjectCasts :: Bool -> Name -> String -> CodeGen ()
+genGObjectCasts :: Bool -> Name -> Text -> CodeGen ()
 genGObjectCasts isIU n cn_ = do
   name' <- upperName n
 
   group $ do
-    line $ "foreign import ccall \"" ++ cn_ ++ "\""
-    indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
+    line $ "foreign import ccall \"" ++ T.unpack cn_ ++ "\""
+    indent $ line $ "c_" ++ T.unpack cn_ ++ " :: IO GType"
 
   group $ do
     line $ "instance GObject " ++ name' ++ " where"
     indent $ group $ do
             line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
-            line $ "gobjectType _ = c_" ++ cn_
+            line $ "gobjectType _ = c_" ++ T.unpack cn_
 
   -- Safe downcasting.
   group $ do

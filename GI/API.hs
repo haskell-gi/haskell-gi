@@ -43,20 +43,26 @@ import Data.Text (Text)
 import Text.XML hiding (Name)
 
 import GI.Internal.ArgInfo
-import GI.Internal.FieldInfo
+
 import GI.GIR.Alias (documentListAliases)
 import GI.GIR.Arg (Arg(..))
 import GI.GIR.BasicTypes (ParseContext(..), Alias, Name(..))
+import GI.GIR.Boxed (Boxed(..), parseBoxed)
 import GI.GIR.Callable (Callable(..))
+import GI.GIR.Callback (Callback(..), parseCallback)
 import GI.GIR.Constant (Constant(..), parseConstant)
 import GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
 import GI.GIR.Enum (Enumeration(..), parseEnum)
+import GI.GIR.Field (Field(..))
 import GI.GIR.Flags (Flags(..), parseFlags)
 import GI.GIR.Function (Function(..), parseFunction)
 import GI.GIR.Interface (Interface(..), parseInterface)
+import GI.GIR.Object (Object(..), parseObject)
 import GI.GIR.Property (Property(..))
 import GI.GIR.Repository (readGiRepository)
 import GI.GIR.Signal (Signal(..))
+import GI.GIR.Struct (Struct(..), parseStruct)
+import GI.GIR.Union (Union(..), parseUnion)
 import GI.GIR.XMLUtils (subelements, childElemsWithLocalName)
 import GI.Type (Type)
 
@@ -79,147 +85,6 @@ data GIRInfoParse = GIRInfoParse {
     girIPNamespaces :: [Maybe GIRNamespace]
 } deriving (Show)
 
-data Field = Field {
-    fieldName :: String,
-    fieldType :: Type,
-    fieldCallback :: Maybe Callback,
-    fieldOffset :: Int,
-    fieldFlags :: [FieldInfoFlag],
-    fieldDeprecated :: Maybe DeprecationInfo }
-    deriving Show
-
-{-
-toField :: FieldInfo -> Field
-toField fi = Field
-    (infoName fi)
-    (typeFromTypeInfo $ fieldInfoType fi)
-     -- Fields with embedded "anonymous" callback interfaces.
-    (case typeFromTypeInfo (fieldInfoType fi) of
-       TInterface _ n ->
-         if n /= infoName fi
-         then Nothing
-         else let iface = baseInfo . typeInfoInterface . fieldInfoType $ fi
-              in case infoType iface of
-                   InfoTypeCallback -> Just . toCallback . fromBaseInfo $ iface
-                   _                -> Nothing
-       _ -> Nothing)
-    (fieldInfoOffset fi)
-    (fieldInfoFlags fi)
-    (infoDeprecated fi)
--}
-
-data Struct = Struct {
-    structIsBoxed :: Bool,
-    structTypeInit :: Maybe String,
-    structSize :: Int,
-    structIsForeign :: Bool,
-    isGTypeStruct :: Bool,
-    structFields :: [Field],
-    structMethods :: [(Name, Function)],
-    structDeprecated :: Maybe DeprecationInfo }
-    deriving Show
-
-{-
-toStruct :: StructInfo -> Struct
-toStruct si = Struct
-    (isJust (registeredTypeInfoTypeInit si) &&
-        gtypeIsBoxed (registeredTypeInfoGType si))
-    (registeredTypeInfoTypeInit si)
-    (structInfoSize si)
-    (structInfoIsForeign si)
-    (structInfoIsGTypeStruct si)
-    (map toField $ structInfoFields si)
-    (map (withName toFunction) (structInfoMethods si))
-    (infoDeprecated si)
--}
-
-parseStruct :: ParseContext -> Element -> Maybe (Name, API)
-parseStruct _ _ = Nothing
-
--- XXX: Capture alignment and method info.
-
-data Union = Union {
-    unionIsBoxed :: Bool,
-    unionSize :: Int,
-    unionTypeInit :: Maybe String,
-    unionFields :: [Field],
-    unionMethods :: [(Name, Function)],
-    unionDeprecated :: Maybe DeprecationInfo }
-    deriving Show
-
-{-
-toUnion :: UnionInfo -> Union
-toUnion ui = Union
-    (isJust (registeredTypeInfoTypeInit ui) &&
-        gtypeIsBoxed (registeredTypeInfoGType ui))
-    (unionInfoSize ui)
-    (registeredTypeInfoTypeInit ui)
-    (map toField $ unionInfoFields ui)
-    (map (withName toFunction) (unionInfoMethods ui))
-    (infoDeprecated ui)
--}
-
-parseUnion :: ParseContext -> Element -> Maybe (Name, API)
-parseUnion _ _ = Nothing
-
--- XXX
-data Callback = Callback Callable
-    deriving Show
-
-{-
-toCallback = Callback . toCallable
--}
-
-parseCallback :: ParseContext -> Element -> Maybe (Name, API)
-parseCallback _ _ = Nothing
-
-data Object = Object {
-    objFields :: [Field],
-    objMethods :: [(Name, Function)],
-    objProperties :: [Property],
-    objSignals :: [Signal],
-    objInterfaces :: [Name],
-    objConstants :: [Constant],
-    objParent :: Maybe Name,
-    objTypeInit :: String,
-    objTypeName :: String,
-    objRefFunction :: Maybe String,
-    objUnrefFunction :: Maybe String,
-    objDeprecated :: Maybe DeprecationInfo }
-    deriving Show
-
-{-
-toObject :: ObjectInfo -> Object
-toObject oi = Object
-    (map toField $ objectInfoFields oi)
-    (map (withName toFunction) (objectInfoMethods oi))
-    (map toProperty $ objectInfoProperties oi)
-    (map toSignal (objectInfoSignals oi))
-    (map getName $ objectInfoInterfaces oi)
-    (map toConstant $ objectInfoConstants oi)
-    (getName <$> objectInfoParent oi)
-    (objectInfoTypeInit oi)
-    (objectInfoTypeName oi)
-    (objectInfoRefFunction oi)
-    (objectInfoUnrefFunction oi)
-    (infoDeprecated oi)
--}
-
-parseObject :: ParseContext -> Element -> Maybe (Name, API)
-parseObject _ _ = Nothing
-
--- XXX: Work out what to do with boxed types.
-data Boxed = Boxed
-    deriving Show
-
-{-
-toBoxed :: BaseInfo -> Boxed
-toBoxed _ = Boxed
--}
-
-parseBoxed :: ParseContext -> Element -> Maybe (Name, API)
-parseBoxed _ _ = Nothing
-
 data API
     = APIConst Constant
     | APIFunction Function
@@ -232,26 +97,6 @@ data API
     | APIUnion Union
     | APIBoxed Boxed
     deriving Show
-
-{-
-toAPI :: BaseInfo -> (Name, API)
-toAPI bi = (getName bi, toAPI' (infoType bi) bi)
-    where
-
-    toAPI' InfoTypeConstant = convert APIConst toConstant
-    toAPI' InfoTypeEnum = convert APIEnum toEnumeration
-    toAPI' InfoTypeFlags = convert APIFlags toFlags
-    toAPI' InfoTypeFunction = convert APIFunction toFunction
-    toAPI' InfoTypeCallback = convert APICallback toCallback
-    toAPI' InfoTypeStruct = convert APIStruct toStruct
-    toAPI' InfoTypeUnion = convert APIUnion toUnion
-    toAPI' InfoTypeObject = convert APIObject toObject
-    toAPI' InfoTypeInterface = convert APIInterface toInterface
-    toAPI' InfoTypeBoxed = convert APIBoxed toBoxed
-    toAPI' it = error $ "not expecting a " ++ show it
-
-    convert fa fb bi = fa $ fb $ fromBaseInfo bi
--}
 
 maybeAddAPI :: GIRNamespace -> (a -> API) -> Maybe (Name, a) -> GIRNamespace
 maybeAddAPI ns _ Nothing = ns
@@ -266,12 +111,12 @@ parseNamespaceElement ctx ns@GIRNamespace{..} element =
       "enumeration" -> maybeAddAPI ns APIEnum (parseEnum ctx element)
       "bitfield" -> maybeAddAPI ns APIFlags (parseFlags ctx element)
       "function" -> maybeAddAPI ns APIFunction (parseFunction ctx element)
-      "callback" -> maybeAddAPI ns id (parseCallback ctx element)
-      "record" -> maybeAddAPI ns id (parseStruct ctx element)
-      "union" -> maybeAddAPI ns id (parseUnion ctx element)
-      "class" -> maybeAddAPI ns id (parseObject ctx element)
+      "callback" -> maybeAddAPI ns APICallback (parseCallback ctx element)
+      "record" -> maybeAddAPI ns APIStruct (parseStruct ctx element)
+      "union" -> maybeAddAPI ns APIUnion (parseUnion ctx element)
+      "class" -> maybeAddAPI ns APIObject (parseObject ctx element)
       "interface" -> maybeAddAPI ns APIInterface (parseInterface ctx element)
-      "boxed" -> maybeAddAPI ns id (parseBoxed ctx element)
+      "boxed" -> maybeAddAPI ns APIBoxed (parseBoxed ctx element)
       n -> error . T.unpack $ "Unknown GIR element \"" <> n <> "\" when processing namespace \"" <> nsName <> "\", aborting."
 
 parseNamespace :: Element -> M.Map Alias Type -> Maybe GIRNamespace
