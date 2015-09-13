@@ -3,6 +3,7 @@ module GI.GIR.BasicTypes
     ( ParseContext(..)
     , Alias(..)
     , Name(..)
+    , Transfer(..)
     , nameInCurrentNS
     ) where
 
@@ -23,6 +24,12 @@ data ParseContext = ParseContext {
       currentNamespace :: Text,
       knownAliases     :: M.Map Alias Type
     } deriving Show
+
+-- | Transfer mode for an argument or property.
+data Transfer = TransferNothing
+              | TransferContainer
+              | TransferEverything
+                deriving (Show, Eq, Ord)
 
 -- | Build a name in the current namespace.
 nameInCurrentNS :: ParseContext -> Text -> Name

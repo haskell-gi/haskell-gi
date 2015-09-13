@@ -3,9 +3,10 @@ module GI.GIR.Callable
     ) where
 
 import GI.Type (Type)
-import GI.Internal.ArgInfo (Transfer)
 import GI.GIR.Arg (Arg(..))
 import GI.GIR.Deprecation (DeprecationInfo)
+
+import GI.GIR.BasicTypes (Transfer(..))
 
 data Callable = Callable {
         returnType :: Type,

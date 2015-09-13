@@ -44,14 +44,15 @@ girFile' name Nothing path =
 
         False -> return Nothing
 
-girFile :: Text -> Maybe Text -> IO (Maybe FilePath)
-girFile name version =
-    firstJust <$> (girDataDirs >>= mapM (girFile' name version))
+girFile :: Text -> Maybe Text -> [FilePath] -> IO (Maybe FilePath)
+girFile name version extraPaths = do
+  dataDirs <- girDataDirs
+  firstJust <$> (mapM (girFile' name version) (extraPaths ++ dataDirs))
     where firstJust = listToMaybe . catMaybes
 
-readGiRepository :: Bool -> Text -> Maybe Text -> IO Document
-readGiRepository verbose name version =
-    girFile name version >>= \case
+readGiRepository :: Bool -> Text -> Maybe Text -> [FilePath] -> IO Document
+readGiRepository verbose name version extraPaths =
+    girFile name version extraPaths >>= \case
         Just path -> do
             when verbose $ putStrLn $ "Loading GI repository: " ++ path
             readFile def path

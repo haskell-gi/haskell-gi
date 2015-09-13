@@ -32,8 +32,6 @@ import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
-import GI.Internal.ArgInfo
-import GI.Internal.FunctionInfo
 
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol callable flags) = do

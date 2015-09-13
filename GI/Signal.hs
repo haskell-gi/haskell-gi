@@ -23,7 +23,6 @@ import GI.SymbolNaming
 import GI.Transfer (freeContainerType)
 import GI.Type
 import GI.Util (split, parenthesize, withComment)
-import GI.Internal.ArgInfo
 
 -- The prototype of the callback on the Haskell side (what users of
 -- the binding will see)

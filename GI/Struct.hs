@@ -19,7 +19,6 @@ import GI.Code
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
-import GI.Internal.ArgInfo
 
 -- | Whether (not) to generate bindings for the given struct.
 ignoreStruct :: Name -> Struct -> Bool

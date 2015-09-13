@@ -46,8 +46,6 @@ import GI.SymbolNaming
 import GI.Type
 import GI.Util
 
-import GI.Internal.ArgInfo (Transfer(..))
-
 -- String identifying a constructor in the generated code, which is
 -- either (by default) a pure function (indicated by the P
 -- constructor) or a function returning values on a monad (M

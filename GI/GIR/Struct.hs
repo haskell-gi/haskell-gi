@@ -21,6 +21,8 @@ data Struct = Struct {
     structSize :: Int,
     structIsForeign :: Bool,
     isGTypeStruct :: Bool,
+    -- https://bugzilla.gnome.org/show_bug.cgi?id=560248
+    structIsDisguised :: Bool,
     structFields :: [Field],
     structMethods :: [(Name, Function)],
     structDeprecated :: Maybe DeprecationInfo }

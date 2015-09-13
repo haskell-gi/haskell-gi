@@ -41,23 +41,6 @@ Executable haskell-gi
   extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
-      GI.Internal.Types,
-      GI.Internal.Typelib,
-      GI.Internal.ArgInfo,
-      GI.Internal.BaseInfo,
-      GI.Internal.CallableInfo,
-      GI.Internal.ConstantInfo,
-      GI.Internal.EnumInfo,
-      GI.Internal.FieldInfo,
-      GI.Internal.FunctionInfo,
-      GI.Internal.InterfaceInfo,
-      GI.Internal.ObjectInfo,
-      GI.Internal.ParamFlag,
-      GI.Internal.PropertyInfo,
-      GI.Internal.RegisteredTypeInfo,
-      GI.Internal.StructInfo,
-      GI.Internal.TypeInfo,
-      GI.Internal.UnionInfo,
       GI.GIR.Alias,
       GI.GIR.BasicTypes,
       GI.GIR.Boxed,

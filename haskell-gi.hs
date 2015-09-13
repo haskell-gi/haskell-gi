@@ -35,7 +35,6 @@ import GI.Attributes (genAttributes, genAllAttributes)
 import GI.OverloadedSignals (genSignalInstances, genOverloadedSignalConnectors)
 import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
 import GI.SymbolNaming (ucFirst)
-import GI.Internal.Typelib (prependSearchPath)
 
 data Mode = GenerateCode | Dump | Attributes | Signals | Help
 
@@ -102,16 +101,16 @@ outputPath options =
         return (prefix, dir)
 
 -- | Load the given API and dependencies, filtering them in the process.
-loadFilteredAPI :: Bool -> Overrides -> Text
+loadFilteredAPI :: Bool -> Overrides -> [FilePath] -> Text
                 -> IO (M.Map Name API, M.Map Name API)
-loadFilteredAPI verbose ovs name = do
-  (gir, girDeps) <- loadGIRInfo verbose name Nothing
+loadFilteredAPI verbose ovs extraPaths name = do
+  (gir, girDeps) <- loadGIRInfo verbose name Nothing extraPaths
   return $ filterAPIsAndDeps ovs gir girDeps
 
 -- Generate all generic accessor functions ("_label", for example).
-genGenericAttrs :: Options -> Overrides -> [Text] -> IO ()
-genGenericAttrs options ovs modules = do
-  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs) modules
+genGenericAttrs :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
+genGenericAttrs options ovs modules extraPaths = do
+  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs extraPaths) modules
   let apis = M.unions (map fst girInfos)
       allAPIs = M.unions (apis : map snd girInfos) -- Including dependencies
   let cfg = Config {modName = Nothing,
@@ -123,9 +122,9 @@ genGenericAttrs options ovs modules = do
   writeFile (joinPath [dirPrefix, "Properties.hs"]) $ codeToString code
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
-genGenericConnectors :: Options -> Overrides -> [Text] -> IO ()
-genGenericConnectors options ovs modules = do
-  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs) modules
+genGenericConnectors :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
+genGenericConnectors options ovs modules extraPaths = do
+  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs extraPaths) modules
   let apis = M.unions (map fst girInfos)
       allAPIs = M.unions (apis : map snd girInfos) -- Including dependencies
   let cfg = Config {modName = Nothing,
@@ -138,9 +137,9 @@ genGenericConnectors options ovs modules = do
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
-processMod :: Options -> Overrides -> String -> IO ()
-processMod options ovs name = do
-  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) Nothing
+processMod :: Options -> Overrides -> [FilePath] -> String -> IO ()
+processMod options ovs extraPaths name = do
+  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) Nothing extraPaths
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
 
@@ -190,24 +189,25 @@ processMod options ovs name = do
 
 dump :: Options -> Overrides -> String -> IO ()
 dump options ovs name = do
-  (doc, _) <- loadGIRInfo (optVerbose options) (pack name) (pack <$> M.lookup name (nsChooseVersion ovs))
+  (doc, _) <- loadGIRInfo (optVerbose options) (pack name) (pack <$> M.lookup name (nsChooseVersion ovs)) (optSearchPaths options)
   mapM_ (putStrLn . ppShow) (girAPIs doc)
 
 process :: Options -> [String] -> IO ()
 process options names = do
-  mapM_ prependSearchPath $ optSearchPaths options
+  let extraPaths = optSearchPaths options
   configs <- traverse TIO.readFile (optOverridesFiles options)
   case parseOverridesFile (concatMap T.lines configs) of
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"
       hPutStr stderr (T.unpack errorMsg)
       exitFailure
-    Right ovs -> case optMode options of
-                   GenerateCode -> forM_ names (processMod options ovs)
-                   Attributes -> genGenericAttrs options ovs (map T.pack names)
-                   Signals -> genGenericConnectors options ovs (map T.pack names)
-                   Dump -> forM_ names (dump options ovs)
-                   Help -> putStr showHelp
+    Right ovs ->
+      case optMode options of
+        GenerateCode -> forM_ names (processMod options ovs extraPaths)
+        Attributes -> genGenericAttrs options ovs (map T.pack names) extraPaths
+        Signals -> genGenericConnectors options ovs (map T.pack names) extraPaths
+        Dump -> forM_ names (dump options ovs)
+        Help -> putStr showHelp
 
 foreign import ccall "g_type.h g_type_init"
     g_type_init :: IO ()

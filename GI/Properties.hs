@@ -20,8 +20,7 @@ import GI.Inheritable
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
-import GI.Internal.ArgInfo (Transfer(..))
-import GI.Internal.ParamFlag (ParamFlag(..))
+
 
 propTypeStr :: Type -> CodeGen String
 propTypeStr t = case t of

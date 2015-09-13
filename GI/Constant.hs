@@ -14,7 +14,6 @@ import GI.API
 import GI.Code
 import GI.Conversions
 import GI.Type
-import GI.Internal.ArgInfo (Transfer(TransferNothing))
 
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant (Name _ name) (Constant t value deprecated) = do

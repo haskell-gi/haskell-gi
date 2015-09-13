@@ -27,7 +27,6 @@ import GI.SymbolNaming
 import GI.Transfer
 import GI.Type
 import GI.Util
-import GI.Internal.ArgInfo
 
 import Text.Show.Pretty (ppShow)
 

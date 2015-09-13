@@ -2,7 +2,6 @@
 module GI.Type
     ( BasicType(..)
     , Type(..)
-    , typeFromTypeInfo
     , io
     , ptr
     , con
@@ -10,10 +9,6 @@ module GI.Type
     ) where
 
 import Data.Typeable
-
-import GI.Internal.BaseInfo
-import GI.Internal.TypeInfo
-import GI.Internal.Types
 
 -- This enum mirrors the definition in gitypes.h.
 data BasicType
@@ -52,57 +47,6 @@ data Type
     | TVariant
     | TParamSpec
     deriving (Eq, Show, Ord)
-
-basicTypeFromTypeTag TypeTagVoid = Just TVoid
-basicTypeFromTypeTag TypeTagBoolean = Just TBoolean
-basicTypeFromTypeTag TypeTagInt8 = Just TInt8
-basicTypeFromTypeTag TypeTagInt16 = Just TInt16
-basicTypeFromTypeTag TypeTagInt32 = Just TInt32
-basicTypeFromTypeTag TypeTagInt64 = Just TInt64
-basicTypeFromTypeTag TypeTagUint8 = Just TUInt8
-basicTypeFromTypeTag TypeTagUint16 = Just TUInt16
-basicTypeFromTypeTag TypeTagUint32 = Just TUInt32
-basicTypeFromTypeTag TypeTagUint64 = Just TUInt64
-basicTypeFromTypeTag TypeTagFloat = Just TFloat
-basicTypeFromTypeTag TypeTagDouble = Just TDouble
-basicTypeFromTypeTag TypeTagUnichar = Just TUniChar
-basicTypeFromTypeTag TypeTagUtf8 = Just TUTF8
-basicTypeFromTypeTag TypeTagFilename = Just TFileName
-basicTypeFromTypeTag TypeTagGtype = Just TGType
-basicTypeFromTypeTag _ = Nothing
-
-typeFromTypeInfo :: TypeInfo -> Type
-typeFromTypeInfo ti =
-    case basicTypeFromTypeTag tag of
-      Just bt -> TBasicType bt
-      Nothing -> case tag of
-           TypeTagArray -> case typeInfoArrayType ti of
-                             ArrayTypeC         ->
-                                 TCArray (typeInfoIsZeroTerminated ti)
-                                         (typeInfoArrayFixedSize ti)
-                                         (typeInfoArrayLength ti)
-                                         p1
-                             ArrayTypeArray     -> TGArray p1
-                             ArrayTypePtrArray  -> TPtrArray p1
-                             ArrayTypeByteArray -> TByteArray
-           -- TypeTagInterface -> TInterface (typeTagToString . typeInfoTag $ ti)
-           TypeTagInterface ->
-               let bi = typeInfoInterface ti
-               in case (infoNamespace bi, infoName bi) of
-                    ("GLib", "Variant") -> TVariant
-                    ("GObject", "ParamSpec") -> TParamSpec
-                    (ns, n) -> TInterface ns n
-           TypeTagGlist -> TGList p1
-           TypeTagGslist -> TGSList p1
-           TypeTagGhash -> TGHash p1 p2
-           -- XXX: Include more information.
-           TypeTagError -> TError
-           _ -> error $ "implement me: " ++ show (tag, fromEnum tag, fromEnum TypeTagArray)
-
-    where tag = typeInfoTag ti
-          p1 = typeFromTypeInfo $ typeInfoParamType ti 0
-          p2 = typeFromTypeInfo $ typeInfoParamType ti 1
-
 
 con :: String -> [TypeRep] -> TypeRep
 con "[]" xs = mkTyConApp listCon xs

@@ -5,15 +5,23 @@ module GI.API
     , GIRInfo(..)
     , loadGIRInfo
 
-    -- Reexported from GI.GIR.BasicTypes.
+    -- Reexported from GI.GIR.BasicTypes
     , Name(..)
+    , Transfer(..)
 
-    -- Reexported from GI.Internal.ArgInfo.
+    -- Reexported from GI.GIR.Arg
+    , Direction(..)
     , Scope(..)
 
-    -- Reexported from GI.GIR.Deprecation.
+    -- Reexported from GI.GIR.Deprecation
     , deprecatedPragma
     , DeprecationInfo
+
+    -- Reexported from GI.GIR.Property
+    , ParamFlag(..)
+
+    -- Reexported from GI.GIR.Function
+    , FunctionInfoFlag(..)
 
     -- Reexported from the corresponding GI.GIR modules
     , Constant(..)
@@ -42,11 +50,9 @@ import Data.Text (Text)
 
 import Text.XML hiding (Name)
 
-import GI.Internal.ArgInfo
-
 import GI.GIR.Alias (documentListAliases)
-import GI.GIR.Arg (Arg(..))
-import GI.GIR.BasicTypes (ParseContext(..), Alias, Name(..))
+import GI.GIR.Arg (Arg(..), Direction(..), Scope(..))
+import GI.GIR.BasicTypes (ParseContext(..), Alias, Name(..), Transfer(..))
 import GI.GIR.Boxed (Boxed(..), parseBoxed)
 import GI.GIR.Callable (Callable(..))
 import GI.GIR.Callback (Callback(..), parseCallback)
@@ -55,10 +61,10 @@ import GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
 import GI.GIR.Enum (Enumeration(..), parseEnum)
 import GI.GIR.Field (Field(..))
 import GI.GIR.Flags (Flags(..), parseFlags)
-import GI.GIR.Function (Function(..), parseFunction)
+import GI.GIR.Function (Function(..), parseFunction, FunctionInfoFlag(..))
 import GI.GIR.Interface (Interface(..), parseInterface)
 import GI.GIR.Object (Object(..), parseObject)
-import GI.GIR.Property (Property(..))
+import GI.GIR.Property (Property(..), ParamFlag(..))
 import GI.GIR.Repository (readGiRepository)
 import GI.GIR.Signal (Signal(..))
 import GI.GIR.Struct (Struct(..), parseStruct)
@@ -169,26 +175,28 @@ documentListIncludes doc = S.fromList (mapMaybe parseInclude includes)
 loadDependencies :: Bool                              -- Verbose
                  -> S.Set (Text, Text)                -- Requested
                  -> M.Map (Text, Text) Document       -- Loaded so far
+                 -> [FilePath]                        -- extra path to search
                  -> IO (M.Map (Text, Text) Document)  -- New loaded set
-loadDependencies verbose requested loaded
+loadDependencies verbose requested loaded extraPaths
         | S.null requested = return loaded
         | otherwise = do
   let (name, version) = S.elemAt 0 requested
-  doc <- readGiRepository verbose name (Just version)
+  doc <- readGiRepository verbose name (Just version) extraPaths
   let newLoaded = M.insert (name, version) doc loaded
       newRequested = S.union requested (documentListIncludes doc)
       notYetLoaded = S.filter (/= (name, version)) newRequested
-  loadDependencies verbose notYetLoaded newLoaded
+  loadDependencies verbose notYetLoaded newLoaded extraPaths
 
 -- | Load a given GIR file and recursively its dependencies
 loadGIRFile :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
+            -> [FilePath]       -- ^ extra paths to search
             -> IO (Document,                    -- ^ loaded document
                    M.Map (Text, Text) Document) -- ^ dependencies
-loadGIRFile verbose name version = do
-  doc <- readGiRepository verbose name version
-  deps <- loadDependencies verbose (documentListIncludes doc) M.empty
+loadGIRFile verbose name version extraPaths = do
+  doc <- readGiRepository verbose name version extraPaths
+  deps <- loadDependencies verbose (documentListIncludes doc) M.empty extraPaths
   return (doc, deps)
 
 -- | Turn a GIRInfoParse into a proper GIRInfo, doing some sanity
@@ -209,10 +217,11 @@ toGIRInfo info =
 loadGIRInfo :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
+            -> [FilePath]       -- ^ extra paths to search
             -> IO (GIRInfo,     -- ^ parsed document
                    [GIRInfo])   -- ^ parsed deps
-loadGIRInfo verbose name version =  do
-  (doc, deps) <- loadGIRFile verbose name version
+loadGIRInfo verbose name version extraPaths =  do
+  (doc, deps) <- loadGIRFile verbose name version extraPaths
   let aliases = M.unions (map documentListAliases (doc : M.elems deps))
       parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
       parsedDeps = map (toGIRInfo . parseGIRDocument aliases) (M.elems deps)

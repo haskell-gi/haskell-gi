@@ -20,7 +20,6 @@ import GI.GObject
 import GI.SymbolNaming (ucFirst)
 import GI.Type
 import GI.Util
-import GI.Internal.ArgInfo
 
 -- Basic primitives for freeing the given types. Types that point to
 -- Haskell objects with memory managed by the GC should not be freed
