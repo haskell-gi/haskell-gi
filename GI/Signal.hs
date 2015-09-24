@@ -12,6 +12,7 @@ import Control.Monad (forM, forM_, when, unless)
 import Data.List (intercalate)
 import Data.Typeable (typeOf)
 import Data.Bool (bool)
+import qualified Data.Text as T
 
 import Text.Show.Pretty (ppShow)
 
@@ -260,13 +261,13 @@ genSignal :: Signal -> Name -> ExcCodeGen ()
 genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   on' <- upperName on
 
-  line $ "-- signal " ++ on' ++ "::" ++ sn
+  line $ "-- signal " ++ on' ++ "::" ++ T.unpack sn
 
   let inArgs = filter ((/= DirectionOut) . direction) $ args cb
       hInArgs = filter (not . (`elem` arrayLengths cb)) inArgs
       outArgs = filter ((/= DirectionIn) . direction) $ args cb
       hOutArgs = filter (not . (`elem` arrayLengths cb)) outArgs
-      sn' = signalHaskellName sn
+      sn' = signalHaskellName (T.unpack sn)
       signalConnectorName = on' ++ ucFirst sn'
       cbType = signalConnectorName ++ "Callback"
 
@@ -308,4 +309,4 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
     line $ fullName ++ " obj cb after = do"
     indent $ do
         line $ "cb' <- mk" ++ cbType ++ " (" ++ lcFirst cbType ++ "Wrapper cb)"
-        line $ "connectSignalFunPtr obj \"" ++ sn ++ "\" cb' after"
+        line $ "connectSignalFunPtr obj \"" ++ T.unpack sn ++ "\" cb' after"

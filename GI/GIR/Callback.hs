@@ -6,18 +6,14 @@ module GI.GIR.Callback
     , parseCallback
     ) where
 
-import Text.XML (Element)
-import GI.GIR.BasicTypes (ParseContext, Name)
+import GI.GIR.Parser
+import GI.GIR.Callable (Callable, parseCallable)
 
-import GI.GIR.Callable (Callable)
-
--- XXX
 data Callback = Callback Callable
     deriving Show
 
-{-
-toCallback = Callback . toCallable
--}
-
-parseCallback :: ParseContext -> Element -> Maybe (Name, Callback)
-parseCallback _ _ = Nothing
+parseCallback :: Parser (Name, Callback)
+parseCallback = do
+  name <- parseName
+  callable <- parseCallable
+  return (name, Callback callable)

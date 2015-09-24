@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GI.CodeGen
     ( genConstant
     , genFunction
@@ -34,13 +35,13 @@ import GI.Type
 import GI.Util
 
 genFunction :: Name -> Function -> CodeGen ()
-genFunction n (Function symbol callable flags) = do
-    line $ "-- function " ++ symbol
+genFunction n (Function symbol throws callable) = do
+    line $ "-- function " ++ T.unpack symbol
 
     handleCGExc
-        (line . (concat ["-- XXX Could not generate function ", symbol
+        (line . (concat ["-- XXX Could not generate function ", T.unpack symbol
                         , "\n-- Error was : "] ++) . describeCGError)
-        (genCallable n symbol callable (FunctionThrows `elem` flags))
+        (genCallable n symbol callable throws)
 
 genBoxedObject :: Name -> Text -> CodeGen ()
 genBoxedObject n typeInit = do
@@ -168,12 +169,12 @@ genStruct n s = unless (ignoreStruct n s) $ do
     genStructFields n s
 
     -- Methods
-    forM_ (structMethods s) $ \(mn, f) -> do
-        isFunction <- symbolFromFunction (fnSymbol f)
+    forM_ (structMethods s) $ \(mn, m) -> do
+        isFunction <- symbolFromFunction (methodSymbol m)
         unless isFunction $ handleCGExc
             (line . (concat ["-- XXX Could not generate method ", name', "::"
                             , name mn, "\n", "-- Error was : "] ++) . describeCGError)
-            (genMethod n mn f)
+            (genMethod n mn m)
 
 genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
@@ -190,12 +191,12 @@ genUnion n u = do
     -- XXX Fields
 
     -- Methods
-    forM_ (unionMethods u) $ \(mn, f) -> do
-        isFunction <- symbolFromFunction $ fnSymbol f
+    forM_ (unionMethods u) $ \(mn, m) -> do
+        isFunction <- symbolFromFunction $ methodSymbol m
         unless isFunction $ handleCGExc
             (line . (concat ["-- XXX Could not generate method " , name', "::"
                             , name mn, "\n" , "-- Error was : "] ++) . describeCGError)
-            (genMethod n mn f)
+            (genMethod n mn m)
 
 -- Add the implicit object argument to methods of an object.  Since we
 -- are prepending an argument we need to adjust the offset of the
@@ -249,24 +250,24 @@ fixConstructorReturnType returnsGObject cn c = c { returnType = returnType' }
                     else
                         returnType c
 
-genMethod :: Name -> Name -> Function -> ExcCodeGen ()
-genMethod cn mn (Function {
-                    fnSymbol = sym,
-                    fnCallable = c,
-                    fnFlags = fs }) = do
+genMethod :: Name -> Name -> Method -> ExcCodeGen ()
+genMethod cn mn (Method {
+                    methodSymbol = sym,
+                    methodCallable = c,
+                    methodType = t,
+                    methodThrows = throws
+                 }) = do
     name' <- upperName cn
     returnsGObject <- isGObject (returnType c)
     line $ "-- method " ++ name' ++ "::" ++ name mn
-    line $ "-- method flags : " ++ show fs
+    line $ "-- method type : " ++ show t
     let -- Mangle the name to namespace it to the class.
         mn' = mn { name = name cn ++ "_" ++ name mn }
-    let c'  = if FunctionIsConstructor `elem` fs
+    let c'  = if Constructor == t
               then fixConstructorReturnType returnsGObject cn c
               else c
-        c'' = if FunctionIsMethod `elem` fs
-              then fixMethodArgs cn c'
-              else c'
-    genCallable mn' sym c'' (FunctionThrows `elem` fs)
+        c'' = fixMethodArgs cn c'
+    genCallable mn' sym c'' throws
 
 -- Since all GObjects are instances of their own class and GObject,
 -- the method signatures can get a little cumbersome. The construction
@@ -358,17 +359,18 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
   genGObjectCasts isIU n (objTypeInit o)
 
   -- Methods
-  forM_ (objMethods o) $ \(mn, f) ->
+  forM_ (objMethods o) $ \(mn, m) ->
          handleCGExc
          (line . (concat ["-- XXX Could not generate method ", name', "::"
                          , name mn, "\n", "-- Error was : "] ++) . describeCGError)
-         (genMethod n mn f)
+         (genMethod n mn m)
 
   -- And finally signals
   forM_ (objSignals o) $ \s ->
       handleCGExc
       (line . (concat ["-- XXX Could not generate signal ", name', "::"
-                      , sigName s, "\n", "-- Error was : "] ++) . describeCGError)
+                      , (T.unpack . sigName) s
+                      , "\n", "-- Error was : "] ++) . describeCGError)
       (genSignal s n)
 
 genInterface :: Name -> Interface -> CodeGen ()
@@ -415,17 +417,18 @@ genInterface n iface = do
     genGObjectCasts isIU n cn_
 
     -- Methods
-    forM_ (ifMethods iface) $ \(mn, f) -> do
-        isFunction <- symbolFromFunction (fnSymbol f)
+    forM_ (ifMethods iface) $ \(mn, m) -> do
+        isFunction <- symbolFromFunction (methodSymbol m)
         unless isFunction $ handleCGExc
              (line . (concat ["-- XXX Could not generate method ", name', "::"
                              , name mn, "\n", "-- Error was : "] ++) . describeCGError)
-             (genMethod n mn f)
+             (genMethod n mn m)
 
     -- And finally signals
     forM_ (ifSignals iface) $ \s -> handleCGExc
         (line . (concat ["-- XXX Could not generate signal ", name', "::"
-                        , sigName s, "\n", "-- Error was : "] ++) . describeCGError)
+                        , (T.unpack . sigName) s
+                        , "\n", "-- Error was : "] ++) . describeCGError)
         (genSignal s n)
 
 -- Some type libraries include spurious interface/struct methods,
@@ -434,7 +437,10 @@ genInterface n iface = do
 -- generate the method.
 --
 -- It may be more expedient to keep a map of symbol -> function.
-symbolFromFunction :: String -> CodeGen Bool
+--
+-- XXX Maybe the GIR helps here? Sometimes such functions are
+-- annotated with the "moved-to".
+symbolFromFunction :: Text -> CodeGen Bool
 symbolFromFunction sym = do
     apis <- getAPIs
     return $ any (hasSymbol sym . snd) $ M.toList apis
@@ -452,7 +458,6 @@ genAPI n (APIStruct s) = genStruct n s
 genAPI n (APIUnion u) = genUnion n u
 genAPI n (APIObject o) = genObject n o
 genAPI n (APIInterface i) = genInterface n i
-genAPI _ (APIBoxed _) = return ()
 
 genPrelude :: String -> String -> CodeGen ()
 genPrelude name modulePrefix = do

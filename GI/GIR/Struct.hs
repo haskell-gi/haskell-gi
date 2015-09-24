@@ -6,41 +6,53 @@ module GI.GIR.Struct
     , parseStruct
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
+import Data.Maybe (isJust)
 import Data.Text (Text)
-import Text.XML (Element)
 
-import GI.GIR.BasicTypes (ParseContext, Name)
-import GI.GIR.Deprecation (DeprecationInfo)
-
-import GI.GIR.Function (Function)
-import GI.GIR.Field (Field)
+import GI.GIR.Field (Field, parseFields, computeFieldOffsets)
+import GI.GIR.Method (Method, MethodType(..), parseMethod)
+import GI.GIR.Parser
 
 data Struct = Struct {
     structIsBoxed :: Bool,
     structTypeInit :: Maybe Text,
     structSize :: Int,
-    structIsForeign :: Bool,
-    isGTypeStruct :: Bool,
+    gtypeStructFor :: Maybe Name,
     -- https://bugzilla.gnome.org/show_bug.cgi?id=560248
     structIsDisguised :: Bool,
     structFields :: [Field],
-    structMethods :: [(Name, Function)],
+    structMethods :: [(Name, Method)],
     structDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
-{-
-toStruct :: StructInfo -> Struct
-toStruct si = Struct
-    (isJust (registeredTypeInfoTypeInit si) &&
-        gtypeIsBoxed (registeredTypeInfoGType si))
-    (registeredTypeInfoTypeInit si)
-    (structInfoSize si)
-    (structInfoIsForeign si)
-    (structInfoIsGTypeStruct si)
-    (map toField $ structInfoFields si)
-    (map (withName toFunction) (structInfoMethods si))
-    (infoDeprecated si)
--}
-
-parseStruct :: ParseContext -> Element -> Maybe (Name, Struct)
-parseStruct _ _ = Nothing
+parseStruct :: Parser (Name, Struct)
+parseStruct = do
+  name <- parseName
+  deprecated <- parseDeprecation
+  structFor <- queryAttrWithNamespace GLibGIRNS "is-gtype-struct-for" >>= \case
+               Just t -> (fmap Just . qualifyName) t
+               Nothing -> return Nothing
+  typeInit <- queryAttrWithNamespace GLibGIRNS "get-type"
+  disguised <- optionalAttr "disguised" False parseBool
+  (fields, size) <- computeFieldOffsets <$> parseFields
+  constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
+  methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
+  return (name,
+          Struct {
+            --- XXX We need a better check to see whether a struct is
+            --- boxed, it could be that it is has a GType but it is
+            --- not boxed... the only way I see of doing this is to
+            --- load the library and ask.
+            structIsBoxed = isJust typeInit
+          , structTypeInit = typeInit
+          , structSize = size
+          , gtypeStructFor = structFor
+          , structIsDisguised = disguised
+          , structFields = fields
+          , structMethods = constructors ++ methods
+          , structDeprecated = deprecated
+          })

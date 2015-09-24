@@ -8,18 +8,16 @@ module GI.GIR.XMLUtils
     , GIRXMLNamespace(..)
     , lookupAttrWithNamespace
     , childElemsWithLocalName
+    , childElemsWithNSName
     , firstChildWithLocalName
     , getElementContent
-    , parseIntegral
     ) where
 
 import Text.XML (Element(elementNodes, elementName, elementAttributes),
                  Node(NodeContent, NodeElement), nameLocalName, Name(..))
 import Data.Maybe (mapMaybe, listToMaybe)
-import Data.Text (Text)
 import qualified Data.Map as M
-import qualified Data.Text as T
-import qualified Data.Text.Read as TR
+import Data.Text (Text)
 
 -- | Turn a node into an element (if it is indeed an element node).
 nodeToElement :: Node -> Maybe Element
@@ -41,6 +39,16 @@ childElemsWithLocalName n =
     filter localNameMatch . subelements
     where localNameMatch = (== n) . localName
 
+-- | Restrict to those with given name.
+childElemsWithNSName :: GIRXMLNamespace -> Text -> Element -> [Element]
+childElemsWithNSName ns n = filter nameMatch . subelements
+    where nameMatch = (== name) . elementName
+          name = Name {
+                   nameLocalName = n
+                 , nameNamespace = Just (girNamespace ns)
+                 , namePrefix = Nothing
+                 }
+
 -- | Find the first child element with the given name.
 firstChildWithLocalName :: Text -> Element -> Maybe Element
 firstChildWithLocalName n = listToMaybe . childElemsWithLocalName n
@@ -52,18 +60,13 @@ getElementContent = listToMaybe . mapMaybe getContent . elementNodes
           getContent (NodeContent t) = Just t
           getContent _ = Nothing
 
--- | Parse a signed integral number.
-parseIntegral :: Integral a => Text -> Maybe a
-parseIntegral str = case TR.signed TR.decimal str of
-                     Right (n, r) | T.null r -> Just n
-                     _ -> Nothing
-
 -- | Lookup an attribute for an element (with no prefix).
 lookupAttr :: Name -> Element -> Maybe Text
 lookupAttr attr element = M.lookup attr (elementAttributes element)
 
 -- | GIR namespaces we know about.
 data GIRXMLNamespace = GLibGIRNS | CGIRNS
+                     deriving Show
 
 -- | Return the text representation of the known GIR namespaces.
 girNamespace :: GIRXMLNamespace -> Text

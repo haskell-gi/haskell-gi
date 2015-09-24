@@ -5,35 +5,35 @@ module GI.GIR.Alias
 
 import qualified Data.Map as M
 import Data.Text (Text)
+import qualified Data.Text as T
 import Text.XML (Element(elementAttributes), Document(documentRoot))
 
 import GI.Type (Type)
-import GI.GIR.BasicTypes (Alias(..), ParseContext(..))
+import GI.GIR.BasicTypes (Alias(..))
 import GI.GIR.Type (parseType)
-import GI.GIR.XMLUtils (subelements, childElemsWithLocalName, localName)
+import GI.GIR.Parser
+import GI.GIR.XMLUtils (childElemsWithLocalName)
 
--- | Find all aliases in a given namespace. We assume that namespaces
--- are the first elements in the namespace, in order to avoid scanning
--- all the entries in the namespace.
+-- | Find all aliases in a given namespace.
 namespaceListAliases :: Element -> M.Map Alias Type
-namespaceListAliases ns = M.fromList $ maybe [] (go (subelements ns)) maybeNSName
-    where maybeNSName = M.lookup "name" (elementAttributes ns)
-          go :: [Element] -> Text -> [(Alias, Type)]
-          go [] _ = []
-          go (e:es) nsName
-             | localName e /= "alias" = []
-             | otherwise = case parseAlias nsName e of
-                             Just n -> n : go es nsName
-                             Nothing -> go es nsName
+namespaceListAliases ns =
+    case M.lookup "name" (elementAttributes ns) of
+      Nothing -> error $ "Namespace with no name!"
+      Just nsName -> case runParser nsName M.empty ns parseAliases of
+                       Left err -> (error . T.unpack) err
+                       Right aliases -> M.fromList (map addNS aliases)
+                           where addNS (n, t) = (Alias (nsName, n), t)
 
--- | Parse an alias
-parseAlias :: Text -> Element -> Maybe (Alias, Type)
-parseAlias nsName element = do
-  name <- M.lookup "name" (elementAttributes element)
-  t <- parseType ctx element
-  return (Alias (nsName, name), t)
-  where ctx = ParseContext {currentNamespace = nsName,
-                            knownAliases = M.empty}
+-- | Parse all the aliases in the current namespace
+parseAliases :: Parser [(Text, Type)]
+parseAliases = parseChildrenWithLocalName "alias" parseAlias
+
+-- | Parse a single alias
+parseAlias :: Parser (Text, Type)
+parseAlias = do
+  name <- getAttr "name"
+  t <- parseType
+  return (name, t)
 
 -- | Find all aliases in a given document.
 documentListAliases :: Document -> M.Map Alias Type

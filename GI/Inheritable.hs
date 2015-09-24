@@ -11,6 +11,7 @@ import Control.Applicative ((<$>), (<*>))
 #endif
 import Control.Monad (foldM)
 import qualified Data.Map as M
+import Data.Text (Text)
 
 import GI.API
 import GI.Code (findAPIByName, CodeGen, line)
@@ -21,7 +22,7 @@ import GI.GObject (instanceTree)
 class Inheritable i where
     ifInheritables :: Interface -> [i]
     objInheritables :: Object -> [i]
-    iName :: i -> String
+    iName :: i -> Text
 
 instance Inheritable Property where
     ifInheritables = ifProperties
@@ -78,8 +79,8 @@ removeDuplicates :: forall i. (Eq i, Show i, Inheritable i) =>
 removeDuplicates inheritables =
     (filterTainted . M.toList) <$> foldM filterDups M.empty inheritables
     where
-      filterDups :: M.Map String (Bool, Name, i) -> (Name, i) ->
-                    CodeGen (M.Map String (Bool, Name, i))
+      filterDups :: M.Map Text (Bool, Name, i) -> (Name, i) ->
+                    CodeGen (M.Map Text (Bool, Name, i))
       filterDups m (name, prop) =
         case M.lookup (iName prop) m of
           Just (tainted, n, p)
@@ -92,7 +93,7 @@ removeDuplicates inheritables =
                    -- Tainted
                    return $ M.insert (iName prop) (True, n, p) m
           Nothing -> return $ M.insert (iName prop) (False, name, prop) m
-      filterTainted :: [(String, (Bool, Name, i))] -> [(Name, i)]
+      filterTainted :: [(Text, (Bool, Name, i))] -> [(Name, i)]
       filterTainted xs =
           [(name, prop) | (_, (tainted, name, prop)) <- xs, not tainted]
 

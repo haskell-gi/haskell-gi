@@ -6,50 +6,53 @@ module GI.GIR.Object
     , parseObject
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 import Data.Text (Text)
-import Text.XML (Element)
 
-import GI.GIR.BasicTypes (ParseContext, Name)
-import GI.GIR.Deprecation (DeprecationInfo)
-
-import GI.GIR.Constant (Constant)
-import GI.GIR.Field (Field)
-import GI.GIR.Function (Function)
-import GI.GIR.Property (Property)
-import GI.GIR.Signal (Signal)
+import GI.GIR.Field (Field, parseFields, computeFieldOffsets)
+import GI.GIR.Method (Method, parseMethod, MethodType(..))
+import GI.GIR.Property (Property, parseProperty)
+import GI.GIR.Signal (Signal, parseSignal)
+import GI.GIR.Parser
 
 data Object = Object {
-    objFields :: [Field],
-    objMethods :: [(Name, Function)],
-    objProperties :: [Property],
-    objSignals :: [Signal],
-    objInterfaces :: [Name],
-    objConstants :: [Constant],
     objParent :: Maybe Name,
     objTypeInit :: Text,
     objTypeName :: Text,
-    objRefFunction :: Maybe Text,
-    objUnrefFunction :: Maybe Text,
-    objDeprecated :: Maybe DeprecationInfo }
-    deriving Show
+    objInterfaces :: [Name],
+    objDeprecated :: Maybe DeprecationInfo,
+    objFields :: [Field],
+    objMethods :: [(Name, Method)],
+    objProperties :: [Property],
+    objSignals :: [Signal]
+    } deriving Show
 
-{-
-toObject :: ObjectInfo -> Object
-toObject oi = Object
-    (map toField $ objectInfoFields oi)
-    (map (withName toFunction) (objectInfoMethods oi))
-    (map toProperty $ objectInfoProperties oi)
-    (map toSignal (objectInfoSignals oi))
-    (map getName $ objectInfoInterfaces oi)
-    (map toConstant $ objectInfoConstants oi)
-    (getName <$> objectInfoParent oi)
-    (objectInfoTypeInit oi)
-    (objectInfoTypeName oi)
-    (objectInfoRefFunction oi)
-    (objectInfoUnrefFunction oi)
-    (infoDeprecated oi)
--}
-
-parseObject :: ParseContext -> Element -> Maybe (Name, Object)
-parseObject _ _ = Nothing
+parseObject :: Parser (Name, Object)
+parseObject = do
+  name <- parseName
+  deprecated <- parseDeprecation
+  methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
+  constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
+  parent <- optionalAttr "parent" Nothing (fmap Just . qualifyName)
+  interfaces <- parseChildrenWithLocalName "implements" parseName
+  props <- parseChildrenWithLocalName "property" parseProperty
+  typeInit <- getAttrWithNamespace GLibGIRNS "get-type"
+  typeName <- getAttrWithNamespace GLibGIRNS "type-name"
+  signals <- parseChildrenWithNSName GLibGIRNS "signal" parseSignal
+  fields <- parseFields
+  return (name,
+         Object {
+            objParent = parent
+          , objTypeInit = typeInit
+          , objTypeName = typeName
+          , objInterfaces = interfaces
+          , objDeprecated = deprecated
+          , objFields = (fst . computeFieldOffsets) fields
+          , objMethods = constructors ++ methods
+          , objProperties = props
+          , objSignals = signals
+          })
 

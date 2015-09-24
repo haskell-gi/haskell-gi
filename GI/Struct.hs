@@ -10,7 +10,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM_, unless)
 
 import Data.List (isSuffixOf)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, isJust)
 import Data.Text (unpack)
 
 import GI.API
@@ -22,7 +22,7 @@ import GI.Util
 
 -- | Whether (not) to generate bindings for the given struct.
 ignoreStruct :: Name -> Struct -> Bool
-ignoreStruct (Name _ name) s = isGTypeStruct s ||
+ignoreStruct (Name _ name) s = isJust (gtypeStructFor s) ||
                                "Private" `isSuffixOf` name
 
 -- | Canonical name for the type of a callback type embedded in a

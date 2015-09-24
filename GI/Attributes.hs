@@ -9,6 +9,8 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM_, when)
 import Control.Monad.Writer (tell)
 import qualified Data.Set as S
+import qualified Data.Text as T
+import Data.Text (Text)
 
 import GI.API
 import GI.Code
@@ -19,10 +21,10 @@ import GI.CodeGen (genPrelude)
 
 -- A list of distinct property names for all GObjects appearing in the
 -- given list of APIs.
-findObjectPropNames :: [(Name, API)] -> CodeGen [String]
+findObjectPropNames :: [(Name, API)] -> CodeGen [Text]
 findObjectPropNames apis = S.toList <$> go apis S.empty
     where
-      go :: [(Name, API)] -> S.Set String -> CodeGen (S.Set String)
+      go :: [(Name, API)] -> S.Set Text -> CodeGen (S.Set Text)
       go [] set = return set
       go ((name, api):apis) set = do
         isGO <- apiIsGObject name api
@@ -35,14 +37,14 @@ findObjectPropNames apis = S.toList <$> go apis S.empty
                _ -> error $ "GObject not an Interface or Object!? " ++ show name
         else go apis set
 
-      insertProps :: [Property] -> S.Set String -> S.Set String
+      insertProps :: [Property] -> S.Set Text -> S.Set Text
       insertProps props set = foldr (S.insert . propName) set props
 
-genPropertyAttr :: String -> CodeGen ()
+genPropertyAttr :: Text -> CodeGen ()
 genPropertyAttr pName = group $ do
-  line $ "-- Property \"" ++ pName ++ "\""
-  let name = hyphensToCamelCase pName
-  line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ pName ++ "\" o"
+  line $ "-- Property \"" ++ T.unpack pName ++ "\""
+  let name = (hyphensToCamelCase  . T.unpack) pName
+  line $ "_" ++ lcFirst name ++ " :: Attr \"" ++ T.unpack pName ++ "\" o"
   line $ "_" ++ lcFirst name ++ " = Attr"
 
 genProps :: (Name, API) -> CodeGen ()

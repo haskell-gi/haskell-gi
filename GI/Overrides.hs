@@ -25,7 +25,7 @@ data Overrides = Overrides {
       -- "_" string will be used.
       constantPrefix  :: M.Map String String,
       -- | Ignored elements of a given API.
-      ignoredElems    :: M.Map Name (S.Set String),
+      ignoredElems    :: M.Map Name (S.Set Text),
       -- | Ignored APIs (all elements in this API will just be discarded).
       ignoredAPIs     :: S.Set Name,
       -- | Structs for which accessors should not be auto-generated.
@@ -101,7 +101,7 @@ parseIgnore _ Nothing =
     throwError "'ignore' requires a namespace to be defined first."
 parseIgnore (T.words -> [T.splitOn "." -> [api,elem]]) (Just ns) =
     tell $ defaultOverrides {ignoredElems = M.singleton (Name ns (T.unpack api))
-                                         (S.singleton $ T.unpack elem)}
+                                         (S.singleton elem)}
 parseIgnore (T.words -> [T.splitOn "." -> [api]]) (Just ns) =
     tell $ defaultOverrides {ignoredAPIs = S.singleton (Name ns (T.unpack api))}
 parseIgnore ignore _ =
@@ -155,11 +155,12 @@ parseCabalPkgVersion t =
 
 -- | Filter a set of named objects based on a lookup list of names to
 -- ignore.
-filterNamed :: [(Name, a)] -> S.Set String -> [(Name, a)]
-filterNamed set ignores = filter ((`S.notMember` ignores) . name . fst) set
+filterNamed :: [(Name, a)] -> S.Set Text -> [(Name, a)]
+filterNamed set ignores =
+    filter ((`S.notMember` ignores) . T.pack . name . fst) set
 
 -- | Filter one API according to the given config.
-filterOneAPI :: Overrides -> (Name, API, Maybe (S.Set String)) -> (Name, API)
+filterOneAPI :: Overrides -> (Name, API, Maybe (S.Set Text)) -> (Name, API)
 filterOneAPI ovs (Name ns n, APIConst c, _) =
     (Name ns (prefix ++ n), APIConst c)
     where prefix = fromMaybe "_" $ M.lookup ns (constantPrefix ovs)

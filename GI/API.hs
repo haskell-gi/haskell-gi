@@ -18,10 +18,10 @@ module GI.API
     , DeprecationInfo
 
     -- Reexported from GI.GIR.Property
-    , ParamFlag(..)
+    , PropertyFlag(..)
 
-    -- Reexported from GI.GIR.Function
-    , FunctionInfoFlag(..)
+    -- Reexported from GI.GIR.Method
+    , MethodType(..)
 
     -- Reexported from the corresponding GI.GIR modules
     , Constant(..)
@@ -34,6 +34,7 @@ module GI.API
     , Struct(..)
     , Callback(..)
     , Interface(..)
+    , Method(..)
     , Object(..)
     , Enumeration(..)
     , Flags (..)
@@ -52,8 +53,7 @@ import Text.XML hiding (Name)
 
 import GI.GIR.Alias (documentListAliases)
 import GI.GIR.Arg (Arg(..), Direction(..), Scope(..))
-import GI.GIR.BasicTypes (ParseContext(..), Alias, Name(..), Transfer(..))
-import GI.GIR.Boxed (Boxed(..), parseBoxed)
+import GI.GIR.BasicTypes (Alias, Name(..), Transfer(..))
 import GI.GIR.Callable (Callable(..))
 import GI.GIR.Callback (Callback(..), parseCallback)
 import GI.GIR.Constant (Constant(..), parseConstant)
@@ -61,15 +61,17 @@ import GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
 import GI.GIR.Enum (Enumeration(..), parseEnum)
 import GI.GIR.Field (Field(..))
 import GI.GIR.Flags (Flags(..), parseFlags)
-import GI.GIR.Function (Function(..), parseFunction, FunctionInfoFlag(..))
+import GI.GIR.Function (Function(..), parseFunction)
 import GI.GIR.Interface (Interface(..), parseInterface)
+import GI.GIR.Method (Method(..), MethodType(..))
 import GI.GIR.Object (Object(..), parseObject)
-import GI.GIR.Property (Property(..), ParamFlag(..))
+import GI.GIR.Parser (Parser, runParser)
+import GI.GIR.Property (Property(..), PropertyFlag(..))
 import GI.GIR.Repository (readGiRepository)
 import GI.GIR.Signal (Signal(..))
 import GI.GIR.Struct (Struct(..), parseStruct)
 import GI.GIR.Union (Union(..), parseUnion)
-import GI.GIR.XMLUtils (subelements, childElemsWithLocalName)
+import GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr)
 import GI.Type (Type)
 
 data GIRInfo = GIRInfo {
@@ -101,29 +103,33 @@ data API
     | APIObject Object
     | APIStruct Struct
     | APIUnion Union
-    | APIBoxed Boxed
     deriving Show
 
-maybeAddAPI :: GIRNamespace -> (a -> API) -> Maybe (Name, a) -> GIRNamespace
-maybeAddAPI ns _ Nothing = ns
-maybeAddAPI ns@GIRNamespace{nsAPIs} wrap (Just (n, v)) =
-    ns {nsAPIs = (n, wrap v) : nsAPIs}
+parseAPI :: Text -> M.Map Alias Type -> Element -> (a -> API)
+         -> Parser (Name, a) -> (Name, API)
+parseAPI ns aliases element wrapper parser =
+    case runParser ns aliases element parser of
+      Left err -> error $ "Parse error: " ++ T.unpack err
+      Right (n, a) -> (n, wrapper a)
 
-parseNamespaceElement :: ParseContext -> GIRNamespace -> Element -> GIRNamespace
-parseNamespaceElement ctx ns@GIRNamespace{..} element =
-    case nameLocalName (elementName element) of
-      "alias" -> ns     -- Processed separately
-      "constant" -> maybeAddAPI ns APIConst (parseConstant ctx element)
-      "enumeration" -> maybeAddAPI ns APIEnum (parseEnum ctx element)
-      "bitfield" -> maybeAddAPI ns APIFlags (parseFlags ctx element)
-      "function" -> maybeAddAPI ns APIFunction (parseFunction ctx element)
-      "callback" -> maybeAddAPI ns APICallback (parseCallback ctx element)
-      "record" -> maybeAddAPI ns APIStruct (parseStruct ctx element)
-      "union" -> maybeAddAPI ns APIUnion (parseUnion ctx element)
-      "class" -> maybeAddAPI ns APIObject (parseObject ctx element)
-      "interface" -> maybeAddAPI ns APIInterface (parseInterface ctx element)
-      "boxed" -> maybeAddAPI ns APIBoxed (parseBoxed ctx element)
-      n -> error . T.unpack $ "Unknown GIR element \"" <> n <> "\" when processing namespace \"" <> nsName <> "\", aborting."
+parseNSElement :: M.Map Alias Type -> GIRNamespace -> Element -> GIRNamespace
+parseNSElement aliases ns@GIRNamespace{..} element
+    | lookupAttr "introspectable" element == Just "0" = ns
+    | otherwise =
+        case nameLocalName (elementName element) of
+          "alias" -> ns     -- Processed separately
+          "constant" -> parse APIConst parseConstant
+          "enumeration" -> parse APIEnum parseEnum
+          "bitfield" -> parse APIFlags parseFlags
+          "function" -> parse APIFunction parseFunction
+          "callback" -> parse APICallback parseCallback
+          "record" -> parse APIStruct parseStruct
+          "union" -> parse APIUnion parseUnion
+          "class" -> parse APIObject parseObject
+          "interface" -> parse APIInterface parseInterface
+          "boxed" -> ns -- Unsupported
+          n -> error . T.unpack $ "Unknown GIR element \"" <> n <> "\" when processing namespace \"" <> nsName <> "\", aborting."
+    where parse = \w p -> ns { nsAPIs = parseAPI nsName aliases element w p : nsAPIs }
 
 parseNamespace :: Element -> M.Map Alias Type -> Maybe GIRNamespace
 parseNamespace element aliases = do
@@ -135,8 +141,7 @@ parseNamespace element aliases = do
              nsVersion      = version,
              nsAPIs         = []
            }
-      ctx = ParseContext name aliases
-  return $ L.foldl' (parseNamespaceElement ctx) ns (subelements element)
+  return $ L.foldl' (parseNSElement aliases) ns (subelements element)
 
 parseInclude :: Element -> Maybe (Text, Text)
 parseInclude element = do

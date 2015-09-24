@@ -5,39 +5,38 @@ module GI.GIR.Interface
     , parseInterface
     ) where
 
-import Data.Maybe (mapMaybe)
 import Data.Text (Text)
-import Text.XML (Element)
 
-import GI.GIR.BasicTypes (ParseContext, Name, nameInCurrentNS)
-import GI.GIR.Constant (Constant(..))
-import GI.GIR.Deprecation (DeprecationInfo)
-import GI.GIR.Function (Function(..), parseFunction)
-import GI.GIR.Property (Property(..))
-import GI.GIR.Signal (Signal(..))
-import GI.GIR.XMLUtils (lookupAttr, childElemsWithLocalName)
+import GI.GIR.Method (Method, MethodType(..), parseMethod)
+import GI.GIR.Property (Property, parseProperty)
+import GI.GIR.Signal (Signal, parseSignal)
+import GI.GIR.Parser
 
 data Interface = Interface {
-        ifConstants :: [(Name, Constant)],
         ifProperties :: [Property],
         ifSignals :: [Signal],
         ifPrerequisites :: [Name],
         ifTypeInit :: Maybe Text,
-        ifMethods :: [(Name, Function)],
+        ifMethods :: [(Name, Method)],
         ifDeprecated :: Maybe DeprecationInfo
     } deriving Show
 
-parseInterface :: ParseContext -> Element -> Maybe (Name, Interface)
-parseInterface ctx element = do
-    name <- lookupAttr "name" element
-    let methods = mapMaybe (parseFunction ctx) $
-            childElemsWithLocalName "method" element
-    return (nameInCurrentNS ctx name, Interface {
-            ifConstants = [],
-            ifProperties = [],
-            ifSignals = [],
-            ifPrerequisites = [],
-            ifTypeInit = Nothing,
-            ifMethods = methods,
-            ifDeprecated = Nothing
-        })
+parseInterface :: Parser (Name, Interface)
+parseInterface = do
+  name <- parseName
+  props <- parseChildrenWithLocalName "property" parseProperty
+  signals <- parseChildrenWithNSName GLibGIRNS "signal" parseSignal
+  prereqs <- parseChildrenWithLocalName "prerequisite" parseName
+  typeInit <- queryAttrWithNamespace GLibGIRNS "get-type"
+  methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
+  constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
+  deprecated <- parseDeprecation
+  return (name,
+         Interface {
+            ifProperties = props
+          , ifSignals = signals
+          , ifPrerequisites = prereqs
+          , ifTypeInit = typeInit
+          , ifMethods = constructors ++ methods
+          , ifDeprecated = deprecated
+          })

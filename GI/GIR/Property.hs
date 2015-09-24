@@ -1,50 +1,52 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GI.GIR.Property
     ( Property(..)
-    , ParamFlag(..)
+    , PropertyFlag(..)
+    , parseProperty
     ) where
 
+import Data.Text (Text)
+import Data.Monoid ((<>))
+
 import GI.Type (Type)
-import GI.GIR.Deprecation (DeprecationInfo)
 
+import GI.GIR.Arg (parseTransfer)
 import GI.GIR.BasicTypes (Transfer)
+import GI.GIR.Parser
+import GI.GIR.Type (parseType)
 
-data ParamFlag = ParamReadable
-               | ParamWritable
-               | ParamConstruct
-               | ParamConstructOnly
-               | ParamLaxValidation
-               | ParamStaticName
-               | ParamStaticNick
-               | ParamStaticBlurb
-               | ParamDeprecated
-               deriving (Show,Eq)
-
-instance Enum ParamFlag where
-  fromEnum ParamReadable = 1
-  fromEnum ParamWritable = 2
-  fromEnum ParamConstruct = 4
-  fromEnum ParamConstructOnly = 8
-  fromEnum ParamLaxValidation = 16
-  fromEnum ParamStaticName = 32
-  fromEnum ParamStaticNick = 64
-  fromEnum ParamStaticBlurb = 128
-  fromEnum ParamDeprecated = 2147483648
-
-  toEnum 1 = ParamReadable
-  toEnum 2 = ParamWritable
-  toEnum 4 = ParamConstruct
-  toEnum 8 = ParamConstructOnly
-  toEnum 16 = ParamLaxValidation
-  toEnum 32 = ParamStaticName
-  toEnum 64 = ParamStaticNick
-  toEnum 128 = ParamStaticBlurb
-  toEnum 2147483648 = ParamDeprecated
-  toEnum n = error $ "Unknown param flag: " ++ show n
+data PropertyFlag = PropertyReadable
+                  | PropertyWritable
+                  | PropertyConstruct
+                  | PropertyConstructOnly
+                    deriving (Show,Eq)
 
 data Property = Property {
-        propName :: String,
+        propName :: Text,
         propType :: Type,
-        propFlags :: [ParamFlag],
+        propFlags :: [PropertyFlag],
         propTransfer :: Transfer,
         propDeprecated :: Maybe DeprecationInfo
     } deriving (Show, Eq)
+
+parseProperty :: Parser Property
+parseProperty = do
+  name <- getAttr "name"
+  t <- parseType
+  transfer <- parseTransfer
+  deprecated <- parseDeprecation
+  readable <- optionalAttr "readable" True parseBool
+  writable <- optionalAttr "writable" False parseBool
+  construct <- optionalAttr "construct" False parseBool
+  constructOnly <- optionalAttr "construct-only" False parseBool
+  let flags = if readable then [PropertyReadable] else []
+              <> if writable then [PropertyWritable] else []
+              <> if construct then [PropertyConstruct] else []
+              <> if constructOnly then [PropertyConstructOnly] else []
+  return $ Property {
+                  propName = name
+                , propType = t
+                , propFlags = flags
+                , propTransfer = transfer
+                , propDeprecated = deprecated
+                }

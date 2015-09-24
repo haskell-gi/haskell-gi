@@ -8,6 +8,7 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when, unless)
 import Data.List (intercalate)
+import qualified Data.Text as T
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CInt, CUInt)
@@ -92,7 +93,7 @@ genPropertySetter n pName prop = group $ do
   line $ "set" ++ pName ++ " :: (" ++ intercalate ", " constraints'
            ++ ") => o -> " ++ t ++ " -> IO ()"
   line $ "set" ++ pName ++ " obj val = setObjectProperty" ++ tStr
-           ++ " obj \"" ++ propName prop ++ "\" val"
+           ++ " obj \"" ++ (T.unpack . propName) prop ++ "\" val"
 
 genPropertyGetter :: Name -> String -> Property -> CodeGen ()
 genPropertyGetter n pName prop = group $ do
@@ -103,7 +104,7 @@ genPropertyGetter n pName prop = group $ do
                 " => o -> " ++ show (io outType)
   tStr <- propTypeStr $ propType prop
   line $ "get" ++ pName ++ " obj = getObjectProperty" ++ tStr
-        ++ " obj \"" ++ propName prop ++ "\"" ++
+        ++ " obj \"" ++ (T.unpack . propName) prop ++ "\"" ++
            if tStr `elem` ["Object", "Boxed"]
            then " " ++ show outType -- These require the constructor too.
            else ""
@@ -119,7 +120,7 @@ genPropertyConstructor pName prop = group $ do
   line $ "construct" ++ pName ++ " :: " ++ constraints'
            ++ t ++ " -> IO ([Char], GValue)"
   line $ "construct" ++ pName ++ " val = constructObjectProperty" ++ tStr
-           ++ " \"" ++ propName prop ++ "\" val"
+           ++ " \"" ++ (T.unpack . propName) prop ++ "\" val"
 
 genObjectProperties :: Name -> Object -> CodeGen ()
 genObjectProperties n o = do
@@ -148,13 +149,13 @@ genOneProperty :: Name -> Name -> Property -> ExcCodeGen ()
 genOneProperty n propOwner@(Name ons on) prop = do
   name <- upperName n
   propOwnerName <- upperName propOwner
-  let cName = hyphensToCamelCase $ propName prop
+  let cName = (hyphensToCamelCase . T.unpack . propName) prop
       pName = propOwnerName ++ cName
       flags = propFlags prop
-      writable = ParamWritable `elem` flags &&
-                 (ParamConstructOnly `notElem` flags)
-      readable = ParamReadable `elem` flags
-      constructOnly = ParamConstructOnly `elem` flags
+      writable = PropertyWritable `elem` flags &&
+                 (PropertyConstructOnly `notElem` flags)
+      readable = PropertyReadable `elem` flags
+      constructOnly = PropertyConstructOnly `elem` flags
       owned = propOwner == n -- Whether n is the object which
                              -- defined the property, will be False
                              -- for properties inherited from parent
@@ -180,7 +181,7 @@ genOneProperty n propOwner@(Name ons on) prop = do
                                  ++ show pName
 
     group $ do
-      line $ "-- VVV Prop \"" ++ propName prop ++ "\""
+      line $ "-- VVV Prop \"" ++ (T.unpack . propName) prop ++ "\""
       line $ "   -- Type: " ++ show (propType prop)
       line $ "   -- Flags: " ++ show (propFlags prop)
 
@@ -220,9 +221,10 @@ genOneProperty n propOwner@(Name ons on) prop = do
         attrWriteType | writable      = "SettableAndConstructibleAttr"
                       | constructOnly = "ConstructOnlyAttr"
                       | otherwise     = "ReadOnlyAttr"
-        instanceVars = "\"" ++ propName prop ++ "\" " ++ name
+        instanceVars = "\"" ++ (T.unpack . propName) prop ++ "\" " ++ name
 
-    line $ "instance HasAttr " ++ name ++ " \"" ++ propName prop ++ "\" where"
+    line $ "instance HasAttr " ++ name ++ " \""
+             ++ (T.unpack . propName) prop ++ "\" where"
     indent $ do
             line $ "type AttrIsReadable " ++ instanceVars
                      ++ " = " ++ show readable
@@ -242,6 +244,6 @@ genProperties :: Name -> [(Name, Property)] -> CodeGen ()
 genProperties n props = do
   forM_ props $ \(owner, prop) -> do
       handleCGExc (\err -> line $ "-- XXX Generation of property\""
-                             ++ propName prop
+                             ++ (T.unpack . propName) prop
                              ++ "\" failed: " ++ describeCGError err)
                   (genOneProperty n owner prop)

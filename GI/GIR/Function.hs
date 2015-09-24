@@ -1,27 +1,29 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GI.GIR.Function
     ( Function(..)
-    , FunctionInfoFlag(..)
     , parseFunction
     ) where
 
-import Text.XML (Element)
+import Data.Text (Text)
 
-import GI.GIR.BasicTypes (ParseContext(..), Name(..))
-import GI.GIR.Callable (Callable(..))
-
-data FunctionInfoFlag = FunctionIsMethod
-                      | FunctionIsConstructor
-                      | FunctionIsGetter
-                      | FunctionIsSetter
-                      | FunctionWrapsVFunc
-                      | FunctionThrows
-                        deriving (Show, Eq)
+import GI.GIR.Callable (Callable(..), parseCallable)
+import GI.GIR.Parser
 
 data Function = Function {
-        fnSymbol :: String,
-        fnCallable :: Callable,
-        fnFlags :: [FunctionInfoFlag]
+        fnSymbol :: Text,
+        fnThrows :: Bool,
+        fnCallable :: Callable
     } deriving Show
 
-parseFunction :: ParseContext -> Element -> Maybe (Name, Function)
-parseFunction _ _ = Nothing
+parseFunction :: Parser (Name, Function)
+parseFunction = do
+  name <- parseName
+  callable <- parseCallable
+  symbol <- getAttrWithNamespace CGIRNS "identifier"
+  throws <- optionalAttr "throws" False parseBool
+  return $ (name,
+            Function {
+              fnSymbol = symbol
+            , fnCallable = callable
+            , fnThrows = throws
+            })

@@ -5,33 +5,18 @@ module GI.GIR.Type
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 #endif
-import Control.Applicative ((<|>))
 
-import qualified Data.Map as M
-import Data.Maybe (mapMaybe, fromMaybe)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Foreign.Storable (sizeOf)
-import Foreign.C (CInt, CUInt, CLong, CULong, CSize)
-import Text.XML (Element(elementAttributes))
+import Foreign.C (CShort, CUShort, CInt, CUInt, CLong, CULong, CSize)
+import System.Posix.Types (CSsize)
 
 import GI.Type (Type(..), BasicType(..))
-import GI.GIR.BasicTypes (Alias(..), ParseContext(ParseContext, knownAliases,
-                                                  currentNamespace))
-import GI.GIR.XMLUtils (subelements, localName, parseIntegral)
-
-data TypeElement = TypeElement Element | ArrayElement Element
-
--- | Find the children giving the type of the given element.
-findTypeElements :: Element -> [TypeElement]
-findTypeElements = mapMaybe toTypeElement . subelements
-    where toTypeElement :: Element -> Maybe TypeElement
-          toTypeElement elem
-              | "type" <- localName elem = Just (TypeElement elem)
-              | "array" <- localName elem = Just (ArrayElement elem)
-          toTypeElement _ = Nothing
+import GI.GIR.Parser
 
 -- | Map the given type name to a BasicType (in GI.Type), if possible.
 nameToBasicType :: Text -> Maybe BasicType
@@ -51,9 +36,19 @@ nameToBasicType "guint64"  = Just TUInt64
 nameToBasicType "gfloat"   = Just TFloat
 nameToBasicType "gdouble"  = Just TDouble
 nameToBasicType "gunichar" = Just TUniChar
-nameToBasicType "gtype"    = Just TGType
+nameToBasicType "GType"    = Just TGType
 nameToBasicType "utf8"     = Just TUTF8
 nameToBasicType "filename" = Just TFileName
+nameToBasicType "gshort"   = case sizeOf (0 :: CShort) of
+                               2 -> Just TInt16
+                               4 -> Just TInt32
+                               8 -> Just TInt64
+                               n -> error $ "Unexpected short size: " ++ show n
+nameToBasicType "gushort"  = case sizeOf (0 :: CUShort) of
+                               2 -> Just TUInt16
+                               4 -> Just TUInt32
+                               8 -> Just TUInt64
+                               n -> error $ "Unexpected ushort size: " ++ show n
 nameToBasicType "gint"     = case sizeOf (0 :: CInt) of
                                4 -> Just TInt32
                                8 -> Just TInt64
@@ -70,80 +65,99 @@ nameToBasicType "gulong"   = case sizeOf (0 :: CULong) of
                                4 -> Just TUInt32
                                8 -> Just TUInt64
                                n -> error $ "Unexpected ulong length: " ++ show n
+nameToBasicType "gssize"   = case sizeOf (0 :: CSsize) of
+                               4 -> Just TInt32
+                               8 -> Just TInt64
+                               n -> error $ "Unexpected ssize length: " ++ show n
 nameToBasicType "gsize"    = case sizeOf (0 :: CSize) of
                                4 -> Just TUInt32
                                8 -> Just TUInt64
                                n -> error $ "Unexpected size length: " ++ show n
 nameToBasicType _          = Nothing
 
--- | A boolean value given by a numerical constant.
-parseBool :: Text -> Maybe Bool
-parseBool "0" = Just False
-parseBool "1" = Just True
-parseBool _   = Nothing
-
 -- | The different array types.
-parseArrayType :: ParseContext -> Element -> Maybe Type
-parseArrayType ctx elem =
-    case M.lookup "name" (elementAttributes elem) of
-      Just "GLib.Array" -> TGArray <$> parseType ctx elem
-      Just "GLib.PtrArray" -> TPtrArray <$> parseType ctx elem
-      Just "GLib.ByteArray" -> Just TByteArray
-      Just _ -> Nothing
-      Nothing -> parseCArrayType ctx elem
+parseArrayInfo :: Parser Type
+parseArrayInfo = queryAttr "name" >>= \case
+      Just "GLib.Array" -> TGArray <$> parseType
+      Just "GLib.PtrArray" -> TPtrArray <$> parseType
+      Just "GLib.ByteArray" -> return TByteArray
+      Just other -> parseError $ "Unsupported array type: \"" <> other <> "\""
+      Nothing -> parseCArrayType
 
 -- | A C array
-parseCArrayType :: ParseContext -> Element -> Maybe Type
-parseCArrayType ctx element = do
-  let attrs = elementAttributes element
-      length = fromMaybe (-1) (M.lookup "length" attrs >>= parseIntegral)
-      zeroTerminated = fromMaybe True (M.lookup "zero-terminated" attrs >>= parseBool)
-      fixedSize = fromMaybe (-1) (M.lookup "fixed-size" attrs >>= parseIntegral)
-  elementType <- parseType ctx element
+parseCArrayType :: Parser Type
+parseCArrayType = do
+  zeroTerminated <- queryAttr "zero-terminated" >>= \case
+                    Just b -> parseBool b
+                    Nothing -> return True
+  length <- queryAttr "length" >>= \case
+            Just l -> parseIntegral l
+            Nothing -> return (-1)
+  fixedSize <- queryAttr "fixed-size" >>= \case
+               Just s -> parseIntegral s
+               Nothing -> return (-1)
+  elementType <- parseType
   return $ TCArray zeroTerminated fixedSize length elementType
 
 -- | A hash table.
-parseHashTable :: ParseContext -> Element -> Maybe Type
-parseHashTable ctx elem =
-    case findTypeElements elem of
-      [key, value] -> TGHash <$> parseTypeElement ctx key <*> parseTypeElement ctx value
-      _ -> Nothing
+parseHashTable :: Parser Type
+parseHashTable = parseTypeElements >>= \case
+                 [key, value] -> return $ TGHash key value
+                 other -> parseError $ "Unsupported hash type: "
+                                       <> T.pack (show other)
+
+-- | For GLists and GSLists there is sometimes no information about
+-- the type of the elements. In these cases we report them as
+-- pointers.
+parseListType :: Parser Type
+parseListType = queryType >>= \case
+                Just t -> return t
+                Nothing -> return (TBasicType TVoid)
 
 -- | A type which is not a BasicType or array.
-parseFundamentalType :: Text -> ParseContext -> Element -> Maybe Type
-parseFundamentalType "GLib.List" ctx elem = TGList <$> parseType ctx elem
-parseFundamentalType "GLib.SList" ctx elem = TGSList <$> parseType ctx elem
-parseFundamentalType "GLib.HashTable" ctx elem = parseHashTable ctx elem
-parseFundamentalType "GLib.Error" _ _ = Just TError
-parseFundamentalType "GLib.Variant" _ _ = Just TVariant
-parseFundamentalType "GObject.ParamSpec" _ _ = Just TParamSpec
-parseFundamentalType iface ctx _ = parseInterfaceType iface ctx
+parseFundamentalType :: Text -> Parser Type
+parseFundamentalType "GLib.List" = TGList <$> parseListType
+parseFundamentalType "GLib.SList" = TGSList <$> parseListType
+parseFundamentalType "GLib.HashTable" = parseHashTable
+parseFundamentalType "GLib.Error" = return TError
+parseFundamentalType "GLib.Variant" = return TVariant
+parseFundamentalType "GObject.ParamSpec" = return TParamSpec
+parseFundamentalType iface = parseInterfaceType iface
 
 -- | An interface type (basically, everything that is not of a known type).
-parseInterfaceType :: Text -> ParseContext -> Maybe Type
-parseInterfaceType iface ParseContext{..} =
+parseInterfaceType :: Text -> Parser Type
+parseInterfaceType iface =
     case T.split (== '.') iface of
-      [ns, n] -> Just $ checkAliases ns n
-      [n]     -> Just $ checkAliases currentNamespace n
-      _       -> Nothing
-    where checkAliases :: Text -> Text -> Type
-          checkAliases ns name =
-              case M.lookup (Alias (ns, name)) knownAliases of
-                Just t -> t
-                Nothing -> TInterface (T.unpack ns) (T.unpack name)
+      [ns, n] -> resolveQualifiedTypeName ns n
+      [n]     -> resolveLocalTypeName n
+      _       -> parseError $ "Unsupported interface type: \"" <> iface <> "\""
+
+-- | Parse information on a "type" element.
+parseTypeInfo :: Parser Type
+parseTypeInfo = do
+  typeName <- getAttr "name"
+  case nameToBasicType typeName of
+    Just b -> return (TBasicType b)
+    Nothing -> parseFundamentalType typeName
+
+-- | Find the children giving the type of the given element.
+parseTypeElements :: Parser [Type]
+parseTypeElements = (++) <$> parseChildrenWithLocalName "type" parseTypeInfo <*>
+                    parseChildrenWithLocalName "array" parseArrayInfo
+
+-- | Try to find a type node, but do not error out if it is not
+-- found. This _does_ give an error if more than one type node is
+-- found.
+queryType :: Parser (Maybe Type)
+queryType = parseTypeElements >>= \case
+            [e] -> return (Just e)
+            [] -> return Nothing
+            _ -> parseError $ "Found more than one type for the element."
 
 -- | Parse the type of a node (which will be described by a child node
 -- named "type" or "array").
-parseType :: ParseContext -> Element -> Maybe Type
-parseType ctx element =
-    case findTypeElements element of
-      [e] -> parseTypeElement ctx e
-      _ -> Nothing -- If there is not precisely one type element it is
-                   -- not clear what to do.
-
--- | Parse a single type element (the "type" or "array" element itself).
-parseTypeElement :: ParseContext -> TypeElement -> Maybe Type
-parseTypeElement ctx (TypeElement e) = do
-  typeName <- M.lookup "name" (elementAttributes e)
-  (TBasicType <$> nameToBasicType typeName) <|> parseFundamentalType typeName ctx e
-parseTypeElement ctx (ArrayElement e) = parseArrayType ctx e
+parseType :: Parser Type
+parseType = parseTypeElements >>= \case
+            [e] -> return e
+            [] -> parseError $ "Did not find a type for the element."
+            _ -> parseError $ "Found more than one type for the element."

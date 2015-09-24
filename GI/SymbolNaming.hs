@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GI.SymbolNaming
     ( qualify
     , qualifyWithSuffix
@@ -13,18 +14,23 @@ module GI.SymbolNaming
     ) where
 
 import Data.Char (toLower, toUpper)
-import Data.List (isPrefixOf)
+import qualified Data.Text as T
+import Data.Text (Text)
+import Data.Monoid ((<>))
 
 import GI.API
 import GI.Code
 import GI.Config (Config(modName))
 import GI.Util (split)
 
+interfaceClassName :: String -> String
 interfaceClassName = (++"Klass")
 
+ucFirst :: String -> String
 ucFirst (x:xs) = toUpper x : xs
 ucFirst "" = error "ucFirst: empty string"
 
+lcFirst :: String -> String
 lcFirst (x:xs) = toLower x : xs
 lcFirst "" = error "lcFirst: empty string"
 
@@ -83,6 +89,7 @@ hyphensToCamelCase str = concatMap ucFirst $ split '-' str
 underscoresToCamelCase :: String -> String
 underscoresToCamelCase str = concatMap ucFirst $ split '_' str
 
+escapeReserved :: Text -> String
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"
 escapeReserved "data" = "data_"
@@ -109,6 +116,6 @@ escapeReserved "sizeOf" = "sizeOf_"
 escapeReserved "when" = "when_"
 escapeReserved "default" = "default_"
 escapeReserved s
-    | "set_" `isPrefixOf` s = s ++ "_"
-    | "get_" `isPrefixOf` s = s ++ "_"
-    | otherwise = s
+    | "set_" `T.isPrefixOf` s = T.unpack s <> "_"
+    | "get_" `T.isPrefixOf` s = T.unpack s <> "_"
+    | otherwise = T.unpack s

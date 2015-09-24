@@ -2,7 +2,7 @@
 module GI.GIR.Deprecation
     ( DeprecationInfo
     , deprecatedPragma
-    , parseDeprecation
+    , queryDeprecated
     ) where
 
 import qualified Data.Map as M
@@ -31,8 +31,8 @@ deprecatedPragma name (Just info) = "{-# DEPRECATED " ++ name ++ reason ++ note 
                        Just v -> "(since version " ++ T.unpack v ++ " ) "
 
 -- | Parse the deprecation information for the given element of the GIR file.
-parseDeprecation :: Element -> Maybe DeprecationInfo
-parseDeprecation element =
+queryDeprecated :: Element -> Maybe DeprecationInfo
+queryDeprecated element =
     case M.lookup "deprecated" attrs of
       Just _ -> let version = M.lookup "deprecated-version" attrs
                     msg = firstChildWithLocalName "doc-deprecated" element >>=

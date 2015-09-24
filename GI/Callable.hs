@@ -19,6 +19,8 @@ import Data.List (intercalate, nub)
 import Data.Maybe (isJust)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import qualified Data.Map as Map
+import qualified Data.Text as T
+import Data.Text (Text)
 
 import GI.API
 import GI.Code
@@ -49,7 +51,7 @@ hOutType callable outArgs ignoreReturn = do
              (_, "()") -> "(,)" `con` hOutArgTypes
              _         -> "(,)" `con` (maybeHReturnType : hOutArgTypes)
 
-mkForeignImport :: String -> Callable -> Bool -> CodeGen ()
+mkForeignImport :: Text -> Callable -> Bool -> CodeGen ()
 mkForeignImport symbol callable throwsGError = foreignImport $ do
     line first
     indent $ do
@@ -58,8 +60,8 @@ mkForeignImport symbol callable throwsGError = foreignImport $ do
                line $ padTo 40 "Ptr (Ptr GError) -> " ++ "-- error"
         line =<< last
     where
-    first = "foreign import ccall \"" ++ symbol ++ "\" " ++
-                symbol ++ " :: "
+    first = "foreign import ccall \"" ++ T.unpack symbol ++ "\" " ++
+                T.unpack symbol ++ " :: "
     fArgStr arg = do
         ft <- foreignType $ argType arg
         weAlloc <- isJust <$> requiresAlloc (argType arg)
@@ -68,7 +70,7 @@ mkForeignImport symbol callable throwsGError = foreignImport $ do
                   else
                       ptr ft
         let start = show ft' ++ " -> "
-        return $ padTo 40 start ++ "-- " ++ argName arg
+        return $ padTo 40 start ++ "-- " ++ T.unpack (argName arg)
                    ++ " : " ++ show (argType arg)
     last = show <$> io <$> case returnType callable of
                              TBasicType TVoid -> return $ typeOf ()
@@ -90,7 +92,7 @@ wrapMaybe arg =
            TGSList _ -> return False
            _ -> if isNullable (argType arg)
                 then return True
-                else badIntroError $ "argument \"" ++ argName arg ++ "\" is not of nullable type, but it is marked as such."
+                else badIntroError $ "argument \"" ++ T.unpack (argName arg) ++ "\" is not of nullable type, but it is marked as such."
     else return False
 
 -- Given the list of arguments returns the list of constraints and the
@@ -516,10 +518,10 @@ hSignature hInArgs retType = do
       when (not $ null constraints) $ do
           line $ "(" ++ intercalate ", " constraints ++ ") =>"
       forM_ (zip types hInArgs) $ \(t, a) ->
-           line $ withComment (t ++ " ->") $ argName a
+           line $ withComment (t ++ " ->") $ T.unpack (argName a)
       line $ show $ io $ retType
 
-genCallable :: Name -> String -> Callable -> Bool -> ExcCodeGen ()
+genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
 genCallable n symbol callable throwsGError = do
     group $ do
         line $ "-- Args : " ++ (show $ args callable)
@@ -603,7 +605,7 @@ genCallable n symbol callable throwsGError = do
                                 then "propagateGError $ "
                                 else ""
         line $ returnBind ++ maybeCatchGErrors
-                 ++ symbol ++ concatMap (" " ++) argNames
+                 ++ T.unpack symbol ++ concatMap (" " ++) argNames
 
     convertResult :: Map.Map String String -> ExcCodeGen String
     convertResult nameMap =

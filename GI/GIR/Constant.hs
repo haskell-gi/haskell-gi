@@ -5,14 +5,11 @@ module GI.GIR.Constant
     , parseConstant
     ) where
 
-import qualified Data.Map as M
 import Data.Text (Text)
-import Text.XML (Element(elementAttributes))
 
 import GI.Type (Type)
-import GI.GIR.BasicTypes (ParseContext, Name, nameInCurrentNS)
-import GI.GIR.Deprecation (DeprecationInfo, parseDeprecation)
 import GI.GIR.Type (parseType)
+import GI.GIR.Parser
 
 -- | Info about a constant.
 data Constant = Constant {
@@ -22,11 +19,10 @@ data Constant = Constant {
     } deriving (Show)
 
 -- | Parse a "constant" element from the GIR file.
-parseConstant :: ParseContext -> Element -> Maybe (Name, Constant)
-parseConstant ctx element = do
-  let attrs = elementAttributes element
-  name <- M.lookup "name" attrs
-  value <- M.lookup "value" attrs
-  t <- parseType ctx element
-  return (nameInCurrentNS ctx name,
-          Constant t value (parseDeprecation element))
+parseConstant :: Parser (Name, Constant)
+parseConstant = do
+  name <- parseName
+  deprecated <- parseDeprecation
+  value <- getAttr "value"
+  t <- parseType
+  return (name, Constant t value deprecated)

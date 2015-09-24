@@ -8,6 +8,8 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when)
 import Control.Monad.Writer (tell)
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import qualified Data.Set as S
 
@@ -22,9 +24,9 @@ import GI.Util (padTo)
 -- A list of distinct signal names for all GObjects appearing in the
 -- given list of APIs.
 findSignalNames :: [(Name, API)] -> CodeGen [String]
-findSignalNames apis = S.toList <$> go apis S.empty
+findSignalNames apis = (map T.unpack . S.toList) <$> go apis S.empty
     where
-      go :: [(Name, API)] -> S.Set String -> CodeGen (S.Set String)
+      go :: [(Name, API)] -> S.Set Text -> CodeGen (S.Set Text)
       go [] set = return set
       go ((name, api):apis) set = do
         isGO <- apiIsGObject name api
@@ -37,7 +39,7 @@ findSignalNames apis = S.toList <$> go apis S.empty
                _ -> error $ "GObject not an Interface or Object!? " ++ show name
         else go apis set
 
-      insertSignals :: [Signal] -> S.Set String -> S.Set String
+      insertSignals :: [Signal] -> S.Set Text -> S.Set Text
       insertSignals props set = foldr (S.insert . sigName) set props
 
 -- | Generate the overloaded signal connectors: "Clicked", "ActivateLink", ...
@@ -62,21 +64,22 @@ genOverloadedSignalConnectors allAPIs modulePrefix = do
 -- | Generate the given signal instance for the given API object.
 genInstance :: Name -> (Name, Signal) -> CodeGen ()
 genInstance n (owner, signal) = group $ do
-    line $ "instance HasSignal \"" ++ sigName signal ++ "\" "
+    line $ "instance HasSignal \"" ++ (T.unpack . sigName) signal ++ "\" "
              ++ name n ++ " where"
     indent $ do
       -- This should follow the conventions in genSignal in Signal.hs
       on <- upperName owner
-      let sn = signalHaskellName (sigName signal)
-          signalConnectorName = on ++ ucFirst sn
+      let sn = (T.unpack . sigName) signal
+          shn = signalHaskellName sn
+          signalConnectorName = on ++ ucFirst shn
           cbHaskellType = signalConnectorName ++ "Callback"
-      line $ "type HaskellCallbackType \"" ++ sigName signal ++ "\" "
-               ++ name n ++ " = " ++ cbHaskellType
-      line $ "type ConnectConstraint \"" ++ sigName signal ++ "\" "
-              ++ name n ++ " = (~) \"" ++ sigName signal ++ "\""
+      line $ "type HaskellCallbackType \"" ++ sn
+               ++ "\" " ++ name n ++ " = " ++ cbHaskellType
+      line $ "type ConnectConstraint \"" ++ sn ++ "\" "
+              ++ name n ++ " = (~) \"" ++ sn ++ "\""
       ons <- qualify (namespace owner)
       line $ "connectSignal _ = " ++ ons ++ "connect"
-               ++ ucFirst (name owner) ++ ucFirst sn
+               ++ ucFirst (name owner) ++ ucFirst shn
 
 -- | HasSignal instances for GObject objects.
 genObjectSignals :: Name -> Object -> CodeGen ()

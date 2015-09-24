@@ -6,13 +6,12 @@ module GI.GIR.Flags
     ) where
 
 import GI.GIR.Enum (Enumeration, parseEnum)
-import GI.GIR.BasicTypes (ParseContext, Name)
-import Text.XML (Element)
+import GI.GIR.Parser
 
 data Flags = Flags Enumeration
     deriving Show
 
-parseFlags :: ParseContext -> Element -> Maybe (Name, Flags)
-parseFlags ctx element = do
-  (n, enum) <- parseEnum ctx element
+parseFlags :: Parser (Name, Flags)
+parseFlags = do
+  (n, enum) <- parseEnum
   return (n, Flags enum)
