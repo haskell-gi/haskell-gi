@@ -106,6 +106,9 @@ resolveQualifiedTypeName :: Text -> Text -> Parser Type
 resolveQualifiedTypeName ns n = do
   ctx <- ask
   case M.lookup (Alias (ns, n)) (knownAliases ctx) of
+    -- The resolved type may be an alias itself, like for
+    -- Gtk.Allocation -> Gdk.Rectangle -> cairo.RectangleInt
+    Just (TInterface ns n) -> resolveQualifiedTypeName (T.pack ns) (T.pack n)
     Just t -> return t
     Nothing -> return $ TInterface (T.unpack ns) (T.unpack n)
 
