@@ -160,15 +160,17 @@ parseNamespace element aliases = do
   let attrs = elementAttributes element
   name <- M.lookup "name" attrs
   version <- M.lookup "version" attrs
-  libs <- M.lookup "shared-library" attrs
+  libs <- case M.lookup "shared-library" attrs of
+            Just ls -> return $ T.split (',' ==) ls
+            Nothing -> return []
   let ns = GIRNamespace {
              nsName         = name,
              nsVersion      = version,
              nsAPIs         = [],
-             nsLibraries    = T.split (',' ==) libs,
+             nsLibraries    = libs,
              nsCTypes       = []
            }
-  return $ L.foldl' (parseNSElement aliases) ns (subelements element)
+  return (L.foldl' (parseNSElement aliases) ns (subelements element))
 
 parseInclude :: Element -> Maybe (Text, Text)
 parseInclude element = do
