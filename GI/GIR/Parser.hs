@@ -24,7 +24,6 @@ module GI.GIR.Parser
     , currentNamespace
     , qualifyName
     , resolveQualifiedTypeName
-    , resolveLocalTypeName
 
     -- Reexported for convenience
     , Name(..)
@@ -111,12 +110,6 @@ resolveQualifiedTypeName ns n = do
     Just (TInterface ns n) -> resolveQualifiedTypeName (T.pack ns) (T.pack n)
     Just t -> return t
     Nothing -> return $ TInterface (T.unpack ns) (T.unpack n)
-
--- | Same thing but with a name in the current namespace.
-resolveLocalTypeName :: Text -> Parser Type
-resolveLocalTypeName n = do
-  ctx <- ask
-  resolveQualifiedTypeName (ctxNamespace ctx) n
 
 -- | Return the value of an attribute for the given element. If the
 -- attribute is not present this throws an error.

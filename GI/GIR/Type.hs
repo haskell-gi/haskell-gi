@@ -115,22 +115,15 @@ parseListType = queryType >>= \case
                 Nothing -> return (TBasicType TVoid)
 
 -- | A type which is not a BasicType or array.
-parseFundamentalType :: Text -> Parser Type
-parseFundamentalType "GLib.List" = TGList <$> parseListType
-parseFundamentalType "GLib.SList" = TGSList <$> parseListType
-parseFundamentalType "GLib.HashTable" = parseHashTable
-parseFundamentalType "GLib.Error" = return TError
-parseFundamentalType "GLib.Variant" = return TVariant
-parseFundamentalType "GObject.ParamSpec" = return TParamSpec
-parseFundamentalType iface = parseInterfaceType iface
-
--- | An interface type (basically, everything that is not of a known type).
-parseInterfaceType :: Text -> Parser Type
-parseInterfaceType iface =
-    case T.split (== '.') iface of
-      [ns, n] -> resolveQualifiedTypeName ns n
-      [n]     -> resolveLocalTypeName n
-      _       -> parseError $ "Unsupported interface type: \"" <> iface <> "\""
+parseFundamentalType :: Text -> Text -> Parser Type
+parseFundamentalType "GLib" "List" = TGList <$> parseListType
+parseFundamentalType "GLib" "SList" = TGSList <$> parseListType
+parseFundamentalType "GLib" "HashTable" = parseHashTable
+parseFundamentalType "GLib" "Error" = return TError
+parseFundamentalType "GLib" "Variant" = return TVariant
+parseFundamentalType "GObject" "ParamSpec" = return TParamSpec
+-- A TInterface type (basically, everything that is not of a known type).
+parseFundamentalType ns n = resolveQualifiedTypeName ns n
 
 -- | Parse information on a "type" element.
 parseTypeInfo :: Parser Type
@@ -138,7 +131,13 @@ parseTypeInfo = do
   typeName <- getAttr "name"
   case nameToBasicType typeName of
     Just b -> return (TBasicType b)
-    Nothing -> parseFundamentalType typeName
+    Nothing -> case T.split ('.' ==) typeName of
+                 [ns, n] -> parseFundamentalType ns n
+                 [n] -> do
+                   ns <- currentNamespace
+                   parseFundamentalType ns n
+                 _ -> parseError $ "Unsupported type form: \""
+                                   <> typeName <> "\""
 
 -- | Find the children giving the type of the given element.
 parseTypeElements :: Parser [Type]
