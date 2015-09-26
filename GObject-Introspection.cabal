@@ -36,6 +36,7 @@ Executable haskell-gi
       transformers >= 0.3,
       xdg-basedir,
       xml-conduit >= 1.3.0,
+      unix >= 2.7 && <2.8,
       GObject-Introspection
   build-tools: hsc2hs, c2hs
   extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes
@@ -66,6 +67,7 @@ Executable haskell-gi
       GI.Config,
       GI.Constant,
       GI.Conversions,
+      GI.DynLib,
       GI.GObject,
       GI.GType,
       GI.Inheritable,

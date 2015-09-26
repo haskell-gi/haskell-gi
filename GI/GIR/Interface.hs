@@ -13,10 +13,10 @@ import GI.GIR.Signal (Signal, parseSignal)
 import GI.GIR.Parser
 
 data Interface = Interface {
+        ifTypeInit :: Maybe Text,
+        ifPrerequisites :: [Name],
         ifProperties :: [Property],
         ifSignals :: [Signal],
-        ifPrerequisites :: [Name],
-        ifTypeInit :: Maybe Text,
         ifMethods :: [(Name, Method)],
         ifDeprecated :: Maybe DeprecationInfo
     } deriving Show
@@ -26,7 +26,6 @@ parseInterface = do
   name <- parseName
   props <- parseChildrenWithLocalName "property" parseProperty
   signals <- parseChildrenWithNSName GLibGIRNS "signal" parseSignal
-  prereqs <- parseChildrenWithLocalName "prerequisite" parseName
   typeInit <- queryAttrWithNamespace GLibGIRNS "get-type"
   methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
   constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
@@ -34,8 +33,8 @@ parseInterface = do
   return (name,
          Interface {
             ifProperties = props
+          , ifPrerequisites = error ("unfixed interface " ++ show name)
           , ifSignals = signals
-          , ifPrerequisites = prereqs
           , ifTypeInit = typeInit
           , ifMethods = constructors ++ methods
           , ifDeprecated = deprecated

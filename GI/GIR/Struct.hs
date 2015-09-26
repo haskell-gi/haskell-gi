@@ -10,7 +10,6 @@ module GI.GIR.Struct
 import Control.Applicative ((<$>))
 #endif
 
-import Data.Maybe (isJust)
 import Data.Text (Text)
 
 import GI.GIR.Field (Field, parseFields, computeFieldOffsets)
@@ -43,11 +42,7 @@ parseStruct = do
   methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
   return (name,
           Struct {
-            --- XXX We need a better check to see whether a struct is
-            --- boxed, it could be that it is has a GType but it is
-            --- not boxed... the only way I see of doing this is to
-            --- load the library and ask.
-            structIsBoxed = isJust typeInit
+            structIsBoxed = error ("unfixed struct " ++ show name)
           , structTypeInit = typeInit
           , structSize = size
           , gtypeStructFor = structFor
