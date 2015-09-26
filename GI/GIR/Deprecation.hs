@@ -22,13 +22,14 @@ data DeprecationInfo = DeprecationInfo {
 -- deprecation pragma.
 deprecatedPragma :: String -> Maybe DeprecationInfo -> String
 deprecatedPragma _    Nothing     = ""
-deprecatedPragma name (Just info) = "{-# DEPRECATED " ++ name ++ reason ++ note ++ "#-}"
+deprecatedPragma name (Just info) = "{-# DEPRECATED " ++ name ++ " " ++
+                                    show (note ++ reason) ++ "#-}"
         where reason = case deprecationMessage info of
-                         Nothing -> " <no reason given for deprecation> "
-                         Just msg -> " \"" ++ T.unpack msg ++ "\" "
+                         Nothing -> []
+                         Just msg -> (lines . T.unpack) msg
               note = case deprecatedSinceVersion info of
-                       Nothing -> ""
-                       Just v -> "(since version " ++ T.unpack v ++ " ) "
+                       Nothing -> []
+                       Just v -> ["(since version " ++ T.unpack v ++ ")"]
 
 -- | Parse the deprecation information for the given element of the GIR file.
 queryDeprecated :: Element -> Maybe DeprecationInfo
