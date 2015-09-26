@@ -266,7 +266,10 @@ loadGIRInfo verbose name version extraPaths =  do
     Right (docGIR, depsGIR) -> do
       if girNSName docGIR == name
       then do
-        libs <- (mapM loadDynLib . L.nub . concatMap girLibraries) (docGIR : depsGIR)
+        libs <- (fmap catMaybes
+                . mapM (loadDynLib verbose)
+                . L.nub
+                . concatMap girLibraries) (docGIR : depsGIR)
         (fixedDoc, fixedDeps) <- fixupGIRInfos libs docGIR depsGIR
         mapM_ unloadDynLib libs
         return (fixedDoc, fixedDeps)

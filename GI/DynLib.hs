@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Dynamically load/unload dynamic libraries. We use these libraries
 -- to look up GTypes when generating code.
 module GI.DynLib
@@ -10,8 +12,9 @@ module GI.DynLib
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
+import Control.Monad (when)
 
-import Foreign.Ptr (FunPtr, nullFunPtr)
+import Foreign.Ptr (FunPtr, nullFunPtr, nullPtr)
 import Foreign.C.String (CString, withCString)
 import qualified System.Posix.DynamicLinker as DL
 import qualified System.Posix.DynamicLinker.Prim as DLP
@@ -24,10 +27,18 @@ import GI.Utils.BasicTypes (GType(..), CGType)
 -- | Opaque type encapsulating a loaded dynamic library.
 newtype DynLib = DynLib DL.DL
 
--- | Load a dynamic library, giving an error if it cannot be found.
-loadDynLib :: Text -> IO DynLib
-loadDynLib libname =
-    DynLib <$> DL.dlopen (T.unpack libname) [DL.RTLD_LAZY, DL.RTLD_GLOBAL]
+-- | Try to load a dynamic library.
+loadDynLib :: Bool -> Text -> IO (Maybe DynLib)
+loadDynLib verbose name = do
+  when verbose $ putStrLn ("Loading dynlib " ++ show name)
+  withCString (T.unpack name) $ \cstr -> do
+    dl <- DLP.c_dlopen cstr (DLP.packRTLDFlags [DL.RTLD_LAZY, DL.RTLD_GLOBAL])
+    if dl /= nullPtr
+    then (return . Just . DynLib . DLP.DLHandle) dl
+    else do
+      when verbose $
+        putStrLn ("Could not load dynamic library " ++ show name)
+      return Nothing
 
 type GTypeInit = IO CGType
 foreign import ccall "dynamic" gtypeInit :: FunPtr GTypeInit -> GTypeInit
