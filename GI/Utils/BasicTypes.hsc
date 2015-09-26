@@ -2,8 +2,8 @@
 -- | Basic types used in the bindings.
 module GI.Utils.BasicTypes
     (
-     -- * GType related
-     GType(..)
+      -- * GType related
+      GType(..)
     , CGType
 
     , gtypeName

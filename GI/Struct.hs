@@ -10,7 +10,8 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM_, unless)
 
 import Data.List (isSuffixOf)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, isJust)
+import Data.Text (unpack)
 
 import GI.API
 import GI.Conversions
@@ -18,18 +19,17 @@ import GI.Code
 import GI.SymbolNaming
 import GI.Type
 import GI.Util
-import GI.Internal.ArgInfo
 
 -- | Whether (not) to generate bindings for the given struct.
 ignoreStruct :: Name -> Struct -> Bool
-ignoreStruct (Name _ name) s = isGTypeStruct s ||
+ignoreStruct (Name _ name) s = isJust (gtypeStructFor s) ||
                                "Private" `isSuffixOf` name
 
 -- | Canonical name for the type of a callback type embedded in a
 -- struct field.
 fieldCallbackType :: String -> Field -> String
 fieldCallbackType structName field = structName
-                                     ++ (underscoresToCamelCase .
+                                     ++ (underscoresToCamelCase . unpack .
                                          fieldName) field
                                      ++ "FieldCallback"
 
@@ -77,7 +77,7 @@ buildFieldGetter n@(Name ns _) field = do
   hType <- show <$> haskellType (fieldType field)
   fType <- show <$> foreignType (fieldType field)
   unless ("Private" `isSuffixOf` hType) $ do
-     fName <- upperName $ Name ns (fieldName field)
+     fName <- upperName $ Name ns (unpack . fieldName $ field)
      let getter = lcFirst name' ++ "Read" ++ fName
      line $ getter ++ " :: " ++ name' ++ " -> IO " ++
                  if ' ' `elem` hType
@@ -98,6 +98,6 @@ genStructFields n s = do
 
   forM_ (structFields s) $ \field -> group $
       handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
-                               ":" ++ fieldName field ++ "\" :: " ++
+                               ":" ++ unpack (fieldName field) ++ "\" :: " ++
                                describeCGError e))
                   (buildFieldGetter n field)

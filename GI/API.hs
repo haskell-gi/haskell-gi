@@ -1,7 +1,29 @@
+{-# LANGUAGE OverloadedStrings, RecordWildCards, NamedFieldPuns #-}
 
 module GI.API
     ( API(..)
+    , GIRInfo(..)
+    , loadGIRInfo
+
+    -- Reexported from GI.GIR.BasicTypes
     , Name(..)
+    , Transfer(..)
+
+    -- Reexported from GI.GIR.Arg
+    , Direction(..)
+    , Scope(..)
+
+    -- Reexported from GI.GIR.Deprecation
+    , deprecatedPragma
+    , DeprecationInfo
+
+    -- Reexported from GI.GIR.Property
+    , PropertyFlag(..)
+
+    -- Reexported from GI.GIR.Method
+    , MethodType(..)
+
+    -- Reexported from the corresponding GI.GIR modules
     , Constant(..)
     , Arg(..)
     , Callable(..)
@@ -12,297 +34,80 @@ module GI.API
     , Struct(..)
     , Callback(..)
     , Interface(..)
+    , Method(..)
     , Object(..)
     , Enumeration(..)
     , Flags (..)
     , Union (..)
-
-    , Scope(..) -- from GI.Internal.ArgInfo, for convenience
-
-    , loadAPI
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
+import Control.Monad ((>=>), forM)
+import qualified Data.List as L
+import qualified Data.Map as M
+import Data.Maybe (mapMaybe, catMaybes)
+import Data.Monoid ((<>))
+import qualified Data.Set as S
+import qualified Data.Text as T
+import Data.Text (Text)
 
-import Data.Int
-import Data.Maybe (isJust)
+import Foreign.Ptr (Ptr)
+import Foreign (peek)
+import Foreign.C.Types (CUInt)
 
-import GI.Internal.Types
-import GI.Internal.ArgInfo
-import GI.Internal.BaseInfo
-import GI.Internal.CallableInfo
-import GI.Internal.ConstantInfo
-import GI.Internal.EnumInfo
-import GI.Internal.FieldInfo
-import GI.Internal.FunctionInfo
-import GI.Internal.InterfaceInfo
-import GI.Internal.ObjectInfo
-import GI.Internal.PropertyInfo
-import GI.Internal.RegisteredTypeInfo
-import GI.Internal.StructInfo
-import GI.Internal.TypeInfo
-import GI.Internal.Typelib (getInfos, load)
-import GI.Internal.UnionInfo
-import GI.GType
-import GI.Type
+import Text.XML hiding (Name)
 
-data Name = Name { namespace :: String, name :: String }
-    deriving (Eq, Ord, Show)
+import GI.GIR.Alias (documentListAliases)
+import GI.GIR.Arg (Arg(..), Direction(..), Scope(..))
+import GI.GIR.BasicTypes (Alias, Name(..), Transfer(..))
+import GI.GIR.Callable (Callable(..))
+import GI.GIR.Callback (Callback(..), parseCallback)
+import GI.GIR.Constant (Constant(..), parseConstant)
+import GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
+import GI.GIR.Enum (Enumeration(..), parseEnum)
+import GI.GIR.Field (Field(..))
+import GI.GIR.Flags (Flags(..), parseFlags)
+import GI.GIR.Function (Function(..), parseFunction)
+import GI.GIR.Interface (Interface(..), parseInterface)
+import GI.GIR.Method (Method(..), MethodType(..))
+import GI.GIR.Object (Object(..), parseObject)
+import GI.GIR.Parser (Parser, runParser)
+import GI.GIR.Property (Property(..), PropertyFlag(..))
+import GI.GIR.Repository (readGiRepository)
+import GI.GIR.Signal (Signal(..))
+import GI.GIR.Struct (Struct(..), parseStruct)
+import GI.GIR.Union (Union(..), parseUnion)
+import GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr,
+                        lookupAttrWithNamespace, GIRXMLNamespace(..))
 
-getName :: BaseInfoClass bi => bi -> Name
-getName bi =
-   let namespace = baseInfoNamespace $ baseInfo bi
-       name = baseInfoName $ baseInfo bi
-    in Name namespace name
+import GI.Utils.BasicConversions (unpackStorableArrayWithLength)
+import GI.Utils.BasicTypes (GType(..), CGType, gtypeName)
+import GI.Utils.Utils (allocMem, freeMem)
+import GI.DynLib (loadDynLib, DynLib, DynLibCache, findGType)
+import GI.GType (gtypeIsBoxed)
+import GI.Type (Type)
 
-withName :: BaseInfoClass bi => (bi -> a) -> (bi -> (Name, a))
-withName f x = (getName x, f x)
+data GIRInfo = GIRInfo {
+      girPCPackages      :: [Text],
+      girNSName          :: Text,
+      girNSVersion       :: Text,
+      girLibraries       :: [Text], -- ^ Libs associated with the namespace
+      girAPIs            :: [(Name, API)],
+      girCTypes          :: M.Map Text Name
+    } deriving Show
 
-data Constant = Constant {
-      constantType  :: Type,
-      constantValue :: Argument }
-    deriving Show
+data GIRNamespace = GIRNamespace {
+      nsName      :: Text,
+      nsVersion   :: Text,
+      nsAPIs      :: [(Name, API)],
+      nsLibraries :: [Text],
+      nsCTypes    :: [(Text, Name)]
+    } deriving (Show)
 
-toConstant :: ConstantInfo -> Constant
-toConstant ci = Constant {
-                  constantType  = typeFromTypeInfo (constantInfoType ci)
-                , constantValue = constantInfoValue ci }
-
-data Enumeration = Enumeration {
-    enumValues :: [(String, Int64)],
-    errorDomain :: Maybe String,
-    enumTypeInit :: Maybe String,
-    enumStorageType :: TypeTag }
-    deriving Show
-
-toEnumeration :: EnumInfo -> Enumeration
-toEnumeration ei = Enumeration
-    (map (\vi -> (baseInfoName . baseInfo $ vi, valueInfoValue vi))
-             (enumInfoValues ei))
-    (enumInfoErrorDomain ei)
-    (registeredTypeInfoTypeInit ei)
-    (enumInfoStorageType ei)
-
-data Flags = Flags Enumeration
-    deriving Show
-
-toFlags :: EnumInfo -> Flags
-toFlags ei = let enum = toEnumeration ei
-              in Flags enum
-
-data Arg = Arg {
-    argName :: String,
-    argType :: Type,
-    direction :: Direction,
-    mayBeNull :: Bool,
-    argScope :: Scope,
-    argClosure :: Int,
-    argDestroy :: Int,
-    transfer :: Transfer }
-    deriving (Show, Eq, Ord)
-
-toArg :: ArgInfo -> Arg
-toArg ai =
-   Arg (baseInfoName . baseInfo $ ai)
-        (typeFromTypeInfo . argInfoType $ ai)
-        (argInfoDirection ai)
-        (argInfoMayBeNull ai)
-        (argInfoScope ai)
-        (argInfoClosure ai)
-        (argInfoDestroy ai)
-        (argInfoOwnershipTransfer ai)
-
-data Callable = Callable {
-    returnType :: Type,
-    returnMayBeNull :: Bool,
-    returnTransfer :: Transfer,
-    returnAttributes :: [(String, String)],
-    args :: [Arg],
-    skipReturn :: Bool }
-    deriving (Show, Eq)
-
-toCallable :: CallableInfo -> Callable
-toCallable ci =
-    let returnType = callableInfoReturnType ci
-        argType = typeFromTypeInfo returnType
-        ais = callableInfoArgs ci
-        in Callable argType
-               (callableInfoMayReturnNull ci)
-               (callableInfoCallerOwns ci)
-               (callableInfoReturnAttributes ci)
-               (map toArg ais)
-               (callableInfoSkipReturn ci)
-
-data Function = Function {
-    fnSymbol :: String,
-    fnCallable :: Callable,
-    fnFlags :: [FunctionInfoFlag] }
-    deriving Show
-
-toFunction :: FunctionInfo -> Function
-toFunction fi =
-     let ci = fromBaseInfo (baseInfo fi) :: CallableInfo
-      in Function
-         (functionInfoSymbol fi)
-         (toCallable ci)
-         (functionInfoFlags fi)
-
-data Signal = Signal {
-    sigName :: String,
-    sigCallable :: Callable }
-    deriving (Show, Eq)
-
-toSignal :: SignalInfo -> Signal
-toSignal si = Signal {
-    sigName = baseInfoName $ baseInfo si,
-    sigCallable = toCallable $ callableInfo si }
-
-data Property = Property {
-    propName :: String,
-    propType :: Type,
-    propFlags :: [ParamFlag],
-    propTransfer :: Transfer }
-    deriving (Show, Eq)
-
-toProperty :: PropertyInfo -> Property
-toProperty pi =
-    Property (baseInfoName $ baseInfo pi)
-        (typeFromTypeInfo $ propertyInfoType pi)
-        (propertyInfoFlags pi)
-        (propertyInfoTransfer pi)
-
-data Field = Field {
-    fieldName :: String,
-    fieldType :: Type,
-    fieldCallback :: Maybe Callback,
-    fieldOffset :: Int,
-    fieldFlags :: [FieldInfoFlag] }
-    deriving Show
-
-toField :: FieldInfo -> Field
-toField fi =
-    Field {fieldName = baseInfoName . baseInfo $ fi,
-           fieldType = typeFromTypeInfo $ fieldInfoType fi,
-           fieldOffset = fieldInfoOffset fi,
-           -- Fields with embedded "anonymous" callback interfaces.
-           fieldCallback =
-               case typeFromTypeInfo (fieldInfoType fi) of
-                 TInterface _ n ->
-                     if n /= (baseInfoName . baseInfo $ fi)
-                     then Nothing
-                     else let iface = baseInfo .
-                                      typeInfoInterface .
-                                      fieldInfoType $ fi
-                          in case baseInfoType iface of
-                               InfoTypeCallback ->
-                                   Just . toCallback . fromBaseInfo $ iface
-                               _ -> Nothing
-                 _ -> Nothing,
-           fieldFlags = fieldInfoFlags fi}
-
-data Struct = Struct {
-    structIsBoxed :: Bool,
-    structTypeInit :: Maybe String,
-    structSize :: Int,
-    structIsForeign :: Bool,
-    isGTypeStruct :: Bool,
-    structFields :: [Field],
-    structMethods :: [(Name, Function)]
-    }
-    deriving Show
-
-toStruct :: StructInfo -> Struct
-toStruct si = Struct {
-                structIsBoxed = isJust (registeredTypeInfoTypeInit si) &&
-                                gtypeIsBoxed (registeredTypeInfoGType si),
-                structTypeInit = registeredTypeInfoTypeInit si,
-                structFields = map toField $ structInfoFields si,
-                structMethods = map (withName toFunction)
-                                (structInfoMethods si),
-                structSize = structInfoSize si,
-                structIsForeign = structInfoIsForeign si,
-                isGTypeStruct = structInfoIsGTypeStruct si }
-
--- XXX: Capture alignment and method info.
-
-data Union = Union {
-    unionIsBoxed :: Bool,
-    unionSize :: Int,
-    unionTypeInit :: Maybe String,
-    unionFields :: [Field],
-    unionMethods :: [(Name, Function)] }
-    deriving Show
-
-toUnion :: UnionInfo -> Union
-toUnion ui = Union {
-               unionIsBoxed = isJust (registeredTypeInfoTypeInit ui) &&
-                              gtypeIsBoxed (registeredTypeInfoGType ui),
-               unionSize = unionInfoSize ui,
-               unionTypeInit = registeredTypeInfoTypeInit ui,
-               unionFields = map toField $ unionInfoFields ui,
-               unionMethods = map (withName toFunction)
-                                (unionInfoMethods ui) }
-
--- XXX
-data Callback = Callback Callable
-    deriving Show
-
-toCallback = Callback . toCallable
-
-data Interface = Interface {
-    ifConstants :: [(Name, Constant)],
-    ifProperties :: [Property],
-    ifSignals :: [Signal],
-    ifPrerequisites :: [Name],
-    ifTypeInit :: Maybe String,
-    ifMethods :: [(Name, Function)] }
-    deriving Show
-
-toInterface :: InterfaceInfo -> Interface
-toInterface ii = Interface {
-    ifConstants = map (withName toConstant) (interfaceInfoConstants ii),
-    ifProperties = map toProperty (interfaceInfoProperties ii),
-    ifSignals = map toSignal (interfaceInfoSignals ii),
-    ifPrerequisites = map (fst . toAPI) (interfaceInfoPrerequisites ii),
-    ifTypeInit = registeredTypeInfoTypeInit ii,
-    ifMethods = map (withName toFunction) (interfaceInfoMethods ii) }
-
-data Object = Object {
-    objFields :: [Field],
-    objMethods :: [(Name, Function)],
-    objProperties :: [Property],
-    objSignals :: [Signal],
-    objInterfaces :: [Name],
-    objConstants :: [Constant],
-    objParent :: Maybe Name,
-    objTypeInit :: String,
-    objTypeName :: String,
-    objRefFunction :: Maybe String,
-    objUnrefFunction :: Maybe String }
-    deriving Show
-
-toObject :: ObjectInfo -> Object
-toObject oi = Object {
-    objFields = map toField $ objectInfoFields oi,
-    objMethods = map (withName toFunction) (objectInfoMethods oi),
-    objProperties = map toProperty $ objectInfoProperties oi,
-    objSignals = map toSignal (objectInfoSignals oi),
-    objInterfaces = map getName $ objectInfoInterfaces oi,
-    objConstants = map toConstant $ objectInfoConstants oi,
-    objParent = getName <$> objectInfoParent oi,
-    objTypeInit = objectInfoTypeInit oi,
-    objTypeName = objectInfoTypeName oi,
-    objRefFunction = objectInfoRefFunction oi,
-    objUnrefFunction = objectInfoUnrefFunction oi }
-
--- XXX: Work out what to do with boxed types.
-data Boxed = Boxed
-    deriving Show
-
-toBoxed :: BaseInfo -> Boxed
-toBoxed _ = Boxed
+data GIRInfoParse = GIRInfoParse {
+    girIPPackage    :: [Maybe Text],
+    girIPIncludes   :: [Maybe (Text, Text)],
+    girIPNamespaces :: [Maybe GIRNamespace]
+} deriving (Show)
 
 data API
     = APIConst Constant
@@ -314,32 +119,236 @@ data API
     | APIObject Object
     | APIStruct Struct
     | APIUnion Union
-    | APIBoxed Boxed
     deriving Show
 
-toAPI :: BaseInfoClass bi => bi -> (Name, API)
-toAPI i = (getName bi, toAPI' (baseInfoType i) bi)
-    where
+parseAPI :: Text -> M.Map Alias Type -> Element -> (a -> API)
+         -> Parser (Name, a) -> (Name, API)
+parseAPI ns aliases element wrapper parser =
+    case runParser ns aliases element parser of
+      Left err -> error $ "Parse error: " ++ T.unpack err
+      Right (n, a) -> (n, wrapper a)
 
-    bi = baseInfo i
+parseNSElement :: M.Map Alias Type -> GIRNamespace -> Element -> GIRNamespace
+parseNSElement aliases ns@GIRNamespace{..} element
+    | lookupAttr "introspectable" element == Just "0" = ns
+    | otherwise =
+        case nameLocalName (elementName element) of
+          "alias" -> ns     -- Processed separately
+          "constant" -> parse APIConst parseConstant
+          "enumeration" -> parse APIEnum parseEnum
+          "bitfield" -> parse APIFlags parseFlags
+          "function" -> parse APIFunction parseFunction
+          "callback" -> parse APICallback parseCallback
+          "record" -> parse APIStruct parseStruct
+          "union" -> parse APIUnion parseUnion
+          "class" -> parse APIObject parseObject
+          "interface" -> parse APIInterface parseInterface
+          "boxed" -> ns -- Unsupported
+          n -> error . T.unpack $ "Unknown GIR element \"" <> n <> "\" when processing namespace \"" <> nsName <> "\", aborting."
+    where parse :: (a -> API) -> Parser (Name, a) -> GIRNamespace
+          parse wrapper parser =
+              let (n, api) = parseAPI nsName aliases element wrapper parser
+                  maybeCType = lookupAttrWithNamespace CGIRNS "type" element
+              in ns { nsAPIs = (n, api) : nsAPIs,
+                      nsCTypes = case maybeCType of
+                                   Just ctype -> (ctype, n) : nsCTypes
+                                   Nothing -> nsCTypes
+                    }
 
-    toAPI' InfoTypeConstant = convert APIConst toConstant
-    toAPI' InfoTypeEnum = convert APIEnum toEnumeration
-    toAPI' InfoTypeFlags = convert APIFlags toFlags
-    toAPI' InfoTypeFunction = convert APIFunction toFunction
-    toAPI' InfoTypeCallback = convert APICallback toCallback
-    toAPI' InfoTypeStruct = convert APIStruct toStruct
-    toAPI' InfoTypeUnion = convert APIUnion toUnion
-    toAPI' InfoTypeObject = convert APIObject toObject
-    toAPI' InfoTypeInterface = convert APIInterface toInterface
-    toAPI' InfoTypeBoxed = convert APIBoxed toBoxed
-    toAPI' it = error $ "not expecting a " ++ show it
+parseNamespace :: Element -> M.Map Alias Type -> Maybe GIRNamespace
+parseNamespace element aliases = do
+  let attrs = elementAttributes element
+  name <- M.lookup "name" attrs
+  version <- M.lookup "version" attrs
+  libs <- case M.lookup "shared-library" attrs of
+            Just ls -> return $ T.split (',' ==) ls
+            Nothing -> return []
+  let ns = GIRNamespace {
+             nsName         = name,
+             nsVersion      = version,
+             nsAPIs         = [],
+             nsLibraries    = libs,
+             nsCTypes       = []
+           }
+  return (L.foldl' (parseNSElement aliases) ns (subelements element))
 
-    convert fa fb bi = fa $ fb $ fromBaseInfo bi
+parseInclude :: Element -> Maybe (Text, Text)
+parseInclude element = do
+  name <- M.lookup "name" attrs
+  version <- M.lookup "version" attrs
+  return (name, version)
+      where attrs = elementAttributes element
 
--- | Load the APIs in the given namespace.
-loadAPI :: Bool -> String -> Maybe String -> IO [(Name, API)]
-loadAPI verbose name version = do
-    lib <- load name version verbose
-    infos <- getInfos lib
-    return $ map toAPI infos
+parsePackage :: Element -> Maybe Text
+parsePackage element = M.lookup "name" (elementAttributes element)
+
+parseRootElement :: M.Map Alias Type -> GIRInfoParse -> Element -> GIRInfoParse
+parseRootElement aliases info@GIRInfoParse{..} element =
+    case nameLocalName (elementName element) of
+      "include" -> info {girIPIncludes = parseInclude element : girIPIncludes}
+      "package" -> info {girIPPackage = parsePackage element : girIPPackage}
+      "namespace" -> info {girIPNamespaces = parseNamespace element aliases : girIPNamespaces}
+      _ -> info
+
+emptyGIRInfoParse :: GIRInfoParse
+emptyGIRInfoParse = GIRInfoParse {
+                      girIPPackage = [],
+                      girIPIncludes = [],
+                      girIPNamespaces = []
+                    }
+
+parseGIRDocument :: M.Map Alias Type -> Document -> GIRInfoParse
+parseGIRDocument aliases doc = L.foldl' (parseRootElement aliases) emptyGIRInfoParse (subelements (documentRoot doc))
+
+-- | Parse the list of includes in a given document.
+documentListIncludes :: Document -> S.Set (Text, Text)
+documentListIncludes doc = S.fromList (mapMaybe parseInclude includes)
+    where includes = childElemsWithLocalName "include" (documentRoot doc)
+
+-- | Load a set of dependencies, recursively.
+loadDependencies :: Bool                              -- Verbose
+                 -> S.Set (Text, Text)                -- Requested
+                 -> M.Map (Text, Text) Document       -- Loaded so far
+                 -> [FilePath]                        -- extra path to search
+                 -> IO (M.Map (Text, Text) Document)  -- New loaded set
+loadDependencies verbose requested loaded extraPaths
+        | S.null requested = return loaded
+        | otherwise = do
+  let (name, version) = S.elemAt 0 requested
+  doc <- readGiRepository verbose name (Just version) extraPaths
+  let newLoaded = M.insert (name, version) doc loaded
+      newRequested = S.union requested (documentListIncludes doc)
+      notYetLoaded = S.filter (/= (name, version)) newRequested
+  loadDependencies verbose notYetLoaded newLoaded extraPaths
+
+-- | Load a given GIR file and recursively its dependencies
+loadGIRFile :: Bool             -- ^ verbose
+            -> Text             -- ^ name
+            -> Maybe Text       -- ^ version
+            -> [FilePath]       -- ^ extra paths to search
+            -> IO (Document,                    -- ^ loaded document
+                   M.Map (Text, Text) Document) -- ^ dependencies
+loadGIRFile verbose name version extraPaths = do
+  doc <- readGiRepository verbose name version extraPaths
+  deps <- loadDependencies verbose (documentListIncludes doc) M.empty extraPaths
+  return (doc, deps)
+
+-- | Turn a GIRInfoParse into a proper GIRInfo, doing some sanity
+-- checking along the way.
+toGIRInfo :: GIRInfoParse -> Either Text GIRInfo
+toGIRInfo info =
+    case catMaybes (girIPNamespaces info) of
+      [ns] -> Right GIRInfo {
+                girPCPackages = (reverse . catMaybes . girIPPackage) info
+              , girNSName = nsName ns
+              , girNSVersion = nsVersion ns
+              , girAPIs = reverse (nsAPIs ns)
+              , girLibraries = nsLibraries ns
+              , girCTypes = M.fromList (nsCTypes ns)
+              }
+      [] -> Left "Found no valid namespace."
+      _  -> Left "Found multiple namespaces."
+
+-- | Load and parse a GIR file, including its dependencies.
+loadGIRInfo :: Bool             -- ^ verbose
+            -> Text             -- ^ name
+            -> Maybe Text       -- ^ version
+            -> [FilePath]       -- ^ extra paths to search
+            -> DynLibCache      -- ^ cache for dynlibs
+            -> IO (GIRInfo,     -- ^ parsed document
+                   [GIRInfo])   -- ^ parsed deps
+loadGIRInfo verbose name version extraPaths libCache =  do
+  (doc, deps) <- loadGIRFile verbose name version extraPaths
+  let aliases = M.unions (map documentListAliases (doc : M.elems deps))
+      parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
+      parsedDeps = map (toGIRInfo . parseGIRDocument aliases) (M.elems deps)
+  case combineErrors parsedDoc parsedDeps of
+    Left err -> error . T.unpack $ "Error when parsing \"" <> name <> "\": " <> err
+    Right (docGIR, depsGIR) -> do
+      if girNSName docGIR == name
+      then do
+        libs <- (fmap catMaybes
+                . mapM (loadDynLib verbose libCache)
+                . L.nub
+                . concatMap girLibraries) (docGIR : depsGIR)
+        (fixedDoc, fixedDeps) <- fixupGIRInfos libs docGIR depsGIR
+        return (fixedDoc, fixedDeps)
+      else error . T.unpack $ "Got unexpected namespace \""
+               <> girNSName docGIR <> "\" when parsing \"" <> name <> "\"."
+  where combineErrors :: Either Text GIRInfo -> [Either Text GIRInfo]
+                      -> Either Text (GIRInfo, [GIRInfo])
+        combineErrors parsedDoc parsedDeps = do
+          doc <- parsedDoc
+          deps <- sequence parsedDeps
+          return (doc, deps)
+
+foreign import ccall "g_type_interface_prerequisites" g_type_interface_prerequisites :: CGType -> Ptr CUInt -> IO (Ptr CGType)
+
+-- | List the prerequisites for a 'GType' corresponding to an interface.
+gtypeInterfaceListPrereqs :: GType -> IO [Text]
+gtypeInterfaceListPrereqs (GType cgtype) = do
+  nprereqsPtr <- allocMem :: IO (Ptr CUInt)
+  ps <- g_type_interface_prerequisites cgtype nprereqsPtr
+  nprereqs <- peek nprereqsPtr
+  psCGTypes <- unpackStorableArrayWithLength nprereqs ps
+  freeMem ps
+  freeMem nprereqsPtr
+  mapM (fmap T.pack . gtypeName . GType) psCGTypes
+
+-- | The list of prerequisites in GIR files is not always
+-- accurate. Instead of relying on this, we instantiate the 'GType'
+-- associated to the interface, and listing the interfaces from there.
+fixupInterface :: [DynLib] -> M.Map Text Name ->
+                  (Name, API) -> IO (Name, API)
+fixupInterface libs csymbolMap (n, APIInterface iface) = do
+  prereqs <- case ifTypeInit iface of
+               Nothing -> return []
+               Just ti -> do
+                 gtype <- findGType libs ti
+                 prereqGTypes <- gtypeInterfaceListPrereqs gtype
+                 forM prereqGTypes $ \p -> do
+                   case M.lookup p csymbolMap of
+                     Just pn -> return pn
+                     Nothing -> error $ "Could not find prerequisite type " ++ show p ++ " for interface " ++ show n
+  return (n, APIInterface (iface {ifPrerequisites = prereqs}))
+fixupInterface _ _ (n, api) = return (n, api)
+
+-- | There is not enough info in the GIR files to determine whether a
+-- struct is boxed. We find out by instantiating the 'GType'
+-- corresponding to the struct (if known) and checking whether is
+-- descends from the boxed GType.
+fixupStruct :: [DynLib] -> M.Map Text Name ->
+               (Name, API) -> IO (Name, API)
+-- The type for "GVariant" is marked as "intern", we wrap
+-- this one natively.
+fixupStruct _ _ (n@(Name "GLib" "Variant"), APIStruct s) =
+  return (n, APIStruct (s {structIsBoxed = False}))
+fixupStruct libs _ (n, APIStruct s) = do
+  isBoxed <- case structTypeInit s of
+               Nothing -> return False
+               Just ti -> do
+                 gtype <- findGType libs ti
+                 return (gtypeIsBoxed gtype)
+  return (n, APIStruct (s {structIsBoxed = isBoxed}))
+fixupStruct _ _ (n, api) = return (n, api)
+
+-- | Fixup parsed GIRInfos: some of the required information is not
+-- found in the GIR files themselves, but can be obtained by
+-- instantiating the required GTypes from the installed libraries.
+fixupGIRInfos :: [DynLib] -> GIRInfo -> [GIRInfo] -> IO (GIRInfo, [GIRInfo])
+fixupGIRInfos libs doc deps =
+  (fixup fixupInterface >=> fixup fixupStruct) (doc, deps)
+  where fixup :: ([DynLib] -> M.Map Text Name -> (Name, API) -> IO (Name, API))
+                 -> (GIRInfo, [GIRInfo]) -> IO (GIRInfo, [GIRInfo])
+        fixup fixer (doc, deps) = do
+          fixedDoc <- fixAPIs fixer doc
+          fixedDeps <- mapM (fixAPIs fixer) deps
+          return (fixedDoc, fixedDeps)
+
+        fixAPIs :: ([DynLib] -> M.Map Text Name -> (Name, API) -> IO (Name, API)) -> GIRInfo -> IO GIRInfo
+        fixAPIs fixer info = do
+          fixedAPIs <- mapM (fixer libs ctypes) (girAPIs info)
+          return $ info {girAPIs = fixedAPIs}
+
+        ctypes :: M.Map Text Name
+        ctypes = M.unions (map girCTypes (doc:deps))

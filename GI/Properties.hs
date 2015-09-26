@@ -9,6 +9,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM_, when, unless)
 import Data.List (intercalate)
 import Data.Monoid ((<>))
+import qualified Data.Text as T
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CInt, CUInt)
@@ -21,8 +22,6 @@ import GI.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
 import GI.SymbolNaming (upperNameWithSuffix, upperName, classConstraint, qualifyWithSuffix, hyphensToCamelCase)
 import GI.Type
 import GI.Util
-import GI.Internal.ArgInfo (Transfer(..))
-import GI.Internal.ParamFlag (ParamFlag(..))
 
 propTypeStr :: Type -> CodeGen String
 propTypeStr t = case t of
@@ -94,7 +93,7 @@ genPropertySetter n pName prop = group $ do
   line $ "set" ++ pName ++ " :: (" ++ intercalate ", " constraints'
            ++ ") => o -> " ++ t ++ " -> IO ()"
   line $ "set" ++ pName ++ " obj val = setObjectProperty" ++ tStr
-           ++ " obj \"" ++ propName prop ++ "\" val"
+           ++ " obj \"" ++ T.unpack (propName prop) ++ "\" val"
 
 genPropertyGetter :: Name -> String -> Property -> CodeGen ()
 genPropertyGetter n pName prop = group $ do
@@ -105,7 +104,7 @@ genPropertyGetter n pName prop = group $ do
                 " => o -> " ++ show (io outType)
   tStr <- propTypeStr $ propType prop
   line $ "get" ++ pName ++ " obj = getObjectProperty" ++ tStr
-        ++ " obj \"" ++ propName prop ++ "\"" ++
+        ++ " obj \"" ++ T.unpack (propName prop) ++ "\"" ++
            if tStr `elem` ["Object", "Boxed"]
            then " " ++ show outType -- These require the constructor too.
            else ""
@@ -121,7 +120,7 @@ genPropertyConstructor pName prop = group $ do
   line $ "construct" ++ pName ++ " :: " ++ constraints'
            ++ t ++ " -> IO ([Char], GValue)"
   line $ "construct" ++ pName ++ " val = constructObjectProperty" ++ tStr
-           ++ " \"" ++ propName prop ++ "\" val"
+           ++ " \"" ++ T.unpack (propName prop) ++ "\" val"
 
 genObjectProperties :: Name -> Object -> CodeGen ()
 genObjectProperties n o = do
@@ -131,7 +130,8 @@ genObjectProperties n o = do
     allProps <- fullObjectPropertyList n o >>=
                 mapM (\(owner, prop) -> do
                         pi <- infoType owner prop
-                        return $ "'(\"" ++ propName prop ++ "\", " ++ pi ++ ")")
+                        return $ "'(\"" ++ T.unpack (propName prop)
+                                   ++ "\", " ++ pi ++ ")")
     genProperties n (objProperties o) allProps
 
 genInterfaceProperties :: Name -> Interface -> CodeGen ()
@@ -139,7 +139,8 @@ genInterfaceProperties n iface = do
   allProps <- fullInterfacePropertyList n iface >>=
                 mapM (\(owner, prop) -> do
                         pi <- infoType owner prop
-                        return $ "'(\"" ++ propName prop ++ "\", " ++ pi ++ ")")
+                        return $ "'(\"" ++ T.unpack (propName prop)
+                                   ++ "\", " ++ pi ++ ")")
   genProperties n (ifProperties iface) allProps
 
 -- If the given accesor is available (indicated by available == True),
@@ -158,19 +159,19 @@ accessorOrUndefined available accessor (Name ons on) cName =
 infoType :: Name -> Property -> CodeGen String
 infoType owner prop = do
   name <- upperNameWithSuffix "A." owner
-  let cName = hyphensToCamelCase (propName prop)
+  let cName = (hyphensToCamelCase . T.unpack . propName) prop
   return $ name ++ cName ++ "PropertyInfo"
 
 genOneProperty :: Name -> Property -> ExcCodeGen ()
 genOneProperty owner prop = do
   name <- upperName owner
-  let cName = hyphensToCamelCase $ propName prop
+  let cName = (hyphensToCamelCase . T.unpack . propName) prop
       pName = name ++ cName
       flags = propFlags prop
-      writable = ParamWritable `elem` flags &&
-                 (ParamConstructOnly `notElem` flags)
-      readable = ParamReadable `elem` flags
-      constructOnly = ParamConstructOnly `elem` flags
+      writable = PropertyWritable `elem` flags &&
+                 (PropertyConstructOnly `notElem` flags)
+      readable = PropertyReadable `elem` flags
+      constructOnly = PropertyConstructOnly `elem` flags
 
   -- For properties the meaning of having transfer /= TransferNothing
   -- is not clear (what are the right semantics for GValue setters?),
@@ -191,7 +192,7 @@ genOneProperty owner prop = do
                                ++ show pName
 
   group $ do
-    line $ "-- VVV Prop \"" ++ propName prop ++ "\""
+    line $ "-- VVV Prop \"" ++ T.unpack (propName prop) ++ "\""
     line $ "   -- Type: " ++ show (propType prop)
     line $ "   -- Flags: " ++ show (propFlags prop)
 
@@ -240,7 +241,7 @@ genOneProperty owner prop = do
                      ++ " = " ++ classConstraint name
             line $ "type AttrGetType " ++ it ++ " = " ++ outType
             line $ "type AttrLabel " ++ it ++ " = \""
-                     ++ name ++ "::" ++ propName prop ++ "\""
+                     ++ name ++ "::" ++ T.unpack (propName prop) ++ "\""
             line $ "attrGet _ = " ++ getter
             line $ "attrSet _ = " ++ setter
             line $ "attrConstruct _ = " ++ constructor
@@ -270,7 +271,7 @@ genProperties n ownedProps allProps = do
   forM_ ownedProps $ \prop -> do
       handleCGExc (\err -> do
                      line $ "-- XXX Generation of property \""
-                              ++ propName prop ++ "\" of object \""
+                              ++ T.unpack (propName prop) ++ "\" of object \""
                               ++ name ++ "\" failed: " ++ describeCGError err
                      genPlaceholderProperty n prop)
                   (genOneProperty n prop)

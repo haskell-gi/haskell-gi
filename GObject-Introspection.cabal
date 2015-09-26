@@ -1,5 +1,5 @@
 Name:                GObject-Introspection
-Version:             0.6
+Version:             0.7
 Synopsis:            Generate Haskell bindings for GObject-Introspection capable libraries
 Description:         Generate Haskell bindings for GObject-Introspection capable libraries. This includes most notably Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
 Homepage:            https://github.com/garetxe/haskell-gi
@@ -30,7 +30,11 @@ Executable haskell-gi
       transformers >= 0.3,
       pretty-show,
       process,
+      safe,
       bytestring,
+      xdg-basedir,
+      xml-conduit >= 1.3.0,
+      unix >= 2.7 && <2.8,
       GObject-Introspection,
       text >= 1.0,
       free
@@ -38,23 +42,23 @@ Executable haskell-gi
   extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
-      GI.Internal.Types,
-      GI.Internal.Typelib,
-      GI.Internal.ArgInfo,
-      GI.Internal.BaseInfo,
-      GI.Internal.CallableInfo,
-      GI.Internal.ConstantInfo,
-      GI.Internal.EnumInfo,
-      GI.Internal.FieldInfo,
-      GI.Internal.FunctionInfo,
-      GI.Internal.InterfaceInfo,
-      GI.Internal.ObjectInfo,
-      GI.Internal.ParamFlag,
-      GI.Internal.PropertyInfo,
-      GI.Internal.RegisteredTypeInfo,
-      GI.Internal.StructInfo,
-      GI.Internal.TypeInfo,
-      GI.Internal.UnionInfo,
+      GI.GIR.Alias,
+      GI.GIR.BasicTypes,
+      GI.GIR.Callback,
+      GI.GIR.Constant,
+      GI.GIR.Deprecation,
+      GI.GIR.Enum,
+      GI.GIR.Field,
+      GI.GIR.Flags,
+      GI.GIR.Method,
+      GI.GIR.Object,
+      GI.GIR.Parser,
+      GI.GIR.Repository,
+      GI.GIR.Signal,
+      GI.GIR.Struct,
+      GI.GIR.Type,
+      GI.GIR.Union,
+      GI.GIR.XMLUtils,
       GI.API,
       GI.Attributes,
       GI.Cabal,
@@ -63,6 +67,7 @@ Executable haskell-gi
       GI.Config,
       GI.Constant,
       GI.Conversions,
+      GI.DynLib,
       GI.GObject,
       GI.GType,
       GI.Inheritance,
@@ -78,7 +83,7 @@ Executable haskell-gi
       GI.Type,
       GI.Util
 
-  C-sources: c/hsgclosure.c
+  c-sources: c/enumStorage.c
 
 Library
   exposed-modules:

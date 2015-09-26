@@ -1,7 +1,4 @@
 namespace Soup
 
-# The pkg-config name is libsoup
-pkg-config-name soup libsoup
-
 # The "len" parameter is not marked as (out)
 ignore Address.get_sockaddr

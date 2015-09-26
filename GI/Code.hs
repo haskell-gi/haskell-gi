@@ -9,9 +9,6 @@ module GI.Code
     , codeToString
     , loadDependency
     , getDeps
-    , Deps
-    , getAPIs
-    , injectAPIs
     , recurse
     , recurse'
     , handleCGExc
@@ -24,8 +21,12 @@ module GI.Code
     , blank
     , group
     , foreignImport
+
     , findAPI
     , findAPIByName
+    , getAPIs
+    , injectAPIs
+
     , config
     ) where
 
@@ -41,7 +42,6 @@ import qualified Data.Set as Set
 
 import GI.API (API, Name(..))
 import GI.Config (Config(..))
-import GI.Overrides (loadFilteredAPI)
 import GI.Type (Type(..))
 
 data Code
@@ -99,35 +99,35 @@ unwrapCodeGen :: Config -> CodeGenState -> CodeGen a ->
                  IO (a, CodeGenState, Code)
 unwrapCodeGen cfg state cg =
     runExceptT (runRWST cg cfg state) >>= \case
-               Left _ -> error "unwrapCodeGen:: The impossible happened!"
-               Right (r, s, c) -> return (r, s, c)
+        Left _ -> error "unwrapCodeGen:: The impossible happened!"
+        Right (r, s, c) -> return (r, s, c)
 
 -- | Run the given code generator, merging its resulting state into
 -- the ambient state, and turning its output into a value.
 recurse :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
 recurse cg = do
-  cfg <- config
-  oldState <- get
-  liftIO (runExceptT $ runRWST cg cfg oldState) >>= \case
-             Left e -> throwError e
-             Right (r, st, c) -> put (mergeState oldState st)
-                                 >> return (r, c)
+    r <- ask
+    oldState <- get
+    liftIO (runExceptT $ runRWST cg r oldState) >>= \case
+        Left e -> throwError e
+        Right (r, st, c) -> put (mergeState oldState st) >> return (r, c)
 
 -- | Try running the given `action`, and if it fails run `fallback`
 -- instead.
 handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
 handleCGExc fallback action = do
-  cfg <- config
-  oldState <- get
-  liftIO (runExceptT $ runRWST action cfg oldState) >>= \case
-             Left e -> fallback e
-             Right (r, s, c) -> do
-                                put $ mergeState oldState s
-                                tell c
-                                return r
+    r <- ask
+    oldState <- get
+    liftIO (runExceptT $ runRWST action r oldState) >>= \case
+        Left e -> fallback e
+        Right (r, s, c) -> do
+            put $ mergeState oldState s
+            tell c
+            return r
 
 emptyState :: CodeGenState
-emptyState = CodeGenState {moduleDeps = Set.empty, loadedAPIs = M.empty}
+emptyState = CodeGenState {moduleDeps = Set.empty
+                          ,loadedAPIs = M.empty }
 
 getDeps :: CodeGen Deps
 getDeps = moduleDeps <$> get
@@ -145,26 +145,25 @@ injectAPIs newAPIs = do
 -- | Merge two states of a code generator.
 mergeState :: CodeGenState -> CodeGenState -> CodeGenState
 mergeState oldState newState =
-  -- If no dependencies were added we do not need to merge, this saves
-  -- quite a bit of work.
-  if Set.size (moduleDeps oldState) /= Set.size (moduleDeps newState)
-  then let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
-           newAPIs = M.union (loadedAPIs oldState) (loadedAPIs newState)
-       in CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
-  else oldState
+    -- If no dependencies were added we do not need to merge.
+    if Set.size (moduleDeps oldState) /= Set.size (moduleDeps newState)
+    then let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
+             newAPIs = M.union (loadedAPIs oldState) (loadedAPIs newState)
+         in CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
+    else oldState
 
 -- | Run a code generator, and return the dependencies encountered
 -- when generating code.
-genCode :: Config -> CodeGen () -> IO (Deps, Code)
-genCode cfg cg = do
-  (_, st, code) <- unwrapCodeGen cfg emptyState cg
-  return (moduleDeps st, code)
+genCode :: Config -> M.Map Name API -> CodeGen () -> IO (Deps, Code)
+genCode cfg apis cg = do
+    (_, st, code) <- unwrapCodeGen cfg (emptyState {loadedAPIs = apis}) cg
+    return (moduleDeps st, code)
 
 -- | Like `genCode`, but keep the final value and output, discarding
 -- the state.
-evalCodeGen :: Config -> CodeGen a -> IO (a, Code)
-evalCodeGen cfg cg = do
-  (r, _, code) <- unwrapCodeGen cfg emptyState cg
+evalCodeGen :: Config -> M.Map Name API -> CodeGen a -> IO (a, Code)
+evalCodeGen cfg apis cg = do
+  (r, _, code) <- unwrapCodeGen cfg (emptyState {loadedAPIs = apis}) cg
   return (r, code)
 
 -- | Like `recurse`, but for generators returning a unit value, where
@@ -172,18 +171,13 @@ evalCodeGen cfg cg = do
 recurse' :: CodeGen () -> CodeGen Code
 recurse' cg = snd <$> recurse cg
 
+-- | Mark the given dependency as used by the module.
 loadDependency :: String -> CodeGen ()
 loadDependency name = do
-  deps <- getDeps
-  unless (Set.member name deps) $
-       do
-         apis <- getAPIs
-         cfg <- config
-         imported <- M.fromList <$>
-                     liftIO (loadFilteredAPI (verbose cfg) (overrides cfg) name)
-         let newDeps = Set.insert name deps
-             newAPIs = M.union apis imported
-         put CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
+    deps <- getDeps
+    unless (Set.member name deps) $ do
+        let newDeps = Set.insert name deps
+        modify' $ \s -> s {moduleDeps = newDeps}
 
 -- | Give a friendly textual description of the error for presenting
 -- to the user.
@@ -208,18 +202,11 @@ findAPI _ = return Nothing
 
 findAPIByName :: Name -> CodeGen API
 findAPIByName n@(Name ns _) = do
-  apis <- getAPIs
-  case M.lookup n apis of
-    Just api -> return api
-    Nothing -> do
-      deps <- getDeps
-      if not (Set.member ns deps)
-      -- If we get asked for a module not yet loaded, load it and retry.
-      then do
-        loadDependency ns
-        findAPIByName n
-      else error $ "couldn't find API description for "
-                       ++ ns ++ "." ++ name n
+    apis <- getAPIs
+    case M.lookup n apis of
+        Just api -> return api
+        Nothing ->
+            error $ "couldn't find API description for " ++ ns ++ "." ++ name n
 
 config :: CodeGen Config
 config = ask

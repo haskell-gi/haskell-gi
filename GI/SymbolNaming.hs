@@ -15,12 +15,13 @@ module GI.SymbolNaming
     ) where
 
 import Data.Char (toLower, toUpper)
-import Data.List (isPrefixOf)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (Monoid, (<>))
 #else
 import Data.Monoid ((<>))
 #endif
+import Data.Text (Text)
+import qualified Data.Text as T
 import Data.String (IsString)
 
 import GI.API
@@ -97,7 +98,7 @@ hyphensToCamelCase str = concatMap ucFirst $ split '-' str
 underscoresToCamelCase :: String -> String
 underscoresToCamelCase str = concatMap ucFirst $ split '_' str
 
-escapeReserved :: String -> String
+escapeReserved :: Text -> String
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"
 escapeReserved "data" = "data_"
@@ -124,6 +125,6 @@ escapeReserved "sizeOf" = "sizeOf_"
 escapeReserved "when" = "when_"
 escapeReserved "default" = "default_"
 escapeReserved s
-    | "set_" `isPrefixOf` s = s ++ "_"
-    | "get_" `isPrefixOf` s = s ++ "_"
-    | otherwise = s
+    | "set_" `T.isPrefixOf` s = T.unpack s <> "_"
+    | "get_" `T.isPrefixOf` s = T.unpack s <> "_"
+    | otherwise = T.unpack s

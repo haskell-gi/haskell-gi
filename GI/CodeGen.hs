@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GI.CodeGen
     ( genConstant
     , genFunction
@@ -16,6 +17,8 @@ import Data.Tuple (swap)
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.Text as T
+import Data.Text (Text)
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CUInt)
@@ -31,55 +34,56 @@ import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
                   ignoreStruct)
 import GI.SymbolNaming (upperName, ucFirst, classConstraint, noName)
 import GI.Type
-import GI.Internal.ArgInfo
-import GI.Internal.FunctionInfo
-import GI.Internal.TypeInfo
 
 genFunction :: Name -> Function -> CodeGen ()
-genFunction n (Function symbol callable flags) = do
-  line $ "-- function " ++ symbol
-  handleCGExc (\e -> line ("-- XXX Could not generate function " ++ symbol
+genFunction n (Function symbol throws callable) = do
+  line $ "-- function " ++ T.unpack symbol
+  handleCGExc (\e -> line ("-- XXX Could not generate function "
+                           ++ T.unpack symbol
                            ++ "\n-- Error was : " ++ describeCGError e))
-              (genCallable n symbol callable (FunctionThrows `elem` flags))
+              (genCallable n symbol callable throws)
 
-genBoxedObject :: Name -> String -> CodeGen ()
+genBoxedObject :: Name -> Text -> CodeGen ()
 genBoxedObject n typeInit = do
   name' <- upperName n
 
   group $ do
-    line $ "foreign import ccall \"" ++ typeInit ++ "\" c_" ++
-            typeInit ++ " :: "
+    line $ "foreign import ccall \"" ++ T.unpack typeInit ++ "\" c_" ++
+            T.unpack typeInit ++ " :: "
     indent $ line "IO GType"
   group $ do
        line $ "instance BoxedObject " ++ name' ++ " where"
-       indent $ line $ "boxedType _ = c_" ++ typeInit
+       indent $ line $ "boxedType _ = c_" ++ T.unpack typeInit
 
-genBoxedEnum :: Name -> String -> CodeGen ()
+genBoxedEnum :: Name -> Text -> CodeGen ()
 genBoxedEnum n typeInit = do
   name' <- upperName n
 
   group $ do
-    line $ "foreign import ccall \"" ++ typeInit ++ "\" c_" ++
-            typeInit ++ " :: "
+    line $ "foreign import ccall \"" ++ T.unpack typeInit ++ "\" c_" ++
+            T.unpack typeInit ++ " :: "
     indent $ line "IO GType"
   group $ do
        line $ "instance BoxedEnum " ++ name' ++ " where"
-       indent $ line $ "boxedEnumType _ = c_" ++ typeInit
+       indent $ line $ "boxedEnumType _ = c_" ++ T.unpack typeInit
 
 genEnumOrFlags :: Name -> Enumeration -> ExcCodeGen ()
-genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storage) = do
+genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storageBytes isDeprecated) = do
   -- Conversion functions expect enums and flags to map to CUInt,
   -- which we assume to be of 32 bits. Fail early, instead of giving
   -- strange errors at runtime.
   when (sizeOf (0 :: CUInt) /= 4) $
        notImplementedError $ "Unsupported CUInt size: " ++ show (sizeOf (0 :: CUInt))
-  when (storage /= TypeTagInt32 && storage /= TypeTagUint32) $
-       notImplementedError $ "Storage of size /= 32 not supported : " ++ show storage
+  when (storageBytes /= 4) $
+       notImplementedError $ "Storage of size /= 4 not supported : " ++ show storageBytes
 
   name' <- upperName n
   fields' <- forM fields $ \(fieldName, value) -> do
-      n <- upperName $ Name ns (name ++ "_" ++ fieldName)
+      n <- upperName $ Name ns (name ++ "_" ++ T.unpack fieldName)
       return (n, value)
+
+  line $ deprecatedPragma name' isDeprecated
+
   group $ do
     line $ "data " ++ name' ++ " = "
     indent $
@@ -125,12 +129,12 @@ genFlags n@(Name _ name) (Flags enum) = do
                 name' <- upperName n
                 group $ line $ "instance IsGFlag " ++ name')
 
-genErrorDomain :: String -> String -> CodeGen ()
+genErrorDomain :: String -> Text -> CodeGen ()
 genErrorDomain name' domain = do
   group $ do
     line $ "instance GErrorClass " ++ name' ++ " where"
     indent $ line $
-               "gerrorClassDomain _ = \"" ++ domain ++ "\""
+               "gerrorClassDomain _ = \"" ++ T.unpack domain ++ "\""
   -- Generate type specific error handling (saves a bit of typing, and
   -- it's clearer to read).
   group $ do
@@ -167,7 +171,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
 
       -- Methods
       forM_ (structMethods s) $ \(mn, f) ->
-          do isFunction <- symbolFromFunction (fnSymbol f)
+          do isFunction <- symbolFromFunction (methodSymbol f)
              unless isFunction $
                   handleCGExc
                   (\e -> line ("-- XXX Could not generate method "
@@ -192,7 +196,7 @@ genUnion n u = do
 
   -- Methods
   forM_ (unionMethods u) $ \(mn, f) ->
-      do isFunction <- symbolFromFunction (fnSymbol f)
+      do isFunction <- symbolFromFunction (methodSymbol f)
          unless isFunction $
               handleCGExc
               (\e -> line ("-- XXX Could not generate method "
@@ -252,34 +256,36 @@ fixConstructorReturnType returnsGObject cn c = c { returnType = returnType' }
                     else
                         returnType c
 
-genMethod :: Name -> Name -> Function -> ExcCodeGen ()
-genMethod cn mn (Function {
-                    fnSymbol = sym,
-                    fnCallable = c,
-                    fnFlags = fs }) = do
+genMethod :: Name -> Name -> Method -> ExcCodeGen ()
+genMethod cn mn (Method {
+                    methodSymbol = sym,
+                    methodCallable = c,
+                    methodType = t,
+                    methodThrows = throws
+                 }) = do
     name' <- upperName cn
     returnsGObject <- isGObject (returnType c)
     line $ "-- method " ++ name' ++ "::" ++ name mn
-    line $ "-- method flags : " ++ show fs
+    line $ "-- method type : " ++ show t
     let -- Mangle the name to namespace it to the class.
         mn' = mn { name = name cn ++ "_" ++ name mn }
-    let c'  = if FunctionIsConstructor `elem` fs
+    let c'  = if Constructor == t
               then fixConstructorReturnType returnsGObject cn c
               else c
-        c'' = if FunctionIsMethod `elem` fs
+        c'' = if OrdinaryMethod == t
               then fixMethodArgs cn c'
               else c'
-    genCallable mn' sym c'' (FunctionThrows `elem` fs)
+    genCallable mn' sym c'' throws
 
 -- Type casting with type checking
-genGObjectCasts :: Bool -> Name -> String -> [Name] -> CodeGen ()
+genGObjectCasts :: Bool -> Name -> Text -> [Name] -> CodeGen ()
 genGObjectCasts isIU n cn_ parents = do
   name' <- upperName n
   qualifiedParents <- traverse upperName parents
 
   group $ do
-    line $ "foreign import ccall \"" ++ cn_ ++ "\""
-    indent $ line $ "c_" ++ cn_ ++ " :: IO GType"
+    line $ "foreign import ccall \"" ++ T.unpack cn_ ++ "\""
+    indent $ line $ "c_" ++ T.unpack cn_ ++ " :: IO GType"
 
   group $ do
     line $ "type instance ParentTypes " ++ name' ++ " = '[" ++
@@ -289,7 +295,7 @@ genGObjectCasts isIU n cn_ parents = do
     line $ "instance GObject " ++ name' ++ " where"
     indent $ group $ do
             line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
-            line $ "gobjectType _ = c_" ++ cn_
+            line $ "gobjectType _ = c_" ++ T.unpack cn_
 
   let className = classConstraint name'
   group $ do
@@ -339,9 +345,9 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
   -- And finally signals
   forM_ (objSignals o) $ \s ->
       handleCGExc
-      (\e -> line ("-- XXX Could not generate signal "
-                   ++ name' ++ "::" ++ sigName s ++ "\n"
-                   ++ "-- Error was : " ++ describeCGError e))
+      (line . (concat ["-- XXX Could not generate signal ", name', "::"
+                      , (T.unpack . sigName) s
+                      , "\n", "-- Error was : "] ++) . describeCGError)
       (genSignal s n)
 
 genInterface :: Name -> Interface -> CodeGen ()
@@ -353,6 +359,7 @@ genInterface n iface = do
 
   name' <- upperName n
   line $ "-- interface " ++ name' ++ " "
+  line $ deprecatedPragma name' $ ifDeprecated iface
   line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
 
   noName name'
@@ -374,7 +381,7 @@ genInterface n iface = do
 
   -- Methods
   forM_ (ifMethods iface) $ \(mn, f) -> do
-    isFunction <- symbolFromFunction (fnSymbol f)
+    isFunction <- symbolFromFunction (methodSymbol f)
     unless isFunction $
          handleCGExc
          (\e -> line ("-- XXX Could not generate method "
@@ -382,13 +389,12 @@ genInterface n iface = do
                       ++ "-- Error was : " ++ describeCGError e))
          (genMethod n mn f)
 
-  -- Signals
-  forM_ (ifSignals iface) $ \s ->
-      handleCGExc
-      (\e -> line ("-- XXX Could not generate signal "
-                   ++ name' ++ "::" ++ sigName s ++ "\n"
-                   ++ "-- Error was : " ++ describeCGError e))
-      (genSignal s n)
+  -- And finally signals
+  forM_ (ifSignals iface) $ \s -> handleCGExc
+        (line . (concat ["-- XXX Could not generate signal ", name', "::"
+                        , (T.unpack . sigName) s
+                        , "\n", "-- Error was : "] ++) . describeCGError)
+        (genSignal s n)
 
 -- Some type libraries include spurious interface/struct methods,
 -- where a method Mod.Foo::func also appears as an ordinary function
@@ -396,13 +402,16 @@ genInterface n iface = do
 -- generate the method.
 --
 -- It may be more expedient to keep a map of symbol -> function.
-symbolFromFunction :: String -> CodeGen Bool
+--
+-- XXX Maybe the GIR helps here? Sometimes such functions are
+-- annotated with the "moved-to".
+symbolFromFunction :: Text -> CodeGen Bool
 symbolFromFunction sym = do
-  apis <- getAPIs
-  return $ any (hasSymbol sym . snd) $ M.toList apis
+    apis <- getAPIs
+    return $ any (hasSymbol sym . snd) $ M.toList apis
     where
-      hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2 })) = sym1 == sym2
-      hasSymbol _ _ = False
+        hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2 })) = sym1 == sym2
+        hasSymbol _ _ = False
 
 genAPI :: Name -> API -> CodeGen ()
 genAPI n (APIConst c) = genConstant n c
@@ -414,7 +423,6 @@ genAPI n (APIStruct s) = genStruct n s
 genAPI n (APIUnion u) = genUnion n u
 genAPI n (APIObject o) = genObject n o
 genAPI n (APIInterface i) = genInterface n i
-genAPI _ (APIBoxed _) = return ()
 
 genPrelude :: String -> String -> CodeGen ()
 genPrelude name modulePrefix = do
@@ -445,7 +453,7 @@ genPrelude name modulePrefix = do
     line "import qualified Data.Map as Map"
     line "import Foreign.C"
     line "import Foreign.Ptr"
-    line "import Foreign.ForeignPtr.Safe"
+    line "import Foreign.ForeignPtr"
     line "import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)"
     line "import Foreign.Storable (peek, poke, sizeOf)"
     line "import Control.Applicative ((<$>))"
@@ -487,14 +495,14 @@ genModule name apis modulePrefix = do
 
   code <- recurse' $ mapM_ (uncurry genAPI) $
           -- We provide these ourselves
-          filter (not . (== Name "GLib" "Array") . fst) $
-          filter (not . (== Name "GLib" "Error") . fst) $
-          filter (not . (== Name "GLib" "HashTable") . fst) $
-          filter (not . (== Name "GLib" "List") . fst) $
-          filter (not . (== Name "GLib" "SList") . fst) $
-          filter (not . (== Name "GLib" "Variant") . fst) $
-          filter (not . (== Name "GObject" "Value") . fst) $
-          filter (not . (== Name "GObject" "Closure") . fst) $
+          filter ((`notElem` [ Name "GLib" "Array"
+                             , Name "GLib" "Error"
+                             , Name "GLib" "HashTable"
+                             , Name "GLib" "List"
+                             , Name "GLib" "SList"
+                             , Name "GLib" "Variant"
+                             , Name "GObject" "Value"
+                             , Name "GObject" "Closure"]) . fst) $
           -- Some callback types are defined inside structs
           map fixAPIStructs $ (++ embeddedAPIs) apis
 

@@ -1,51 +1,48 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GI.PkgConfig
     ( pkgConfigGetVersion
     ) where
 
 import Control.Monad (when)
-import Data.Char (toLower)
-import Data.Monoid (First(..))
+import Data.Monoid (First(..), (<>))
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (mconcat)
 #endif
 import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import Data.Text (Text)
 import System.Exit (ExitCode(..))
 import System.Process (readProcessWithExitCode)
 
-import GI.Internal.Typelib (getVersion, load)
-
--- | Known mappings from (lowercased) gobject-introspection namespaces
--- to package names known to pkg-config.
-builtinMappings :: M.Map String String
-builtinMappings = M.fromList [("gtk", "gtk+")
-                             ,("gdkpixbuf", "gdk-pixbuf")]
-
 -- | Try asking pkg-config for the version of a given module.
-tryPkgConfig :: String -> IO (Maybe (String, String))
+tryPkgConfig :: Text -> IO (Maybe (Text, Text))
 tryPkgConfig pkgName = do
   (exitcode, stdout, _) <-
-      readProcessWithExitCode "pkg-config" ["--modversion", pkgName] ""
+      readProcessWithExitCode "pkg-config" ["--modversion", T.unpack pkgName] ""
   case exitcode of
-    ExitSuccess -> case takeWhile (/='\n') stdout of
-                     [] -> return Nothing
-                     v -> return (Just (pkgName, v))
+    ExitSuccess -> case lines stdout of
+                     [v] -> return (Just (pkgName, T.pack v))
+                     _ -> return Nothing
     ExitFailure _ -> return Nothing
 
 -- | Get the pkg-config name and associated installed version of a given
 -- gobject-introspection namespace. Since the mapping is not
--- one-to-one some guessing is involved, and in some cases we need to
--- resort to mapping tables.
-pkgConfigGetVersion :: String -> Bool -> M.Map String String ->
-                       IO (Maybe (String, String))
-pkgConfigGetVersion name verbose overridenNames = do
-  let lowerName = map toLower name
-  giVersion <- load name Nothing verbose >>= getVersion
+-- one-to-one some guessing is involved, although in most cases the
+-- required information is listed in the GIR file.
+pkgConfigGetVersion :: Text     -- name
+                    -> Text     -- version
+                    -> [Text]   -- known package names
+                    -> Bool     -- verbose
+                    -> M.Map Text Text -- suggested overrides
+                    -> IO (Maybe (Text, Text))
+pkgConfigGetVersion name version packages verbose overridenNames = do
+  let lowerName = T.toLower name
   when verbose $
-           putStrLn ("Querying pkg-config for " ++ name ++
-                     " version " ++ giVersion)
-  let knownMappings = M.union builtinMappings overridenNames
-      alternatives = case M.lookup lowerName knownMappings of
-                       Nothing -> [lowerName ++ "-" ++ giVersion, lowerName]
-                       Just n -> [n ++ "-" ++ giVersion, n]
+           putStrLn $ T.unpack ("Querying pkg-config for " <> name <>
+                              " version " <> version)
+  let alternatives = case M.lookup lowerName overridenNames of
+                       Nothing -> packages ++ [lowerName <> "-" <> version,
+                                               lowerName]
+                       Just n -> [n <> "-" <> version, n]
       firstJust = getFirst . mconcat . map First
   mapM tryPkgConfig alternatives >>= return . firstJust

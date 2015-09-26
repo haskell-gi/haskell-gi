@@ -2,18 +2,23 @@
 module GI.Type
     ( BasicType(..)
     , Type(..)
-    , typeFromTypeInfo
     , io
     , ptr
     , con
     , maybeT
+
+    , typeSize
+    , typeAlign
     ) where
 
+import Foreign.Ptr (nullPtr)
+import Foreign.C.Types
+import Foreign.Storable (sizeOf, alignment)
+import Data.Int
+import Data.Word
 import Data.Typeable
 
-import GI.Internal.BaseInfo
-import GI.Internal.TypeInfo
-import GI.Internal.Types
+import GI.Utils.BasicTypes (CGType)
 
 -- This enum mirrors the definition in gitypes.h.
 data BasicType
@@ -53,57 +58,6 @@ data Type
     | TParamSpec
     deriving (Eq, Show, Ord)
 
-basicTypeFromTypeTag TypeTagVoid = Just TVoid
-basicTypeFromTypeTag TypeTagBoolean = Just TBoolean
-basicTypeFromTypeTag TypeTagInt8 = Just TInt8
-basicTypeFromTypeTag TypeTagInt16 = Just TInt16
-basicTypeFromTypeTag TypeTagInt32 = Just TInt32
-basicTypeFromTypeTag TypeTagInt64 = Just TInt64
-basicTypeFromTypeTag TypeTagUint8 = Just TUInt8
-basicTypeFromTypeTag TypeTagUint16 = Just TUInt16
-basicTypeFromTypeTag TypeTagUint32 = Just TUInt32
-basicTypeFromTypeTag TypeTagUint64 = Just TUInt64
-basicTypeFromTypeTag TypeTagFloat = Just TFloat
-basicTypeFromTypeTag TypeTagDouble = Just TDouble
-basicTypeFromTypeTag TypeTagUnichar = Just TUniChar
-basicTypeFromTypeTag TypeTagUtf8 = Just TUTF8
-basicTypeFromTypeTag TypeTagFilename = Just TFileName
-basicTypeFromTypeTag TypeTagGtype = Just TGType
-basicTypeFromTypeTag _ = Nothing
-
-typeFromTypeInfo :: TypeInfo -> Type
-typeFromTypeInfo ti =
-    case basicTypeFromTypeTag tag of
-      Just bt -> TBasicType bt
-      Nothing -> case tag of
-           TypeTagArray -> case typeInfoArrayType ti of
-                             ArrayTypeC         ->
-                                 TCArray (typeInfoIsZeroTerminated ti)
-                                         (typeInfoArrayFixedSize ti)
-                                         (typeInfoArrayLength ti)
-                                         p1
-                             ArrayTypeArray     -> TGArray p1
-                             ArrayTypePtrArray  -> TPtrArray p1
-                             ArrayTypeByteArray -> TByteArray
-           -- TypeTagInterface -> TInterface (typeTagToString . typeInfoTag $ ti)
-           TypeTagInterface ->
-               let bi = baseInfo . typeInfoInterface $ ti
-               in case (baseInfoNamespace bi, baseInfoName bi) of
-                    ("GLib", "Variant") -> TVariant
-                    ("GObject", "ParamSpec") -> TParamSpec
-                    (ns, n) -> TInterface ns n
-           TypeTagGlist -> TGList p1
-           TypeTagGslist -> TGSList p1
-           TypeTagGhash -> TGHash p1 p2
-           -- XXX: Include more information.
-           TypeTagError -> TError
-           _ -> error $ "implement me: " ++ show (tag, fromEnum tag, fromEnum TypeTagArray)
-
-    where tag = typeInfoTag ti
-          p1 = typeFromTypeInfo $ typeInfoParamType ti 0
-          p2 = typeFromTypeInfo $ typeInfoParamType ti 1
-
-
 con :: String -> [TypeRep] -> TypeRep
 con "[]" xs = mkTyConApp listCon xs
               where listCon = typeRepTyCon (typeOf [""])
@@ -119,3 +73,53 @@ ptr t = "Ptr" `con` [t]
 
 maybeT :: TypeRep -> TypeRep
 maybeT t = "Maybe" `con` [t]
+
+-- | Compute the size in bytes of the C type corresponding to a 'Type'.
+typeSize :: Type -> Int
+typeSize (TBasicType b) = basicSize b
+typeSize _ = sizeOf nullPtr -- everything else we assume to be a pointer
+
+-- | Compute the size in bytes of the C type corresponding to a 'BasicType'
+basicSize :: BasicType -> Int
+basicSize TVoid = sizeOf nullPtr
+basicSize TBoolean = sizeOf (0 :: CInt)
+basicSize TInt8 = sizeOf (0 :: Int8)
+basicSize TUInt8 = sizeOf (0 :: Word8)
+basicSize TInt16 = sizeOf (0 :: Int16)
+basicSize TUInt16 = sizeOf (0 :: Word16)
+basicSize TInt32 = sizeOf (0 :: Int32)
+basicSize TUInt32 = sizeOf (0 :: Word32)
+basicSize TInt64 = sizeOf (0 :: Int64)
+basicSize TUInt64 = sizeOf (0 :: Word64)
+basicSize TFloat = sizeOf (0 :: CFloat)
+basicSize TDouble = sizeOf (0 :: CDouble)
+basicSize TUniChar = sizeOf (0 :: Word32)
+basicSize TGType = sizeOf (0 :: CGType)
+basicSize TUTF8 = sizeOf nullPtr
+basicSize TFileName = sizeOf nullPtr
+
+-- | Compute the alignment requirements, in bytes, for the C type
+-- corresponding to the given 'Type'.
+typeAlign :: Type -> Int
+typeAlign (TBasicType b) = basicAlign b
+typeAlign _ = sizeOf nullPtr
+
+-- | Compute the alignment requirements, in bytes, for the C type
+-- corresponding to the given 'Type'.
+basicAlign :: BasicType -> Int
+basicAlign TVoid = alignment nullPtr
+basicAlign TBoolean = alignment (0 :: CInt)
+basicAlign TInt8 = alignment (0 :: Int8)
+basicAlign TUInt8 = alignment (0 :: Word8)
+basicAlign TInt16 = alignment (0 :: Int16)
+basicAlign TUInt16 = alignment (0 :: Word16)
+basicAlign TInt32 = alignment (0 :: Int32)
+basicAlign TUInt32 = alignment (0 :: Word32)
+basicAlign TInt64 = alignment (0 :: Int64)
+basicAlign TUInt64 = alignment (0 :: Word64)
+basicAlign TFloat = alignment (0 :: CFloat)
+basicAlign TDouble = alignment (0 :: CDouble)
+basicAlign TUniChar = alignment (0 :: Word32)
+basicAlign TGType = alignment (0 :: CGType)
+basicAlign TUTF8 = alignment nullPtr
+basicAlign TFileName = alignment nullPtr

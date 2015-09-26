@@ -7,6 +7,9 @@ module GI.OverloadedSignals
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when)
+import Control.Monad.Writer (tell)
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import Data.List (intercalate)
 import qualified Data.Set as S
@@ -22,9 +25,9 @@ import GI.Util (padTo)
 -- A list of distinct signal names for all GObjects appearing in the
 -- given list of APIs.
 findSignalNames :: [(Name, API)] -> CodeGen [String]
-findSignalNames apis = S.toList <$> go apis S.empty
+findSignalNames apis = (map T.unpack . S.toList) <$> go apis S.empty
     where
-      go :: [(Name, API)] -> S.Set String -> CodeGen (S.Set String)
+      go :: [(Name, API)] -> S.Set Text -> CodeGen (S.Set Text)
       go [] set = return set
       go ((name, api):apis) set = do
         isGO <- apiIsGObject name api
@@ -37,7 +40,7 @@ findSignalNames apis = S.toList <$> go apis S.empty
                _ -> error $ "GObject not an Interface or Object!? " ++ show name
         else go apis set
 
-      insertSignals :: [Signal] -> S.Set String -> S.Set String
+      insertSignals :: [Signal] -> S.Set Text -> S.Set Text
       insertSignals props set = foldr (S.insert . sigName) set props
 
 -- | Generate the overloaded signal connectors: "Clicked", "ActivateLink", ...
@@ -67,13 +70,14 @@ genOverloadedSignalConnectors allAPIs modulePrefix = do
 signalInfoName :: Name -> Signal -> CodeGen String
 signalInfoName n signal = do
   n' <- upperName n
-  return $ n' ++ (ucFirst . signalHaskellName . sigName) signal ++ "SignalInfo"
+  return $ n' ++ (ucFirst . signalHaskellName . T.unpack . sigName) signal
+             ++ "SignalInfo"
 
 -- | Generate the given signal instance for the given API object.
 genInstance :: Name -> Signal -> CodeGen ()
 genInstance owner signal = group $ do
   name <- upperName owner
-  let sn = (ucFirst . signalHaskellName . sigName) signal
+  let sn = (ucFirst . signalHaskellName . T.unpack . sigName) signal
   si <- signalInfoName owner signal
   line $ "data " ++ si
   line $ "instance SignalInfo " ++ si ++ " where"
@@ -93,7 +97,8 @@ genObjectSignals n o = do
        infos <- fullObjectSignalList n o >>=
                 mapM (\(owner, signal) -> do
                       si <- signalInfoName owner signal
-                      return $ "'(\"" ++ sigName signal ++ "\", " ++ si ++ ")")
+                      return $ "'(\"" ++ (T.unpack . sigName) signal
+                                 ++ "\", " ++ si ++ ")")
        -- The "notify::[property]" signal is a generic signal used for
        -- connecting to property notifications.
        let allSignals = infos ++
@@ -109,7 +114,8 @@ genInterfaceSignals n iface = do
   infos <- fullInterfaceSignalList n iface >>=
            mapM (\(owner, signal) -> do
                    si <- signalInfoName owner signal
-                   return $ "'(\"" ++ sigName signal ++ "\", " ++ si ++ ")")
+                   return $ "'(\"" ++ T.unpack (sigName signal)
+                              ++ "\", " ++ si ++ ")")
   isGO <- apiIsGObject n (APIInterface iface)
   -- The "notify::[property]" signal is a generic signal used for
   -- connecting to property notifications of a GObject.
@@ -128,10 +134,12 @@ genSignals _ = return ()
 
 -- | Generate the signal information instances, so the generic overloaded
 -- signal connectors are available.
-genSignalInstances :: String -> [(Name, API)] -> String -> Deps -> CodeGen ()
-genSignalInstances name apis modulePrefix deps = do
+genSignalInstances :: String -> [(Name, API)] -> String -> CodeGen ()
+genSignalInstances name apis modulePrefix = do
   let mp = (modulePrefix ++)
       nm = ucFirst name
+
+  code <- recurse' $ forM_ apis genSignals
 
   line   "-- Generated code."
   blank
@@ -156,11 +164,11 @@ genSignalInstances name apis modulePrefix deps = do
   -- Import dependencies, including instances for their overloaded
   -- signals, so they are implicitly reexported and they do not need
   -- to be included explicitly from client code.
-  forM_ (S.toList deps) $ \i -> when (i /= name) $ do
+  deps <- S.toList <$> getDeps
+  forM_ deps $ \i -> when (i /= name) $
     line $ "import qualified " ++ mp (ucFirst i) ++ "Signals as " ++ ucFirst i
-  blank
 
   line $ "import " ++ modulePrefix ++ nm
   blank
 
-  forM_ apis genSignals
+  tell code
