@@ -4,6 +4,7 @@ module GI.API
     ( API(..)
     , GIRInfo(..)
     , loadGIRInfo
+    , loadRawGIRInfo
 
     -- Reexported from GI.GIR.BasicTypes
     , Name(..)
@@ -248,6 +249,20 @@ toGIRInfo info =
               }
       [] -> Left "Found no valid namespace."
       _  -> Left "Found multiple namespaces."
+
+-- | Bare minimum loading and parsing of a single repository, without
+-- loading or parsing its dependencies, resolving aliases, or fixing
+-- up structs or interfaces.
+loadRawGIRInfo :: Bool          -- ^ verbose
+               -> Text          -- ^ name
+               -> Maybe Text    -- ^ version
+               -> [FilePath]    -- ^ extra paths to search
+               -> IO GIRInfo    -- ^ bare parsed document
+loadRawGIRInfo verbose name version extraPaths = do
+  doc <- readGiRepository verbose name version extraPaths
+  case toGIRInfo (parseGIRDocument M.empty doc) of
+    Left err -> error . T.unpack $ "Error when raw parsing \"" <> name <> "\": " <> err
+    Right docGIR -> return docGIR
 
 -- | Load and parse a GIR file, including its dependencies.
 loadGIRInfo :: Bool             -- ^ verbose

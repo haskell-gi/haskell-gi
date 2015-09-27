@@ -26,7 +26,7 @@ import qualified Data.Set as S
 import GI.Utils.GError
 import Text.Show.Pretty (ppShow)
 
-import GI.API (loadGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
+import GI.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import GI.Cabal (cabalConfig, genCabalProject)
 import GI.Code (codeToString, genCode, evalCodeGen)
 import GI.Config (Config(..))
@@ -108,34 +108,36 @@ loadFilteredAPI verbose ovs extraPaths libCache name = do
   (gir, girDeps) <- loadGIRInfo verbose name Nothing extraPaths libCache
   return $ filterAPIsAndDeps ovs gir girDeps
 
+-- | Load a dependency without further postprocessing.
+loadRawAPIs :: Bool -> [FilePath] -> Text -> IO [(Name, API)]
+loadRawAPIs verbose extraPaths name = do
+  gir <- loadRawGIRInfo verbose name Nothing extraPaths
+  return (girAPIs gir)
+
 -- Generate all generic accessor functions ("_label", for example).
-genGenericAttrs :: Options -> Overrides -> [Text] -> [FilePath]
-                -> DynLibCache -> IO ()
-genGenericAttrs options ovs modules extraPaths libCache = do
-  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs extraPaths libCache) modules
-  let apis = M.unions (map fst girInfos)
-      allAPIs = M.unions (apis : map snd girInfos) -- Including dependencies
-  let cfg = Config {modName = Nothing,
+genGenericAttrs :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
+genGenericAttrs options ovs modules extraPaths = do
+  apis <- mapM (loadRawAPIs (optVerbose options) extraPaths) modules
+  let allAPIs = M.unions (map M.fromList apis)
+      cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
                     overrides = ovs}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
-  (_, code) <- genCode cfg allAPIs (genAllAttributes (M.toList apis) modPrefix)
+  (_, code) <- genCode cfg allAPIs (genAllAttributes (M.toList allAPIs) modPrefix)
   writeFile (joinPath [dirPrefix, "Properties.hs"]) $ codeToString code
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
-genGenericConnectors :: Options -> Overrides -> [Text] -> [FilePath]
-                     -> DynLibCache -> IO ()
-genGenericConnectors options ovs modules extraPaths libCache = do
-  girInfos <- mapM (loadFilteredAPI (optVerbose options) ovs extraPaths libCache) modules
-  let apis = M.unions (map fst girInfos)
-      allAPIs = M.unions (apis : map snd girInfos) -- Including dependencies
-  let cfg = Config {modName = Nothing,
+genGenericConnectors :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
+genGenericConnectors options ovs modules extraPaths = do
+  apis <- mapM (loadRawAPIs (optVerbose options) extraPaths) modules
+  let allAPIs = M.unions (map M.fromList apis)
+      cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
                     overrides = ovs}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Signals"
-  (_, code) <- genCode cfg allAPIs (genOverloadedSignalConnectors (M.toList apis) modPrefix)
+  (_, code) <- genCode cfg allAPIs (genOverloadedSignalConnectors (M.toList allAPIs) modPrefix)
   writeFile (joinPath [dirPrefix, "Signals.hs"]) $ codeToString code
 
 -- Generate the code for the given module, and return the dependencies
@@ -209,8 +211,8 @@ process options names = do
     Right ovs ->
       case optMode options of
         GenerateCode -> forM_ names (processMod options ovs extraPaths libCache)
-        Attributes -> genGenericAttrs options ovs (map T.pack names) extraPaths libCache
-        Signals -> genGenericConnectors options ovs (map T.pack names) extraPaths libCache
+        Attributes -> genGenericAttrs options ovs (map T.pack names) extraPaths
+        Signals -> genGenericConnectors options ovs (map T.pack names) extraPaths
         Dump -> forM_ names (dump options ovs libCache)
         Help -> putStr showHelp
 

@@ -14,7 +14,6 @@ import Data.Text (Text)
 
 import GI.API
 import GI.Code
-import GI.GObject
 import GI.SymbolNaming
 import GI.Properties
 import GI.CodeGen (genPrelude)
@@ -26,19 +25,16 @@ findObjectPropNames apis = S.toList <$> go apis S.empty
     where
       go :: [(Name, API)] -> S.Set Text -> CodeGen (S.Set Text)
       go [] set = return set
-      go ((name, api):apis) set = do
-        isGO <- apiIsGObject name api
-        if isGO
-        then case api of
-               APIInterface iface ->
-                   go apis $ insertProps (ifProperties iface) set
-               APIObject object ->
-                   go apis $ insertProps (objProperties object) set
-               _ -> error $ "GObject not an Interface or Object!? " ++ show name
-        else go apis set
+      go ((_, api):apis) set =
+        case api of
+          APIInterface iface ->
+              go apis $ insertProps (ifProperties iface) set
+          APIObject object ->
+              go apis $ insertProps (objProperties object) set
+          _ -> go apis set
 
       insertProps :: [Property] -> S.Set Text -> S.Set Text
-      insertProps props set = foldr (S.insert . propName) set props
+      insertProps props set = S.union set ((S.fromList . map propName) props)
 
 genPropertyAttr :: Text -> CodeGen ()
 genPropertyAttr pName = group $ do

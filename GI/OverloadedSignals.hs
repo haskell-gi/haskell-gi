@@ -16,8 +16,8 @@ import qualified Data.Set as S
 
 import GI.API
 import GI.Code
-import GI.GObject (apiIsGObject)
 import GI.Inheritance (fullObjectSignalList, fullInterfaceSignalList)
+import GI.GObject (apiIsGObject)
 import GI.Signal (signalHaskellName)
 import GI.SymbolNaming (ucFirst, upperName)
 import GI.Util (padTo)
@@ -29,16 +29,13 @@ findSignalNames apis = (map T.unpack . S.toList) <$> go apis S.empty
     where
       go :: [(Name, API)] -> S.Set Text -> CodeGen (S.Set Text)
       go [] set = return set
-      go ((name, api):apis) set = do
-        isGO <- apiIsGObject name api
-        if isGO
-        then case api of
-               APIInterface iface ->
-                   go apis $ insertSignals (ifSignals iface) set
-               APIObject object ->
-                   go apis $ insertSignals (objSignals object) set
-               _ -> error $ "GObject not an Interface or Object!? " ++ show name
-        else go apis set
+      go ((_, api):apis) set =
+          case api of
+            APIInterface iface ->
+                go apis $ insertSignals (ifSignals iface) set
+            APIObject object ->
+                go apis $ insertSignals (objSignals object) set
+            _ -> go apis set
 
       insertSignals :: [Signal] -> S.Set Text -> S.Set Text
       insertSignals props set = foldr (S.insert . sigName) set props

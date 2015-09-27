@@ -102,6 +102,7 @@ data SignalProxy (a :: Symbol) (b :: Symbol) (c :: * -> Constraint) where
     DeleteFromCursor                     :: SignalProxy "delete-from-cursor" "" NoConstraint
     DeleteRange                          :: SignalProxy "delete-range" "" NoConstraint
     DeleteSurrounding                    :: SignalProxy "delete-surrounding" "" NoConstraint
+    DeleteText                           :: SignalProxy "delete-text" "" NoConstraint
     DeletedText                          :: SignalProxy "deleted-text" "" NoConstraint
     Deselect                             :: SignalProxy "deselect" "" NoConstraint
     DesktopFolder                        :: SignalProxy "desktop-folder" "" NoConstraint
