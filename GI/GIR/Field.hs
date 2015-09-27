@@ -75,6 +75,7 @@ parseField = do
   let flags = if readable then [FieldIsReadable] else []
              <> if writable then [FieldIsWritable] else []
   introspectable <- optionalAttr "introspectable" True parseBool
+  private <- optionalAttr "private" False parseBool
   (t, callback) <-
       if introspectable
       then do
@@ -97,7 +98,7 @@ parseField = do
           _ -> parseError "Multiple callbacks in field"
   return $ Field {
                fieldName = name
-             , fieldVisible = introspectable
+             , fieldVisible = introspectable && not private
              , fieldType = t
              , fieldCallback = callback
              , fieldOffset = 0          -- Fixed by computeOffsets
