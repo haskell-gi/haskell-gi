@@ -1,26 +1,32 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 -- | A minimal wrapper for libgirepository.
 module GI.LibGIRepository
     ( girRequire
     , girStructSizeAndOffsets
     , girUnionSizeAndOffsets
+    , girLoadGType
     ) where
 
-import Control.Monad (void, forM)
+import Control.Monad (forM, when)
 import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Data.Text as T
 
 import Foreign.C.Types (CInt(..), CSize(..))
 import Foreign.C.String (CString)
-import Foreign (nullPtr, Ptr, ForeignPtr)
+import Foreign (nullPtr, Ptr, ForeignPtr, FunPtr, peek)
 
 import GI.Utils.BasicConversions (withTextCString, cstringToText)
-import GI.Utils.BasicTypes (BoxedObject(..), GType(..))
+import GI.Utils.BasicTypes (BoxedObject(..), GType(..), CGType)
 import GI.Utils.GError (GError, checkGError)
 import GI.Utils.ManagedPtr (wrapBoxed, withManagedPtr)
+import GI.Utils.Utils (allocMem, freeMem)
 
 -- | Wrapper for 'GIBaseInfo'
 newtype BaseInfo = BaseInfo (ForeignPtr BaseInfo)
+
+-- | Wrapper for 'GITypelib'
+newtype Typelib = Typelib (Ptr Typelib)
 
 foreign import ccall "g_base_info_gtype_get_type" c_g_base_info_gtype_get_type :: IO GType
 
@@ -29,17 +35,19 @@ instance BoxedObject BaseInfo where
 
 foreign import ccall "g_irepository_require" g_irepository_require ::
     Ptr () -> CString -> CString -> CInt -> Ptr (Ptr GError)
-    -> IO (Ptr ())
+    -> IO (Ptr Typelib)
 
 -- | Ensure that the given version of the namespace is loaded. If that
 -- is not possible we error out.
-girRequire :: Text -> Text -> IO ()
+girRequire :: Text -> Text -> IO Typelib
 girRequire ns version =
     withTextCString ns $ \cns ->
-    withTextCString version $ \cversion ->
-        void $ checkGError (g_irepository_require nullPtr cns cversion 0)
-                           (error $ "Could not load typelib for " ++ show ns ++
-                                      " version " ++ show version)
+    withTextCString version $ \cversion -> do
+        typelib <- checkGError (g_irepository_require nullPtr cns cversion 0)
+                               (error $ "Could not load typelib for "
+                                          ++ show ns ++ " version "
+                                          ++ show version)
+        return (Typelib typelib)
 
 foreign import ccall "g_irepository_find_by_name" g_irepository_find_by_name ::
     Ptr () -> CString -> CString -> IO (Ptr BaseInfo)
@@ -84,7 +92,6 @@ girStructSizeAndOffsets ns name = do
                          return (fname, fromIntegral fOffset)
      return (fromIntegral size, M.fromList fieldOffsets)
 
-
 foreign import ccall "g_union_info_get_size" g_union_info_get_size ::
     Ptr BaseInfo -> IO CSize
 foreign import ccall "g_union_info_get_n_fields" g_union_info_get_n_fields ::
@@ -108,3 +115,32 @@ girUnionSizeAndOffsets ns name = do
                          fOffset <- g_field_info_get_offset fi
                          return (fname, fromIntegral fOffset)
      return (fromIntegral size, M.fromList fieldOffsets)
+
+foreign import ccall "g_typelib_symbol" g_typelib_symbol ::
+    Ptr Typelib -> CString -> Ptr (FunPtr a) -> IO CInt
+
+-- | Load a symbol from the dynamic library associated to the given namespace.
+girSymbol :: forall a. Text -> Text -> IO (FunPtr a)
+girSymbol ns symbol = do
+  typelib <- withTextCString ns $ \cns ->
+                    checkGError (g_irepository_require nullPtr cns nullPtr 0)
+                                (error $ "Could not load typelib " ++ show ns)
+  funPtrPtr <- allocMem :: IO (Ptr (FunPtr a))
+  result <- withTextCString symbol $ \csymbol ->
+                      g_typelib_symbol typelib csymbol funPtrPtr
+  when (result /= 1) $
+       error ("Could not resolve symbol " ++ show symbol ++ " in namespace "
+              ++ show ns)
+  funPtr <- peek funPtrPtr
+  freeMem funPtrPtr
+  return funPtr
+
+type GTypeInit = IO CGType
+foreign import ccall "dynamic" gtypeInit :: FunPtr GTypeInit -> GTypeInit
+
+-- | Load a GType given the namespace where it lives and the type init
+-- function.
+girLoadGType :: Text -> Text -> IO GType
+girLoadGType ns typeInit = do
+  funPtr <- girSymbol ns typeInit
+  GType <$> gtypeInit funPtr

@@ -83,9 +83,8 @@ import GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr,
 import GI.Utils.BasicConversions (unpackStorableArrayWithLength)
 import GI.Utils.BasicTypes (GType(..), CGType, gtypeName)
 import GI.Utils.Utils (allocMem, freeMem)
-import GI.DynLib (loadDynLib, DynLib, DynLibCache, findGType)
 import GI.LibGIRepository (girRequire, girStructSizeAndOffsets,
-                           girUnionSizeAndOffsets)
+                           girUnionSizeAndOffsets, girLoadGType)
 import GI.GType (gtypeIsBoxed)
 import GI.Type (Type)
 
@@ -93,7 +92,6 @@ data GIRInfo = GIRInfo {
       girPCPackages      :: [Text],
       girNSName          :: Text,
       girNSVersion       :: Text,
-      girLibraries       :: [Text], -- ^ Libs associated with the namespace
       girAPIs            :: [(Name, API)],
       girCTypes          :: M.Map Text Name
     } deriving Show
@@ -102,7 +100,6 @@ data GIRNamespace = GIRNamespace {
       nsName      :: Text,
       nsVersion   :: Text,
       nsAPIs      :: [(Name, API)],
-      nsLibraries :: [Text],
       nsCTypes    :: [(Text, Name)]
     } deriving (Show)
 
@@ -163,14 +160,10 @@ parseNamespace element aliases = do
   let attrs = elementAttributes element
   name <- M.lookup "name" attrs
   version <- M.lookup "version" attrs
-  libs <- case M.lookup "shared-library" attrs of
-            Just ls -> return $ T.split (',' ==) ls
-            Nothing -> return []
   let ns = GIRNamespace {
              nsName         = name,
              nsVersion      = version,
              nsAPIs         = [],
-             nsLibraries    = libs,
              nsCTypes       = []
            }
   return (L.foldl' (parseNSElement aliases) ns (subelements element))
@@ -246,7 +239,6 @@ toGIRInfo info =
               , girNSName = nsName ns
               , girNSVersion = nsVersion ns
               , girAPIs = reverse (nsAPIs ns)
-              , girLibraries = nsLibraries ns
               , girCTypes = M.fromList (nsCTypes ns)
               }
       [] -> Left "Found no valid namespace."
@@ -271,10 +263,9 @@ loadGIRInfo :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
-            -> DynLibCache      -- ^ cache for dynlibs
             -> IO (GIRInfo,     -- ^ parsed document
                    [GIRInfo])   -- ^ parsed deps
-loadGIRInfo verbose name version extraPaths libCache =  do
+loadGIRInfo verbose name version extraPaths =  do
   (doc, deps) <- loadGIRFile verbose name version extraPaths
   let aliases = M.unions (map documentListAliases (doc : M.elems deps))
       parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
@@ -284,13 +275,9 @@ loadGIRInfo verbose name version extraPaths libCache =  do
     Right (docGIR, depsGIR) -> do
       if girNSName docGIR == name
       then do
-        libs <- (fmap catMaybes
-                . mapM (loadDynLib verbose libCache)
-                . L.nub
-                . concatMap girLibraries) (docGIR : depsGIR)
         forM_ (docGIR : depsGIR) $ \info ->
             girRequire (girNSName info) (girNSVersion info)
-        (fixedDoc, fixedDeps) <- fixupGIRInfos libs docGIR depsGIR
+        (fixedDoc, fixedDeps) <- fixupGIRInfos docGIR depsGIR
         return (fixedDoc, fixedDeps)
       else error . T.unpack $ "Got unexpected namespace \""
                <> girNSName docGIR <> "\" when parsing \"" <> name <> "\"."
@@ -317,20 +304,19 @@ gtypeInterfaceListPrereqs (GType cgtype) = do
 -- | The list of prerequisites in GIR files is not always
 -- accurate. Instead of relying on this, we instantiate the 'GType'
 -- associated to the interface, and listing the interfaces from there.
-fixupInterface :: [DynLib] -> M.Map Text Name ->
-                  (Name, API) -> IO (Name, API)
-fixupInterface libs csymbolMap (n, APIInterface iface) = do
+fixupInterface :: M.Map Text Name -> (Name, API) -> IO (Name, API)
+fixupInterface csymbolMap (n@(Name ns _), APIInterface iface) = do
   prereqs <- case ifTypeInit iface of
                Nothing -> return []
                Just ti -> do
-                 gtype <- findGType libs ti
+                 gtype <- girLoadGType (T.pack ns) ti
                  prereqGTypes <- gtypeInterfaceListPrereqs gtype
                  forM prereqGTypes $ \p -> do
                    case M.lookup p csymbolMap of
                      Just pn -> return pn
                      Nothing -> error $ "Could not find prerequisite type " ++ show p ++ " for interface " ++ show n
   return (n, APIInterface (iface {ifPrerequisites = prereqs}))
-fixupInterface _ _ (n, api) = return (n, api)
+fixupInterface _ (n, api) = return (n, api)
 
 -- | There is not enough info in the GIR files to determine whether a
 -- struct is boxed. We find out by instantiating the 'GType'
@@ -338,24 +324,23 @@ fixupInterface _ _ (n, api) = return (n, api)
 -- descends from the boxed GType. Similarly, the size of the struct
 -- and offset of the fields is hard to compute from the GIR data, we
 -- simply reuse the machinery in libgirepository.
-fixupStruct :: [DynLib] -> M.Map Text Name ->
-               (Name, API) -> IO (Name, API)
-fixupStruct libs _ (n, APIStruct s) = do
-  fixed <- (fixupStructIsBoxed libs n >=> fixupStructSizeAndOffsets n) s
+fixupStruct :: M.Map Text Name -> (Name, API) -> IO (Name, API)
+fixupStruct _ (n, APIStruct s) = do
+  fixed <- (fixupStructIsBoxed n >=> fixupStructSizeAndOffsets n) s
   return (n, APIStruct fixed)
-fixupStruct _ _ api = return api
+fixupStruct _ api = return api
 
 -- | Find out whether the struct is boxed.
-fixupStructIsBoxed :: [DynLib] -> Name -> Struct -> IO Struct
+fixupStructIsBoxed :: Name -> Struct -> IO Struct
 -- The type for "GVariant" is marked as "intern", we wrap
 -- this one natively.
-fixupStructIsBoxed _ (Name "GLib" "Variant") s =
+fixupStructIsBoxed (Name "GLib" "Variant") s =
     return (s {structIsBoxed = False})
-fixupStructIsBoxed libs _ s = do
+fixupStructIsBoxed (Name ns _) s = do
   isBoxed <- case structTypeInit s of
                Nothing -> return False
                Just ti -> do
-                 gtype <- findGType libs ti
+                 gtype <- girLoadGType (T.pack ns) ti
                  return (gtypeIsBoxed gtype)
   return (s {structIsBoxed = isBoxed})
 
@@ -368,12 +353,11 @@ fixupStructSizeAndOffsets (Name ns n) s = do
             , structFields = map (fixupField offsetMap) (structFields s)})
 
 -- | Same thing for unions.
-fixupUnion :: [DynLib] -> M.Map Text Name ->
-               (Name, API) -> IO (Name, API)
-fixupUnion _ _ (n, APIUnion u) = do
+fixupUnion :: M.Map Text Name -> (Name, API) -> IO (Name, API)
+fixupUnion _ (n, APIUnion u) = do
   fixed <- (fixupUnionSizeAndOffsets n) u
   return (n, APIUnion fixed)
-fixupUnion _ _ api = return api
+fixupUnion _ api = return api
 
 -- | Like 'fixupStructSizeAndOffset' above.
 fixupUnionSizeAndOffsets :: Name -> Union -> IO Union
@@ -393,20 +377,20 @@ fixupField offsetMap f =
 -- | Fixup parsed GIRInfos: some of the required information is not
 -- found in the GIR files themselves, but can be obtained by
 -- instantiating the required GTypes from the installed libraries.
-fixupGIRInfos :: [DynLib] -> GIRInfo -> [GIRInfo] -> IO (GIRInfo, [GIRInfo])
-fixupGIRInfos libs doc deps = (fixup fixupInterface >=>
-                               fixup fixupStruct >=>
-                               fixup fixupUnion) (doc, deps)
-  where fixup :: ([DynLib] -> M.Map Text Name -> (Name, API) -> IO (Name, API))
+fixupGIRInfos :: GIRInfo -> [GIRInfo] -> IO (GIRInfo, [GIRInfo])
+fixupGIRInfos doc deps = (fixup fixupInterface >=>
+                          fixup fixupStruct >=>
+                          fixup fixupUnion) (doc, deps)
+  where fixup :: (M.Map Text Name -> (Name, API) -> IO (Name, API))
                  -> (GIRInfo, [GIRInfo]) -> IO (GIRInfo, [GIRInfo])
         fixup fixer (doc, deps) = do
           fixedDoc <- fixAPIs fixer doc
           fixedDeps <- mapM (fixAPIs fixer) deps
           return (fixedDoc, fixedDeps)
 
-        fixAPIs :: ([DynLib] -> M.Map Text Name -> (Name, API) -> IO (Name, API)) -> GIRInfo -> IO GIRInfo
+        fixAPIs :: (M.Map Text Name -> (Name, API) -> IO (Name, API)) -> GIRInfo -> IO GIRInfo
         fixAPIs fixer info = do
-          fixedAPIs <- mapM (fixer libs ctypes) (girAPIs info)
+          fixedAPIs <- mapM (fixer ctypes) (girAPIs info)
           return $ info {girAPIs = fixedAPIs}
 
         ctypes :: M.Map Text Name

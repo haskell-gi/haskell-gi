@@ -31,7 +31,6 @@ import GI.Cabal (cabalConfig, genCabalProject)
 import GI.Code (codeToString, genCode, evalCodeGen)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
-import GI.DynLib (DynLibCache, newDynLibCache)
 import GI.Attributes (genAttributes, genAllAttributes)
 import GI.OverloadedSignals (genSignalInstances, genOverloadedSignalConnectors)
 import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
@@ -102,10 +101,10 @@ outputPath options =
         return (prefix, dir)
 
 -- | Load the given API and dependencies, filtering them in the process.
-loadFilteredAPI :: Bool -> Overrides -> [FilePath] -> DynLibCache -> Text
+loadFilteredAPI :: Bool -> Overrides -> [FilePath] -> Text
                 -> IO (M.Map Name API, M.Map Name API)
-loadFilteredAPI verbose ovs extraPaths libCache name = do
-  (gir, girDeps) <- loadGIRInfo verbose name Nothing extraPaths libCache
+loadFilteredAPI verbose ovs extraPaths name = do
+  (gir, girDeps) <- loadGIRInfo verbose name Nothing extraPaths
   return $ filterAPIsAndDeps ovs gir girDeps
 
 -- | Load a dependency without further postprocessing.
@@ -142,10 +141,9 @@ genGenericConnectors options ovs modules extraPaths = do
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
-processMod :: Options -> Overrides -> [FilePath] -> DynLibCache
-           -> String -> IO ()
-processMod options ovs extraPaths libCache name = do
-  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) Nothing extraPaths libCache
+processMod :: Options -> Overrides -> [FilePath] -> String -> IO ()
+processMod options ovs extraPaths name = do
+  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) Nothing extraPaths
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
 
@@ -193,16 +191,15 @@ processMod options ovs extraPaths libCache name = do
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ msg
 
-dump :: Options -> Overrides -> DynLibCache -> String -> IO ()
-dump options ovs libCache name = do
-  (doc, _) <- loadGIRInfo (optVerbose options) (pack name) (pack <$> M.lookup name (nsChooseVersion ovs)) (optSearchPaths options) libCache
+dump :: Options -> Overrides -> String -> IO ()
+dump options ovs name = do
+  (doc, _) <- loadGIRInfo (optVerbose options) (pack name) (pack <$> M.lookup name (nsChooseVersion ovs)) (optSearchPaths options)
   mapM_ (putStrLn . ppShow) (girAPIs doc)
 
 process :: Options -> [String] -> IO ()
 process options names = do
   let extraPaths = optSearchPaths options
   configs <- traverse TIO.readFile (optOverridesFiles options)
-  libCache <- newDynLibCache
   case parseOverridesFile (concatMap T.lines configs) of
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"
@@ -210,10 +207,10 @@ process options names = do
       exitFailure
     Right ovs ->
       case optMode options of
-        GenerateCode -> forM_ names (processMod options ovs extraPaths libCache)
+        GenerateCode -> forM_ names (processMod options ovs extraPaths)
         Attributes -> genGenericAttrs options ovs (map T.pack names) extraPaths
         Signals -> genGenericConnectors options ovs (map T.pack names) extraPaths
-        Dump -> forM_ names (dump options ovs libCache)
+        Dump -> forM_ names (dump options ovs)
         Help -> putStr showHelp
 
 foreign import ccall "g_type.h g_type_init"
