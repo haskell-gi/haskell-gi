@@ -42,7 +42,7 @@ module GI.API
     , Union (..)
     ) where
 
-import Control.Monad ((>=>), forM)
+import Control.Monad ((>=>), forM, forM_)
 import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe, catMaybes)
@@ -84,6 +84,8 @@ import GI.Utils.BasicConversions (unpackStorableArrayWithLength)
 import GI.Utils.BasicTypes (GType(..), CGType, gtypeName)
 import GI.Utils.Utils (allocMem, freeMem)
 import GI.DynLib (loadDynLib, DynLib, DynLibCache, findGType)
+import GI.LibGIRepository (girRequire, girStructSizeAndOffsets,
+                           girUnionSizeAndOffsets)
 import GI.GType (gtypeIsBoxed)
 import GI.Type (Type)
 
@@ -286,6 +288,8 @@ loadGIRInfo verbose name version extraPaths libCache =  do
                 . mapM (loadDynLib verbose libCache)
                 . L.nub
                 . concatMap girLibraries) (docGIR : depsGIR)
+        forM_ (docGIR : depsGIR) $ \info ->
+            girRequire (girNSName info) (girNSVersion info)
         (fixedDoc, fixedDeps) <- fixupGIRInfos libs docGIR depsGIR
         return (fixedDoc, fixedDeps)
       else error . T.unpack $ "Got unexpected namespace \""
@@ -330,29 +334,69 @@ fixupInterface _ _ (n, api) = return (n, api)
 
 -- | There is not enough info in the GIR files to determine whether a
 -- struct is boxed. We find out by instantiating the 'GType'
--- corresponding to the struct (if known) and checking whether is
--- descends from the boxed GType.
+-- corresponding to the struct (if known) and checking whether it
+-- descends from the boxed GType. Similarly, the size of the struct
+-- and offset of the fields is hard to compute from the GIR data, we
+-- simply reuse the machinery in libgirepository.
 fixupStruct :: [DynLib] -> M.Map Text Name ->
                (Name, API) -> IO (Name, API)
+fixupStruct libs _ (n, APIStruct s) = do
+  fixed <- (fixupStructIsBoxed libs n >=> fixupStructSizeAndOffsets n) s
+  return (n, APIStruct fixed)
+fixupStruct _ _ api = return api
+
+-- | Find out whether the struct is boxed.
+fixupStructIsBoxed :: [DynLib] -> Name -> Struct -> IO Struct
 -- The type for "GVariant" is marked as "intern", we wrap
 -- this one natively.
-fixupStruct _ _ (n@(Name "GLib" "Variant"), APIStruct s) =
-  return (n, APIStruct (s {structIsBoxed = False}))
-fixupStruct libs _ (n, APIStruct s) = do
+fixupStructIsBoxed _ (Name "GLib" "Variant") s =
+    return (s {structIsBoxed = False})
+fixupStructIsBoxed libs _ s = do
   isBoxed <- case structTypeInit s of
                Nothing -> return False
                Just ti -> do
                  gtype <- findGType libs ti
                  return (gtypeIsBoxed gtype)
-  return (n, APIStruct (s {structIsBoxed = isBoxed}))
-fixupStruct _ _ (n, api) = return (n, api)
+  return (s {structIsBoxed = isBoxed})
+
+-- | Fix the size and alignment of fields. This is much easier to do
+-- by using libgirepository than reading the GIR file directly.
+fixupStructSizeAndOffsets :: Name -> Struct -> IO Struct
+fixupStructSizeAndOffsets (Name ns n) s = do
+  (size, offsetMap) <- girStructSizeAndOffsets (T.pack ns) (T.pack n)
+  return (s { structSize = size
+            , structFields = map (fixupField offsetMap) (structFields s)})
+
+-- | Same thing for unions.
+fixupUnion :: [DynLib] -> M.Map Text Name ->
+               (Name, API) -> IO (Name, API)
+fixupUnion _ _ (n, APIUnion u) = do
+  fixed <- (fixupUnionSizeAndOffsets n) u
+  return (n, APIUnion fixed)
+fixupUnion _ _ api = return api
+
+-- | Like 'fixupStructSizeAndOffset' above.
+fixupUnionSizeAndOffsets :: Name -> Union -> IO Union
+fixupUnionSizeAndOffsets (Name ns n) u = do
+  (size, offsetMap) <- girUnionSizeAndOffsets (T.pack ns) (T.pack n)
+  return (u { unionSize = size
+            , unionFields = map (fixupField offsetMap) (unionFields u)})
+
+-- | Fixup the offsets of fields using the given offset map.
+fixupField :: M.Map Text Int -> Field -> Field
+fixupField offsetMap f =
+    f {fieldOffset = case M.lookup (fieldName f) offsetMap of
+                       Nothing -> error $ "Could not find field "
+                                  ++ show (fieldName f)
+                       Just o -> o }
 
 -- | Fixup parsed GIRInfos: some of the required information is not
 -- found in the GIR files themselves, but can be obtained by
 -- instantiating the required GTypes from the installed libraries.
 fixupGIRInfos :: [DynLib] -> GIRInfo -> [GIRInfo] -> IO (GIRInfo, [GIRInfo])
-fixupGIRInfos libs doc deps =
-  (fixup fixupInterface >=> fixup fixupStruct) (doc, deps)
+fixupGIRInfos libs doc deps = (fixup fixupInterface >=>
+                               fixup fixupStruct >=>
+                               fixup fixupUnion) (doc, deps)
   where fixup :: ([DynLib] -> M.Map Text Name -> (Name, API) -> IO (Name, API))
                  -> (GIRInfo, [GIRInfo]) -> IO (GIRInfo, [GIRInfo])
         fixup fixer (doc, deps) = do

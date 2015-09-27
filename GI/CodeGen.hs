@@ -30,8 +30,8 @@ import GI.Code
 import GI.GObject
 import GI.Inheritance (instanceTree)
 import GI.Signal (genSignal, genCallback)
-import GI.Struct (genStructFields, extractCallbacksInStruct, fixAPIStructs,
-                  ignoreStruct)
+import GI.Struct (genStructOrUnionFields, extractCallbacksInStruct,
+                  fixAPIStructs, ignoreStruct)
 import GI.SymbolNaming (upperName, ucFirst, classConstraint, noName)
 import GI.Type
 
@@ -167,7 +167,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
            genBoxedObject n (fromJust $ structTypeInit s)
 
       -- Generate code for fields.
-      genStructFields n s
+      genStructOrUnionFields n (structFields s)
 
       -- Methods
       forM_ (structMethods s) $ \(mn, f) ->
@@ -192,7 +192,8 @@ genUnion n u = do
   when (unionIsBoxed u) $
     genBoxedObject n (fromJust $ unionTypeInit u)
 
-  -- XXX Fields
+  -- Generate code for fields.
+  genStructOrUnionFields n (unionFields u)
 
   -- Methods
   forM_ (unionMethods u) $ \(mn, f) ->

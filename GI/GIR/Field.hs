@@ -5,7 +5,6 @@ module GI.GIR.Field
     ( Field(..)
     , FieldInfoFlag
     , parseFields
-    , computeFieldOffsets
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -15,7 +14,7 @@ import Control.Applicative ((<$>))
 import Data.Monoid ((<>))
 import Data.Text (Text)
 
-import GI.Type (Type(..), typeSize, typeAlign)
+import GI.Type (Type(..))
 
 import GI.GIR.Callback (Callback, parseCallback)
 import GI.GIR.Type (parseType)
@@ -33,34 +32,6 @@ data Field = Field {
 
 data FieldInfoFlag = FieldIsReadable | FieldIsWritable
                    deriving Show
-
--- | Compute the offsets for the fields.
-computeFieldOffsets :: [Field] -> ([Field], Int)
-computeFieldOffsets fs =
-    let fields = go 0 fs
-        size = case fields of
-                 [] -> 0
-                 fs -> let f = last fs
-                           s = fieldOffset f + typeSize (fieldType f)
-                           -- Maximum alignment requirement for a field.
-                           maxa = maximum (map (typeAlign . fieldType) fs)
-                           -- The structure will be padded to the
-                           -- smallest possible multiple of the
-                           -- maximum alignment larger or equal to
-                           -- size.
-                       in ((s + maxa - 1) `div` maxa) * maxa
-    in (fields, size)
-
-    where go :: Int -> [Field] -> [Field]
-          go _ [] = []
-          go off (f:fs) = let fadrs = align off (fieldType f)
-                              next = fadrs + typeSize (fieldType f)
-                          in f {fieldOffset = fadrs} : go next fs
-          -- Round up to the closest multiple of the alignment for the
-          -- C type larger or equal to the given offset.
-          align :: Int -> Type -> Int
-          align off t = let a = typeAlign t
-                        in ((off + a - 1) `div` a) * a
 
 -- | Parse a single field in a struct or union. We parse
 -- non-introspectable fields too (but set fieldVisible = False for
@@ -101,7 +72,7 @@ parseField = do
              , fieldVisible = introspectable && not private
              , fieldType = t
              , fieldCallback = callback
-             , fieldOffset = 0          -- Fixed by computeOffsets
+             , fieldOffset = error ("unfixed field offset " ++ show name)
              , fieldFlags = flags
              , fieldDeprecated = deprecated
           }

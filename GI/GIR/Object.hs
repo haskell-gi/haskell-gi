@@ -12,7 +12,6 @@ import Control.Applicative ((<$>))
 
 import Data.Text (Text)
 
-import GI.GIR.Field (Field, parseFields, computeFieldOffsets)
 import GI.GIR.Method (Method, parseMethod, MethodType(..))
 import GI.GIR.Property (Property, parseProperty)
 import GI.GIR.Signal (Signal, parseSignal)
@@ -24,7 +23,6 @@ data Object = Object {
     objTypeName :: Text,
     objInterfaces :: [Name],
     objDeprecated :: Maybe DeprecationInfo,
-    objFields :: [Field],
     objMethods :: [(Name, Method)],
     objProperties :: [Property],
     objSignals :: [Signal]
@@ -43,7 +41,6 @@ parseObject = do
   typeInit <- getAttrWithNamespace GLibGIRNS "get-type"
   typeName <- getAttrWithNamespace GLibGIRNS "type-name"
   signals <- parseChildrenWithNSName GLibGIRNS "signal" parseSignal
-  fields <- parseFields
   return (name,
          Object {
             objParent = parent
@@ -51,7 +48,6 @@ parseObject = do
           , objTypeName = typeName
           , objInterfaces = interfaces
           , objDeprecated = deprecated
-          , objFields = (fst . computeFieldOffsets) fields
           , objMethods = constructors ++ methods ++ functions
           , objProperties = props
           , objSignals = signals

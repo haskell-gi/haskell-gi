@@ -76,6 +76,7 @@ Executable haskell-gi
       GI.PkgConfig,
       GI.ProjectInfo,
       GI.Properties,
+      GI.LibGIRepository,
       GI.Signal,
       GI.Struct,
       GI.SymbolNaming,

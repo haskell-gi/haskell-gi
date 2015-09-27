@@ -1,4 +1,4 @@
-module GI.Struct ( genStructFields
+module GI.Struct ( genStructOrUnionFields
                  , extractCallbacksInStruct
                  , fixAPIStructs
                  , ignoreStruct)
@@ -92,11 +92,11 @@ buildFieldGetter n@(Name ns _) field = do
        result <- convert "val" $ fToH (fieldType field) TransferNothing
        line $ "return " ++ result
 
-genStructFields :: Name -> Struct -> CodeGen ()
-genStructFields n s = do
+genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
+genStructOrUnionFields n fields = do
   name' <- upperName n
 
-  forM_ (structFields s) $ \field -> when (fieldVisible field) $ group $
+  forM_ fields $ \field -> when (fieldVisible field) $ group $
       handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
                                ":" ++ unpack (fieldName field) ++ "\" :: " ++
                                describeCGError e))

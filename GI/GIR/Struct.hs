@@ -12,7 +12,7 @@ import Control.Applicative ((<$>))
 
 import Data.Text (Text)
 
-import GI.GIR.Field (Field, parseFields, computeFieldOffsets)
+import GI.GIR.Field (Field, parseFields)
 import GI.GIR.Method (Method, MethodType(..), parseMethod)
 import GI.GIR.Parser
 
@@ -37,14 +37,14 @@ parseStruct = do
                Nothing -> return Nothing
   typeInit <- queryAttrWithNamespace GLibGIRNS "get-type"
   disguised <- optionalAttr "disguised" False parseBool
-  (fields, size) <- computeFieldOffsets <$> parseFields
+  fields <- parseFields
   constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
   methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
   return (name,
           Struct {
-            structIsBoxed = error ("unfixed struct " ++ show name)
+            structIsBoxed = error ("[boxed] unfixed struct " ++ show name)
           , structTypeInit = typeInit
-          , structSize = size
+          , structSize = error ("[size] unfixed struct " ++ show name)
           , gtypeStructFor = structFor
           , structIsDisguised = disguised
           , structFields = fields
