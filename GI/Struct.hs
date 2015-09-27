@@ -7,7 +7,7 @@ module GI.Struct ( genStructFields
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM_, unless)
+import Control.Monad (forM_, unless, when)
 
 import Data.List (isSuffixOf)
 import Data.Maybe (mapMaybe, isJust)
@@ -96,7 +96,7 @@ genStructFields :: Name -> Struct -> CodeGen ()
 genStructFields n s = do
   name' <- upperName n
 
-  forM_ (structFields s) $ \field -> group $
+  forM_ (structFields s) $ \field -> when (fieldVisible field) $ group $
       handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
                                ":" ++ unpack (fieldName field) ++ "\" :: " ++
                                describeCGError e))

@@ -77,7 +77,12 @@ maybeT t = "Maybe" `con` [t]
 -- | Compute the size in bytes of the C type corresponding to a 'Type'.
 typeSize :: Type -> Int
 typeSize (TBasicType b) = basicSize b
-typeSize _ = sizeOf nullPtr -- everything else we assume to be a pointer
+-- XXX Everything else we assume to be a pointer. This is incorrect,
+-- though: often struct fields of type "TInterface a b" are not
+-- pointers to the struct, but embedded structs (commmonly, a "parent"
+-- struct). Taking this into account is important for accurately
+-- computing the sizes of structs, and offsets of fields.
+typeSize _ = sizeOf nullPtr
 
 -- | Compute the size in bytes of the C type corresponding to a 'BasicType'
 basicSize :: BasicType -> Int

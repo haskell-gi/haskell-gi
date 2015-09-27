@@ -23,6 +23,7 @@ import GI.GIR.Parser
 
 data Field = Field {
       fieldName :: Text,
+      fieldVisible :: Bool,
       fieldType :: Type,
       fieldCallback :: Maybe Callback,
       fieldOffset :: Int,
@@ -33,8 +34,6 @@ data Field = Field {
 data FieldInfoFlag = FieldIsReadable | FieldIsWritable
                    deriving Show
 
---- XXX We should also include the non-introspectable fields in the
---- computation of the sizes.
 -- | Compute the offsets for the fields.
 computeFieldOffsets :: [Field] -> ([Field], Int)
 computeFieldOffsets fs =
@@ -63,6 +62,10 @@ computeFieldOffsets fs =
           align off t = let a = typeAlign t
                         in ((off + a - 1) `div` a) * a
 
+-- | Parse a single field in a struct or union. We parse
+-- non-introspectable fields too (but set fieldVisible = False for
+-- them), this is necessary since they affect the computation of
+-- offsets of fields and sizes of containing structs.
 parseField :: Parser Field
 parseField = do
   name <- getAttr "name"
@@ -71,16 +74,30 @@ parseField = do
   writable <- optionalAttr "writable" False parseBool
   let flags = if readable then [FieldIsReadable] else []
              <> if writable then [FieldIsWritable] else []
-  callbacks <- parseChildrenWithLocalName "callback" parseCallback
-  (cbn, callback) <- case callbacks of
-                       [] -> return (Nothing, Nothing)
-                       [(n, cb)] -> return (Just n, Just cb)
-                       _ -> parseError "Multiple callbacks in field"
-  t <- case cbn of
-         Nothing -> parseType
-         Just (Name ns n) -> return (TInterface ns n)
+  introspectable <- optionalAttr "introspectable" True parseBool
+  (t, callback) <-
+      if introspectable
+      then do
+        callbacks <- parseChildrenWithLocalName "callback" parseCallback
+        (cbn, callback) <- case callbacks of
+                             [] -> return (Nothing, Nothing)
+                             [(n, cb)] -> return (Just n, Just cb)
+                             _ -> parseError "Multiple callbacks in field"
+        t <- case cbn of
+               Nothing -> parseType
+               Just (Name ns n) -> return (TInterface ns n)
+        return (t, callback)
+      else do
+        callbacks <- parseAllChildrenWithLocalName "callback" parseName
+        case callbacks of
+          [] -> do
+               t <- parseType
+               return (t, Nothing)
+          [Name ns n] -> return (TInterface ns n, Nothing)
+          _ -> parseError "Multiple callbacks in field"
   return $ Field {
                fieldName = name
+             , fieldVisible = introspectable
              , fieldType = t
              , fieldCallback = callback
              , fieldOffset = 0          -- Fixed by computeOffsets
@@ -89,4 +106,4 @@ parseField = do
           }
 
 parseFields :: Parser [Field]
-parseFields = parseChildrenWithLocalName "field" parseField
+parseFields = parseAllChildrenWithLocalName "field" parseField

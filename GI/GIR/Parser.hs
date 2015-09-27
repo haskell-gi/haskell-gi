@@ -13,6 +13,7 @@ module GI.GIR.Parser
     , parseIntegral
     , parseBool
     , parseChildrenWithLocalName
+    , parseAllChildrenWithLocalName
     , parseChildrenWithNSName
 
     , getAttr
@@ -183,7 +184,7 @@ parseBool "0" = return False
 parseBool "1" = return True
 parseBool other = parseError $ "Unsupported boolean value: " <> T.pack (show other)
 
--- | Parse all the (introspectable) subelements with the given local name.
+-- | Parse all the introspectable subelements with the given local name.
 parseChildrenWithLocalName :: Text -> Parser a -> Parser [a]
 parseChildrenWithLocalName n parser = do
   ctx <- ask
@@ -194,7 +195,14 @@ parseChildrenWithLocalName n parser = do
             introspectable e = lookupAttr "introspectable" e /= Just "0" &&
                                lookupAttr "shadowed-by" e == Nothing
 
--- | Parse all children with the given namespace and local name.
+-- | Parse all subelements with the given local name.
+parseAllChildrenWithLocalName :: Text -> Parser a -> Parser [a]
+parseAllChildrenWithLocalName n parser = do
+  ctx <- ask
+  mapM (withElement parser) (childElemsWithLocalName n (currentElement ctx))
+
+-- | Parse all introspectable children with the given namespace and
+-- local name.
 parseChildrenWithNSName :: GIRXMLNamespace -> Text -> Parser a -> Parser [a]
 parseChildrenWithNSName ns n parser = do
   ctx <- ask
