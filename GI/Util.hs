@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module GI.Util
   ( maybeWithCString
   , getList

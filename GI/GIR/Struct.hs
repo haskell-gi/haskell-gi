@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Parsing of structs.
 module GI.GIR.Struct
     ( Struct(..)

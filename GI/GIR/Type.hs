@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards, OverloadedStrings, PatternGuards #-}
+{-# LANGUAGE RecordWildCards, PatternGuards #-}
 -- | Parsing type information from GIR files.
 module GI.GIR.Type
     ( parseType

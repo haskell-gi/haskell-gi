@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Parsing of objects.
 module GI.GIR.Object
     ( Object(..)

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ViewPatterns #-}
+{-# LANGUAGE ViewPatterns #-}
 module GI.Overrides
     ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion)
     , parseOverridesFile

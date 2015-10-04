@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Parsing of unions.
 module GI.GIR.Union
     ( Union(..)

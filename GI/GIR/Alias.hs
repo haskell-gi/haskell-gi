@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module GI.GIR.Alias
     ( documentListAliases
     ) where

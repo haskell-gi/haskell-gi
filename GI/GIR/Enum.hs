@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Parsing of Enums.
 module GI.GIR.Enum
     ( Enumeration(..)

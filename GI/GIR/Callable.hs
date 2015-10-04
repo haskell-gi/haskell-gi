@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module GI.GIR.Callable
     ( Callable(..)
     , parseCallable

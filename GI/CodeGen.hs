@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module GI.CodeGen
     ( genConstant
     , genFunction

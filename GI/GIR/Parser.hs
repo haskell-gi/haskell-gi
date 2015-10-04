@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | The Parser monad.
 module GI.GIR.Parser
     ( Parser

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Parsing of object/struct/union fields.
 module GI.GIR.Field
     ( Field(..)

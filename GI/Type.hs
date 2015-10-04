@@ -9,6 +9,8 @@ module GI.Type
     ) where
 
 import Data.Typeable
+import qualified Data.Text as T
+import Data.Text (Text)
 
 -- This enum mirrors the definition in gitypes.h.
 data BasicType
@@ -48,12 +50,12 @@ data Type
     | TParamSpec
     deriving (Eq, Show, Ord)
 
-con :: String -> [TypeRep] -> TypeRep
+con :: Text -> [TypeRep] -> TypeRep
 con "[]" xs = mkTyConApp listCon xs
-              where listCon = typeRepTyCon (typeOf [""])
+              where listCon = typeRepTyCon (typeOf [True])
 con "(,)" xs = mkTyConApp tupleCon xs
-               where tupleCon = typeRepTyCon (typeOf ("",""))
-con s xs = mkTyConApp (mkTyCon3 "GI" "GI" s) xs
+               where tupleCon = typeRepTyCon (typeOf (True, True))
+con s xs = mkTyConApp (mkTyCon3 "GI" "GI" (T.unpack s)) xs
 
 io :: TypeRep -> TypeRep
 io t = "IO" `con` [t]

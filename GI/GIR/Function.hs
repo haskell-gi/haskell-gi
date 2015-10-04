@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module GI.GIR.Function
     ( Function(..)
     , parseFunction

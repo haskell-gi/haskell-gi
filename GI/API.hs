@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, RecordWildCards, NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns #-}
 
 module GI.API
     ( API(..)

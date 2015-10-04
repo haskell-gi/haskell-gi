@@ -38,7 +38,7 @@ Executable haskell-gi
       text >= 1.0,
       free
   build-tools: hsc2hs, c2hs
-  extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes
+  extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
   ghc-options: -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:
       GI.GIR.Alias,

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 -- | Parsing of callbacks.
 module GI.GIR.Callback
     ( Callback(..)

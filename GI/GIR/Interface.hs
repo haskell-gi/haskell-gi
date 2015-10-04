@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module GI.GIR.Interface
     ( Interface(..)
     , parseInterface

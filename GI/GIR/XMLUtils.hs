@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 -- | Some helpers for making traversals of GIR documents easier.
 module GI.GIR.XMLUtils
     ( nodeToElement

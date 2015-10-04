@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 -- | Parsing of constants in GIR files.
 module GI.GIR.Constant
     ( Constant(..)

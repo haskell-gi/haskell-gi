@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, DeriveFunctor, OverloadedStrings #-}
+{-# LANGUAGE PatternGuards, DeriveFunctor #-}
 
 module GI.Conversions
     ( convert
@@ -36,6 +36,7 @@ import Control.Monad.Free (Free(..), liftF)
 import Data.List (intercalate)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import Data.Int
+import qualified Data.Text as T
 import Data.Word
 import GHC.Exts (IsString(..))
 
@@ -637,7 +638,7 @@ haskellType (TInterface "GObject" "Closure") = return $ "Closure" `con` []
 haskellType t@(TInterface ns n) = do
   prefix <- qualify ns
   api <- findAPI t
-  let tname = (prefix ++ n) `con` []
+  let tname = T.pack (prefix ++ n) `con` []
   return $ case api of
              Just (APIFlags _) -> "[]" `con` [tname]
              _ -> tname
@@ -697,9 +698,9 @@ foreignType t@(TInterface ns n) = do
     api <- findAPI t
     prefix <- qualify ns
     return $ case api of
-               Just (APICallback _) -> ("FunPtr " ++ prefix ++ n ++ "C")
+               Just (APICallback _) -> T.pack ("FunPtr " ++ prefix ++ n ++ "C")
                                        `con` []
-               _ -> ptr $ (prefix ++ n) `con` []
+               _ -> ptr $ T.pack (prefix ++ n) `con` []
 
 getIsScalar :: Type -> CodeGen Bool
 getIsScalar t = do
