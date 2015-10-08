@@ -458,6 +458,7 @@ genPrelude name modulePrefix = do
     line "import Foreign.Storable (peek, poke, sizeOf)"
     line "import Control.Applicative ((<$>))"
     line "import Control.Exception (onException)"
+    line "import Control.Monad.IO.Class"
     line "import qualified Data.Text as T"
     blank
     line "import GI.Utils.Attributes hiding (get, set)"

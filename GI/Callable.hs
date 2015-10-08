@@ -15,7 +15,7 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM, forM_, when)
 import Data.Bool (bool)
-import Data.List (intercalate, nub)
+import Data.List (intercalate, nub, (\\))
 import Data.Maybe (isJust)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import qualified Data.Map as Map
@@ -98,7 +98,7 @@ wrapMaybe arg =
 -- Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
 inArgInterfaces :: [Arg] -> ExcCodeGen ([String], [String])
-inArgInterfaces inArgs = consAndTypes ['a'..'z'] inArgs
+inArgInterfaces inArgs = consAndTypes (['a'..'z'] \\ ['m']) inArgs
   where
     consAndTypes :: [Char] -> [Arg] -> ExcCodeGen ([String], [String])
     consAndTypes _ [] = return ([], [])
@@ -513,13 +513,12 @@ freeCallCallbacks callable nameMap =
 
 hSignature :: [Arg] -> TypeRep -> ExcCodeGen ()
 hSignature hInArgs retType = do
-  (constraints, types) <- inArgInterfaces hInArgs
+  (argConstraints, types) <- inArgInterfaces hInArgs
   indent $ do
-      when (not $ null constraints) $ do
-          line $ "(" ++ intercalate ", " constraints ++ ") =>"
+      line $ "(" ++ intercalate ", " ("MonadIO m" : argConstraints) ++ ") =>"
       forM_ (zip types hInArgs) $ \(t, a) ->
            line $ withComment (t ++ " ->") $ T.unpack (argName a)
-      line $ show $ io $ retType
+      line . show $ "m" `con` [retType]
 
 genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
 genCallable n symbol callable throwsGError = do
@@ -556,7 +555,7 @@ genCallable n symbol callable throwsGError = do
         line $ deprecatedPragma name $ callableDeprecated callable
         line $ name ++ " ::"
         hSignature hInArgs =<< hOutType callable hOutArgs ignoreReturn
-        line $ name ++ " " ++ intercalate " " (map argName' hInArgs) ++ " = do"
+        line $ name ++ " " ++ intercalate " " (map argName' hInArgs) ++ " = liftIO $ do"
         indent $ do
             readInArrayLengths n callable hInArgs
             inArgNames <- forM (args callable) $ \arg ->

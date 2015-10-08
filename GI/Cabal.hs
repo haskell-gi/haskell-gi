@@ -163,8 +163,9 @@ genCabalProject gir deps modulePrefix =
                        <> " && < " <> nextIncompatibleVersion depMajor <> ","
           -- Our usage of these is very basic, no reason to put any
           -- strong upper bounds.
-          line $ "bytestring >= 0.10,"
-          line $ "containers >= 0.5,"
-          line $ "text >= 1.0"
+          line "bytestring >= 0.10,"
+          line "containers >= 0.5,"
+          line "text >= 1.0,"
+          line "transformers >= 0.3"
 
       return Nothing -- successful generation, no error
