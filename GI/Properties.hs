@@ -79,7 +79,7 @@ propTypeStr t = case t of
 -- the type variables for the object and its value.
 attrType :: Property -> CodeGen ([String], String)
 attrType prop = do
-  (_,t,constraints) <- argumentType "abcdefghijklmn" $ propType prop
+  (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
   if ' ' `elem` t
   then return (constraints, parenthesize t)
   else return (constraints, t)
@@ -88,22 +88,22 @@ genPropertySetter :: Name -> String -> Property -> CodeGen ()
 genPropertySetter n pName prop = group $ do
   oName <- upperName n
   (constraints, t) <- attrType prop
-  let constraints' = (classConstraint oName ++ " o"):constraints
+  let constraints' = "MonadIO m":(classConstraint oName ++ " o"):constraints
   tStr <- propTypeStr $ propType prop
   line $ "set" ++ pName ++ " :: (" ++ intercalate ", " constraints'
-           ++ ") => o -> " ++ t ++ " -> IO ()"
-  line $ "set" ++ pName ++ " obj val = setObjectProperty" ++ tStr
+           ++ ") => o -> " ++ t ++ " -> m ()"
+  line $ "set" ++ pName ++ " obj val = liftIO $ setObjectProperty" ++ tStr
            ++ " obj \"" ++ T.unpack (propName prop) ++ "\" val"
 
 genPropertyGetter :: Name -> String -> Property -> CodeGen ()
 genPropertyGetter n pName prop = group $ do
   oName <- upperName n
   outType <- haskellType (propType prop)
-  let constraints = "(" ++ classConstraint oName ++ " o)"
+  let constraints = "(MonadIO m, " ++ classConstraint oName ++ " o)"
   line $ "get" ++ pName ++ " :: " ++ constraints ++
-                " => o -> " ++ show (io outType)
+                " => o -> " ++ show ("m" `con` [outType])
   tStr <- propTypeStr $ propType prop
-  line $ "get" ++ pName ++ " obj = getObjectProperty" ++ tStr
+  line $ "get" ++ pName ++ " obj = liftIO $ getObjectProperty" ++ tStr
         ++ " obj \"" ++ T.unpack (propName prop) ++ "\"" ++
            if tStr `elem` ["Object", "Boxed"]
            then " " ++ show outType -- These require the constructor too.
