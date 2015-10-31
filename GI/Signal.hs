@@ -287,13 +287,13 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   -- ("on...") or after the default handler runs (after...). We
   -- provide convenient wrappers for both cases.
   group $ do
-    let signatureConstraints = "GObject a =>"
-        signatureArgs = "a -> " ++ cbType ++ " -> IO SignalHandlerId"
+    let signatureConstraints = "(GObject a, MonadIO m) =>"
+        signatureArgs = "a -> " ++ cbType ++ " -> m SignalHandlerId"
         signature = " :: " ++ signatureConstraints ++ " " ++ signatureArgs
         onName = "on" ++ signalConnectorName
         afterName = "after" ++ signalConnectorName
     line $ onName ++ signature
-    line $ onName ++ " obj cb = connect"
+    line $ onName ++ " obj cb = liftIO $ connect"
              ++ signalConnectorName ++ " obj cb SignalConnectBefore"
     line $ afterName ++ signature
     line $ afterName ++ " obj cb = connect"
@@ -301,12 +301,12 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
 
   group $ do
     let fullName = "connect" ++ signalConnectorName
-        signatureConstraints = "GObject a =>"
+        signatureConstraints = "(GObject a, MonadIO m) =>"
         signatureArgs = "a -> " ++ cbType
-                        ++ " -> SignalConnectMode -> IO SignalHandlerId"
+                        ++ " -> SignalConnectMode -> m SignalHandlerId"
     line $ fullName ++ " :: " ++ signatureConstraints
     line $ replicate (4 + length fullName) ' ' ++ signatureArgs
-    line $ fullName ++ " obj cb after = do"
+    line $ fullName ++ " obj cb after = liftIO $ do"
     indent $ do
         line $ "cb' <- mk" ++ cbType ++ " (" ++ lcFirst cbType ++ "Wrapper cb)"
         line $ "connectSignalFunPtr obj \"" ++ T.unpack sn ++ "\" cb' after"
