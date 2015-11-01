@@ -1,8 +1,0 @@
-namespace WebKit
-
-# PkgConfig names are slightly different to the GI namespaces
-pkg-config-name JavaScriptCore javascriptcoregtk
-
-# This is a macro, but somehow it appears in the introspection data as
-# a function.
-ignore check_version

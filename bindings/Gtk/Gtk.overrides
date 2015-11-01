@@ -1,8 +1,0 @@
-namespace Gtk
-
-# We do not generate wrappers for GtkTreeModelModifyFunc, since it has
-# fairly weird semantics.
-ignore TreeModelFilter.set_modify_func
-
-# Signal with an (out) (caller-allocates) parameter, which we do not support.
-ignore Overlay.get-child-position
