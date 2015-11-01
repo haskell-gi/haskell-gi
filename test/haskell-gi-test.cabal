@@ -1,0 +1,38 @@
+name:                haskell-gi-test
+version:             0.1
+synopsis:            Tests of haskell-gi
+Description:         Tests of haskell-gi
+homepage:            https://github.com/haskell-gi/haskell-gi
+license:             LGPL-3
+author:              Will Thompson,
+                     Iñaki García Etxebarria,
+                     Jonas Platte
+maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+stability:           Experimental
+category:            Development
+build-type:          Simple
+cabal-version:       >=1.8
+
+source-repository head
+  type: git
+  location: git://github.com/haskell-gi/haskell-gi.git
+
+executable testGtk
+  main-is:             testGtk.hs
+  pkgconfig-depends:   gtk+-3.0 >= 3.14 && < 4
+  build-depends:       base >= 4.7 && < 5,
+                       basic-prelude >= 0.5 && <0.6,
+                       bytestring >= 0.10,
+                       containers >= 0.5 && < 0.6,
+                       random >= 1.1 && < 1.2,
+                       gobject-introspection >= 0.8 && < 0.9,
+                       gi-glib >= 0.2.44 && < 0.3,
+                       gi-gdk >= 0.3.16 && < 0.4,
+                       gi-gio >= 0.2.44 && < 0.3,
+                       gi-gtk >= 0.3.16 && < 0.4,
+                       text >= 1.0
+
+  extensions:          OverloadedStrings, NoImplicitPrelude, DoAndIfThenElse, LambdaCase
+  ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing
+  other-modules:       GI.Properties,
+                       GI.Signals

@@ -27,7 +27,7 @@ data Overrides = Overrides {
       ignoredAPIs     :: S.Set Name,
       -- | Structs for which accessors should not be auto-generated.
       sealedStructs   :: S.Set Name,
-      -- | Mapping from GObject-Introspection namespaces to pkg-config
+      -- | Mapping from GObject Introspection namespaces to pkg-config
       pkgConfigMap    :: M.Map Text Text,
       -- | Version number for the generated .cabal package.
       cabalPkgVersion :: Maybe Text,
@@ -121,7 +121,7 @@ parseSeal seal _ =
     throwError ("seal syntax is of the form \"seal name\".\nGot \"seal "
                 <> seal <> "\" instead.")
 
--- | Mapping from GObject-Introspection namespaces to pkg-config.
+-- | Mapping from GObject Introspection namespaces to pkg-config.
 parsePkgConfigName :: Text -> Parser
 parsePkgConfigName (T.words -> [gi,pc]) = tell $
     defaultOverrides {pkgConfigMap =

@@ -1,5 +1,5 @@
 -- | Project information to include in generated bindings, should be
--- kept in sync with GObject-Introspection.cabal
+-- kept in sync with haskell-gi.cabal
 module GI.ProjectInfo
     ( homepage
     , authors
@@ -8,7 +8,7 @@ module GI.ProjectInfo
     ) where
 
 homepage :: String
-homepage = "https://github.com/garetxe/haskell-gi"
+homepage = "https://github.com/haskell-gi/haskell-gi"
 
 authors :: String
 authors = "Will Thompson, Iñaki García Etxebarria and Jonas Platte"

@@ -1,0 +1,33 @@
+name:                haskell-gi-examples
+version:             0.1
+synopsis:            Some examples of the use of haskell-gi generated libraries
+description:         Some examples of the use of haskell-gi generated libraries
+homepage:            https://github.com/haskell-gi/haskell-gi
+license:             LGPL-3
+author:              Iñaki García Etxebarria
+maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+stability:           Experimental
+category:            Development
+build-type:          Simple
+cabal-version:       >=1.8
+
+source-repository head
+  type: git
+  location: git://github.com/haskell-gi/haskell-gi.git
+
+executable SimpleBrowser
+  main-is:             SimpleBrowser.hs
+  pkgconfig-depends:   webkitgtk-3.0 >= 2.4 && < 3
+  build-depends:       base >= 4.7 && < 5,
+                       basic-prelude >= 0.5 && <0.6,
+                       gobject-introspection >= 0.7 && < 0.8,
+                       gi-glib >= 0.2.44 && < 0.3,
+                       gi-gobject >= 0.2.44 && < 0.3,
+                       gi-gtk >= 0.3.16 && < 0.4,
+                       gi-webkit >= 0.2.4 && < 0.3,
+                       text >= 1.0
+
+  extensions:          OverloadedStrings, NoImplicitPrelude
+  ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing
+  other-modules:       GI.Properties,
+                       GI.Signals

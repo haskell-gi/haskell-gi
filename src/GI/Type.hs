@@ -32,7 +32,7 @@ data BasicType
      | TFileName
     deriving (Eq, Enum, Show, Ord)
 
--- This type represents the types found in GObject-Introspection
+-- This type represents the types found in GObject Introspection
 -- interfaces: the types of constants, arguments, etc.
 data Type
     = TBasicType BasicType

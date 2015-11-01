@@ -29,7 +29,7 @@ import GI.ProjectInfo (homepage, license, authors, maintainers)
 import GI.Util (padTo)
 import GI.SymbolNaming (ucFirst)
 
-import Paths_GObject_Introspection (version)
+import Paths_haskell_gi (version)
 
 cabalConfig :: Text
 cabalConfig = T.unlines ["documentation: False",
@@ -150,7 +150,7 @@ genCabalProject gir deps modulePrefix =
                  ++ show major ++ "." ++ show minor
         line $ padTo 20 "build-depends: base >= 4.6 && <4.9,"
         indent $ do
-          line $ "GObject-Introspection >= " ++ showVersion version
+          line $ "gobject-introspection >= " ++ showVersion version
                  ++ " && < " ++ show (haskellGIAPIVersion + 1) ++ ","
           forM_ deps $ \dep -> do
               let depName = girNSName dep
