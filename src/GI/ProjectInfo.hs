@@ -17,4 +17,4 @@ maintainers :: String
 maintainers = "Iñaki García Etxebarria (garetxe@gmail.com)"
 
 license :: String
-license = "LGPL-3"
+license = "LGPL-2.1"
