@@ -4,10 +4,6 @@ module GI.GIR.Object
     , parseObject
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
-
 import Data.Text (Text)
 
 import GI.GIR.Method (Method, parseMethod, MethodType(..))

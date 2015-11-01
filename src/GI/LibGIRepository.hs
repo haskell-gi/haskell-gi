@@ -7,6 +7,10 @@ module GI.LibGIRepository
     , girLoadGType
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 import Control.Monad (forM, when)
 import qualified Data.Map as M
 import Data.Text (Text)

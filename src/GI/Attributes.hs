@@ -80,7 +80,7 @@ genAttributes name apis modulePrefix = do
   genPrelude (nm ++ "Attributes") modulePrefix
 
   deps <- getDeps
-  forM_ deps $ \i -> when (i /= name) $ do
+  forM_ (S.toList deps) $ \i -> when (i /= name) $ do
     line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
     line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
              ++ ucFirst i ++ "A"
