@@ -153,9 +153,9 @@ genSignalInstances name apis modulePrefix = do
   line $ "module " ++ mp nm ++ "Signals where"
   blank
 
-  line   "import GI.Utils.Properties (GObjectNotifySignalInfo)"
-  line   "import GI.Utils.Signals"
-  line   "import GI.Utils.Overloading"
+  line   "import Data.GI.Base.Properties (GObjectNotifySignalInfo)"
+  line   "import Data.GI.Base.Signals"
+  line   "import Data.GI.Base.Overloading"
   blank
 
   -- Import dependencies, including instances for their overloaded

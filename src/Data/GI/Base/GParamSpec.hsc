@@ -1,4 +1,4 @@
-module GI.Utils.GParamSpec
+module Data.GI.Base.GParamSpec
     ( noGParamSpec
 
     , wrapGParamSpecPtr
@@ -11,7 +11,7 @@ import Foreign.Ptr
 import Foreign.ForeignPtr
 import Control.Monad (void)
 
-import GI.Utils.BasicTypes (GParamSpec(..))
+import Data.GI.Base.BasicTypes (GParamSpec(..))
 
 #include <glib-object.h>
 

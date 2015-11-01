@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module GI.Utils.BasicConversions
+module Data.GI.Base.BasicConversions
     ( gflagsToWord
     , wordToGFlags
 
@@ -85,10 +85,10 @@ import Data.Word (Word8, Word64)
 import Data.Int (Int32)
 import Data.Bits (Bits, (.|.), (.&.), shift)
 
-import GI.Utils.BasicTypes
-import GI.Utils.GHashTable (GEqualFunc, GHashFunc)
-import GI.Utils.ManagedPtr (copyBoxedPtr)
-import GI.Utils.Utils (allocBytes, callocBytes, memcpy, freeMem)
+import Data.GI.Base.BasicTypes
+import Data.GI.Base.GHashTable (GEqualFunc, GHashFunc)
+import Data.GI.Base.ManagedPtr (copyBoxedPtr)
+import Data.GI.Base.Utils (allocBytes, callocBytes, memcpy, freeMem)
 
 #include <glib-object.h>
 

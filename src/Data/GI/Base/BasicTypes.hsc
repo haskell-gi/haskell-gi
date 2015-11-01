@@ -1,6 +1,6 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances #-}
 -- | Basic types used in the bindings.
-module GI.Utils.BasicTypes
+module Data.GI.Base.BasicTypes
     (
       -- * GType related
       GType(..)
@@ -151,31 +151,31 @@ class ForeignPtrNewtype a => GObject a where
     -- | The `GType` for this object.
     gobjectType :: a -> IO GType
 
--- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "GI.Utils.GVariant" for further methods.
+-- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "Data.GI.Base.GVariant" for further methods.
 newtype GVariant = GVariant (ForeignPtr GVariant)
 
--- | A <https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html GParamSpec>. See "GI.Utils.GParamSpec" for further methods.
+-- | A <https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html GParamSpec>. See "Data.GI.Base.GParamSpec" for further methods.
 newtype GParamSpec = GParamSpec (ForeignPtr GParamSpec)
 
 -- | An enum usable as a flag for a function.
 class Enum a => IsGFlag a
 
--- | A <https://developer.gnome.org/glib/stable/glib-Arrays.html GArray>. Marshalling for this type is done in "GI.Utils.BasicConversions", it is mapped to a list on the Haskell side.
+-- | A <https://developer.gnome.org/glib/stable/glib-Arrays.html GArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is mapped to a list on the Haskell side.
 data GArray a = GArray (Ptr (GArray a))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Pointer-Arrays.html GPtrArray>. Marshalling for this type is done in "GI.Utils.BasicConversions", it is mapped to a list on the Haskell side.
+-- | A <https://developer.gnome.org/glib/stable/glib-Pointer-Arrays.html GPtrArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is mapped to a list on the Haskell side.
 data GPtrArray a = GPtrArray (Ptr (GPtrArray a))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Byte-Arrays.html GByteArray>. Marshalling for this type is done in "GI.Utils.BasicConversions", it is packed to a 'Data.ByteString.ByteString' on the Haskell side.
+-- | A <https://developer.gnome.org/glib/stable/glib-Byte-Arrays.html GByteArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is packed to a 'Data.ByteString.ByteString' on the Haskell side.
 data GByteArray = GByteArray (Ptr GByteArray)
 
 -- | A <https://developer.gnome.org/glib/stable/glib-Hash-Tables.html GHashTable>. It is mapped to a 'Data.Map.Map' on the Haskell side.
 data GHashTable a b = GHashTable (Ptr (GHashTable a b))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Doubly-Linked-Lists.html GList>, mapped to a list on the Haskell side. Marshalling is done in "GI.Utils.BasicConversions".
+-- | A <https://developer.gnome.org/glib/stable/glib-Doubly-Linked-Lists.html GList>, mapped to a list on the Haskell side. Marshalling is done in "Data.GI.Base.BasicConversions".
 data GList a = GList (Ptr (GList a))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Singly-Linked-Lists.html GSList>, mapped to a list on the Haskell side. Marshalling is done in "GI.Utils.BasicConversions".
+-- | A <https://developer.gnome.org/glib/stable/glib-Singly-Linked-Lists.html GSList>, mapped to a list on the Haskell side. Marshalling is done in "Data.GI.Base.BasicConversions".
 data GSList a = GSList (Ptr (GSList a))
 
 -- | Some APIs, such as `GHashTable`, pass around scalar types

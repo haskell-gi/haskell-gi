@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables, TupleSections #-}
 {- | Assorted utility functions for bindings. -}
-module GI.Utils.Utils
+module Data.GI.Base.Utils
     ( whenJust
     , maybeM
     , maybeFromPtr
@@ -35,7 +35,7 @@ import Foreign.C.Types (CSize(..))
 import Foreign.Ptr (Ptr, nullPtr, FunPtr, freeHaskellFunPtr)
 import Foreign.Storable (Storable(..))
 
-import GI.Utils.BasicTypes (GType(..), CGType, BoxedObject(..))
+import Data.GI.Base.BasicTypes (GType(..), CGType, BoxedObject(..))
 
 -- | When the given value is of "Just a" form, execute the given action,
 -- otherwise do nothing.

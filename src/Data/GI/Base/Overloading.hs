@@ -4,7 +4,7 @@
 
 -- | Helpers for dealing with `GObject`s.
 
-module GI.Utils.Overloading
+module Data.GI.Base.Overloading
     ( -- * Type level inheritance
       ParentTypes
     , IsDescendantOf

@@ -3,7 +3,7 @@ FlexibleInstances, MultiParamTypeClasses, TypeFamilies, PolyKinds,
 EmptyDataDecls, ConstraintKinds #-}
 {-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 
-module GI.Utils.Properties
+module Data.GI.Base.Properties
     ( new
 
     , PropertyNotify(..)
@@ -79,15 +79,15 @@ import qualified Data.ByteString.Char8 as B
 import Data.Text (Text)
 import Data.Proxy (Proxy(..))
 
-import GI.Utils.BasicTypes
-import GI.Utils.BasicConversions
-import GI.Utils.ManagedPtr
-import GI.Utils.Attributes
-import GI.Utils.GParamSpec (newGParamSpecFromPtr)
-import GI.Utils.GValue
-import GI.Utils.GVariant (newGVariantFromPtr)
-import GI.Utils.Overloading (ResolveAttribute, HasAttr)
-import GI.Utils.Signals (SignalConnectMode, SignalHandlerId,
+import Data.GI.Base.BasicTypes
+import Data.GI.Base.BasicConversions
+import Data.GI.Base.ManagedPtr
+import Data.GI.Base.Attributes
+import Data.GI.Base.GParamSpec (newGParamSpecFromPtr)
+import Data.GI.Base.GValue
+import Data.GI.Base.GVariant (newGVariantFromPtr)
+import Data.GI.Base.Overloading (ResolveAttribute, HasAttr)
+import Data.GI.Base.Signals (SignalConnectMode, SignalHandlerId,
                          connectSignalFunPtr,
                          SignalInfo(HaskellCallbackType, connectSignal))
 

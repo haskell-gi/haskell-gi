@@ -16,11 +16,11 @@ import Foreign.C.Types (CInt(..), CSize(..))
 import Foreign.C.String (CString)
 import Foreign (nullPtr, Ptr, ForeignPtr, FunPtr, peek)
 
-import GI.Utils.BasicConversions (withTextCString, cstringToText)
-import GI.Utils.BasicTypes (BoxedObject(..), GType(..), CGType)
-import GI.Utils.GError (GError, checkGError)
-import GI.Utils.ManagedPtr (wrapBoxed, withManagedPtr)
-import GI.Utils.Utils (allocMem, freeMem)
+import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
+import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), CGType)
+import Data.GI.Base.GError (GError, checkGError)
+import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr)
+import Data.GI.Base.Utils (allocMem, freeMem)
 
 -- | Wrapper for 'GIBaseInfo'
 newtype BaseInfo = BaseInfo (ForeignPtr BaseInfo)

@@ -2,7 +2,7 @@
 -- collide with functions appearing in bindings. The generated code
 -- requires just a small subset of the functions in the Prelude, which
 -- we reexport explicitly here.
-module GI.Utils.ShortPrelude
+module Data.GI.Base.ShortPrelude
     ( Enum(fromEnum, toEnum)
     , Show(..)
     , Eq(..)

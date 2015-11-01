@@ -7,11 +7,11 @@
 -- == Basic attributes interface
 --
 -- Attributes of an object can be get, set and constructed. For types
--- descending from 'GI.Utils.BasicTypes.GObject', properties are
+-- descending from 'Data.GI.Base.BasicTypes.GObject', properties are
 -- encoded in attributes, although attributes are slightly more
--- general (every property of a `GI.Utils.BasicTypes.GObject` is an
+-- general (every property of a `Data.GI.Base.BasicTypes.GObject` is an
 -- attribute, but we can also have attributes for types not descending
--- from `GI.Utils.BasicTypes.GObject`).
+-- from `Data.GI.Base.BasicTypes.GObject`).
 --
 -- As an example consider a @button@ widget and a property (of the
 -- Button class, or any of its parent classes or implemented
@@ -82,17 +82,17 @@
 -- as an extra parameter.
 --
 -- Attributes can also be set during construction of a
--- `GI.Utils.BasicTypes.GObject` using `GI.Utils.Properties.new`
+-- `Data.GI.Base.BasicTypes.GObject` using `Data.GI.Base.Properties.new`
 --
 -- > button <- new Button [_label := "Can't touch this!", _sensitive := False]
 --
 -- In addition for value being set/get having to have the right type,
 -- there can be attributes that are read-only, or that can only be set
--- during construction with `GI.Utils.Properties.new`, but cannot be
+-- during construction with `Data.GI.Base.Properties.new`, but cannot be
 -- `set` afterwards. That these invariants hold is also checked during
 -- compile time.
 --
-module GI.Utils.Attributes (
+module Data.GI.Base.Attributes (
   AttrInfo(..),
 
   AttrOpTag(..),
@@ -104,8 +104,8 @@ module GI.Utils.Attributes (
 
 import Data.Proxy (Proxy(..))
 
-import GI.Utils.GValue (GValue(..))
-import GI.Utils.Overloading (ResolveAttribute)
+import Data.GI.Base.GValue (GValue(..))
+import Data.GI.Base.Overloading (ResolveAttribute)
 
 import GHC.TypeLits
 import GHC.Exts (Constraint)

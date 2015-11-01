@@ -9,7 +9,7 @@
 -- newtype an instance of different typeclasses. The routines in this
 -- module deal with the memory management of such managed pointers.
 
-module GI.Utils.ManagedPtr
+module Data.GI.Base.ManagedPtr
     ( -- * Managed pointers
       withManagedPtr
     , withManagedPtrList
@@ -48,8 +48,8 @@ import Foreign.Ptr (Ptr, FunPtr, castPtr)
 import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
-import GI.Utils.BasicTypes
-import GI.Utils.Utils
+import Data.GI.Base.BasicTypes
+import Data.GI.Base.Utils
 
 -- | Perform an IO action on the 'Ptr' inside a managed pointer.
 withManagedPtr :: ForeignPtrNewtype a => a -> (Ptr a -> IO c) -> IO c

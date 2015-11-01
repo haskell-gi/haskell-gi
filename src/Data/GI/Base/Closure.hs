@@ -1,5 +1,5 @@
 -- Some helper functions to create closures.
-module GI.Utils.Closure
+module Data.GI.Base.Closure
     ( Closure(..)
     , newCClosure
     , noClosure
@@ -7,9 +7,9 @@ module GI.Utils.Closure
 
 import Foreign
 
-import GI.Utils.BasicTypes
-import GI.Utils.ManagedPtr (wrapBoxed)
-import GI.Utils.Utils (safeFreeFunPtrPtr)
+import Data.GI.Base.BasicTypes
+import Data.GI.Base.ManagedPtr (wrapBoxed)
+import Data.GI.Base.Utils (safeFreeFunPtrPtr)
 
 newtype Closure = Closure (ForeignPtr Closure)
 

@@ -80,9 +80,9 @@ import GI.GIR.Union (Union(..), parseUnion)
 import GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr,
                         lookupAttrWithNamespace, GIRXMLNamespace(..))
 
-import GI.Utils.BasicConversions (unpackStorableArrayWithLength)
-import GI.Utils.BasicTypes (GType(..), CGType, gtypeName)
-import GI.Utils.Utils (allocMem, freeMem)
+import Data.GI.Base.BasicConversions (unpackStorableArrayWithLength)
+import Data.GI.Base.BasicTypes (GType(..), CGType, gtypeName)
+import Data.GI.Base.Utils (allocMem, freeMem)
 import GI.LibGIRepository (girRequire, girStructSizeAndOffsets,
                            girUnionSizeAndOffsets, girLoadGType)
 import GI.GType (gtypeIsBoxed)

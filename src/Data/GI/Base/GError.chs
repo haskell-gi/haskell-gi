@@ -20,7 +20,7 @@
 --
 -- Notice that the type is suitably specialized, so only
 -- errors of type 'GI.GdkPixbuf.PixbufError' will be caught.
-module GI.Utils.GError
+module Data.GI.Base.GError
     (
     -- * Unpacking GError
     --
@@ -66,10 +66,10 @@ import Control.Exception
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 
-import GI.Utils.BasicTypes (BoxedObject(..), GType(..))
-import GI.Utils.BasicConversions (withTextCString, cstringToText)
-import GI.Utils.ManagedPtr (wrapBoxed)
-import GI.Utils.Utils (allocMem, freeMem)
+import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..))
+import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
+import Data.GI.Base.ManagedPtr (wrapBoxed)
+import Data.GI.Base.Utils (allocMem, freeMem)
 
 #include <glib.h>
 

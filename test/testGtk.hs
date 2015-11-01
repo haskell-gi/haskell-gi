@@ -11,7 +11,7 @@ import qualified GI.GLib as GLib
 import GI.Properties
 import GI.Signals
 
-import GI.Utils.Base
+import Data.GI.Base
 
 import Foreign.C
 
@@ -143,54 +143,54 @@ testPolymorphicLenses parent message = do
 
   -- This should fail to compile with
 {-
-    Couldn't match type ‘GI.Utils.Attributes.AttrOpIsAllowed
+    Couldn't match type ‘Data.GI.Base.Attributes.AttrOpIsAllowed
                            'AttrSet
                            (AttrAllowedOps
-                              (GI.Utils.Overloading.UnknownAttribute
+                              (Data.GI.Base.Overloading.UnknownAttribute
                                  "Error: could not find attribute"
                                  "authors"
                                  "for object"
                                  MessageDialog))
                            (AttrLabel
-                              (GI.Utils.Overloading.UnknownAttribute
+                              (Data.GI.Base.Overloading.UnknownAttribute
                                  "Error: could not find attribute"
                                  "authors"
                                  "for object"
                                  MessageDialog))’
-                   with ‘'GI.Utils.Attributes.OpIsAllowed’
+                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
 -}
   -- set messageBox [ _authors := undefined ]
 
   -- Should fail to compile, with
 {-
-      Couldn't match type ‘'GI.Utils.Attributes.AttrOpNotAllowed
+      Couldn't match type ‘'Data.GI.Base.Attributes.AttrOpNotAllowed
                            "Error: operation "
                            'AttrSet
                            " not allowed for attribute type "
                            "MessageDialog::message-area"’
-                   with ‘'GI.Utils.Attributes.OpIsAllowed’
+                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
 -}
   -- set messageBox [_messageArea := undefined]
 
   -- Should fail to compile, with
 {-
-    Couldn't match type ‘'GI.Utils.Attributes.AttrOpNotAllowed
+    Couldn't match type ‘'Data.GI.Base.Attributes.AttrOpNotAllowed
                            "Error: operation "
                            'AttrSet
                            " not allowed for attribute type "
                            "MessageDialog::buttons"’
-                   with ‘'GI.Utils.Attributes.OpIsAllowed’
+                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
 -}
   -- set messageBox [_buttons := ButtonsTypeYesNo]
 
   -- This should fail to compile with
 {-
-    Couldn't match type ‘'GI.Utils.Attributes.AttrOpNotAllowed
+    Couldn't match type ‘'Data.GI.Base.Attributes.AttrOpNotAllowed
                            "Error: operation "
                            'AttrGet
                            " not allowed for attribute type "
                            "Container::child"’
-                   with ‘'GI.Utils.Attributes.OpIsAllowed’
+                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
 -}
   -- get messageBox _child
 

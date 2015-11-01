@@ -8,7 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 -- | Routines for connecting `GObject`s to signals.
-module GI.Utils.Signals
+module Data.GI.Base.Signals
     ( SignalConnectMode(..),
       connectSignalFunPtr,
       on,
@@ -23,10 +23,10 @@ import Foreign.C
 import GHC.Exts (Constraint)
 import GHC.TypeLits
 
-import GI.Utils.BasicTypes
-import GI.Utils.ManagedPtr (withManagedPtr)
-import GI.Utils.Overloading (HasSignal, ResolveSignal)
-import GI.Utils.Utils (safeFreeFunPtrPtr)
+import Data.GI.Base.BasicTypes
+import Data.GI.Base.ManagedPtr (withManagedPtr)
+import Data.GI.Base.Overloading (HasSignal, ResolveSignal)
+import Data.GI.Base.Utils (safeFreeFunPtrPtr)
 
 #include <glib-object.h>
 

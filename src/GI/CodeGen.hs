@@ -444,7 +444,7 @@ genPrelude name modulePrefix = do
     -- functions defined in the bindings, so we only import the
     -- necessary minimum into our namespace.
     line "import Prelude ()"
-    line "import GI.Utils.ShortPrelude"
+    line "import Data.GI.Base.ShortPrelude"
     line "import Data.Char"
     line "import Data.Int"
     line "import Data.Word"
@@ -461,20 +461,20 @@ genPrelude name modulePrefix = do
     line "import Control.Monad.IO.Class"
     line "import qualified Data.Text as T"
     blank
-    line "import GI.Utils.Attributes hiding (get, set)"
-    line "import GI.Utils.BasicTypes"
-    line "import GI.Utils.BasicConversions"
-    line "import GI.Utils.Closure"
-    line "import GI.Utils.GError"
-    line "import GI.Utils.GHashTable"
-    line "import GI.Utils.GParamSpec"
-    line "import GI.Utils.GVariant"
-    line "import GI.Utils.GValue"
-    line "import GI.Utils.ManagedPtr"
-    line "import GI.Utils.Overloading"
-    line "import GI.Utils.Properties hiding (new)"
-    line "import GI.Utils.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId)"
-    line "import GI.Utils.Utils"
+    line "import Data.GI.Base.Attributes hiding (get, set)"
+    line "import Data.GI.Base.BasicTypes"
+    line "import Data.GI.Base.BasicConversions"
+    line "import Data.GI.Base.Closure"
+    line "import Data.GI.Base.GError"
+    line "import Data.GI.Base.GHashTable"
+    line "import Data.GI.Base.GParamSpec"
+    line "import Data.GI.Base.GVariant"
+    line "import Data.GI.Base.GValue"
+    line "import Data.GI.Base.ManagedPtr"
+    line "import Data.GI.Base.Overloading"
+    line "import Data.GI.Base.Properties hiding (new)"
+    line "import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId)"
+    line "import Data.GI.Base.Utils"
     blank
 
 genModule :: String -> [(Name, API)] -> String -> CodeGen ()

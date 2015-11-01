@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-module GI.Utils.GValue
+module Data.GI.Base.GValue
     ( GValue(..)
 
     , IsGValue(..)
@@ -56,10 +56,10 @@ import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr)
 import Foreign.ForeignPtr (ForeignPtr)
 
-import GI.Utils.BasicTypes
-import GI.Utils.BasicConversions (cstringToText, textToCString)
-import GI.Utils.ManagedPtr
-import GI.Utils.Utils (callocBytes, freeMem)
+import Data.GI.Base.BasicTypes
+import Data.GI.Base.BasicConversions (cstringToText, textToCString)
+import Data.GI.Base.ManagedPtr
+import Data.GI.Base.Utils (callocBytes, freeMem)
 
 newtype GValue = GValue (ForeignPtr GValue)
 

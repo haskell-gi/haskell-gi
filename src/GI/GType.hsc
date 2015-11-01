@@ -1,5 +1,5 @@
 module GI.GType
-    ( GType     -- Reexport from GI.Utils.BasicTypes for convenience
+    ( GType     -- Reexport from Data.GI.Base.BasicTypes for convenience
     , gtypeIsA
     , gtypeIsBoxed
     ) where
@@ -8,7 +8,7 @@ module GI.GType
 
 import Foreign.C
 import System.IO.Unsafe (unsafePerformIO)
-import GI.Utils.BasicTypes (CGType, GType(..))
+import Data.GI.Base.BasicTypes (CGType, GType(..))
 
 foreign import ccall unsafe "g_type_is_a" g_type_is_a ::
     CGType -> CGType -> IO CInt

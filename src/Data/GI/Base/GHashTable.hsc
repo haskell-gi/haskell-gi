@@ -8,7 +8,7 @@ GLib has some helper macros).
 We also need to be able to hash and check for equality different
 datatypes.
 -}
-module GI.Utils.GHashTable
+module Data.GI.Base.GHashTable
     ( GHashFunc
     , GEqualFunc
 
@@ -29,7 +29,7 @@ import Data.Word
 import Foreign.C
 import Foreign.Ptr (Ptr, castPtr, FunPtr)
 
-import GI.Utils.BasicTypes (PtrWrapped(..))
+import Data.GI.Base.BasicTypes (PtrWrapped(..))
 
 #include <glib-object.h>
 

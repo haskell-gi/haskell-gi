@@ -10,7 +10,7 @@ import GI.WebKitAttributes ()
 
 import GI.Properties
 import GI.Signals
-import GI.Utils.Base
+import Data.GI.Base
 
 import System.Mem (performGC)
 

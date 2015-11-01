@@ -24,7 +24,7 @@ checker can determine the return type for you:
 Alternatively, you can use manually the gvariantFrom* and
 gvariantTo* family of functions.
 -}
-module GI.Utils.GVariant
+module Data.GI.Base.GVariant
     ( IsGVariant(..)
     , IsGVariantBasicType
 
@@ -153,10 +153,10 @@ import Foreign.C
 import Foreign.Ptr
 import Foreign.ForeignPtr
 
-import GI.Utils.BasicTypes (GVariant(..))
-import GI.Utils.BasicConversions
-import GI.Utils.ManagedPtr (withManagedPtr, withManagedPtrList)
-import GI.Utils.Utils (freeMem)
+import Data.GI.Base.BasicTypes (GVariant(..))
+import Data.GI.Base.BasicConversions
+import Data.GI.Base.ManagedPtr (withManagedPtr, withManagedPtrList)
+import Data.GI.Base.Utils (freeMem)
 
 -- | An alias for @Nothing :: Maybe GVariant@ to save some typing.
 noGVariant :: Maybe GVariant
