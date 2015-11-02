@@ -20,7 +20,7 @@ executable SimpleBrowser
   pkgconfig-depends:   webkitgtk-3.0 >= 2.4 && < 3
   build-depends:       base >= 4.7 && < 5,
                        basic-prelude >= 0.5 && <0.6,
-                       haskell-gi-base >= 0.8 && < 0.9,
+                       haskell-gi-base >= 0.9 && < 1,
                        gi-glib >= 0.2.44 && < 0.3,
                        gi-gobject >= 0.2.44 && < 0.3,
                        gi-gtk >= 0.3.16 && < 0.4,

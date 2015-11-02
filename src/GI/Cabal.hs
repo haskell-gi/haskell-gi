@@ -157,7 +157,7 @@ genCabalProject gir deps modulePrefix =
                intercalate ", " [base, base ++ "Attributes", base ++ "Signals"]
         line $ padTo 20 "pkgconfig-depends:" ++ T.unpack pcName ++ " >= "
                  ++ show major ++ "." ++ show minor
-        line $ padTo 20 "build-depends: base >= 4.6 && <4.9,"
+        line $ padTo 20 "build-depends: base >= 4.7 && <5,"
         indent $ do
           line $ "haskell-gi-base >= " ++ showVersion version
                  ++ " && < " ++ show (haskellGIAPIVersion + 1) ++ ","

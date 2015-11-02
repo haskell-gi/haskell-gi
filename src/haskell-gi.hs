@@ -7,6 +7,7 @@ import Data.Traversable (traverse)
 import Control.Monad (forM_, when, (>=>))
 import Control.Exception (handle)
 
+import Data.Char (toLower)
 import Data.Bool (bool)
 import Data.List (intercalate)
 import Data.Text (pack, unpack, Text)
@@ -171,7 +172,7 @@ processMod options ovs extraPaths name = do
             codeToString signalCode
 
   when (optCabal options) $ do
-    let cabal = nm ++ ".cabal"
+    let cabal = "gi-" ++ map toLower nm ++ ".cabal"
     fname <- doesFileExist cabal >>=
              bool (return cabal)
                   (putStrLn (cabal ++ " exists, writing "
