@@ -150,7 +150,7 @@ genCabalProject gir deps modulePrefix =
                  ++ show major ++ "." ++ show minor
         line $ padTo 20 "build-depends: base >= 4.6 && <4.9,"
         indent $ do
-          line $ "gobject-introspection >= " ++ showVersion version
+          line $ "haskell-gi-base >= " ++ showVersion version
                  ++ " && < " ++ show (haskellGIAPIVersion + 1) ++ ","
           forM_ deps $ \dep -> do
               let depName = girNSName dep
