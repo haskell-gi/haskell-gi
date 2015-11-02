@@ -27,13 +27,14 @@ import Data.GI.Base.GError
 import Text.Show.Pretty (ppShow)
 
 import GI.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
-import GI.Cabal (cabalConfig, genCabalProject)
+import GI.Cabal (cabalConfig, setupHs, genCabalProject)
 import GI.Code (codeToString, genCode, evalCodeGen)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
 import GI.OverloadedSignals (genSignalInstances, genOverloadedSignalConnectors)
 import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
+import GI.ProjectInfo (licenseText)
 import GI.SymbolNaming (ucFirst)
 
 data Mode = GenerateCode | Dump | Attributes | Signals | Help
@@ -188,6 +189,10 @@ processMod options ovs extraPaths name = do
                writeFile fname (codeToString cabalCode)
                putStrLn "\t\t+ cabal.config"
                writeFile "cabal.config" (T.unpack cabalConfig)
+               putStrLn "\t\t+ Setup.hs"
+               writeFile "Setup.hs" (T.unpack setupHs)
+               putStrLn "\t\t+ LICENSE"
+               writeFile "LICENSE" (licenseText)
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ msg
 

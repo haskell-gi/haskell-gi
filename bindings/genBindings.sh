@@ -9,6 +9,7 @@ generate()
         pushd $mod > /dev/null
         rm -rf GI
         rm -f Setup.hs
+        rm -f LICENSE
         rm -f cabal.config
         rm -f *.cabal
         if test -f $mod*.typelib;
