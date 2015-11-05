@@ -13,7 +13,7 @@ import Data.List (intercalate)
 import Data.Text (pack, unpack, Text)
 
 import System.Directory (createDirectoryIfMissing, doesFileExist)
-import System.FilePath (splitPath, joinPath)
+import System.FilePath (splitDirectories, joinPath)
 import System.Console.GetOpt
 import System.Exit
 import System.IO (hPutStr, hPutStrLn, stderr)
@@ -99,7 +99,7 @@ outputPath options =
       Nothing -> return ("", ".")
       Just dir -> do
         createDirectoryIfMissing True dir
-        let prefix = intercalate "." (splitPath dir) ++ "."
+        let prefix = intercalate "." (splitDirectories dir) ++ "."
         return (prefix, dir)
 
 -- | Load the given API and dependencies, filtering them in the process.
