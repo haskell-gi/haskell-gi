@@ -1,0 +1,11 @@
+# build files
+dist
+
+# cabal sandbox
+.cabal-sandbox
+cabal.sandbox.config
+
+# misc
+*~
+*.bak
+*.swp
