@@ -17,7 +17,7 @@ import Control.Monad (forM, forM_, when)
 import Data.Bool (bool)
 import Data.List (intercalate, nub, (\\))
 import Data.Maybe (isJust)
-import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
+import Data.Typeable (TypeRep, typeOf)
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -90,9 +90,13 @@ wrapMaybe arg =
            -- type.
            TGList _ -> return False
            TGSList _ -> return False
-           _ -> if isNullable (argType arg)
-                then return True
-                else badIntroError $ "argument \"" ++ T.unpack (argName arg) ++ "\" is not of nullable type, but it is marked as such."
+           _ -> do
+             nullable <- isNullable (argType arg)
+             if nullable
+             then return True
+             else badIntroError $ "argument \"" ++ T.unpack (argName arg)
+                      ++ "\" is not of nullable type (" ++ show (argType arg)
+                      ++ "), but it is marked as such."
     else return False
 
 -- Given the list of arguments returns the list of constraints and the
@@ -299,10 +303,10 @@ prepareInCallback arg = do
                                         prefix ++ lcFirst n ++ "Wrapper")
                         _ -> error $ "prepareInCallback : Not an interface! " ++ ppShow arg
 
-  fC <- tyConName <$> typeRepTyCon <$> foreignType (argType arg)
+  when (scope == ScopeTypeAsync) $ do
+   ft <- show <$> foreignType (argType arg)
+   line $ ptrName ++ " <- callocMem :: IO (Ptr (" ++ ft ++ "))"
 
-  when (scope == ScopeTypeAsync) $
-       line $ ptrName ++ " <- callocBytes $ sizeOf (undefined :: " ++ fC ++ ")"
   wrapMaybe arg >>= bool
             (do
               let name' = prime name
@@ -609,7 +613,7 @@ genCallable n symbol callable throwsGError = do
     convertResult :: Map.Map String String -> ExcCodeGen String
     convertResult nameMap =
         if ignoreReturn || returnType callable == TBasicType TVoid
-        then return undefined
+        then return (error "convertResult: unreachable code reached, bug!")
         else do
             if returnMayBeNull callable
             then do
@@ -618,7 +622,12 @@ genCallable n symbol callable throwsGError = do
                     converted <- unwrappedConvertResult "result'"
                     line $ "return " ++ converted
                 return "maybeResult"
-            else unwrappedConvertResult "result"
+            else do
+              nullable <- isNullable (returnType callable)
+              when nullable $
+                 line $ "checkUnexpectedReturnNULL \"" ++ T.unpack symbol
+                          ++ "\" result"
+              unwrappedConvertResult "result"
 
         where
         unwrappedConvertResult rname = case returnType callable of

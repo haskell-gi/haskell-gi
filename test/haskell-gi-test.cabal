@@ -29,6 +29,7 @@ executable testGtk
                        gi-glib >= 0.2.44 && < 0.3,
                        gi-gdk >= 0.3.16 && < 0.4,
                        gi-gio >= 0.2.44 && < 0.3,
+                       gi-gobject >= 0.2 && < 0.3,
                        gi-gtk >= 0.3.16 && < 0.4,
                        text >= 1.0
 

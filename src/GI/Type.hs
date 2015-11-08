@@ -4,6 +4,7 @@ module GI.Type
     , Type(..)
     , io
     , ptr
+    , funptr
     , con
     , maybeT
     ) where
@@ -62,6 +63,9 @@ io t = "IO" `con` [t]
 
 ptr :: TypeRep -> TypeRep
 ptr t = "Ptr" `con` [t]
+
+funptr :: TypeRep -> TypeRep
+funptr t = "FunPtr" `con` [t]
 
 maybeT :: TypeRep -> TypeRep
 maybeT t = "Maybe" `con` [t]

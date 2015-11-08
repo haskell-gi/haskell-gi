@@ -698,8 +698,8 @@ foreignType t@(TInterface ns n) = do
     api <- findAPI t
     prefix <- qualify ns
     return $ case api of
-               Just (APICallback _) -> T.pack ("FunPtr " ++ prefix ++ n ++ "C")
-                                       `con` []
+               Just (APICallback _) ->
+                   funptr $ T.pack (prefix ++ n ++ "C") `con` []
                _ -> ptr $ T.pack (prefix ++ n) `con` []
 
 getIsScalar :: Type -> CodeGen Bool
@@ -737,12 +737,13 @@ isManaged t = do
 
 -- Returns whether the given type is nullable in the C sense,
 -- i.e. whether it can be set to NULL.
-isNullable :: Type -> Bool
-isNullable (TBasicType TVoid) = True
-isNullable (TBasicType TUTF8) = True
-isNullable (TBasicType TFileName) = True
-isNullable (TBasicType _) = False
-isNullable _ = True
+isNullable :: Type -> CodeGen Bool
+isNullable (TBasicType TVoid) = return True
+isNullable (TBasicType TUTF8) = return True
+isNullable (TBasicType TFileName) = return True
+isNullable t = do
+  ft <- foreignType t
+  return (tyConName (typeRepTyCon ft) `elem` ["Ptr", "FunPtr"])
 
 -- If the given type maps to a list in Haskell, return the type of the
 -- elements, and the function that maps over them.

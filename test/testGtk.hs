@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import BasicPrelude hiding (on, error)
 import qualified BasicPrelude as BP
@@ -7,6 +8,7 @@ import GI.GtkSignals () -- For signal instances
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
+import qualified GI.GObject as GObject
 import qualified GI.GLib as GLib
 import GI.Properties
 import GI.Signals
@@ -366,6 +368,17 @@ testArrayOfArrays = do
   Gio.desktopAppInfoSearch "text" >>= print
   putStrLn "+++ Array of array test done"
 
+testUnexpectedNullHandling :: IO ()
+testUnexpectedNullHandling = do
+  putStrLn "*** Unexpected NULL handling test"
+  builder <- builderNewFromString "<interface></interface>" (-1)
+  result <- catch (Just <$> builderGetObject builder "zzz")
+            (\(_ :: UnexpectedNullPointerReturn) -> return Nothing)
+  case (result :: Maybe GObject.Object) of
+    Nothing -> return ()
+    Just _ -> error "Unexpected success in builderGetObject!"
+  putStrLn "+++ Unexpected NULL handling test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -457,6 +470,7 @@ main = do
         testGVariant
         testCast
         testArrayOfArrays
+        testUnexpectedNullHandling
 
         widgetShowAll win
 
