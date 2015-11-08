@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables, TupleSections, OverloadedStrings #-}
 {- | Assorted utility functions for bindings. -}
 module Data.GI.Base.Utils
     ( whenJust
@@ -11,6 +11,7 @@ module Data.GI.Base.Utils
     , convertIfNonNull
     , callocBytes
     , callocBoxedBytes
+    , callocMem
     , allocBytes
     , allocMem
     , freeMem
@@ -19,6 +20,7 @@ module Data.GI.Base.Utils
     , safeFreeFunPtr
     , safeFreeFunPtrPtr
     , maybeReleaseFunPtr
+    , checkUnexpectedReturnNULL
     ) where
 
 #include <glib-object.h>
@@ -26,8 +28,11 @@ module Data.GI.Base.Utils
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative (Applicative, pure, (<$>), (<*>))
 #endif
+import Control.Exception (throwIO)
 import Control.Monad (void)
 
+import qualified Data.Text as T
+import Data.Monoid ((<>))
 import Data.Word
 
 import Foreign (peek)
@@ -35,7 +40,8 @@ import Foreign.C.Types (CSize(..))
 import Foreign.Ptr (Ptr, nullPtr, FunPtr, freeHaskellFunPtr)
 import Foreign.Storable (Storable(..))
 
-import Data.GI.Base.BasicTypes (GType(..), CGType, BoxedObject(..))
+import Data.GI.Base.BasicTypes (GType(..), CGType, BoxedObject(..),
+                                UnexpectedNullPointerReturn(..))
 
 -- | When the given value is of "Just a" form, execute the given action,
 -- otherwise do nothing.
@@ -91,6 +97,12 @@ foreign import ccall "g_malloc0" g_malloc0 ::
 {-# INLINE callocBytes #-}
 callocBytes :: Int -> IO (Ptr a)
 callocBytes n =  g_malloc0 (fromIntegral n)
+
+-- | Make a zero-filled allocation of enough size to hold the given
+-- `Storable` type, using the GLib allocator.
+{-# INLINE callocMem #-}
+callocMem :: forall a. Storable a => IO (Ptr a)
+callocMem = g_malloc0 $ (fromIntegral . sizeOf) (undefined :: a)
 
 foreign import ccall "g_boxed_copy" g_boxed_copy ::
     CGType -> Ptr a -> IO (Ptr a)
@@ -154,3 +166,14 @@ maybeReleaseFunPtr Nothing = return ()
 maybeReleaseFunPtr (Just f) = do
   peek f >>= freeHaskellFunPtr
   freeMem f
+
+-- | Check that the given pointer is not NULL. If it is, raise a
+-- `UnexpectedNullPointerReturn` exception.
+checkUnexpectedReturnNULL :: T.Text -> Ptr a -> IO ()
+checkUnexpectedReturnNULL fnName ptr
+    | ptr == nullPtr =
+        throwIO (UnexpectedNullPointerReturn {
+                   nullPtrErrorMsg = "Received unexpected nullPtr in \""
+                                     <> fnName <> "\"."
+                 })
+    | otherwise = return ()

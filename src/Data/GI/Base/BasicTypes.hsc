@@ -1,4 +1,5 @@
-{-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances #-}
+{-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances,
+  DeriveDataTypeable #-}
 -- | Basic types used in the bindings.
 module Data.GI.Base.BasicTypes
     (
@@ -28,6 +29,7 @@ module Data.GI.Base.BasicTypes
     , BoxedObject(..)
     , BoxedEnum(..)
     , GObject(..)
+    , UnexpectedNullPointerReturn(..)
 
     -- * Basic GLib \/ GObject types
     , GVariant(..)
@@ -48,7 +50,10 @@ module Data.GI.Base.BasicTypes
     , GDestroyNotify
     ) where
 
+import Control.Exception (Exception)
 import Data.Coerce (Coercible)
+import qualified Data.Text as T
+import Data.Typeable (Typeable)
 import Data.Word
 import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr)
@@ -150,6 +155,19 @@ class ForeignPtrNewtype a => GObject a where
     gobjectIsInitiallyUnowned :: a -> Bool
     -- | The `GType` for this object.
     gobjectType :: a -> IO GType
+
+-- | A common omission in the introspection data is missing (nullable)
+-- annotations for return types, when they clearly are nullable. (A
+-- common idiom is "Returns: valid value, or %NULL if something went
+-- wrong.")
+--
+-- Haskell wrappers will raise this exception if the return value is
+-- an unexpected `Foreign.Ptr.nullPtr`.
+data UnexpectedNullPointerReturn =
+    UnexpectedNullPointerReturn { nullPtrErrorMsg :: T.Text }
+                                deriving (Show, Typeable)
+
+instance Exception UnexpectedNullPointerReturn
 
 -- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "Data.GI.Base.GVariant" for further methods.
 newtype GVariant = GVariant (ForeignPtr GVariant)
