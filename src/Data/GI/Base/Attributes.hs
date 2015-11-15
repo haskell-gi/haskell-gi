@@ -102,6 +102,8 @@ module Data.GI.Base.Attributes (
   set
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
+
 import Data.Proxy (Proxy(..))
 
 import Data.GI.Base.GValue (GValue(..))
@@ -215,8 +217,8 @@ data AttrOp obj (tag :: AttrOpTag) where
              proxy (attr :: Symbol) -> (obj -> a -> b) -> AttrOp obj tag
 
 -- | Set a number of properties for some object.
-set :: forall o. o -> [AttrOp o 'AttrSet] -> IO ()
-set obj = mapM_ app
+set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
+set obj = liftIO . mapM_ app
  where
    resolve :: proxy attr -> Proxy (ResolveAttribute attr o)
    resolve _ = Proxy
@@ -233,9 +235,9 @@ set obj = mapM_ app
                       \v -> attrSet (resolve attr) obj (f obj v)
 
 -- | Get the value of an attribute for an object.
-get :: forall info attr obj proxy.
+get :: forall info attr obj proxy m.
        (info ~ ResolveAttribute attr obj, AttrInfo info,
         (AttrBaseTypeConstraint info) obj,
-        AttrOpAllowed 'AttrGet info) =>
-        obj -> proxy (attr :: Symbol) -> IO (AttrGetType info)
-get o _ = attrGet (Proxy :: Proxy info) o
+        AttrOpAllowed 'AttrGet info, MonadIO m) =>
+        obj -> proxy (attr :: Symbol) -> m (AttrGetType info)
+get o _ = liftIO $ attrGet (Proxy :: Proxy info) o

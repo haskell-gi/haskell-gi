@@ -42,7 +42,8 @@ library
   build-depends:       base >= 4.7 && < 5,
                        bytestring,
                        containers,
-                       text >= 1.0
+                       text >= 1.0,
+                       transformers
 
   build-tools:         hsc2hs
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse

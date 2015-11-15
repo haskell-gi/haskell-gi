@@ -17,6 +17,8 @@ module Data.GI.Base.Signals
       SignalInfo(..)
     ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
+
 import Foreign
 import Foreign.C
 
@@ -58,13 +60,13 @@ data SignalConnectMode = SignalConnectBefore  -- ^ Run before the default handle
 -- handler is to be run before the default handler.
 --
 -- > on = connectSignal SignalConnectBefore
-on :: forall signal extra o info constraint proxy.
+on :: forall signal extra o info constraint proxy m.
       (GObject o,
        HasSignal signal o, info ~ ResolveSignal signal o, SignalInfo info,
-       KnownSymbol extra, constraint o) =>
+       KnownSymbol extra, constraint o, MonadIO m) =>
       o -> proxy (signal :: Symbol) (extra :: Symbol) (constraint :: * -> Constraint)
-        -> HaskellCallbackType info -> IO SignalHandlerId
-on o p c = connectSignal (resolve p) o c SignalConnectBefore
+        -> HaskellCallbackType info -> m SignalHandlerId
+on o p c = liftIO $ connectSignal (resolve p) o c SignalConnectBefore
     where resolve :: proxy signal extra constraint ->
                      SignalProxy (ResolveSignal signal o) extra constraint
           resolve _ = SignalProxy
@@ -72,13 +74,13 @@ on o p c = connectSignal (resolve p) o c SignalConnectBefore
 -- | Connect a signal to a handler, running the handler after the default one.
 --
 -- > after = connectSignal SignalConnectAfter
-after :: forall signal extra o info constraint proxy.
+after :: forall signal extra o info constraint proxy m.
          (GObject o,
           HasSignal signal o, info ~ ResolveSignal signal o, SignalInfo info,
-          KnownSymbol extra, constraint o) =>
+          KnownSymbol extra, constraint o, MonadIO m) =>
          o -> proxy (signal :: Symbol) (extra :: Symbol) (constraint :: * -> Constraint)
-           -> HaskellCallbackType info -> IO SignalHandlerId
-after o p c = connectSignal (resolve p) o c SignalConnectAfter
+           -> HaskellCallbackType info -> m SignalHandlerId
+after o p c = liftIO $ connectSignal (resolve p) o c SignalConnectAfter
     where resolve :: proxy signal extra constraint ->
                      SignalProxy (ResolveSignal signal o) extra constraint
           resolve _ = SignalProxy

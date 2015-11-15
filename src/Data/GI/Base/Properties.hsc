@@ -74,6 +74,7 @@ module Data.GI.Base.Properties
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad ((>=>))
+import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import qualified Data.ByteString.Char8 as B
 import Data.Text (Text)
@@ -105,9 +106,11 @@ foreign import ccall "dbg_g_object_newv" g_object_newv ::
 -- | Construct a GObject given the constructor and a list of settable
 -- attributes. AttrOps are always constructible, so we don't need to
 -- enforce constraints here.
-new :: forall o. GObject o => (ForeignPtr o -> o) ->
-       [AttrOp o 'AttrConstruct] -> IO o
-new constructor attrs = do
+new :: forall o m. (GObject o, MonadIO m)
+    => (ForeignPtr o -> o)
+    -> [AttrOp o 'AttrConstruct]
+    -> m o
+new constructor attrs = liftIO $ do
   props <- mapM construct attrs
   let nprops = length props
   params <- mallocBytes (nprops*gparameterSize)
