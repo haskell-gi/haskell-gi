@@ -57,6 +57,7 @@ executable haskell-gi
                        GI.GIR.Method,
                        GI.GIR.Object,
                        GI.GIR.Parser,
+                       GI.GIR.Property,
                        GI.GIR.Repository,
                        GI.GIR.Signal,
                        GI.GIR.Struct,
