@@ -12,10 +12,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
-import Data.Version (Version(..),  showVersion)
-#if MIN_VERSION_base(4,8,0)
-import Data.Version (makeVersion)
-#endif
+import Data.Version (Version(..))
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -44,22 +41,25 @@ setupHs = T.unlines ["#!/usr/bin/env runhaskell",
 haskellGIAPIVersion :: Int
 haskellGIAPIVersion = (head . versionBranch) version
 
-#if !MIN_VERSION_base(4,8,0)
--- Create a version without tags, which we ignore anyway. The
--- versionTags constructor field is deprecated in base 4.8.0.
-makeVersion :: [Int] -> Version
-makeVersion branch = Version branch []
-#endif
+-- | Obtain the minor version. That is, if the given version numbers
+-- are x.y.z, so branch is [x,y,z], we return y.
+minorVersion :: [Int] -> Int
+minorVersion (_:y:_) = y
+minorVersion v = error $ "Programming error: the haskell-gi version does not have at least two components: " ++ show v ++ "."
 
-haskellGIRevision :: String
-haskellGIRevision =
-    showVersion $ makeVersion (tail (versionBranch version))
+-- | Obtain the haskell-gi minor version. Notice that we only append
+-- the minor version here, ignoring revisions. (So if the version is
+-- x.y.z, we drop the "z" part.) This gives us a mechanism for
+-- releasing bug-fix releases of haskell-gi without increasing the
+-- necessary dependency on haskell-gi-base, which only depends on x.y.
+haskellGIMinor :: Int
+haskellGIMinor = minorVersion (versionBranch version)
 
 {- |
 
-If the haskell-gi version is of the form x.y and the pkgconfig version
-of the package being wrapped is a.b.c, this gives something of the
-form x.a.b.y.
+If the haskell-gi version is of the form x.y[.z] and the pkgconfig
+version of the package being wrapped is a.b.c, this gives something of
+the form x.a.b.y.
 
 This strange seeming-rule is so that the packages that we produce
 follow the PVP, assuming that the package being wrapped follows the
@@ -84,7 +84,7 @@ this one), so think carefully before using this override!
 giModuleVersion :: Int -> Int -> Text
 giModuleVersion major minor = T.pack $
     show haskellGIAPIVersion ++ "." ++ show major ++ "."
-             ++ show minor ++ "." ++ haskellGIRevision
+             ++ show minor ++ "." ++ show haskellGIMinor
 
 -- | Smallest version not backwards compatible with the current
 -- version (according to PVP).
@@ -159,8 +159,9 @@ genCabalProject gir deps modulePrefix =
                  ++ show major ++ "." ++ show minor
         line $ padTo 20 "build-depends: base >= 4.7 && <5,"
         indent $ do
-          line $ "haskell-gi-base >= " ++ showVersion version
-                 ++ " && < " ++ show (haskellGIAPIVersion + 1) ++ ","
+          line $ "haskell-gi-base >= "
+                   ++ show haskellGIAPIVersion ++ "." ++ show haskellGIMinor
+                   ++ " && < " ++ show (haskellGIAPIVersion + 1) ++ ","
           forM_ deps $ \dep -> do
               let depName = girNSName dep
                   depVersion = girNSVersion dep
