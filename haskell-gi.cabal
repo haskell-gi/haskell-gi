@@ -40,7 +40,7 @@ executable haskell-gi
                        text >= 1.0,
                        free
 
-  build-tools:         hsc2hs, c2hs
+  build-tools:         hsc2hs
   hs-source-dirs:      src
   other-modules:       GI.GIR.Alias,
                        GI.GIR.Arg,
