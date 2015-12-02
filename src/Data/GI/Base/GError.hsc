@@ -65,6 +65,8 @@ import Foreign.C
 import Control.Exception
 import Data.Text (Text)
 import Data.Typeable (Typeable)
+import Data.Int
+import Data.Word
 
 import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..))
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
@@ -87,7 +89,7 @@ instance BoxedObject GError where
     boxedType _ = g_error_get_type
 
 -- | A GQuark.
-type GQuark = {# type GQuark #}
+type GQuark = #type GQuark
 
 -- | A code used to identify the "namespace" of the error. Within each error
 --   domain all the error codes are defined in an enumeration. Each gtk\/gnome
@@ -101,7 +103,7 @@ type GErrorDomain  = GQuark
 --   enumeration type for each error domain. Of course which enumeration to use
 --   depends on the error domain, but if you use 'catchGErrorJustDomain' or
 --   'handleGErrorJustDomain', this is worked out for you automatically.
-type GErrorCode = {# type gint #}
+type GErrorCode = #type gint
 
 -- | A human readable error message.
 type GErrorMessage = Text
@@ -121,19 +123,19 @@ gerrorNew domain code message =
 gerrorDomain :: GError -> IO GQuark
 gerrorDomain (GError fptr) =
     withForeignPtr fptr $ \ptr ->
-      peek $ ptr `plusPtr` {# offsetof GError->domain #}
+      peek $ ptr `plusPtr` #{offset GError, domain}
 
 -- | The numeric code for the given `GError`.
 gerrorCode :: GError -> IO GErrorCode
 gerrorCode (GError fptr) =
     withForeignPtr fptr $ \ptr ->
-        peek $ ptr `plusPtr` {# offsetof GError->code #}
+        peek $ ptr `plusPtr` #{offset GError, code}
 
 -- | A text message describing the `GError`.
 gerrorMessage :: GError -> IO GErrorMessage
 gerrorMessage (GError fptr) =
     withForeignPtr fptr $ \ptr ->
-      (peek $ ptr `plusPtr` {# offsetof GError->message #}) >>= cstringToText
+      (peek $ ptr `plusPtr` #{offset GError, message}) >>= cstringToText
 
 -- | Each error domain's error enumeration type should be an instance of this
 --   class. This class helps to hide the raw error and domain codes from the
