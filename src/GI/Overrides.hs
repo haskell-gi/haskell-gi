@@ -32,7 +32,7 @@ data Overrides = Overrides {
       -- | Version number for the generated .cabal package.
       cabalPkgVersion :: Maybe Text,
       -- | Prefered version of the namespace
-      nsChooseVersion :: M.Map String String
+      nsChooseVersion :: M.Map Text Text
 }
 
 -- | Construct the generic config for a module.
@@ -135,7 +135,7 @@ parsePkgConfigName t =
 parseNsVersion :: Text -> Parser
 parseNsVersion (T.words -> [ns,version]) = tell $
     defaultOverrides {nsChooseVersion =
-                          M.singleton (T.unpack ns) (T.unpack version)}
+                          M.singleton ns version}
 parseNsVersion t =
     throwError ("namespace-version syntax is of the form\n" <>
                 "\t\"namespace-version namespace version\"\n" <>

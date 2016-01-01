@@ -106,19 +106,21 @@ outputPath options =
 loadFilteredAPI :: Bool -> Overrides -> [FilePath] -> Text
                 -> IO (M.Map Name API, M.Map Name API)
 loadFilteredAPI verbose ovs extraPaths name = do
-  (gir, girDeps) <- loadGIRInfo verbose name Nothing extraPaths
+  let version = M.lookup name (nsChooseVersion ovs)
+  (gir, girDeps) <- loadGIRInfo verbose name version extraPaths
   return $ filterAPIsAndDeps ovs gir girDeps
 
 -- | Load a dependency without further postprocessing.
-loadRawAPIs :: Bool -> [FilePath] -> Text -> IO [(Name, API)]
-loadRawAPIs verbose extraPaths name = do
-  gir <- loadRawGIRInfo verbose name Nothing extraPaths
+loadRawAPIs :: Bool -> Overrides -> [FilePath] -> Text -> IO [(Name, API)]
+loadRawAPIs verbose ovs extraPaths name = do
+  let version = M.lookup name (nsChooseVersion ovs)
+  gir <- loadRawGIRInfo verbose name version extraPaths
   return (girAPIs gir)
 
 -- Generate all generic accessor functions ("_label", for example).
 genGenericAttrs :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
 genGenericAttrs options ovs modules extraPaths = do
-  apis <- mapM (loadRawAPIs (optVerbose options) extraPaths) modules
+  apis <- mapM (loadRawAPIs (optVerbose options) ovs extraPaths) modules
   let allAPIs = M.unions (map M.fromList apis)
       cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
@@ -131,7 +133,7 @@ genGenericAttrs options ovs modules extraPaths = do
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
 genGenericConnectors :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
 genGenericConnectors options ovs modules extraPaths = do
-  apis <- mapM (loadRawAPIs (optVerbose options) extraPaths) modules
+  apis <- mapM (loadRawAPIs (optVerbose options) ovs extraPaths) modules
   let allAPIs = M.unions (map M.fromList apis)
       cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
@@ -145,7 +147,8 @@ genGenericConnectors options ovs modules extraPaths = do
 -- for this module.
 processMod :: Options -> Overrides -> [FilePath] -> String -> IO ()
 processMod options ovs extraPaths name = do
-  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) Nothing extraPaths
+  let version = M.lookup (T.pack name) (nsChooseVersion ovs)
+  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) version extraPaths
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
 
@@ -197,9 +200,10 @@ processMod options ovs extraPaths name = do
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ msg
 
-dump :: Options -> Overrides -> String -> IO ()
+dump :: Options -> Overrides -> Text -> IO ()
 dump options ovs name = do
-  (doc, _) <- loadGIRInfo (optVerbose options) (pack name) (pack <$> M.lookup name (nsChooseVersion ovs)) (optSearchPaths options)
+  let version = M.lookup name (nsChooseVersion ovs)
+  (doc, _) <- loadGIRInfo (optVerbose options) name version (optSearchPaths options)
   mapM_ (putStrLn . ppShow) (girAPIs doc)
 
 process :: Options -> [String] -> IO ()
@@ -216,7 +220,7 @@ process options names = do
         GenerateCode -> forM_ names (processMod options ovs extraPaths)
         Attributes -> genGenericAttrs options ovs (map T.pack names) extraPaths
         Signals -> genGenericConnectors options ovs (map T.pack names) extraPaths
-        Dump -> forM_ names (dump options ovs)
+        Dump -> forM_ names (dump options ovs . pack)
         Help -> putStr showHelp
 
 foreign import ccall "g_type.h g_type_init"
