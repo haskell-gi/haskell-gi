@@ -223,12 +223,8 @@ process options names = do
         Dump -> forM_ names (dump options ovs . pack)
         Help -> putStr showHelp
 
-foreign import ccall "g_type.h g_type_init"
-    g_type_init :: IO ()
-
 main :: IO ()
 main = printGError $ do
-    g_type_init -- Initialize GLib's type system.
     args <- getArgs
     let (actions, nonOptions, errors) = getOpt RequireOrder optDescrs args
         options  = foldl (.) id actions defaultOptions
