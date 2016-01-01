@@ -82,15 +82,15 @@ this one), so think carefully before using this override!
 
 -}
 giModuleVersion :: Int -> Int -> Text
-giModuleVersion major minor = T.pack $
-    show haskellGIAPIVersion ++ "." ++ show major ++ "."
-             ++ show minor ++ "." ++ show haskellGIMinor
+giModuleVersion major minor =
+    (T.pack . intercalate "." . map show) [haskellGIAPIVersion, major, minor,
+                                           haskellGIMinor]
 
--- | Smallest version not backwards compatible with the current
--- version (according to PVP).
-nextIncompatibleVersion :: Int -> Text
-nextIncompatibleVersion major = T.pack $
-    show haskellGIAPIVersion ++ "." ++ show (major+1)
+-- | Determine the next version for which the minor of the package has
+-- been bumped.
+giNextMinor :: Int -> Int -> Text
+giNextMinor major minor = (T.pack . intercalate "." . map show)
+                          [haskellGIAPIVersion, major, minor+1]
 
 -- | Determine the pkg-config name and installed version (major.minor
 -- only) for a given module, or throw an exception if that fails.
@@ -170,7 +170,9 @@ genCabalProject gir deps modulePrefix =
                                          depPackages (verbose cfg) pkMap
               line . T.unpack $ "gi-" <> T.toLower depName <> " >= "
                        <> giModuleVersion depMajor depMinor
-                       <> " && < " <> nextIncompatibleVersion depMajor <> ","
+                       <> " && < "
+                       <> giNextMinor depMajor depMinor
+                       <> ","
           -- Our usage of these is very basic, no reason to put any
           -- strong upper bounds.
           line "bytestring >= 0.10,"
