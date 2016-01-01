@@ -18,4 +18,4 @@ build()
 mkdir -p sdists
 rm -f sdists/*
 
-build GLib JavaScriptCore GObject Atk Gio Soup cairo Pango GdkPixbuf Gdk Gtk WebKit Vte Notify
+build GLib JavaScriptCore-3.0 JavaScriptCore-4.0 GObject Atk Gio Soup cairo Pango GdkPixbuf Gdk Gtk WebKit WebKit2 Vte Notify

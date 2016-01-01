@@ -4,17 +4,18 @@ set -e
 
 generate()
 {
-    for mod in $@; do
-	mkdir -p $mod
-        pushd $mod > /dev/null
+    for modName in $@; do
+	mkdir -p $modName
+        pushd $modName > /dev/null
         rm -rf GI
         rm -f Setup.hs
         rm -f LICENSE
         rm -f cabal.config
         rm -f *.cabal
-        if test -f $mod*.typelib;
+        mod=$(echo $modName | sed -e 's/-.*//')
+        if test -f $mod*.gir;
         then
-            echo "Found locally installed typelib, using it."
+            echo "Found locally installed gir, using it."
             SEARCH_PATH="-s."
         fi
         if test -f $mod.overrides;
@@ -28,4 +29,4 @@ generate()
     done
 }
 
-generate Atk cairo Gdk GdkPixbuf Gio GLib GObject Gtk Notify Pango Soup Vte JavaScriptCore WebKit
+generate Atk cairo Gdk GdkPixbuf Gio GLib GObject Gtk Notify Pango Soup Vte JavaScriptCore-3.0 JavaScriptCore-4.0 WebKit WebKit2
