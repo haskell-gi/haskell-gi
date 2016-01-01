@@ -36,7 +36,7 @@ executable haskell-gi
                        bytestring,
                        xdg-basedir,
                        xml-conduit >= 1.3.0,
-                       haskell-gi-base == 0.10.*,
+                       haskell-gi-base == 0.11.*,
                        text >= 1.0,
                        free
 
