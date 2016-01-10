@@ -1,16 +1,17 @@
 module GI.Code
     ( Code(..)
+    , ModuleInfo(..)
     , BaseCodeGen
     , CodeGen
     , ExcCodeGen
     , CGError(..)
     , genCode
     , evalCodeGen
-    , codeToString
+    , codeToText
     , loadDependency
     , getDeps
     , recurse
-    , recurse'
+    , tellCode
     , handleCGExc
     , describeCGError
     , notImplementedError
@@ -20,12 +21,11 @@ module GI.Code
     , line
     , blank
     , group
-    , foreignImport
+    , submodule
 
     , findAPI
     , findAPIByName
     , getAPIs
-    , injectAPIs
 
     , config
     ) where
@@ -33,12 +33,16 @@ module GI.Code
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad.RWS
+import Control.Monad.Reader
+import Control.Monad.State.Strict
 import Control.Monad.Except
+import Data.Monoid ((<>))
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
 import qualified Data.Map as M
 import qualified Data.Sequence as S
 import qualified Data.Set as Set
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import GI.API (API, Name(..))
 import GI.Config (Config(..))
@@ -49,7 +53,6 @@ data Code
     | Line String
     | Indent Code
     | Sequence (Seq Code)
-    | ForeignImport Code
     | Group Code
     deriving (Eq, Show)
 
@@ -65,9 +68,30 @@ instance Monoid Code where
     a `mappend` b = Sequence (a <| b <| S.empty)
 
 type Deps = Set.Set String
-data CodeGenState = CodeGenState {
-      moduleDeps :: Deps,
-      loadedAPIs :: M.Map Name API }
+type ModuleName = [Text]
+
+-- | Information on a generated module.
+data ModuleInfo = ModuleInfo {
+      moduleName :: ModuleName -- ^ Full module name: ["GI", "Gtk", "Label"].
+    , moduleCode :: Code       -- ^ Generated code for the module.
+    , submodules :: M.Map Text ModuleInfo -- ^ Indexed by the relative
+                                          -- module name.
+    , moduleDeps :: Deps -- ^ Set of dependencies for this module.
+    }
+
+-- | Generate the empty module.
+emptyModule :: ModuleName -> ModuleInfo
+emptyModule m = ModuleInfo { moduleName = m
+                           , moduleCode = NoCode
+                           , submodules = M.empty
+                           , moduleDeps = Set.empty
+                           }
+
+-- | Information for the code generator.
+data CodeGenConfig = CodeGenConfig {
+      hConfig     :: Config        -- ^ Ambient config.
+    , loadedAPIs :: M.Map Name API -- ^ APIs available to the generator.
+    }
 
 data CGError = CGErrorNotImplemented String
              | CGErrorBadIntrospectionInfo String
@@ -75,7 +99,7 @@ data CGError = CGErrorNotImplemented String
                deriving (Show)
 
 type BaseCodeGen excType a =
-    RWST Config Code CodeGenState (ExceptT excType IO) a
+    ReaderT CodeGenConfig (StateT ModuleInfo (ExceptT excType IO)) a
 
 -- | The code generator monad, for generators that cannot throw
 -- errors. The fact that they cannot throw errors is encoded in the
@@ -89,87 +113,114 @@ type CodeGen a = forall e. BaseCodeGen e a
 -- | Code generators that can throw errors.
 type ExcCodeGen a = BaseCodeGen CGError a
 
+-- | Run a `CodeGen` with given `Config` and initial `ModuleInfo`,
+-- returning either the resulting exception, or the result and final
+-- state of the codegen.
+runCodeGen :: BaseCodeGen e a -> CodeGenConfig -> ModuleInfo ->
+              IO (Either e (a, ModuleInfo))
+runCodeGen cg cfg state =
+    liftIO (runExceptT (runStateT (runReaderT cg cfg) state))
+
+-- | Run the given code generator using the state and config of an
+-- ambient CodeGen, but without adding the generated code to
+-- `moduleCode`, instead returning it explicitly.
+recurseCG :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
+recurseCG cg = do
+  cfg <- ask
+  oldInfo <- get
+  -- Start the subgenerator with no code and no submodules.
+  let info = oldInfo { moduleCode = NoCode, submodules = M.empty }
+  liftIO (runCodeGen cg cfg info) >>= \case
+     Left e -> throwError e
+     Right (r, new) -> put (mergeInfoState oldInfo new) >>
+                       return (r, moduleCode new)
+
+-- | Like `recurseCG`, but for generators returning a unit value, where
+-- we can just drop the result.
+recurse :: CodeGen () -> CodeGen Code
+recurse cg = snd <$> recurseCG cg
+
+-- | Merge the dependencies and submodules of the two given
+-- `ModuleInfo`s (but not the generated code).
+mergeInfoState :: ModuleInfo -> ModuleInfo -> ModuleInfo
+mergeInfoState oldState newState =
+    let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
+        newSubmodules = M.unionWith mergeInfo (submodules oldState) (submodules newState)
+    in oldState {moduleDeps = newDeps, submodules = newSubmodules}
+
+-- | Merge the infos, including code too.
+mergeInfo :: ModuleInfo -> ModuleInfo -> ModuleInfo
+mergeInfo oldInfo newInfo =
+    let info = mergeInfoState oldInfo newInfo
+    in info {moduleCode = moduleCode oldInfo <> moduleCode newInfo}
+
+-- | Add the given submodule to the list of submodules of the current
+-- module.
+addSubmodule :: Text -> ModuleInfo -> ModuleInfo -> ModuleInfo
+addSubmodule modName submodule current = current { submodules = M.insertWith mergeInfo modName submodule (submodules current)}
+
+-- | Run the given CodeGen in order to generate a submodule of the
+-- current module.
+submodule :: Text -> BaseCodeGen e () -> BaseCodeGen e ()
+submodule modName cg = do
+  cfg <- ask
+  oldInfo <- get
+  let info = emptyModule (moduleName oldInfo ++ [modName])
+  liftIO (runCodeGen cg cfg info) >>= \case
+         Left e -> throwError e
+         Right (_, smInfo) -> modify' (addSubmodule modName smInfo)
+
+-- | Try running the given `action`, and if it fails run `fallback`
+-- instead.
+handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
+handleCGExc fallback
+ action = do
+    cfg <- ask
+    oldInfo <- get
+    liftIO (runCodeGen action cfg oldInfo) >>= \case
+        Left e -> fallback e
+        Right (r, newInfo) -> do
+            put (mergeInfo oldInfo newInfo)
+            return r
+
+-- | Return the currently loaded set of dependencies.
+getDeps :: CodeGen Deps
+getDeps = moduleDeps <$> get
+
+-- | Return the ambient configuration for the code generator.
+config :: CodeGen Config
+config = hConfig <$> ask
+
+-- | Return the list of APIs available to the generator.
+getAPIs :: CodeGen (M.Map Name API)
+getAPIs = loadedAPIs <$> ask
+
 -- | Due to the `forall` in the definition of `CodeGen`, if we want to
 -- run the monad transformer stack until we get an `IO` action, our
 -- only option is ignoring the possible error code from
 -- `runExceptT`. This is perfectly safe, since there is no way to
 -- construct a computation in the `CodeGen` monad that throws an
 -- exception, due to the higher rank type.
-unwrapCodeGen :: Config -> CodeGenState -> CodeGen a ->
-                 IO (a, CodeGenState, Code)
-unwrapCodeGen cfg state cg =
-    runExceptT (runRWST cg cfg state) >>= \case
+unwrapCodeGen :: CodeGen a -> CodeGenConfig -> ModuleInfo ->
+                 IO (a, ModuleInfo)
+unwrapCodeGen cg cfg info =
+    runCodeGen cg cfg info >>= \case
         Left _ -> error "unwrapCodeGen:: The impossible happened!"
-        Right (r, s, c) -> return (r, s, c)
+        Right (r, newInfo) -> return (r, newInfo)
 
--- | Run the given code generator, merging its resulting state into
--- the ambient state, and turning its output into a value.
-recurse :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
-recurse cg = do
-    r <- ask
-    oldState <- get
-    liftIO (runExceptT $ runRWST cg r oldState) >>= \case
-        Left e -> throwError e
-        Right (r, st, c) -> put (mergeState oldState st) >> return (r, c)
+-- | Like `evalCodeGen`, but discard the resulting output value.
+genCode :: Config -> M.Map Name API -> ModuleName -> CodeGen () ->
+           IO ModuleInfo
+genCode cfg apis mName cg = snd <$> evalCodeGen cfg apis mName cg
 
--- | Try running the given `action`, and if it fails run `fallback`
--- instead.
-handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
-handleCGExc fallback action = do
-    r <- ask
-    oldState <- get
-    liftIO (runExceptT $ runRWST action r oldState) >>= \case
-        Left e -> fallback e
-        Right (r, s, c) -> do
-            put $ mergeState oldState s
-            tell c
-            return r
-
-emptyState :: CodeGenState
-emptyState = CodeGenState {moduleDeps = Set.empty
-                          ,loadedAPIs = M.empty }
-
-getDeps :: CodeGen Deps
-getDeps = moduleDeps <$> get
-
-getAPIs :: CodeGen (M.Map Name API)
-getAPIs = loadedAPIs <$> get
-
--- | Inject the given APIs into loaded set.
-injectAPIs :: [(Name, API)] -> CodeGen()
-injectAPIs newAPIs = do
-  oldState <- get
-  put $ oldState {loadedAPIs =
-                      M.union (loadedAPIs oldState) (M.fromList newAPIs)}
-
--- | Merge two states of a code generator.
-mergeState :: CodeGenState -> CodeGenState -> CodeGenState
-mergeState oldState newState =
-    -- If no dependencies were added we do not need to merge.
-    if Set.size (moduleDeps oldState) /= Set.size (moduleDeps newState)
-    then let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
-             newAPIs = M.union (loadedAPIs oldState) (loadedAPIs newState)
-         in CodeGenState {moduleDeps = newDeps, loadedAPIs = newAPIs}
-    else oldState
-
--- | Run a code generator, and return the dependencies encountered
--- when generating code.
-genCode :: Config -> M.Map Name API -> CodeGen () -> IO (Deps, Code)
-genCode cfg apis cg = do
-    (_, st, code) <- unwrapCodeGen cfg (emptyState {loadedAPIs = apis}) cg
-    return (moduleDeps st, code)
-
--- | Like `genCode`, but keep the final value and output, discarding
--- the state.
-evalCodeGen :: Config -> M.Map Name API -> CodeGen a -> IO (a, Code)
-evalCodeGen cfg apis cg = do
-  (r, _, code) <- unwrapCodeGen cfg (emptyState {loadedAPIs = apis}) cg
-  return (r, code)
-
--- | Like `recurse`, but for generators returning a unit value, where
--- we can just drop the result.
-recurse' :: CodeGen () -> CodeGen Code
-recurse' cg = snd <$> recurse cg
+-- | Run a code generator, and return the information for the
+-- generated module together with the return value of the generator.
+evalCodeGen :: Config -> M.Map Name API -> ModuleName -> CodeGen a ->
+               IO (a, ModuleInfo)
+evalCodeGen cfg apis mName cg = do
+  let initialInfo = emptyModule mName
+      cfg' = CodeGenConfig {hConfig = cfg, loadedAPIs = apis}
+  unwrapCodeGen cg cfg' initialInfo
 
 -- | Mark the given dependency as used by the module.
 loadDependency :: String -> CodeGen ()
@@ -208,42 +259,43 @@ findAPIByName n@(Name ns _) = do
         Nothing ->
             error $ "couldn't find API description for " ++ ns ++ "." ++ name n
 
-config :: CodeGen Config
-config = ask
+-- | Add some code to the current generator.
+tellCode :: Code -> CodeGen ()
+tellCode c = modify' (\s -> s {moduleCode = moduleCode s <> c})
 
+-- | Print out a (newline-terminated) line.
 line :: String -> CodeGen ()
-line = tell . Line
+line = tellCode . Line
 
+-- | A blank line
 blank :: CodeGen ()
 blank = line ""
 
+-- | Increase the indent level for code generation.
 indent :: BaseCodeGen e a -> BaseCodeGen e a
 indent cg = do
-  (x, code) <- recurse cg
-  tell $ Indent code
+  (x, code) <- recurseCG cg
+  tellCode (Indent code)
   return x
 
+-- | Group a set of related code.
 group :: BaseCodeGen e a -> BaseCodeGen e a
 group cg = do
-  (x, code) <- recurse cg
-  tell $ Group code
+  (x, code) <- recurseCG cg
+  tellCode (Group code)
   blank
   return x
 
-foreignImport :: BaseCodeGen e a -> BaseCodeGen e a
-foreignImport cg = do
-  (a, c) <- recurse cg
-  tell $ ForeignImport c
-  return a
+-- | Return a text representation of the `Code`.
+codeToText :: Code -> Text
+codeToText c = T.concat $ str 0 c []
+    where
+      str :: Int -> Code -> [Text] -> [Text]
+      str _ NoCode cont = cont
+      str n (Line s) cont = T.pack (replicate (n * 4) ' ' ++ s ++ "\n") : cont
+      str n (Indent c) cont = str (n + 1) c cont
+      str n (Sequence s) cont = deseq n (S.viewl s) cont
+      str n (Group c) cont = str n c cont
 
-codeToString c = unlines $ str 0 c []
-    where str _ NoCode cont = cont
-          str n (Line s) cont = (replicate (n * 4) ' ' ++ s) : cont
-          str n (Indent c) cont = str (n + 1) c cont
-          str n (ForeignImport c) cont = str n c cont
-          str n (Sequence s) cont = deseq n (S.viewl s) cont
-          -- str n (Sequence s) cont = F.foldr (\code rest -> str n code : rest) cont s
-          str n (Group c) cont = str n c cont
-
-          deseq _ S.EmptyL cont = cont
-          deseq n (c :< cs) cont = str n c (deseq n (S.viewl cs) cont)
+      deseq _ S.EmptyL cont = cont
+      deseq n (c :< cs) cont = str n c (deseq n (S.viewl cs) cont)

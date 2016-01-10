@@ -7,7 +7,6 @@ module GI.OverloadedSignals
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when)
-import Control.Monad.Writer (tell)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -136,7 +135,7 @@ genSignalInstances name apis modulePrefix = do
   let mp = (modulePrefix ++)
       nm = ucFirst name
 
-  code <- recurse' $ forM_ apis genSignals
+  code <- recurse $ forM_ apis genSignals
 
   line   "-- Generated code."
   blank
@@ -168,4 +167,4 @@ genSignalInstances name apis modulePrefix = do
   line $ "import " ++ modulePrefix ++ nm
   blank
 
-  tell code
+  tellCode code

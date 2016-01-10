@@ -10,6 +10,7 @@ module GI.ProjectInfo
     ) where
 
 import Data.FileEmbed (embedStringFile)
+import Data.Text (Text)
 
 homepage :: String
 homepage = "https://github.com/haskell-gi/haskell-gi"
@@ -23,5 +24,5 @@ maintainers = "Iñaki García Etxebarria (garetxe@gmail.com)"
 license :: String
 license = "LGPL-2.1"
 
-licenseText :: String
+licenseText :: Text
 licenseText = $(embedStringFile "LICENSE")

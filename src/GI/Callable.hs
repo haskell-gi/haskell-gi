@@ -52,7 +52,7 @@ hOutType callable outArgs ignoreReturn = do
              _         -> "(,)" `con` (maybeHReturnType : hOutArgTypes)
 
 mkForeignImport :: Text -> Callable -> Bool -> CodeGen ()
-mkForeignImport symbol callable throwsGError = foreignImport $ do
+mkForeignImport symbol callable throwsGError = do
     line first
     indent $ do
         mapM_ (\a -> line =<< fArgStr a) (args callable)

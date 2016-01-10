@@ -10,7 +10,6 @@ import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
 import Control.Monad (forM, forM_, when, unless, filterM)
-import Control.Monad.Writer (tell)
 import Data.List (intercalate, nub)
 import Data.Tuple (swap)
 import Data.Maybe (fromJust, fromMaybe)
@@ -26,6 +25,7 @@ import GI.API
 import GI.Callable (genCallable)
 import GI.Constant (genConstant)
 import GI.Code
+import GI.Config (Config)
 import GI.GObject
 import GI.Inheritance (instanceTree)
 import GI.Signal (genSignal, genCallback)
@@ -477,42 +477,46 @@ genPrelude name modulePrefix = do
     line "import Data.GI.Base.Utils"
     blank
 
-genModule :: String -> [(Name, API)] -> String -> CodeGen ()
-genModule name apis modulePrefix = do
+genModuleInfo :: String -> String -> CodeGen ()
+genModuleInfo name modulePrefix = do
   let mp = (modulePrefix ++)
       name' = ucFirst name
+  apis <- getAPIs
 
-  -- Any module depends on itself, load the information onto the state
-  -- of the monad. This has to be done early, so symbolFromFunction
-  -- above has access to it. It would probably be better to prune the
-  -- duplicated method/functions in advance, and get rid of
-  -- symbolFromFunction and this loadDependency altogether.
-  loadDependency name
-
-  -- Some API symbols are embedded into structures, extract these and
-  -- inject them into the set of APIs loaded and being generated.
-  let embeddedAPIs = concatMap extractCallbacksInStruct apis
-  injectAPIs embeddedAPIs
-
-  code <- recurse' $ mapM_ (uncurry genAPI) $
-          -- We provide these ourselves
-          filter ((`notElem` [ Name "GLib" "Array"
-                             , Name "GLib" "Error"
-                             , Name "GLib" "HashTable"
-                             , Name "GLib" "List"
-                             , Name "GLib" "SList"
-                             , Name "GLib" "Variant"
-                             , Name "GObject" "Value"
-                             , Name "GObject" "Closure"]) . fst) $
-          -- Some callback types are defined inside structs
-          map fixAPIStructs $ (++ embeddedAPIs) apis
+  code <- recurse
+          $ mapM_ (uncurry genAPI)
+            -- We provide these ourselves
+          $ filter ((`notElem` [ Name "GLib" "Array"
+                               , Name "GLib" "Error"
+                               , Name "GLib" "HashTable"
+                               , Name "GLib" "List"
+                               , Name "GLib" "SList"
+                               , Name "GLib" "Variant"
+                               , Name "GObject" "Value"
+                               , Name "GObject" "Closure"]) . fst)
+            -- Some callback types are defined inside structs
+          $ map fixAPIStructs
+          $ M.toList
+          $ apis
 
   genPrelude name' modulePrefix
   deps <- S.toList <$> getDeps
   forM_ deps $ \i -> when (i /= name) $ do
-    line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
-    line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
-             ++ ucFirst i ++ "A"
+     line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
+     line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
+              ++ ucFirst i ++ "A"
   blank
 
-  tell code
+  tellCode code
+
+genModule :: String -> Config -> M.Map Name API -> String ->
+             IO ModuleInfo
+genModule name cfg apis modulePrefix =
+    -- Some API symbols are embedded into structures, extract these
+    -- and inject them into the set of APIs loaded and being
+    -- generated.
+    let embeddedAPIs = (M.fromList
+                       . concatMap extractCallbacksInStruct
+                       . M.toList) apis
+    in genCode cfg (M.union apis embeddedAPIs) ["XXX"]
+           (genModuleInfo name modulePrefix)

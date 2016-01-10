@@ -29,7 +29,7 @@ import Text.Show.Pretty (ppShow)
 
 import GI.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import GI.Cabal (cabalConfig, setupHs, genCabalProject)
-import GI.Code (codeToString, genCode, evalCodeGen)
+import GI.Code (codeToText, genCode, evalCodeGen, moduleCode, moduleDeps)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
@@ -102,14 +102,6 @@ outputPath options =
         let prefix = intercalate "." (splitDirectories dir) ++ "."
         return (prefix, dir)
 
--- | Load the given API and dependencies, filtering them in the process.
-loadFilteredAPI :: Bool -> Overrides -> [FilePath] -> Text
-                -> IO (M.Map Name API, M.Map Name API)
-loadFilteredAPI verbose ovs extraPaths name = do
-  let version = M.lookup name (nsChooseVersion ovs)
-  (gir, girDeps) <- loadGIRInfo verbose name version extraPaths
-  return $ filterAPIsAndDeps ovs gir girDeps
-
 -- | Load a dependency without further postprocessing.
 loadRawAPIs :: Bool -> Overrides -> [FilePath] -> Text -> IO [(Name, API)]
 loadRawAPIs verbose ovs extraPaths name = do
@@ -127,8 +119,9 @@ genGenericAttrs options ovs modules extraPaths = do
                     overrides = ovs}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
-  (_, code) <- genCode cfg allAPIs (genAllAttributes (M.toList allAPIs) modPrefix)
-  writeFile (joinPath [dirPrefix, "Properties.hs"]) $ codeToString code
+  m <- genCode cfg allAPIs ["XXX"] (genAllAttributes (M.toList allAPIs) modPrefix)
+  TIO.writeFile (joinPath [dirPrefix, "Properties.hs"]) $
+     codeToText (moduleCode m)
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
 genGenericConnectors :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
@@ -140,8 +133,9 @@ genGenericConnectors options ovs modules extraPaths = do
                     overrides = ovs}
   (modPrefix, dirPrefix) <- outputPath options
   putStrLn $ "\t* Generating " ++ modPrefix ++ "Signals"
-  (_, code) <- genCode cfg allAPIs (genOverloadedSignalConnectors (M.toList allAPIs) modPrefix)
-  writeFile (joinPath [dirPrefix, "Signals.hs"]) $ codeToString code
+  m <- genCode cfg allAPIs ["XXX"] (genOverloadedSignalConnectors (M.toList allAPIs) modPrefix)
+  TIO.writeFile (joinPath [dirPrefix, "Signals.hs"]) $
+     codeToText (moduleCode m)
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
@@ -160,19 +154,25 @@ processMod options ovs extraPaths name = do
   (modPrefix, dirPrefix) <- outputPath options
 
   putStrLn $ "\t* Generating " ++ modPrefix ++ nm
-  (modDeps, code) <- genCode cfg allAPIs (genModule name (M.toList apis) modPrefix)
-  writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
-             codeToString code
+  m <- genModule name cfg allAPIs modPrefix
+  let code    = moduleCode m
+      modDeps = moduleDeps m
+  TIO.writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
+             codeToText code
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Attributes"
-  (attrDeps, attrCode) <- genCode cfg allAPIs (genAttributes name (M.toList apis) modPrefix)
-  writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
-            codeToString attrCode
+  m <- genCode cfg allAPIs ["XXX"] (genAttributes name (M.toList apis) modPrefix)
+  let attrDeps = moduleDeps m
+      attrCode = moduleCode m
+  TIO.writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
+            codeToText attrCode
 
   putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
-  (sigDeps, signalCode) <- genCode cfg allAPIs (genSignalInstances name (M.toList apis) modPrefix)
-  writeFile (joinPath [dirPrefix, nm ++ "Signals.hs"]) $
-            codeToString signalCode
+  m <- genCode cfg allAPIs ["XXX"] (genSignalInstances name (M.toList apis) modPrefix)
+  let sigCode = moduleCode m
+      sigDeps = moduleDeps m
+  TIO.writeFile (joinPath [dirPrefix, nm ++ "Signals.hs"]) $
+            codeToText sigCode
 
   when (optCabal options) $ do
     let cabal = "gi-" ++ map toLower nm ++ ".cabal"
@@ -187,16 +187,16 @@ processMod options ovs extraPaths name = do
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
         actualDeps = filter ((`S.member` usedDeps) . T.unpack . girNSName) girDeps
-    (err, cabalCode) <- evalCodeGen cfg allAPIs (genCabalProject gir actualDeps modPrefix)
+    (err, cabalCode) <- evalCodeGen cfg allAPIs ["XXX"] (genCabalProject gir actualDeps modPrefix)
     case err of
       Nothing -> do
-               writeFile fname (codeToString cabalCode)
+               TIO.writeFile fname (codeToText (moduleCode cabalCode))
                putStrLn "\t\t+ cabal.config"
-               writeFile "cabal.config" (T.unpack cabalConfig)
+               TIO.writeFile "cabal.config" cabalConfig
                putStrLn "\t\t+ Setup.hs"
-               writeFile "Setup.hs" (T.unpack setupHs)
+               TIO.writeFile "Setup.hs" setupHs
                putStrLn "\t\t+ LICENSE"
-               writeFile "LICENSE" (licenseText)
+               TIO.writeFile "LICENSE" licenseText
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ msg
 

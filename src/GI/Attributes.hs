@@ -7,7 +7,6 @@ module GI.Attributes
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when)
-import Control.Monad.Writer (tell)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -70,7 +69,7 @@ genAttributes name apis modulePrefix = do
   let mp = (modulePrefix ++)
       nm = ucFirst name
 
-  code <- recurse' $ forM_ apis genProps
+  code <- recurse $ forM_ apis genProps
 
   -- Providing orphan instances is the whole point of these modules,
   -- tell GHC that this is fine.
@@ -88,4 +87,4 @@ genAttributes name apis modulePrefix = do
   line $ "import " ++ modulePrefix ++ nm
   blank
 
-  tell code
+  tellCode code
