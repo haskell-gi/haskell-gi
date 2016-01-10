@@ -11,6 +11,7 @@ module GI.Code
     , loadDependency
     , getDeps
     , recurse
+    , recurseWithAPIs
     , tellCode
     , handleCGExc
     , describeCGError
@@ -38,7 +39,7 @@ import Control.Monad.State.Strict
 import Control.Monad.Except
 import Data.Monoid ((<>))
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Data.Sequence as S
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -118,8 +119,7 @@ type ExcCodeGen a = BaseCodeGen CGError a
 -- state of the codegen.
 runCodeGen :: BaseCodeGen e a -> CodeGenConfig -> ModuleInfo ->
               IO (Either e (a, ModuleInfo))
-runCodeGen cg cfg state =
-    liftIO (runExceptT (runStateT (runReaderT cg cfg) state))
+runCodeGen cg cfg state = runExceptT (runStateT (runReaderT cg cfg) state)
 
 -- | Run the given code generator using the state and config of an
 -- ambient CodeGen, but without adding the generated code to
@@ -139,6 +139,20 @@ recurseCG cg = do
 -- we can just drop the result.
 recurse :: CodeGen () -> CodeGen Code
 recurse cg = snd <$> recurseCG cg
+
+-- | Like `recurse`, giving explicitly the set of loaded APIs for the
+-- subgenerator.
+recurseWithAPIs :: M.Map Name API -> CodeGen () -> CodeGen Code
+recurseWithAPIs apis cg = do
+  cfg <- ask
+  oldInfo <- get
+  -- Start the subgenerator with no code and no submodules.
+  let info = oldInfo { moduleCode = NoCode, submodules = M.empty }
+      cfg' = cfg {loadedAPIs = apis}
+  liftIO (runCodeGen cg cfg' info) >>= \case
+     Left e -> throwError e
+     Right (_, new) -> put (mergeInfoState oldInfo new) >>
+                       return (moduleCode new)
 
 -- | Merge the dependencies and submodules of the two given
 -- `ModuleInfo`s (but not the generated code).
@@ -177,7 +191,8 @@ handleCGExc fallback
  action = do
     cfg <- ask
     oldInfo <- get
-    liftIO (runCodeGen action cfg oldInfo) >>= \case
+    let info = oldInfo { moduleCode = NoCode, submodules = M.empty }
+    liftIO (runCodeGen action cfg info) >>= \case
         Left e -> fallback e
         Right (r, newInfo) -> do
             put (mergeInfo oldInfo newInfo)

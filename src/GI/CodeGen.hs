@@ -25,7 +25,6 @@ import GI.API
 import GI.Callable (genCallable)
 import GI.Constant (genConstant)
 import GI.Code
-import GI.Config (Config)
 import GI.GObject
 import GI.Inheritance (instanceTree)
 import GI.Signal (genSignal, genCallback)
@@ -336,7 +335,7 @@ genObject n o = handleCGExc (\_ -> return ()) $ do
 
   -- Methods
   forM_ (objMethods o) $ \(mn, f) ->
-         handleCGExc
+      handleCGExc
          (\e -> line ("-- XXX Could not generate method "
                       ++ name' ++ "::" ++ name mn ++ "\n"
                       ++ "-- Error was : " ++ describeCGError e))
@@ -477,11 +476,10 @@ genPrelude name modulePrefix = do
     line "import Data.GI.Base.Utils"
     blank
 
-genModuleInfo :: String -> String -> CodeGen ()
-genModuleInfo name modulePrefix = do
+genModule' :: M.Map Name API -> String -> String -> CodeGen ()
+genModule' apis name modulePrefix = do
   let mp = (modulePrefix ++)
       name' = ucFirst name
-  apis <- getAPIs
 
   code <- recurse
           $ mapM_ (uncurry genAPI)
@@ -509,14 +507,14 @@ genModuleInfo name modulePrefix = do
 
   tellCode code
 
-genModule :: String -> Config -> M.Map Name API -> String ->
-             IO ModuleInfo
-genModule name cfg apis modulePrefix =
-    -- Some API symbols are embedded into structures, extract these
-    -- and inject them into the set of APIs loaded and being
-    -- generated.
-    let embeddedAPIs = (M.fromList
-                       . concatMap extractCallbacksInStruct
-                       . M.toList) apis
-    in genCode cfg (M.union apis embeddedAPIs) ["XXX"]
-           (genModuleInfo name modulePrefix)
+genModule :: String -> M.Map Name API -> String -> CodeGen ()
+genModule name apis modulePrefix = do
+  -- Some API symbols are embedded into structures, extract these and
+  -- inject them into the set of APIs loaded and being generated.
+  let embeddedAPIs = (M.fromList
+                     . concatMap extractCallbacksInStruct
+                     . M.toList) apis
+  allAPIs <- getAPIs
+  c <- recurseWithAPIs (M.union allAPIs embeddedAPIs)
+       (genModule' (M.union apis embeddedAPIs) name modulePrefix)
+  tellCode c

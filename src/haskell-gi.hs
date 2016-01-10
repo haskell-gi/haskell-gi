@@ -154,7 +154,7 @@ processMod options ovs extraPaths name = do
   (modPrefix, dirPrefix) <- outputPath options
 
   putStrLn $ "\t* Generating " ++ modPrefix ++ nm
-  m <- genModule name cfg allAPIs modPrefix
+  m <- genCode cfg allAPIs ["XXX"] (genModule name apis modPrefix)
   let code    = moduleCode m
       modDeps = moduleDeps m
   TIO.writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
