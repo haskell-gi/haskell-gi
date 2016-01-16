@@ -40,13 +40,14 @@ findSignalNames apis = (map T.unpack . S.toList) <$> go apis S.empty
       insertSignals props set = foldr (S.insert . sigName) set props
 
 -- | Generate the overloaded signal connectors: "Clicked", "ActivateLink", ...
-genOverloadedSignalConnectors :: [(Name, API)] -> String -> CodeGen ()
-genOverloadedSignalConnectors allAPIs modulePrefix = do
+genOverloadedSignalConnectors :: [(Name, API)] -> CodeGen ()
+genOverloadedSignalConnectors allAPIs = do
   line   "-- Generated code."
   blank
   line   "{-# LANGUAGE DataKinds, GADTs, KindSignatures, FlexibleInstances #-}"
   blank
-  line $ "module " ++ modulePrefix ++ "Signals where"
+  moduleName <- currentModule
+  line $ "module " ++ T.unpack moduleName ++ " where"
   blank
   line   "import GHC.TypeLits"
   line   "import GHC.Exts (Constraint)"
@@ -130,9 +131,9 @@ genSignals _ = return ()
 
 -- | Generate the signal information instances, so the generic overloaded
 -- signal connectors are available.
-genSignalInstances :: String -> [(Name, API)] -> String -> CodeGen ()
-genSignalInstances name apis modulePrefix = do
-  let mp = (modulePrefix ++)
+genSignalInstances :: String -> [(Name, API)] -> CodeGen ()
+genSignalInstances name apis = do
+  let mp = ("GI." ++)
       nm = ucFirst name
 
   code <- recurse $ forM_ apis genSignals
@@ -149,7 +150,8 @@ genSignalInstances name apis modulePrefix = do
   line "               TypeOperators #-}"
   blank
 
-  line $ "module " ++ mp nm ++ "Signals where"
+  moduleName <- currentModule
+  line $ "module " ++ T.unpack moduleName ++ " where"
   blank
 
   line   "import Data.GI.Base.Properties (GObjectNotifySignalInfo)"
@@ -162,9 +164,9 @@ genSignalInstances name apis modulePrefix = do
   -- to be included explicitly from client code.
   deps <- S.toList <$> getDeps
   forM_ deps $ \i -> when (i /= name) $
-    line $ "import qualified " ++ mp (ucFirst i) ++ "Signals as " ++ ucFirst i
+    line $ "import qualified " ++ mp (ucFirst i) ++ ".Signals as " ++ ucFirst i
 
-  line $ "import " ++ modulePrefix ++ nm
+  line $ "import " ++ mp nm
   blank
 
   tellCode code

@@ -121,8 +121,8 @@ readMajorMinor version =
 
 -- | Try to generate the cabal project. In case of error return the
 -- corresponding error string.
-genCabalProject :: GIRInfo -> [GIRInfo] -> String -> CodeGen (Maybe String)
-genCabalProject gir deps modulePrefix =
+genCabalProject :: GIRInfo -> [GIRInfo] -> CodeGen (Maybe String)
+genCabalProject gir deps =
     handleCGExc (return . Just . describeCGError) $ do
       cfg <- config
       let pkMap = pkgConfigMap (overrides cfg)
@@ -152,9 +152,10 @@ genCabalProject gir deps modulePrefix =
       line $ "library"
       indent $ do
         line $ padTo 20 "default-language:" ++ "Haskell2010"
-        let base = modulePrefix ++ ucFirst (T.unpack name)
+        let base = "GI." ++ ucFirst (T.unpack name)
         line $ padTo 20 "exposed-modules:" ++
-               intercalate ", " [base, base ++ "Attributes", base ++ "Signals"]
+               intercalate ", " [base,
+                                 base ++ ".Attributes", base ++ ".Signals"]
         line $ padTo 20 "pkgconfig-depends:" ++ T.unpack pcName ++ " >= "
                  ++ show major ++ "." ++ show minor
         line $ padTo 20 "build-depends: base >= 4.7 && <5,"

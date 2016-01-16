@@ -9,11 +9,10 @@ import Control.Exception (handle)
 
 import Data.Char (toLower)
 import Data.Bool (bool)
-import Data.List (intercalate)
+import Data.Monoid ((<>))
 import Data.Text (pack, unpack, Text)
 
-import System.Directory (createDirectoryIfMissing, doesFileExist)
-import System.FilePath (splitDirectories, joinPath)
+import System.Directory (doesFileExist)
 import System.Console.GetOpt
 import System.Exit
 import System.IO (hPutStr, hPutStrLn, stderr)
@@ -29,7 +28,7 @@ import Text.Show.Pretty (ppShow)
 
 import GI.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import GI.Cabal (cabalConfig, setupHs, genCabalProject)
-import GI.Code (codeToText, genCode, evalCodeGen, moduleCode, moduleDeps)
+import GI.Code (genCode, evalCodeGen, moduleDeps, writeModuleTree, moduleCode, codeToText)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
@@ -42,7 +41,7 @@ data Mode = GenerateCode | Dump | Attributes | Signals | Help
 
 data Options = Options {
   optMode :: Mode,
-  optOutput :: Maybe String,
+  optOutputDir :: Maybe String,
   optOverridesFiles :: [String],
   optSearchPaths :: [String],
   optVerbose :: Bool,
@@ -50,7 +49,7 @@ data Options = Options {
 
 defaultOptions = Options {
   optMode = GenerateCode,
-  optOutput = Just "GI",
+  optOutputDir = Nothing,
   optOverridesFiles = [],
   optSearchPaths = [],
   optVerbose = False,
@@ -78,7 +77,7 @@ optDescrs = [
                           "OVERRIDES")
     "specify a file with overrides info",
   Option "O" ["output"] (ReqArg
-                         (\arg opt -> opt {optOutput = Just arg}) "DIR")
+                         (\arg opt -> opt {optOutputDir = Just arg}) "DIR")
     "\tset the output directory",
   Option "s" ["search"] (ReqArg
     (\arg opt -> opt { optSearchPaths = arg : optSearchPaths opt }) "PATH")
@@ -92,15 +91,6 @@ showHelp = concatMap optAsLine optDescrs
         optAsLine _ = error "showHelp"
 
 printGError = handle (gerrorMessage >=> putStrLn . unpack)
-
-outputPath :: Options -> IO (String, String) -- modPrefix, dirPrefix
-outputPath options =
-    case optOutput options of
-      Nothing -> return ("", ".")
-      Just dir -> do
-        createDirectoryIfMissing True dir
-        let prefix = intercalate "." (splitDirectories dir) ++ "."
-        return (prefix, dir)
 
 -- | Load a dependency without further postprocessing.
 loadRawAPIs :: Bool -> Overrides -> [FilePath] -> Text -> IO [(Name, API)]
@@ -117,11 +107,9 @@ genGenericAttrs options ovs modules extraPaths = do
       cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
                     overrides = ovs}
-  (modPrefix, dirPrefix) <- outputPath options
-  putStrLn $ "\t* Generating " ++ modPrefix ++ "Properties"
-  m <- genCode cfg allAPIs ["XXX"] (genAllAttributes (M.toList allAPIs) modPrefix)
-  TIO.writeFile (joinPath [dirPrefix, "Properties.hs"]) $
-     codeToText (moduleCode m)
+  putStrLn $ "\t* Generating GI.Properties"
+  m <- genCode cfg allAPIs ["GI", "Properties"] (genAllAttributes (M.toList allAPIs))
+  writeModuleTree (optVerbose options) (optOutputDir options) m
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
 genGenericConnectors :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
@@ -131,11 +119,9 @@ genGenericConnectors options ovs modules extraPaths = do
       cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
                     overrides = ovs}
-  (modPrefix, dirPrefix) <- outputPath options
-  putStrLn $ "\t* Generating " ++ modPrefix ++ "Signals"
-  m <- genCode cfg allAPIs ["XXX"] (genOverloadedSignalConnectors (M.toList allAPIs) modPrefix)
-  TIO.writeFile (joinPath [dirPrefix, "Signals.hs"]) $
-     codeToText (moduleCode m)
+  putStrLn $ "\t* Generating GI.Signals"
+  m <- genCode cfg allAPIs ["GI", "Signals"] (genOverloadedSignalConnectors (M.toList allAPIs))
+  writeModuleTree (optVerbose options) (optOutputDir options) m
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
@@ -149,33 +135,26 @@ processMod options ovs extraPaths name = do
   let cfg = Config {modName = Just name,
                     verbose = optVerbose options,
                     overrides = ovs}
-      nm = ucFirst name
+      nm = T.pack (ucFirst name)
+      mp = T.unpack . ("GI." <>)
 
-  (modPrefix, dirPrefix) <- outputPath options
+  putStrLn $ "\t* Generating " ++ mp nm
+  m <- genCode cfg allAPIs ["GI", nm] (genModule name apis)
+  let modDeps = moduleDeps m
+  writeModuleTree (optVerbose options) (optOutputDir options) m
 
-  putStrLn $ "\t* Generating " ++ modPrefix ++ nm
-  m <- genCode cfg allAPIs ["XXX"] (genModule name apis modPrefix)
-  let code    = moduleCode m
-      modDeps = moduleDeps m
-  TIO.writeFile (joinPath [dirPrefix, nm ++ ".hs"]) $
-             codeToText code
-
-  putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Attributes"
-  m <- genCode cfg allAPIs ["XXX"] (genAttributes name (M.toList apis) modPrefix)
+  putStrLn $ "\t\t+ " ++ mp nm ++ ".Attributes"
+  m <- genCode cfg allAPIs ["GI", nm, "Attributes"] (genAttributes name (M.toList apis))
   let attrDeps = moduleDeps m
-      attrCode = moduleCode m
-  TIO.writeFile (joinPath [dirPrefix, nm ++ "Attributes.hs"]) $
-            codeToText attrCode
+  writeModuleTree (optVerbose options) (optOutputDir options) m
 
-  putStrLn $ "\t\t+ " ++ modPrefix ++ nm ++ "Signals"
-  m <- genCode cfg allAPIs ["XXX"] (genSignalInstances name (M.toList apis) modPrefix)
-  let sigCode = moduleCode m
-      sigDeps = moduleDeps m
-  TIO.writeFile (joinPath [dirPrefix, nm ++ "Signals.hs"]) $
-            codeToText sigCode
+  putStrLn $ "\t\t+ " ++ mp nm ++ ".Signals"
+  m <- genCode cfg allAPIs ["GI", nm, "Signals"] (genSignalInstances name (M.toList apis))
+  let sigDeps = moduleDeps m
+  writeModuleTree (optVerbose options) (optOutputDir options) m
 
   when (optCabal options) $ do
-    let cabal = "gi-" ++ map toLower nm ++ ".cabal"
+    let cabal = "gi-" ++ map toLower (T.unpack nm) ++ ".cabal"
     fname <- doesFileExist cabal >>=
              bool (return cabal)
                   (putStrLn (cabal ++ " exists, writing "
@@ -187,10 +166,10 @@ processMod options ovs extraPaths name = do
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
         actualDeps = filter ((`S.member` usedDeps) . T.unpack . girNSName) girDeps
-    (err, cabalCode) <- evalCodeGen cfg allAPIs ["XXX"] (genCabalProject gir actualDeps modPrefix)
+    (err, m) <- evalCodeGen cfg allAPIs [] (genCabalProject gir actualDeps)
     case err of
       Nothing -> do
-               TIO.writeFile fname (codeToText (moduleCode cabalCode))
+               TIO.writeFile fname (codeToText [] (moduleCode m))
                putStrLn "\t\t+ cabal.config"
                TIO.writeFile "cabal.config" cabalConfig
                putStrLn "\t\t+ Setup.hs"

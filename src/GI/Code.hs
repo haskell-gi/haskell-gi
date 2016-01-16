@@ -7,28 +7,36 @@ module GI.Code
     , CGError(..)
     , genCode
     , evalCodeGen
+
+    , writeModuleTree
     , codeToText
+
     , loadDependency
     , getDeps
     , recurse
     , recurseWithAPIs
     , tellCode
+
     , handleCGExc
     , describeCGError
     , notImplementedError
     , badIntroError
     , missingInfoError
+
     , indent
     , line
     , blank
     , group
     , submodule
+    , export
+    , exportList
 
     , findAPI
     , findAPIByName
     , getAPIs
 
     , config
+    , currentModule
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -37,6 +45,7 @@ import Control.Applicative ((<$>))
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Control.Monad.Except
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
 import qualified Data.Map.Strict as M
@@ -44,17 +53,22 @@ import qualified Data.Sequence as S
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+
+import System.Directory (createDirectoryIfMissing)
+import System.FilePath (joinPath, takeDirectory)
 
 import GI.API (API, Name(..))
 import GI.Config (Config(..))
 import GI.Type (Type(..))
 
 data Code
-    = NoCode
-    | Line String
-    | Indent Code
-    | Sequence (Seq Code)
-    | Group Code
+    = NoCode              -- ^ No code
+    | Line Text           -- ^ A single line, indented to current indentation
+    | Indent Code         -- ^ Indented region
+    | Sequence (Seq Code) -- ^ The basic sequence of code
+    | Group Code          -- ^ A grouped set of lines
+    | ExportList          -- ^ A list of exports for this module
     deriving (Eq, Show)
 
 instance Monoid Code where
@@ -78,6 +92,7 @@ data ModuleInfo = ModuleInfo {
     , submodules :: M.Map Text ModuleInfo -- ^ Indexed by the relative
                                           -- module name.
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
+    , moduleExports :: Set.Set Text -- ^ Set of exports for the current module.
     }
 
 -- | Generate the empty module.
@@ -86,6 +101,7 @@ emptyModule m = ModuleInfo { moduleName = m
                            , moduleCode = NoCode
                            , submodules = M.empty
                            , moduleDeps = Set.empty
+                           , moduleExports = Set.empty
                            }
 
 -- | Information for the code generator.
@@ -154,13 +170,15 @@ recurseWithAPIs apis cg = do
      Right (_, new) -> put (mergeInfoState oldInfo new) >>
                        return (moduleCode new)
 
--- | Merge the dependencies and submodules of the two given
+-- | Merge the dependencies, exports and submodules of the two given
 -- `ModuleInfo`s (but not the generated code).
 mergeInfoState :: ModuleInfo -> ModuleInfo -> ModuleInfo
 mergeInfoState oldState newState =
     let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
         newSubmodules = M.unionWith mergeInfo (submodules oldState) (submodules newState)
-    in oldState {moduleDeps = newDeps, submodules = newSubmodules}
+        newExports = Set.union (moduleExports oldState) (moduleExports newState)
+    in oldState {moduleDeps = newDeps, submodules = newSubmodules,
+                 moduleExports = newExports}
 
 -- | Merge the infos, including code too.
 mergeInfo :: ModuleInfo -> ModuleInfo -> ModuleInfo
@@ -205,6 +223,12 @@ getDeps = moduleDeps <$> get
 -- | Return the ambient configuration for the code generator.
 config :: CodeGen Config
 config = hConfig <$> ask
+
+-- | Return the name of the current module.
+currentModule :: CodeGen Text
+currentModule = do
+  s <- get
+  return (T.intercalate "." (moduleName s))
 
 -- | Return the list of APIs available to the generator.
 getAPIs :: CodeGen (M.Map Name API)
@@ -280,7 +304,7 @@ tellCode c = modify' (\s -> s {moduleCode = moduleCode s <> c})
 
 -- | Print out a (newline-terminated) line.
 line :: String -> CodeGen ()
-line = tellCode . Line
+line = tellCode . Line . T.pack
 
 -- | A blank line
 blank :: CodeGen ()
@@ -301,16 +325,61 @@ group cg = do
   blank
   return x
 
+-- | Add a export to the current module.
+export :: Text -> CodeGen ()
+export e = modify' $ \s -> s{moduleExports = Set.insert e (moduleExports s)}
+
+-- | A textual representation of the export list indented to the
+-- current indentation level, made into individual lines, and
+-- separated by commas.
+exportList :: CodeGen ()
+exportList = tellCode ExportList
+
 -- | Return a text representation of the `Code`.
-codeToText :: Code -> Text
-codeToText c = T.concat $ str 0 c []
+codeToText :: [Text] -> Code -> Text
+codeToText exports c = T.concat $ str 0 c []
     where
       str :: Int -> Code -> [Text] -> [Text]
       str _ NoCode cont = cont
-      str n (Line s) cont = T.pack (replicate (n * 4) ' ' ++ s ++ "\n") : cont
+      str n (Line s) cont =  paddedLine n s : cont
       str n (Indent c) cont = str (n + 1) c cont
       str n (Sequence s) cont = deseq n (S.viewl s) cont
       str n (Group c) cont = str n c cont
+      str n (ExportList) cont = map (paddedLine n <> (", " <>)) exports ++ cont
+
+      paddedLine :: Int -> Text -> Text
+      paddedLine n s = T.replicate (n * 4) " " <> s <> "\n"
 
       deseq _ S.EmptyL cont = cont
       deseq n (c :< cs) cont = str n c (deseq n (S.viewl cs) cont)
+
+-- | Write to disk the code for a module, under the given base
+-- directory. Does not write submodules recursively, for that use
+-- `writeModuleTree`.
+writeModuleInfo :: Bool -> Maybe FilePath -> ModuleInfo -> IO ()
+writeModuleInfo verbose dirPrefix minfo = do
+  let submoduleNames = map (moduleName) (M.elems (submodules minfo))
+      -- We reexport any submodules.
+      submoduleExports = map (("module " <>) . dotModuleName) submoduleNames
+      fname = moduleNameToPath (moduleName minfo)
+      dirname = takeDirectory fname
+      code = codeToText (submoduleExports ++ Set.toList (moduleExports minfo))
+             (moduleCode minfo)
+  when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
+                           ++ " -> " ++ fname)
+  createDirectoryIfMissing True dirname
+  TIO.writeFile fname code
+  where
+    dotModuleName :: ModuleName -> Text
+    dotModuleName mn = T.intercalate "." mn
+
+    moduleNameToPath :: ModuleName -> FilePath
+    moduleNameToPath mn = joinPath (fromMaybe "" dirPrefix : map T.unpack mn)
+                          ++ ".hs"
+
+-- | Write down the code for a module to disk under the given base
+-- directory. This also writes the submodules.
+writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO ()
+writeModuleTree verbose dirPrefix minfo = do
+  forM_ (M.elems (submodules minfo)) (writeModuleTree verbose dirPrefix)
+  writeModuleInfo verbose dirPrefix minfo

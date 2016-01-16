@@ -423,9 +423,9 @@ genAPI n (APIUnion u) = genUnion n u
 genAPI n (APIObject o) = genObject n o
 genAPI n (APIInterface i) = genInterface n i
 
-genPrelude :: String -> String -> CodeGen ()
-genPrelude name modulePrefix = do
-    let mp = (modulePrefix ++)
+genPrelude :: String -> CodeGen ()
+genPrelude name = do
+    let mp = ("GI." ++)
 
     line "-- Generated code."
     blank
@@ -476,9 +476,9 @@ genPrelude name modulePrefix = do
     line "import Data.GI.Base.Utils"
     blank
 
-genModule' :: M.Map Name API -> String -> String -> CodeGen ()
-genModule' apis name modulePrefix = do
-  let mp = (modulePrefix ++)
+genModule' :: M.Map Name API -> String -> CodeGen ()
+genModule' apis name = do
+  let mp = ("GI." ++)
       name' = ucFirst name
 
   code <- recurse
@@ -497,18 +497,17 @@ genModule' apis name modulePrefix = do
           $ M.toList
           $ apis
 
-  genPrelude name' modulePrefix
+  genPrelude name'
   deps <- S.toList <$> getDeps
   forM_ deps $ \i -> when (i /= name) $ do
      line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
-     line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
-              ++ ucFirst i ++ "A"
+
   blank
 
   tellCode code
 
-genModule :: String -> M.Map Name API -> String -> CodeGen ()
-genModule name apis modulePrefix = do
+genModule :: String -> M.Map Name API -> CodeGen ()
+genModule name apis = do
   -- Some API symbols are embedded into structures, extract these and
   -- inject them into the set of APIs loaded and being generated.
   let embeddedAPIs = (M.fromList
@@ -516,5 +515,5 @@ genModule name apis modulePrefix = do
                      . M.toList) apis
   allAPIs <- getAPIs
   c <- recurseWithAPIs (M.union allAPIs embeddedAPIs)
-       (genModule' (M.union apis embeddedAPIs) name modulePrefix)
+       (genModule' (M.union apis embeddedAPIs) name)
   tellCode c

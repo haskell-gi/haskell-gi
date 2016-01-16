@@ -42,14 +42,15 @@ genPropertyAttr pName = group $ do
   line $ "_" ++ lcFirst name ++ " :: Proxy \"" ++ T.unpack pName ++ "\""
   line $ "_" ++ lcFirst name ++ " = Proxy"
 
-genAllAttributes :: [(Name, API)] -> String -> CodeGen ()
-genAllAttributes allAPIs modulePrefix = do
+genAllAttributes :: [(Name, API)] -> CodeGen ()
+genAllAttributes allAPIs = do
   line "-- Generated code."
   blank
   line "{-# LANGUAGE DataKinds #-}"
   blank
 
-  line $ "module " ++ modulePrefix ++ "Properties where"
+  moduleName <- currentModule
+  line $ "module " ++ T.unpack moduleName ++ " where"
   blank
   line $ "import Data.Proxy (Proxy(..))"
   blank
@@ -64,9 +65,9 @@ genProps (n, APIObject o) = genObjectProperties n o
 genProps (n, APIInterface i) = genInterfaceProperties n i
 genProps _ = return ()
 
-genAttributes :: String -> [(Name, API)] -> String -> CodeGen ()
-genAttributes name apis modulePrefix = do
-  let mp = (modulePrefix ++)
+genAttributes :: String -> [(Name, API)] -> CodeGen ()
+genAttributes name apis = do
+  let mp = ("GI." ++)
       nm = ucFirst name
 
   code <- recurse $ forM_ apis genProps
@@ -76,15 +77,16 @@ genAttributes name apis modulePrefix = do
   line "{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-imports #-}"
   blank
 
-  genPrelude (nm ++ "Attributes") modulePrefix
+  genPrelude (nm ++ ".Attributes")
+
 
   deps <- getDeps
   forM_ (S.toList deps) $ \i -> when (i /= name) $ do
     line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
-    line $ "import qualified " ++ mp (ucFirst i) ++ "Attributes as "
+    line $ "import qualified " ++ mp (ucFirst i) ++ ".Attributes as "
              ++ ucFirst i ++ "A"
 
-  line $ "import " ++ modulePrefix ++ nm
+  line $ "import " ++ mp nm
   blank
 
   tellCode code
