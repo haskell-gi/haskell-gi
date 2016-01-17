@@ -92,11 +92,14 @@ buildFieldGetter n@(Name ns _) field = do
        result <- convert "val" $ fToH (fieldType field) TransferNothing
        line $ "return " ++ result
 
+     export getter
+
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do
   name' <- upperName n
 
-  forM_ fields $ \field -> when (fieldVisible field) $ group $
+  forM_ fields $ \field -> when (fieldVisible field) $
+                           submodule "Fields" $ group $
       handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
                                ":" ++ unpack (fieldName field) ++ "\" :: " ++
                                describeCGError e))

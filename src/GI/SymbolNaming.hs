@@ -15,9 +15,7 @@ module GI.SymbolNaming
 
 import Data.Char (toLower, toUpper)
 #if !MIN_VERSION_base(4,8,0)
-import Data.Monoid (Monoid, (<>))
-#else
-import Data.Monoid ((<>))
+import Data.Monoid (Monoid)
 #endif
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -31,6 +29,7 @@ import GI.Util (split)
 classConstraint :: (Monoid a, IsString a) => a -> a
 classConstraint n = n <> "K"
 
+-- See importDeps in Code.hs for a `Text` implementation.
 ucFirst (x:xs) = toUpper x : xs
 ucFirst "" = error "ucFirst: empty string"
 
@@ -73,8 +72,9 @@ qualifyWithSuffix suffix ns = do
      if modName cfg == Just ns then
          return ""
      else do
-       loadDependency ns -- Make sure that the given namespace is listed
-                         -- as a dependency of this module.
+       loadDependency (T.pack ns) -- Make sure that the given
+                                  -- namespace is listed as a
+                                  -- dependency of this module.
        return $ ucFirst ns ++ suffix
 
 -- | Return the qualified namespace (ns ++ "." or "", depending on
@@ -88,6 +88,7 @@ noName :: String -> CodeGen ()
 noName name' = group $ do
                  line $ "no" ++ name' ++ " :: Maybe " ++ name'
                  line $ "no" ++ name' ++ " = Nothing"
+                 export ("no" ++ name')
 
 -- | For a string of the form "one-sample-string" return "OneSampleString"
 hyphensToCamelCase :: String -> String

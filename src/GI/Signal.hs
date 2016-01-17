@@ -31,6 +31,7 @@ genHaskellCallbackPrototype :: Callable -> String -> [Arg] -> [Arg] ->
                                ExcCodeGen ()
 genHaskellCallbackPrototype cb name' hInArgs hOutArgs = do
   group $ do
+    export name'
     line $ "type " ++ name' ++ " ="
     indent $ do
       forM_ hInArgs $ \arg -> do
@@ -43,6 +44,7 @@ genHaskellCallbackPrototype cb name' hInArgs hOutArgs = do
 
   -- For optional parameters, in case we want to pass Nothing.
   group $ do
+    export ("no" <> name')
     line $ "no" ++ name' ++ " :: Maybe " ++ name'
     line $ "no" ++ name' ++ " = Nothing"
 
@@ -50,7 +52,10 @@ genHaskellCallbackPrototype cb name' hInArgs hOutArgs = do
 genCCallbackPrototype :: Callable -> String -> Bool -> CodeGen ()
 genCCallbackPrototype cb name' isSignal =
   group $ do
-    line $ "type " ++ name' ++ "C ="
+    let ctypeName = name' <> "C"
+    export ctypeName
+
+    line $ "type " <> ctypeName <> " ="
     indent $ do
       when isSignal $ line $ withComment "Ptr () ->" "object"
       forM_ (args cb) $ \arg -> do
@@ -69,14 +74,17 @@ genCCallbackPrototype cb name' isSignal =
 genCallbackWrapperFactory :: String -> CodeGen ()
 genCallbackWrapperFactory name' =
   group $ do
+    let factoryName = "mk" <> name'
     line "foreign import ccall \"wrapper\""
-    indent $ line $ "mk" ++ name' ++ " :: "
+    indent $ line $ factoryName ++ " :: "
                ++ name' ++ "C -> IO (FunPtr " ++ name' ++ "C)"
+    export factoryName
 
 -- Generator of closures
 genClosure :: String -> String -> Bool -> CodeGen ()
-genClosure callback closure isSignal =
-    group $ do
+genClosure callback closure isSignal = do
+  export closure
+  group $ do
       line $ closure ++ " :: " ++ callback ++ " -> IO Closure"
       line $ closure ++ " cb = newCClosure =<< mk" ++ callback ++ " wrapped"
       indent $
@@ -168,9 +176,12 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
                   then "_"
                   else (escapeReserved . argName) arg
       cArgNames = map cName (args cb)
+      wrapperName = lcFirst name' ++ "Wrapper"
+
+  export wrapperName
 
   group $ do
-    line $ lcFirst name' ++ "Wrapper ::"
+    line $ wrapperName <> " ::"
     indent $ do
       unless isSignal $
            line $ "Maybe (Ptr (FunPtr (" ++ name' ++ "C))) ->"
@@ -191,7 +202,7 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
     let allArgs = if isSignal
                   then unwords $ ["_cb", "_"] ++ cArgNames ++ ["_"]
                   else unwords $ ["funptrptr", "_cb"] ++ cArgNames
-    line $ lcFirst name' ++ "Wrapper " ++ allArgs ++ " = do"
+    line $ wrapperName ++ " " ++ allArgs ++ " = do"
     indent $ do
       hInNames <- forM hInArgs (prepareArgForCall cb)
 
@@ -222,7 +233,7 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
                line $ "return " ++ result'
 
 genCallback :: Name -> Callback -> CodeGen ()
-genCallback n (Callback cb) = do
+genCallback n (Callback cb) = submodule "Types" $ do
   name' <- upperName n
   line $ "-- callback " ++ name'
 

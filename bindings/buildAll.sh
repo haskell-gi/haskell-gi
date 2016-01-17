@@ -8,6 +8,7 @@ build()
         pushd $mod > /dev/null
         cabal clean
         cabal configure
+	cabal build
         cabal install
         cabal sdist
         cp dist/*.tar.gz ../sdists

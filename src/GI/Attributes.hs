@@ -15,7 +15,6 @@ import GI.API
 import GI.Code
 import GI.SymbolNaming
 import GI.Properties
-import GI.CodeGen (genPrelude)
 
 -- A list of distinct property names for all GObjects appearing in the
 -- given list of APIs.
@@ -77,11 +76,8 @@ genAttributes name apis = do
   line "{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-unused-imports #-}"
   blank
 
-  genPrelude (nm ++ ".Attributes")
-
-
-  deps <- getDeps
-  forM_ (S.toList deps) $ \i -> when (i /= name) $ do
+  deps <- map T.unpack <$> S.toList <$> getDeps
+  forM_ deps $ \i -> when (i /= name) $ do
     line $ "import qualified " ++ mp (ucFirst i) ++ " as " ++ ucFirst i
     line $ "import qualified " ++ mp (ucFirst i) ++ ".Attributes as "
              ++ ucFirst i ++ "A"

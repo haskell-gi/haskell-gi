@@ -162,7 +162,7 @@ genSignalInstances name apis = do
   -- Import dependencies, including instances for their overloaded
   -- signals, so they are implicitly reexported and they do not need
   -- to be included explicitly from client code.
-  deps <- S.toList <$> getDeps
+  deps <- map T.unpack <$> S.toList <$> getDeps
   forM_ deps $ \i -> when (i /= name) $
     line $ "import qualified " ++ mp (ucFirst i) ++ ".Signals as " ++ ucFirst i
 

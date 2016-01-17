@@ -11,7 +11,6 @@ import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
-import Data.Monoid ((<>))
 import Data.Version (Version(..))
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -25,7 +24,6 @@ import GI.Overrides (pkgConfigMap, cabalPkgVersion)
 import GI.PkgConfig (pkgConfigGetVersion)
 import GI.ProjectInfo (homepage, license, authors, maintainers)
 import GI.Util (padTo)
-import GI.SymbolNaming (ucFirst)
 
 import Paths_haskell_gi (version)
 
@@ -121,8 +119,8 @@ readMajorMinor version =
 
 -- | Try to generate the cabal project. In case of error return the
 -- corresponding error string.
-genCabalProject :: GIRInfo -> [GIRInfo] -> CodeGen (Maybe String)
-genCabalProject gir deps =
+genCabalProject :: GIRInfo -> [GIRInfo] -> [Text] -> CodeGen (Maybe String)
+genCabalProject gir deps exposedModules =
     handleCGExc (return . Just . describeCGError) $ do
       cfg <- config
       let pkMap = pkgConfigMap (overrides cfg)
@@ -152,10 +150,11 @@ genCabalProject gir deps =
       line $ "library"
       indent $ do
         line $ padTo 20 "default-language:" ++ "Haskell2010"
-        let base = "GI." ++ ucFirst (T.unpack name)
-        line $ padTo 20 "exposed-modules:" ++
-               intercalate ", " [base,
-                                 base ++ ".Attributes", base ++ ".Signals"]
+        line $ padTo 20 "default-extensions:" ++ "OverloadedStrings, NegativeLiterals, ConstraintKinds, TypeFamilies, MultiParamTypeClasses, KindSignatures, FlexibleInstances, UndecidableInstances, DataKinds, FlexibleContexts"
+        line $ padTo 20 "ghc-options:" ++ "-fno-warn-unused-imports -fno-warn-warnings-deprecations"
+        line $ padTo 20 "exposed-modules:" ++ T.unpack (head exposedModules)
+        forM_ (tail exposedModules) $ \mod ->
+              line $ padTo 20 "" ++ T.unpack mod
         line $ padTo 20 "pkgconfig-depends:" ++ T.unpack pcName ++ " >= "
                  ++ show major ++ "." ++ show minor
         line $ padTo 20 "build-depends: base >= 4.7 && <5,"

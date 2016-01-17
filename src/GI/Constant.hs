@@ -11,12 +11,12 @@ import GI.Conversions
 import GI.Type
 
 genConstant :: Name -> Constant -> CodeGen ()
-genConstant (Name _ name) (Constant t value deprecated) = do
-  line $ "-- constant " ++ name
-  line $ deprecatedPragma name deprecated
+genConstant (Name _ name) (Constant t value deprecated) =
+    submodule "Constants" $ group $ do
+      line $ deprecatedPragma name deprecated
 
-  handleCGExc (\e -> line $ "-- XXX: Could not generate constant: " ++ describeCGError e)
-              (assignValue name t value)
+      handleCGExc (\e -> line $ "-- XXX: Could not generate constant: " ++ describeCGError e)
+                  (assignValue name t value)
 
 -- | Assign to the given name the given constant value, in a way that
 -- can be assigned to the corresponding Haskell type.

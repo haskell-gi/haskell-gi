@@ -10,6 +10,7 @@ module GI.Code
 
     , writeModuleTree
     , codeToText
+    , transitiveModuleDeps
 
     , loadDependency
     , getDeps
@@ -29,7 +30,6 @@ module GI.Code
     , group
     , submodule
     , export
-    , exportList
 
     , findAPI
     , findAPIByName
@@ -37,6 +37,9 @@ module GI.Code
 
     , config
     , currentModule
+
+    -- From Data.Monoid, for convenience
+    , (<>)
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -45,6 +48,7 @@ import Control.Applicative ((<$>))
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Control.Monad.Except
+import Data.Char (toUpper)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
@@ -68,7 +72,6 @@ data Code
     | Indent Code         -- ^ Indented region
     | Sequence (Seq Code) -- ^ The basic sequence of code
     | Group Code          -- ^ A grouped set of lines
-    | ExportList          -- ^ A list of exports for this module
     deriving (Eq, Show)
 
 instance Monoid Code where
@@ -82,7 +85,7 @@ instance Monoid Code where
     a `mappend` (Sequence b) = Sequence (a <| b)
     a `mappend` b = Sequence (a <| b <| S.empty)
 
-type Deps = Set.Set String
+type Deps = Set.Set Text
 type ModuleName = [Text]
 
 -- | Information on a generated module.
@@ -262,12 +265,19 @@ evalCodeGen cfg apis mName cg = do
   unwrapCodeGen cg cfg' initialInfo
 
 -- | Mark the given dependency as used by the module.
-loadDependency :: String -> CodeGen ()
+loadDependency :: Text -> CodeGen ()
 loadDependency name = do
     deps <- getDeps
     unless (Set.member name deps) $ do
         let newDeps = Set.insert name deps
         modify' $ \s -> s {moduleDeps = newDeps}
+
+-- | Return the transitive set of dependencies, i.e. the union of
+-- those of the module and (transitively) its submodules.
+transitiveModuleDeps :: ModuleInfo -> Deps
+transitiveModuleDeps minfo =
+    Set.unions (moduleDeps minfo
+               : map transitiveModuleDeps (M.elems $ submodules minfo))
 
 -- | Give a friendly textual description of the error for presenting
 -- to the user.
@@ -326,18 +336,13 @@ group cg = do
   return x
 
 -- | Add a export to the current module.
-export :: Text -> CodeGen ()
-export e = modify' $ \s -> s{moduleExports = Set.insert e (moduleExports s)}
-
--- | A textual representation of the export list indented to the
--- current indentation level, made into individual lines, and
--- separated by commas.
-exportList :: CodeGen ()
-exportList = tellCode ExportList
+export :: String -> CodeGen ()
+export e =
+    modify' $ \s -> s{moduleExports = Set.insert (T.pack e) (moduleExports s)}
 
 -- | Return a text representation of the `Code`.
-codeToText :: [Text] -> Code -> Text
-codeToText exports c = T.concat $ str 0 c []
+codeToText :: Code -> Text
+codeToText c = T.concat $ str 0 c []
     where
       str :: Int -> Code -> [Text] -> [Text]
       str _ NoCode cont = cont
@@ -345,13 +350,62 @@ codeToText exports c = T.concat $ str 0 c []
       str n (Indent c) cont = str (n + 1) c cont
       str n (Sequence s) cont = deseq n (S.viewl s) cont
       str n (Group c) cont = str n c cont
-      str n (ExportList) cont = map (paddedLine n <> (", " <>)) exports ++ cont
-
-      paddedLine :: Int -> Text -> Text
-      paddedLine n s = T.replicate (n * 4) " " <> s <> "\n"
 
       deseq _ S.EmptyL cont = cont
       deseq n (c :< cs) cont = str n c (deseq n (S.viewl cs) cont)
+
+-- | Pad a line to the given number of leading spaces, and add a
+-- newline at the end.
+paddedLine :: Int -> Text -> Text
+paddedLine n s = T.replicate (n * 4) " " <> s <> "\n"
+
+-- | Format the given export list (at the given indent level). This is
+-- just the inside of the parenthesis, so the first term is treated
+-- differently from the rest.
+formatExportList :: [Text] -> Text
+formatExportList [] = ""
+formatExportList (f:rest) = T.concat $
+                            f <> "\n" : (map (paddedLine 1 . (", " <>))) rest
+
+-- | Generic module prelude. We reexport all of the submodules.
+modulePrelude :: Text -> [Text] -> [Text] -> Text
+modulePrelude name [] [] = "module " <> name <> " () where\n"
+modulePrelude name exports [] =
+    "module " <> name <> "\n    ( "
+    <> formatExportList exports
+    <> "    ) where\n"
+modulePrelude name [] reexportedModules =
+    "module " <> name <> "\n    ( "
+    <> formatExportList (map ("module " <>) reexportedModules)
+    <> "    ) where\n\n"
+    <> T.unlines (map ("import " <>) reexportedModules)
+modulePrelude name exports reexportedModules =
+    "module " <> name <> "\n    ( "
+    <> formatExportList (map ("module " <>) reexportedModules)
+    <> "\n    , "
+    <> formatExportList exports
+    <> "    ) where\n\n"
+    <> T.unlines (map ("import " <>) reexportedModules)
+
+-- | Code for loading the needed dependencies.
+importDeps :: [Text] -> Text
+importDeps [] = ""
+importDeps deps = T.unlines . map toImport $ deps
+    where toImport :: Text -> Text
+          toImport dep = let ucFirst :: Text -> Text
+                             ucFirst "" = error "importDeps: empty module name!"
+                             ucFirst t = T.cons (toUpper $ T.head t) (T.tail t)
+                             ucDep = ucFirst dep
+                         in "import qualified GI." <> ucDep <> " as " <> ucDep
+
+-- | Standard imports.
+moduleImports :: Text
+moduleImports = T.unlines [ "import Prelude ()"
+                          , "import Data.GI.Base.ShortPrelude"
+                          , ""
+                          , "import qualified Data.Text as T"
+                          , "import qualified Data.ByteString.Char8 as B"
+                          , "import qualified Data.Map as Map" ]
 
 -- | Write to disk the code for a module, under the given base
 -- directory. Does not write submodules recursively, for that use
@@ -360,26 +414,42 @@ writeModuleInfo :: Bool -> Maybe FilePath -> ModuleInfo -> IO ()
 writeModuleInfo verbose dirPrefix minfo = do
   let submoduleNames = map (moduleName) (M.elems (submodules minfo))
       -- We reexport any submodules.
-      submoduleExports = map (("module " <>) . dotModuleName) submoduleNames
+      submoduleExports = map dotModuleName submoduleNames
       fname = moduleNameToPath (moduleName minfo)
       dirname = takeDirectory fname
-      code = codeToText (submoduleExports ++ Set.toList (moduleExports minfo))
-             (moduleCode minfo)
+      code = codeToText (moduleCode minfo)
+      imports = moduleImports
+      prelude = modulePrelude (dotModuleName $ moduleName minfo)
+                (Set.toList $ moduleExports minfo)
+                submoduleExports
+      deps = importDeps (Set.toList $ moduleDeps minfo)
+      pkgRoot = take 2 (moduleName minfo)
+      typesModule = pkgRoot ++ ["Types"]
+      types = if moduleName minfo /= typesModule
+              then "import " <> dotModuleName typesModule
+              else ""
+
   when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
-  TIO.writeFile fname code
-  where
-    dotModuleName :: ModuleName -> Text
-    dotModuleName mn = T.intercalate "." mn
+  TIO.writeFile fname (T.unlines [prelude, imports, types, deps, code])
 
+  where
     moduleNameToPath :: ModuleName -> FilePath
     moduleNameToPath mn = joinPath (fromMaybe "" dirPrefix : map T.unpack mn)
                           ++ ".hs"
 
+-- | Turn an abstract module name into its dotted representation. For
+-- instance, ["GI", "Gtk", "Types"] -> GI.Gtk.Types.
+dotModuleName :: ModuleName -> Text
+dotModuleName mn = T.intercalate "." mn
+
 -- | Write down the code for a module to disk under the given base
--- directory. This also writes the submodules.
-writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO ()
+-- directory. This also writes the submodules. It returns the list of
+-- written modules.
+writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO [Text]
 writeModuleTree verbose dirPrefix minfo = do
-  forM_ (M.elems (submodules minfo)) (writeModuleTree verbose dirPrefix)
+  submoduleNames <- concat <$> forM (M.elems (submodules minfo))
+                                    (writeModuleTree verbose dirPrefix)
   writeModuleInfo verbose dirPrefix minfo
+  return $ (dotModuleName (moduleName minfo) : submoduleNames)

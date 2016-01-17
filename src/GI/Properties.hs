@@ -8,7 +8,6 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when, unless)
 import Data.List (intercalate)
-import Data.Monoid ((<>))
 import qualified Data.Text as T
 
 import Foreign.Storable (sizeOf)

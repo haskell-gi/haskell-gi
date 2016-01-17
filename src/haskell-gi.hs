@@ -28,7 +28,7 @@ import Text.Show.Pretty (ppShow)
 
 import GI.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import GI.Cabal (cabalConfig, setupHs, genCabalProject)
-import GI.Code (genCode, evalCodeGen, moduleDeps, writeModuleTree, moduleCode, codeToText)
+import GI.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAttributes, genAllAttributes)
@@ -109,7 +109,8 @@ genGenericAttrs options ovs modules extraPaths = do
                     overrides = ovs}
   putStrLn $ "\t* Generating GI.Properties"
   m <- genCode cfg allAPIs ["GI", "Properties"] (genAllAttributes (M.toList allAPIs))
-  writeModuleTree (optVerbose options) (optOutputDir options) m
+  _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
+  return ()
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
 genGenericConnectors :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
@@ -121,7 +122,8 @@ genGenericConnectors options ovs modules extraPaths = do
                     overrides = ovs}
   putStrLn $ "\t* Generating GI.Signals"
   m <- genCode cfg allAPIs ["GI", "Signals"] (genOverloadedSignalConnectors (M.toList allAPIs))
-  writeModuleTree (optVerbose options) (optOutputDir options) m
+  _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
+  return ()
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
@@ -139,9 +141,11 @@ processMod options ovs extraPaths name = do
       mp = T.unpack . ("GI." <>)
 
   putStrLn $ "\t* Generating " ++ mp nm
-  m <- genCode cfg allAPIs ["GI", nm] (genModule name apis)
-  let modDeps = moduleDeps m
-  writeModuleTree (optVerbose options) (optOutputDir options) m
+  m <- genCode cfg allAPIs ["GI", nm] (genModule apis)
+  let modDeps = transitiveModuleDeps m
+  moduleList <- writeModuleTree (optVerbose options) (optOutputDir options) m
+
+{- XXX See also below.
 
   putStrLn $ "\t\t+ " ++ mp nm ++ ".Attributes"
   m <- genCode cfg allAPIs ["GI", nm, "Attributes"] (genAttributes name (M.toList apis))
@@ -152,6 +156,7 @@ processMod options ovs extraPaths name = do
   m <- genCode cfg allAPIs ["GI", nm, "Signals"] (genSignalInstances name (M.toList apis))
   let sigDeps = moduleDeps m
   writeModuleTree (optVerbose options) (optOutputDir options) m
+-}
 
   when (optCabal options) $ do
     let cabal = "gi-" ++ map toLower (T.unpack nm) ++ ".cabal"
@@ -161,15 +166,17 @@ processMod options ovs extraPaths name = do
                              ++ cabal ++ ".new instead") >>
                    return (cabal ++ ".new"))
     putStrLn $ "\t\t+ " ++ fname
-    let usedDeps = S.delete name -- The module is not a dep of itself
-                   $ S.unions [modDeps, attrDeps, sigDeps]
+    let usedDeps = S.delete (T.pack name) -- The module is not a dep of itself
+                   $ S.unions [modDeps
+                              {- XXX , attrDeps, sigDeps XXX -}]
+
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
-        actualDeps = filter ((`S.member` usedDeps) . T.unpack . girNSName) girDeps
-    (err, m) <- evalCodeGen cfg allAPIs [] (genCabalProject gir actualDeps)
+        actualDeps = filter ((`S.member` usedDeps) . girNSName) girDeps
+    (err, m) <- evalCodeGen cfg allAPIs [] (genCabalProject gir actualDeps moduleList)
     case err of
       Nothing -> do
-               TIO.writeFile fname (codeToText [] (moduleCode m))
+               TIO.writeFile fname (codeToText (moduleCode m))
                putStrLn "\t\t+ cabal.config"
                TIO.writeFile "cabal.config" cabalConfig
                putStrLn "\t\t+ Setup.hs"

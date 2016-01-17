@@ -52,13 +52,14 @@ hOutType callable outArgs ignoreReturn = do
              _         -> "(,)" `con` (maybeHReturnType : hOutArgTypes)
 
 mkForeignImport :: Text -> Callable -> Bool -> CodeGen ()
-mkForeignImport symbol callable throwsGError = do
+mkForeignImport symbol callable throwsGError = submodule "Internal" $ do
     line first
     indent $ do
         mapM_ (\a -> line =<< fArgStr a) (args callable)
         when throwsGError $
                line $ padTo 40 "Ptr (Ptr GError) -> " ++ "-- error"
         line =<< last
+    export (T.unpack symbol)
     where
     first = "foreign import ccall \"" ++ T.unpack symbol ++ "\" " ++
                 T.unpack symbol ++ " :: "
@@ -556,6 +557,7 @@ genCallable n symbol callable throwsGError = do
     wrapper = group $ do
         let argName' = escapeReserved . argName
         name <- lowerName n
+        export name
         line $ deprecatedPragma name $ callableDeprecated callable
         line $ name ++ " ::"
         hSignature hInArgs =<< hOutType callable hOutArgs ignoreReturn
