@@ -2,11 +2,8 @@ import BasicPrelude hiding (on, error)
 
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
-import GI.GtkSignals ()
 import qualified GI.GLib as GLib
 import GI.WebKit
-import GI.WebKitSignals ()
-import GI.WebKitAttributes ()
 
 import GI.Properties
 import GI.Signals

@@ -1,6 +1,7 @@
 module GI.Code
     ( Code(..)
     , ModuleInfo(..)
+    , ModuleFlag(..)
     , BaseCodeGen
     , CodeGen
     , ExcCodeGen
@@ -30,6 +31,8 @@ module GI.Code
     , group
     , submodule
     , export
+    , setLanguagePragmas
+    , setModuleFlags
 
     , findAPI
     , findAPIByName
@@ -96,7 +99,15 @@ data ModuleInfo = ModuleInfo {
                                           -- module name.
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
     , moduleExports :: Set.Set Text -- ^ Set of exports for the current module.
+    , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
+    , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
     }
+
+-- | Flags for module code generation.
+data ModuleFlag = ImplicitPrelude  -- ^ Use the standard prelude,
+                                   -- instead of the haskell-gi-base short one.
+                | NoTypesImport    -- ^ Do not import a "Types" submodule.
+                  deriving (Show, Eq, Ord)
 
 -- | Generate the empty module.
 emptyModule :: ModuleName -> ModuleInfo
@@ -105,6 +116,8 @@ emptyModule m = ModuleInfo { moduleName = m
                            , submodules = M.empty
                            , moduleDeps = Set.empty
                            , moduleExports = Set.empty
+                           , modulePragmas = Set.empty
+                           , moduleFlags = Set.empty
                            }
 
 -- | Information for the code generator.
@@ -180,8 +193,11 @@ mergeInfoState oldState newState =
     let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
         newSubmodules = M.unionWith mergeInfo (submodules oldState) (submodules newState)
         newExports = Set.union (moduleExports oldState) (moduleExports newState)
+        newPragmas = Set.union (modulePragmas oldState) (modulePragmas newState)
+        newFlags = Set.union (moduleFlags oldState) (moduleFlags newState)
     in oldState {moduleDeps = newDeps, submodules = newSubmodules,
-                 moduleExports = newExports}
+                 moduleExports = newExports, modulePragmas = newPragmas,
+                 moduleFlags = newFlags }
 
 -- | Merge the infos, including code too.
 mergeInfo :: ModuleInfo -> ModuleInfo -> ModuleInfo
@@ -340,6 +356,16 @@ export :: String -> CodeGen ()
 export e =
     modify' $ \s -> s{moduleExports = Set.insert (T.pack e) (moduleExports s)}
 
+-- | Set the language pragmas for the current module.
+setLanguagePragmas :: [Text] -> CodeGen ()
+setLanguagePragmas ps =
+    modify' $ \s -> s{modulePragmas = Set.fromList ps}
+
+-- | Set the given flags for the module.
+setModuleFlags :: [ModuleFlag] -> CodeGen ()
+setModuleFlags flags =
+    modify' $ \s -> s{moduleFlags = Set.fromList flags}
+
 -- | Return a text representation of the `Code`.
 codeToText :: Code -> Text
 codeToText c = T.concat $ str 0 c []
@@ -366,6 +392,11 @@ formatExportList :: [Text] -> Text
 formatExportList [] = ""
 formatExportList (f:rest) = T.concat $
                             f <> "\n" : (map (paddedLine 1 . (", " <>))) rest
+
+-- | Write down the list of language pragmas.
+languagePragmas :: [Text] -> Text
+languagePragmas [] = ""
+languagePragmas ps = "{-# LANGUAGE " <> T.intercalate ", " ps <> " #-}\n"
 
 -- | Generic module prelude. We reexport all of the submodules.
 modulePrelude :: Text -> [Text] -> [Text] -> Text
@@ -418,21 +449,26 @@ writeModuleInfo verbose dirPrefix minfo = do
       fname = moduleNameToPath (moduleName minfo)
       dirname = takeDirectory fname
       code = codeToText (moduleCode minfo)
-      imports = moduleImports
+      pragmas = languagePragmas (Set.toList $ modulePragmas minfo)
       prelude = modulePrelude (dotModuleName $ moduleName minfo)
                 (Set.toList $ moduleExports minfo)
                 submoduleExports
+      imports = if ImplicitPrelude `Set.member` moduleFlags minfo
+                then ""
+                else moduleImports
       deps = importDeps (Set.toList $ moduleDeps minfo)
       pkgRoot = take 2 (moduleName minfo)
       typesModule = pkgRoot ++ ["Types"]
-      types = if moduleName minfo /= typesModule
-              then "import " <> dotModuleName typesModule
-              else ""
+      types = if moduleName minfo == typesModule ||
+              NoTypesImport `Set.member` moduleFlags minfo
+              then ""
+              else "import " <> dotModuleName typesModule
 
   when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
-  TIO.writeFile fname (T.unlines [prelude, imports, types, deps, code])
+  TIO.writeFile fname (T.unlines [pragmas, prelude,
+                                  imports, types, deps, code])
 
   where
     moduleNameToPath :: ModuleName -> FilePath

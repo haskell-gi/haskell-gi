@@ -1,5 +1,6 @@
 module GI.OverloadedSignals
-    ( genSignalInstances
+    ( genObjectSignals
+    , genInterfaceSignals
     , genOverloadedSignalConnectors
     ) where
 
@@ -42,13 +43,9 @@ findSignalNames apis = (map T.unpack . S.toList) <$> go apis S.empty
 -- | Generate the overloaded signal connectors: "Clicked", "ActivateLink", ...
 genOverloadedSignalConnectors :: [(Name, API)] -> CodeGen ()
 genOverloadedSignalConnectors allAPIs = do
-  line   "-- Generated code."
-  blank
-  line   "{-# LANGUAGE DataKinds, GADTs, KindSignatures, FlexibleInstances #-}"
-  blank
-  moduleName <- currentModule
-  line $ "module " ++ T.unpack moduleName ++ " where"
-  blank
+  setLanguagePragmas ["DataKinds", "GADTs", "KindSignatures", "FlexibleInstances"]
+  setModuleFlags [ImplicitPrelude, NoTypesImport]
+
   line   "import GHC.TypeLits"
   line   "import GHC.Exts (Constraint)"
   blank
@@ -62,6 +59,7 @@ genOverloadedSignalConnectors allAPIs = do
     forM_ signalNames $ \sn ->
         line $ padTo (maxLength + 1) (ucFirst (signalHaskellName sn)) ++
                  ":: SignalProxy \"" ++ sn ++ "\" \"\" NoConstraint"
+  export "SignalProxy(..)"
 
 -- | Qualified name for the "(sigName, info)" tag for a given signal.
 signalInfoName :: Name -> Signal -> CodeGen String
@@ -83,6 +81,7 @@ genInstance owner signal = group $ do
           cbHaskellType = signalConnectorName ++ "Callback"
       line $ "type HaskellCallbackType " ++ si ++ " = " ++ cbHaskellType
       line $ "connectSignal _ = " ++ "connect" ++ name ++ sn
+  export si
 
 -- | Signal instances for (GObject-derived) objects.
 genObjectSignals :: Name -> Object -> CodeGen ()
@@ -122,51 +121,3 @@ genInterfaceSignals n iface = do
           else infos
   group . line $ "type instance SignalList " ++ name ++
             " = '[ " ++ intercalate ", " allSignals ++ "]"
-
--- | Generate HasSignal instances for a given API element.
-genSignals :: (Name, API) -> CodeGen ()
-genSignals (n, APIObject o) = genObjectSignals n o
-genSignals (n, APIInterface i) = genInterfaceSignals n i
-genSignals _ = return ()
-
--- | Generate the signal information instances, so the generic overloaded
--- signal connectors are available.
-genSignalInstances :: String -> [(Name, API)] -> CodeGen ()
-genSignalInstances name apis = do
-  let mp = ("GI." ++)
-      nm = ucFirst name
-
-  code <- recurse $ forM_ apis genSignals
-
-  line   "-- Generated code."
-  blank
-
-  -- Providing orphan instances is the whole point of these modules,
-  -- tell GHC that this is fine.
-  line   "{-# OPTIONS_GHC -fno-warn-orphans #-}"
-  blank
-  line   "{-# LANGUAGE DataKinds,    FlexibleInstances,"
-  line   "             TypeFamilies, MultiParamTypeClasses,"
-  line "               TypeOperators #-}"
-  blank
-
-  moduleName <- currentModule
-  line $ "module " ++ T.unpack moduleName ++ " where"
-  blank
-
-  line   "import Data.GI.Base.Properties (GObjectNotifySignalInfo)"
-  line   "import Data.GI.Base.Signals"
-  line   "import Data.GI.Base.Overloading"
-  blank
-
-  -- Import dependencies, including instances for their overloaded
-  -- signals, so they are implicitly reexported and they do not need
-  -- to be included explicitly from client code.
-  deps <- map T.unpack <$> S.toList <$> getDeps
-  forM_ deps $ \i -> when (i /= name) $
-    line $ "import qualified " ++ mp (ucFirst i) ++ ".Signals as " ++ ucFirst i
-
-  line $ "import " ++ mp nm
-  blank
-
-  tellCode code

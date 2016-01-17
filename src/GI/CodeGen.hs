@@ -25,6 +25,8 @@ import GI.Constant (genConstant)
 import GI.Code
 import GI.GObject
 import GI.Inheritance (instanceTree)
+import GI.Properties (genInterfaceProperties, genObjectProperties)
+import GI.OverloadedSignals (genInterfaceSignals, genObjectSignals)
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct)
@@ -151,6 +153,8 @@ genErrorDomain name' domain = do
             line   "IO a ->"
             line   "IO a"
     line $ handler ++ " = handleGErrorJustDomain"
+  export ("catch" ++ name')
+  export ("handle" ++ name')
 
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
@@ -337,6 +341,18 @@ genObject n o = do
       parents <- instanceTree n
       genGObjectCasts isIU n (objTypeInit o) (parents ++ objInterfaces o)
 
+      -- Signals. They need to be in the "Types" module since they
+      -- resulting types appear on overloading.
+      forM_ (objSignals o) $ \s ->
+          handleCGExc
+          (line . (concat ["-- XXX Could not generate signal ", name', "::"
+                          , (T.unpack . sigName) s
+                          , "\n", "-- Error was : "] ++) . describeCGError)
+          (genSignal s n)
+
+      genObjectProperties n o
+      genObjectSignals n o
+
       export (name' <> "(..)")
 
     submodule "Objects" $ submodule (T.pack name') $ do
@@ -353,14 +369,6 @@ genObject n o = do
                         ++ "-- Error was : " ++ describeCGError e))
            (genMethod n mn f)
 
-       -- And finally signals
-       forM_ (objSignals o) $ \s -> submodule "Signals" $
-          handleCGExc
-          (line . (concat ["-- XXX Could not generate signal ", name', "::"
-                          , (T.unpack . sigName) s
-                          , "\n", "-- Error was : "] ++) . describeCGError)
-          (genSignal s n)
-
 genInterface :: Name -> Interface -> CodeGen ()
 genInterface n iface = do
   name' <- upperName n
@@ -371,6 +379,17 @@ genInterface n iface = do
      line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
      export (name' <> "(..)")
 
+     -- Signals. They need to be in the "Types" module since they
+     -- resulting types appear on overloading.
+     forM_ (ifSignals iface) $ \s -> handleCGExc
+          (line . (concat ["-- XXX Could not generate signal ", name', "::"
+                          , (T.unpack . sigName) s
+                          , "\n", "-- Error was : "] ++) . describeCGError)
+          (genSignal s n)
+
+     genInterfaceProperties n iface
+     genInterfaceSignals n iface
+
      isGO <- apiIsGObject n (APIInterface iface)
      if isGO
      then do
@@ -380,6 +399,7 @@ genInterface n iface = do
        allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
        let uniqueParents = nub (concat allParents)
        genGObjectCasts isIU n cn_ uniqueParents
+
      else group $ do
        let cls = classConstraint name'
        export cls
@@ -401,13 +421,6 @@ genInterface n iface = do
                              ++ name' ++ "::" ++ name mn ++ "\n"
                              ++ "-- Error was : " ++ describeCGError e))
                 (genMethod n mn f)
-
-     -- And finally signals
-     forM_ (ifSignals iface) $ \s -> submodule "Signals" $ handleCGExc
-        (line . (concat ["-- XXX Could not generate signal ", name', "::"
-                        , (T.unpack . sigName) s
-                        , "\n", "-- Error was : "] ++) . describeCGError)
-        (genSignal s n)
 
 -- Some type libraries include spurious interface/struct methods,
 -- where a method Mod.Foo::func also appears as an ordinary function

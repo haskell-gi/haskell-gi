@@ -1,11 +1,9 @@
 module GI.SymbolNaming
     ( qualify
-    , qualifyWithSuffix
     , ucFirst
     , lcFirst
     , lowerName
     , upperName
-    , upperNameWithSuffix
     , noName
     , escapeReserved
     , classConstraint

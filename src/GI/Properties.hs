@@ -18,7 +18,7 @@ import GI.Conversions
 import GI.Code
 import GI.GObject
 import GI.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
-import GI.SymbolNaming (upperNameWithSuffix, upperName, classConstraint, qualifyWithSuffix, hyphensToCamelCase)
+import GI.SymbolNaming (upperName, classConstraint, qualify, hyphensToCamelCase)
 import GI.Type
 import GI.Util
 
@@ -150,14 +150,14 @@ accessorOrUndefined available accessor (Name ons on) cName =
     if not available
     then return "undefined"
     else do
-      prefix <- qualifyWithSuffix "A." ons
+      prefix <- qualify ons
       return $ prefix ++ accessor ++ on ++ cName
 
 -- | The name of the type encoding the information for the property of
 -- the object.
 infoType :: Name -> Property -> CodeGen String
 infoType owner prop = do
-  name <- upperNameWithSuffix "A." owner
+  name <- upperName owner
   let cName = (hyphensToCamelCase . T.unpack . propName) prop
   return $ name ++ cName ++ "PropertyInfo"
 
@@ -228,7 +228,7 @@ genOneProperty owner prop = do
                          then ["'AttrGet"]
                          else [])
     it <- infoType owner prop
-
+    export it
     line $ "data " ++ it
     line $ "instance AttrInfo " ++ it ++ " where"
     indent $ do
@@ -251,6 +251,7 @@ genPlaceholderProperty :: Name -> Property -> CodeGen ()
 genPlaceholderProperty owner prop = do
   line $ "-- XXX Placeholder"
   it <- infoType owner prop
+  export it
   line $ "data " ++ it
   line $ "instance AttrInfo " ++ it ++ " where"
   indent $ do

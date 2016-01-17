@@ -1,8 +1,11 @@
--- Generated code.
+{-# LANGUAGE DataKinds, FlexibleInstances, GADTs, KindSignatures #-}
 
-{-# LANGUAGE DataKinds, GADTs, KindSignatures, FlexibleInstances #-}
+module GI.Signals
+    ( SignalProxy(..)
+    ) where
 
-module GI.Signals where
+
+
 
 import GHC.TypeLits
 import GHC.Exts (Constraint)
@@ -405,3 +408,4 @@ data SignalProxy (a :: Symbol) (b :: Symbol) (c :: * -> Constraint) where
     WindowRemoved                        :: SignalProxy "window-removed" "" NoConstraint
     WindowStateEvent                     :: SignalProxy "window-state-event" "" NoConstraint
     Wrapped                              :: SignalProxy "wrapped" "" NoConstraint
+

@@ -3,8 +3,6 @@
 import BasicPrelude hiding (on, error)
 import qualified BasicPrelude as BP
 import GI.Gtk hiding (main)
-import GI.GtkAttributes () -- For various attribute instances
-import GI.GtkSignals () -- For signal instances
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio

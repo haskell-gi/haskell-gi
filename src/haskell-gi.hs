@@ -31,8 +31,8 @@ import GI.Cabal (cabalConfig, setupHs, genCabalProject)
 import GI.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
-import GI.Attributes (genAttributes, genAllAttributes)
-import GI.OverloadedSignals (genSignalInstances, genOverloadedSignalConnectors)
+import GI.Attributes (genAllAttributes)
+import GI.OverloadedSignals (genOverloadedSignalConnectors)
 import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
 import GI.ProjectInfo (licenseText)
 import GI.SymbolNaming (ucFirst)
@@ -145,19 +145,6 @@ processMod options ovs extraPaths name = do
   let modDeps = transitiveModuleDeps m
   moduleList <- writeModuleTree (optVerbose options) (optOutputDir options) m
 
-{- XXX See also below.
-
-  putStrLn $ "\t\t+ " ++ mp nm ++ ".Attributes"
-  m <- genCode cfg allAPIs ["GI", nm, "Attributes"] (genAttributes name (M.toList apis))
-  let attrDeps = moduleDeps m
-  writeModuleTree (optVerbose options) (optOutputDir options) m
-
-  putStrLn $ "\t\t+ " ++ mp nm ++ ".Signals"
-  m <- genCode cfg allAPIs ["GI", nm, "Signals"] (genSignalInstances name (M.toList apis))
-  let sigDeps = moduleDeps m
-  writeModuleTree (optVerbose options) (optOutputDir options) m
--}
-
   when (optCabal options) $ do
     let cabal = "gi-" ++ map toLower (T.unpack nm) ++ ".cabal"
     fname <- doesFileExist cabal >>=
@@ -166,9 +153,8 @@ processMod options ovs extraPaths name = do
                              ++ cabal ++ ".new instead") >>
                    return (cabal ++ ".new"))
     putStrLn $ "\t\t+ " ++ fname
-    let usedDeps = S.delete (T.pack name) -- The module is not a dep of itself
-                   $ S.unions [modDeps
-                              {- XXX , attrDeps, sigDeps XXX -}]
+    -- The module is not a dep of itself
+    let usedDeps = S.delete (T.pack name) modDeps
 
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
