@@ -3,7 +3,35 @@
 -- requires just a small subset of the functions in the Prelude, which
 -- we reexport explicitly here.
 module Data.GI.Base.ShortPrelude
-    ( Enum(fromEnum, toEnum)
+    ( module Data.Char
+    , module Data.Int
+    , module Data.Word
+    , module Data.ByteString.Char8
+    , module Foreign.C
+    , module Foreign.Ptr
+    , module Foreign.ForeignPtr
+    , module Foreign.ForeignPtr.Unsafe
+    , module Foreign.Storable
+    , module Control.Applicative
+    , module Control.Exception
+    , module Control.Monad.IO.Class
+
+    , module Data.GI.Base.Attributes
+    , module Data.GI.Base.BasicTypes
+    , module Data.GI.Base.BasicConversions
+    , module Data.GI.Base.Closure
+    , module Data.GI.Base.GError
+    , module Data.GI.Base.GHashTable
+    , module Data.GI.Base.GParamSpec
+    , module Data.GI.Base.GVariant
+    , module Data.GI.Base.GValue
+    , module Data.GI.Base.ManagedPtr
+    , module Data.GI.Base.Overloading
+    , module Data.GI.Base.Properties
+    , module Data.GI.Base.Signals
+    , module Data.GI.Base.Utils
+
+    , Enum(fromEnum, toEnum)
     , Show(..)
     , Eq(..)
     , IO
@@ -28,3 +56,32 @@ module Data.GI.Base.ShortPrelude
     ) where
 
 import Control.Monad (when)
+import Data.Char (Char, ord, chr)
+import Data.Int (Int, Int8, Int16, Int32, Int64)
+import Data.Word (Word8, Word16, Word32, Word64)
+import Data.ByteString.Char8 (ByteString)
+import Foreign.C (CInt(..), CUInt(..), CFloat(..), CDouble(..), CString)
+import Foreign.Ptr (Ptr, plusPtr, FunPtr, nullPtr,
+                    castFunPtrToPtr, castPtrToFunPtr)
+import Foreign.ForeignPtr (ForeignPtr, newForeignPtr_)
+import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
+import Foreign.Storable (peek, poke, sizeOf)
+import Control.Applicative ((<$>))
+import Control.Exception (onException)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+
+import Data.GI.Base.Attributes hiding (get, set)
+import Data.GI.Base.BasicTypes
+import Data.GI.Base.BasicConversions
+import Data.GI.Base.Closure
+import Data.GI.Base.GError
+import Data.GI.Base.GHashTable
+import Data.GI.Base.GParamSpec
+import Data.GI.Base.GVariant
+import Data.GI.Base.GValue
+import Data.GI.Base.ManagedPtr
+import Data.GI.Base.Overloading
+import Data.GI.Base.Properties hiding (new)
+import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId, SignalInfo(..))
+import Data.GI.Base.Utils
+
