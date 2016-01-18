@@ -9,7 +9,7 @@ import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer
 
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (isJust)
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -18,9 +18,6 @@ import Data.Text (Text)
 import GI.API
 
 data Overrides = Overrides {
-      -- | Prefix for constants in a given namespace, if not given the
-      -- "_" string will be used.
-      constantPrefix  :: M.Map String String,
       -- | Ignored elements of a given API.
       ignoredElems    :: M.Map Name (S.Set Text),
       -- | Ignored APIs (all elements in this API will just be discarded).
@@ -38,7 +35,6 @@ data Overrides = Overrides {
 -- | Construct the generic config for a module.
 defaultOverrides :: Overrides
 defaultOverrides = Overrides {
-              constantPrefix  = M.empty,
               ignoredElems    = M.empty,
               ignoredAPIs     = S.empty,
               sealedStructs   = S.empty,
@@ -52,7 +48,6 @@ defaultOverrides = Overrides {
 instance Monoid Overrides where
     mempty = defaultOverrides
     mappend a b = Overrides {
-      constantPrefix = constantPrefix a <> constantPrefix b,
       ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
       sealedStructs = sealedStructs a <> sealedStructs b,
       ignoredElems = M.unionWith S.union (ignoredElems a) (ignoredElems b),
@@ -85,7 +80,6 @@ parseOneLine (T.stripPrefix "#" -> Just _) = return ()
 parseOneLine (T.stripPrefix "namespace " -> Just ns) =
     (put . Just . T.unpack . T.strip) ns
 parseOneLine (T.stripPrefix "ignore " -> Just ign) = get >>= parseIgnore ign
-parseOneLine (T.stripPrefix "constantPrefix " -> Just p) = get >>= parseConstP p
 parseOneLine (T.stripPrefix "seal " -> Just s) = get >>= parseSeal s
 parseOneLine (T.stripPrefix "pkg-config-name" -> Just s) = parsePkgConfigName s
 parseOneLine (T.stripPrefix "cabal-pkg-version" -> Just s) = parseCabalPkgVersion s
@@ -103,14 +97,6 @@ parseIgnore (T.words -> [T.splitOn "." -> [api]]) (Just ns) =
     tell $ defaultOverrides {ignoredAPIs = S.singleton (Name ns (T.unpack api))}
 parseIgnore ignore _ =
     throwError ("Ignore syntax is of the form \"ignore API.elem\" with '.elem' optional.\nGot \"ignore " <> ignore <> "\" instead.")
-
--- | Prefix for constants.
-parseConstP :: Text -> Maybe String -> Parser
-parseConstP _ Nothing = throwError "'constantPrefix' requires a namespace to be defined first. "
-parseConstP (T.words -> [p]) (Just ns) = tell $
-    defaultOverrides {constantPrefix = M.singleton ns (T.unpack p)}
-parseConstP prefix _ =
-    throwError ("constantPrefix syntax is of the form \"constantPrefix prefix\".\nGot \"constantPrefix " <> prefix <> "\" instead.")
 
 -- | Sealed structures.
 parseSeal :: Text -> Maybe String -> Parser
@@ -158,9 +144,6 @@ filterNamed set ignores =
 
 -- | Filter one API according to the given config.
 filterOneAPI :: Overrides -> (Name, API, Maybe (S.Set Text)) -> (Name, API)
-filterOneAPI ovs (Name ns n, APIConst c, _) =
-    (Name ns (prefix ++ n), APIConst c)
-    where prefix = fromMaybe "_" $ M.lookup ns (constantPrefix ovs)
 filterOneAPI ovs (n, APIStruct s, maybeIgnores) =
     (n, APIStruct s {structMethods = maybe (structMethods s)
                                      (filterNamed (structMethods s))

@@ -245,7 +245,7 @@ testTimeout = do
   putStrLn "*** Timeout test"
   now <- GLib.getMonotonicTime
   putStrLn $ "Now is " ++ show now ++ " , adding timeout."
-  _ <- GLib.timeoutAdd GLib._PRIORITY_DEFAULT 500 $ do
+  _ <- GLib.timeoutAdd GLib.PRIORITY_DEFAULT 500 $ do
                 andNow <- GLib.getMonotonicTime
                 putStrLn $ "Timeout called @ " ++ show andNow
                 return False
@@ -377,6 +377,18 @@ testUnexpectedNullHandling = do
     Just _ -> error "Unexpected success in builderGetObject!"
   putStrLn "+++ Unexpected NULL handling test done"
 
+testConstantPatternMatching :: IO ()
+testConstantPatternMatching = do
+  putStrLn "*** Constant pattern matching test"
+  when (not $ checkDigits "0123456789") $
+       error "Digit check failed!"
+  when (checkDigits GLib.CSET_A_2_Z) $
+       error "Digit check succeeded unexpectedly!"
+  putStrLn "+++ Constant pattern matching test done"
+      where checkDigits :: Text -> Bool
+            checkDigits GLib.CSET_DIGITS = True
+            checkDigits _                = False
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -469,6 +481,7 @@ main = do
         testCast
         testArrayOfArrays
         testUnexpectedNullHandling
+        testConstantPatternMatching
 
         widgetShowAll win
 
