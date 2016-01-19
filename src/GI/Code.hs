@@ -47,6 +47,7 @@ module GI.Code
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+import Data.Monoid (Monoid(..))
 #endif
 import Control.Monad.Reader
 import Control.Monad.State.Strict

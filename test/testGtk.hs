@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, PatternSynonyms #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import BasicPrelude hiding (on, error)
 import qualified BasicPrelude as BP
