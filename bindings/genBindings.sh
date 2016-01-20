@@ -29,4 +29,4 @@ generate()
     done
 }
 
-generate Atk cairo Gdk GdkPixbuf Gio GLib GObject Gtk Notify Pango Soup Vte JavaScriptCore-3.0 JavaScriptCore-4.0 WebKit WebKit2
+generate Atk cairo Gdk GdkPixbuf Gio GIRepository GLib GObject Gtk Notify Pango Soup Vte JavaScriptCore-3.0 JavaScriptCore-4.0 WebKit WebKit2
