@@ -98,8 +98,7 @@ genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do
   name' <- upperName n
 
-  forM_ fields $ \field -> when (fieldVisible field) $
-                           submodule "Fields" $ group $
+  forM_ fields $ \field -> when (fieldVisible field) $ group $
       handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
                                ":" ++ unpack (fieldName field) ++ "\" :: " ++
                                describeCGError e))

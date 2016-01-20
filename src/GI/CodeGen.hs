@@ -178,7 +178,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
       -- Methods
       forM_ (structMethods s) $ \(mn, f) ->
           do isFunction <- symbolFromFunction (methodSymbol f)
-             unless isFunction $ submodule "Methods" $
+             unless isFunction $
                   handleCGExc
                   (\e -> line ("-- XXX Could not generate method "
                                ++ name' ++ "::" ++ name mn ++ "\n"
@@ -207,7 +207,7 @@ genUnion n u = do
      -- Methods
      forM_ (unionMethods u) $ \(mn, f) ->
          do isFunction <- symbolFromFunction (methodSymbol f)
-            unless isFunction $ submodule "Methods" $
+            unless isFunction $
                    handleCGExc
                    (\e -> line ("-- XXX Could not generate method "
                                 ++ name' ++ "::" ++ name mn ++ "\n"
@@ -362,7 +362,7 @@ genObject n o = do
        export (name' <> "(..)")
 
        -- Methods
-       forM_ (objMethods o) $ \(mn, f) -> submodule "Methods" $
+       forM_ (objMethods o) $ \(mn, f) ->
            handleCGExc
            (\e -> line ("-- XXX Could not generate method "
                         ++ name' ++ "::" ++ name mn ++ "\n"
@@ -415,7 +415,7 @@ genInterface n iface = do
      -- Methods
      forM_ (ifMethods iface) $ \(mn, f) -> do
          isFunction <- symbolFromFunction (methodSymbol f)
-         unless isFunction $ submodule "Methods" $
+         unless isFunction $
                 handleCGExc
                 (\e -> line ("-- XXX Could not generate method "
                              ++ name' ++ "::" ++ name mn ++ "\n"
