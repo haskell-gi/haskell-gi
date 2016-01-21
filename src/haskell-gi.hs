@@ -27,7 +27,7 @@ import Text.Show.Pretty (ppShow)
 
 import GI.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import GI.Cabal (cabalConfig, setupHs, genCabalProject)
-import GI.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText)
+import GI.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, writeModuleCode, moduleCode, codeToText)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.Attributes (genAllAttributes)
@@ -108,7 +108,7 @@ genGenericAttrs options ovs modules extraPaths = do
                     overrides = ovs}
   putStrLn $ "\t* Generating GI.Properties"
   m <- genCode cfg allAPIs ["GI", "Properties"] (genAllAttributes (M.toList allAPIs))
-  _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
+  _ <- writeModuleCode (optVerbose options) (optOutputDir options) m
   return ()
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
@@ -121,7 +121,7 @@ genGenericConnectors options ovs modules extraPaths = do
                     overrides = ovs}
   putStrLn $ "\t* Generating GI.Signals"
   m <- genCode cfg allAPIs ["GI", "Signals"] (genOverloadedSignalConnectors (M.toList allAPIs))
-  _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
+  _ <- writeModuleCode (optVerbose options) (optOutputDir options) m
   return ()
 
 -- Generate the code for the given module, and return the dependencies

@@ -54,6 +54,8 @@ genBoxedObject n typeInit = do
        line $ "instance BoxedObject " ++ name' ++ " where"
        indent $ line $ "boxedType _ = c_" ++ T.unpack typeInit
 
+  hsBoot $ line $ "instance BoxedObject " ++ name' ++ " where"
+
 genBoxedEnum :: Name -> Text -> CodeGen ()
 genBoxedEnum n typeInit = do
   name' <- upperName n
@@ -110,8 +112,11 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
   maybe (return ()) (genBoxedEnum n) maybeTypeInit
 
 genEnum :: Name -> Enumeration -> CodeGen ()
-genEnum n@(Name _ name) enum = submodule "Types" $ do
+genEnum n@(Name _ name) enum = submodule "Enums" $ do
   line $ "-- Enum " ++ name
+
+  -- Reexported as-is by GI.Pkg.Types
+  setModuleFlags [Reexport, NoTypesImport, NoCallbacksImport]
 
   handleCGExc (\e -> line $ "-- XXX Could not generate: " ++ describeCGError e)
               (genEnumOrFlags n enum)
@@ -119,8 +124,11 @@ genEnum n@(Name _ name) enum = submodule "Types" $ do
 -- Very similar to enums, but we also declare ourselves as members of
 -- the IsGFlag typeclass.
 genFlags :: Name -> Flags -> CodeGen ()
-genFlags n@(Name _ name) (Flags enum) = submodule "Types" $ do
+genFlags n@(Name _ name) (Flags enum) = submodule "Flags" $ do
   line $ "-- Flags " ++ name
+
+  -- Reexported as-is by GI.Pkg.Types
+  setModuleFlags [Reexport, NoTypesImport, NoCallbacksImport]
 
   handleCGExc (\e -> line $ "-- XXX Could not generate: " ++ describeCGError e)
               (do
@@ -160,17 +168,16 @@ genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
    name' <- upperName n
 
-   submodule "Types" $ do
-      line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+   submodule "Structs" $ submodule (T.pack name') $ do
+      let decl = line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+      hsBoot decl
+      decl
+
       when (structIsBoxed s) $
            genBoxedObject n (fromJust $ structTypeInit s)
       export (name' <> ("(..)"))
 
-   submodule "Structs" $ submodule (T.pack name') $ do
       noName name'
-
-      -- Reexport for convenience
-      export (name' <> "(..)")
 
       -- Generate code for fields.
       genStructOrUnionFields n (structFields s)
@@ -189,17 +196,16 @@ genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
   name' <- upperName n
 
-  submodule "Types" $ do
-     line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+  submodule "Unions" $ submodule (T.pack name') $ do
+     let decl = line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+     hsBoot decl
+     decl
+
      when (unionIsBoxed u) $
           genBoxedObject n (fromJust $ unionTypeInit u)
      export (name' <> "(..)")
 
-  submodule "Unions" $ submodule (T.pack name') $ do
      noName name'
-
-     -- Reexport for convenience
-     export (name' <> "(..)")
 
      -- Generate code for fields.
      genStructOrUnionFields n (unionFields u)
@@ -302,7 +308,7 @@ genGObjectCasts isIU n cn_ parents = do
          intercalate ", " qualifiedParents ++ "]"
 
   group $ do
-    line $ "instance GObject " ++ name' ++ " where"
+    bline $ "instance GObject " ++ name' ++ " where"
     indent $ group $ do
             line $ "gobjectIsInitiallyUnowned _ = " ++ show isIU
             line $ "gobjectType _ = c_" ++ T.unpack cn_
@@ -310,8 +316,8 @@ genGObjectCasts isIU n cn_ parents = do
   let className = classConstraint name'
   group $ do
     export className
-    line $ "class GObject o => " ++ className ++ " o"
-    line $ "instance (GObject o, IsDescendantOf " ++ name' ++ " o) => "
+    bline $ "class GObject o => " ++ className ++ " o"
+    bline $ "instance (GObject o, IsDescendantOf " ++ name' ++ " o) => "
              ++ className ++ " o"
 
   -- Safe downcasting.
@@ -333,36 +339,30 @@ genObject n o = do
   if not isGO
   then line $ "-- APIObject \"" ++ name' ++
                 "\" does not descend from GObject, it will be ignored."
-  else do
-    submodule "Types" $ do
-      line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
-      -- Type safe casting to parent objects, and implemented interfaces.
-      isIU <- isInitiallyUnowned t
-      parents <- instanceTree n
-      genGObjectCasts isIU n (objTypeInit o) (parents ++ objInterfaces o)
+  else submodule "Objects" $ submodule (T.pack name') $
+       do
+         bline $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+         -- Type safe casting to parent objects, and implemented interfaces.
+         isIU <- isInitiallyUnowned t
+         parents <- instanceTree n
+         genGObjectCasts isIU n (objTypeInit o) (parents ++ objInterfaces o)
 
-      -- Signals. They need to be in the "Types" module since they
-      -- resulting types appear on overloading.
-      forM_ (objSignals o) $ \s ->
+         noName name'
+
+         export (name' <> "(..)")
+
+         forM_ (objSignals o) $ \s ->
           handleCGExc
           (line . (concat ["-- XXX Could not generate signal ", name', "::"
                           , (T.unpack . sigName) s
                           , "\n", "-- Error was : "] ++) . describeCGError)
           (genSignal s n)
 
-      genObjectProperties n o
-      genObjectSignals n o
+         genObjectProperties n o
+         genObjectSignals n o
 
-      export (name' <> "(..)")
-
-    submodule "Objects" $ submodule (T.pack name') $ do
-       noName name'
-
-       -- For convenience
-       export (name' <> "(..)")
-
-       -- Methods
-       forM_ (objMethods o) $ \(mn, f) ->
+         -- Methods
+         forM_ (objMethods o) $ \(mn, f) ->
            handleCGExc
            (\e -> line ("-- XXX Could not generate method "
                         ++ name' ++ "::" ++ name mn ++ "\n"
@@ -373,14 +373,14 @@ genInterface :: Name -> Interface -> CodeGen ()
 genInterface n iface = do
   name' <- upperName n
 
-  submodule "Types" $ group $ do
+  submodule "Interfaces" $ submodule (T.pack name') $ do
      line $ "-- interface " ++ name' ++ " "
      line $ deprecatedPragma name' $ ifDeprecated iface
-     line $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
+     bline $ "newtype " ++ name' ++ " = " ++ name' ++ " (ForeignPtr " ++ name' ++ ")"
      export (name' <> "(..)")
 
-     -- Signals. They need to be in the "Types" module since they
-     -- resulting types appear on overloading.
+     noName name'
+
      forM_ (ifSignals iface) $ \s -> handleCGExc
           (line . (concat ["-- XXX Could not generate signal ", name', "::"
                           , (T.unpack . sigName) s
@@ -403,14 +403,9 @@ genInterface n iface = do
      else group $ do
        let cls = classConstraint name'
        export cls
-       line $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
-       line $ "instance (ForeignPtrNewtype o, IsDescendantOf " ++ name' ++ " o) => " ++ cls ++ " o"
+       bline $ "class ForeignPtrNewtype a => " ++ cls ++ " a"
+       bline $ "instance (ForeignPtrNewtype o, IsDescendantOf " ++ name' ++ " o) => " ++ cls ++ " o"
        line $ "type instance ParentTypes " ++ name' ++ " = '[]"
-
-  submodule "Interfaces" $ submodule (T.pack name') $ do
-     noName name'
-
-     export (name' <> "(..)")
 
      -- Methods
      forM_ (ifMethods iface) $ \(mn, f) -> do
@@ -451,7 +446,8 @@ genAPI n (APIObject o) = genObject n o
 genAPI n (APIInterface i) = genInterface n i
 
 genModule' :: M.Map Name API -> CodeGen ()
-genModule' apis = mapM_ (uncurry genAPI)
+genModule' apis = do
+  mapM_ (uncurry genAPI)
             -- We provide these ourselves
           $ filter ((`notElem` [ Name "GLib" "Array"
                                , Name "GLib" "Error"
@@ -466,6 +462,10 @@ genModule' apis = mapM_ (uncurry genAPI)
           $ M.toList
           $ apis
 
+  -- Make sure we generate a "Callbacks" module, since it is imported
+  -- by other modules. It is fine if it ends up empty.
+  submodule "Callbacks" $ return ()
+
 genModule :: M.Map Name API -> CodeGen ()
 genModule apis = do
   -- Some API symbols are embedded into structures, extract these and
@@ -474,6 +474,5 @@ genModule apis = do
                      . concatMap extractCallbacksInStruct
                      . M.toList) apis
   allAPIs <- getAPIs
-  c <- recurseWithAPIs (M.union allAPIs embeddedAPIs)
+  recurseWithAPIs (M.union allAPIs embeddedAPIs)
        (genModule' (M.union apis embeddedAPIs))
-  tellCode c

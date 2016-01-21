@@ -229,7 +229,7 @@ genOneProperty owner prop = do
                          else [])
     it <- infoType owner prop
     export it
-    line $ "data " ++ it
+    bline $ "data " ++ it
     line $ "instance AttrInfo " ++ it ++ " where"
     indent $ do
             line $ "type AttrAllowedOps " ++ it

@@ -233,7 +233,7 @@ genCallbackWrapper cb name' dataptrs hInArgs hOutArgs isSignal = do
                line $ "return " ++ result'
 
 genCallback :: Name -> Callback -> CodeGen ()
-genCallback n (Callback cb) = submodule "Types" $ do
+genCallback n (Callback cb) = submodule "Callbacks" $ do
   name' <- upperName n
   line $ "-- callback " ++ name'
 

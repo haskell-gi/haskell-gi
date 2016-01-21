@@ -10,14 +10,13 @@ module GI.Code
     , evalCodeGen
 
     , writeModuleTree
+    , writeModuleCode
     , codeToText
     , transitiveModuleDeps
 
     , loadDependency
     , getDeps
-    , recurse
     , recurseWithAPIs
-    , tellCode
 
     , handleCGExc
     , describeCGError
@@ -26,9 +25,11 @@ module GI.Code
     , missingInfoError
 
     , indent
+    , bline
     , line
     , blank
     , group
+    , hsBoot
     , submodule
     , export
     , setLanguagePragmas
@@ -46,7 +47,7 @@ module GI.Code
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 import Data.Monoid (Monoid(..))
 #endif
 import Control.Monad.Reader
@@ -96,6 +97,7 @@ type ModuleName = [Text]
 data ModuleInfo = ModuleInfo {
       moduleName :: ModuleName -- ^ Full module name: ["GI", "Gtk", "Label"].
     , moduleCode :: Code       -- ^ Generated code for the module.
+    , bootCode   :: Code       -- ^ Interface going into the .hs-boot file.
     , submodules :: M.Map Text ModuleInfo -- ^ Indexed by the relative
                                           -- module name.
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
@@ -108,12 +110,15 @@ data ModuleInfo = ModuleInfo {
 data ModuleFlag = ImplicitPrelude  -- ^ Use the standard prelude,
                                    -- instead of the haskell-gi-base short one.
                 | NoTypesImport    -- ^ Do not import a "Types" submodule.
+                | NoCallbacksImport-- ^ Do not import a "Callbacks" submodule.
+                | Reexport         -- ^ Reexport the module (as is) from .Types
                   deriving (Show, Eq, Ord)
 
 -- | Generate the empty module.
 emptyModule :: ModuleName -> ModuleInfo
 emptyModule m = ModuleInfo { moduleName = m
                            , moduleCode = NoCode
+                           , bootCode = NoCode
                            , submodules = M.empty
                            , moduleDeps = Set.empty
                            , moduleExports = Set.empty
@@ -162,33 +167,28 @@ recurseCG cg = do
   cfg <- ask
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
-  let info = oldInfo { moduleCode = NoCode, submodules = M.empty }
+  let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
+                       bootCode = NoCode }
   liftIO (runCodeGen cg cfg info) >>= \case
      Left e -> throwError e
      Right (r, new) -> put (mergeInfoState oldInfo new) >>
                        return (r, moduleCode new)
 
--- | Like `recurseCG`, but for generators returning a unit value, where
--- we can just drop the result.
-recurse :: CodeGen () -> CodeGen Code
-recurse cg = snd <$> recurseCG cg
-
 -- | Like `recurse`, giving explicitly the set of loaded APIs for the
 -- subgenerator.
-recurseWithAPIs :: M.Map Name API -> CodeGen () -> CodeGen Code
+recurseWithAPIs :: M.Map Name API -> CodeGen () -> CodeGen ()
 recurseWithAPIs apis cg = do
   cfg <- ask
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
-  let info = oldInfo { moduleCode = NoCode, submodules = M.empty }
+  let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
+                       bootCode = NoCode }
       cfg' = cfg {loadedAPIs = apis}
   liftIO (runCodeGen cg cfg' info) >>= \case
      Left e -> throwError e
-     Right (_, new) -> put (mergeInfoState oldInfo new) >>
-                       return (moduleCode new)
+     Right (_, new) -> put (mergeInfo oldInfo new)
 
--- | Merge the dependencies, exports and submodules of the two given
--- `ModuleInfo`s (but not the generated code).
+-- | Merge everything but the generated code for the two given `ModuleInfo`.
 mergeInfoState :: ModuleInfo -> ModuleInfo -> ModuleInfo
 mergeInfoState oldState newState =
     let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
@@ -196,15 +196,16 @@ mergeInfoState oldState newState =
         newExports = Set.union (moduleExports oldState) (moduleExports newState)
         newPragmas = Set.union (modulePragmas oldState) (modulePragmas newState)
         newFlags = Set.union (moduleFlags oldState) (moduleFlags newState)
+        newBoot = bootCode oldState <> bootCode newState
     in oldState {moduleDeps = newDeps, submodules = newSubmodules,
                  moduleExports = newExports, modulePragmas = newPragmas,
-                 moduleFlags = newFlags }
+                 moduleFlags = newFlags, bootCode = newBoot }
 
 -- | Merge the infos, including code too.
 mergeInfo :: ModuleInfo -> ModuleInfo -> ModuleInfo
 mergeInfo oldInfo newInfo =
     let info = mergeInfoState oldInfo newInfo
-    in info {moduleCode = moduleCode oldInfo <> moduleCode newInfo}
+    in info { moduleCode = moduleCode oldInfo <> moduleCode newInfo }
 
 -- | Add the given submodule to the list of submodules of the current
 -- module.
@@ -229,7 +230,8 @@ handleCGExc fallback
  action = do
     cfg <- ask
     oldInfo <- get
-    let info = oldInfo { moduleCode = NoCode, submodules = M.empty }
+    let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
+                         bootCode = NoCode }
     liftIO (runCodeGen action cfg info) >>= \case
         Left e -> fallback e
         Right (r, newInfo) -> do
@@ -333,6 +335,11 @@ tellCode c = modify' (\s -> s {moduleCode = moduleCode s <> c})
 line :: String -> CodeGen ()
 line = tellCode . Line . T.pack
 
+-- | Print out the given line both to the normal module, and to the
+-- HsBoot file.
+bline :: String -> CodeGen ()
+bline l = hsBoot (line l) >> line l
+
 -- | A blank line
 blank :: CodeGen ()
 blank = line ""
@@ -350,6 +357,13 @@ group cg = do
   (x, code) <- recurseCG cg
   tellCode (Group code)
   blank
+  return x
+
+-- | Write the given code into the .hs-boot file for the current module.
+hsBoot :: BaseCodeGen e a -> BaseCodeGen e a
+hsBoot cg = do
+  (x, code) <- recurseCG cg
+  modify' (\s -> s{bootCode = bootCode s <> code})
   return x
 
 -- | Add a export to the current module.
@@ -386,7 +400,7 @@ codeToText c = T.concat $ str 0 c []
 paddedLine :: Int -> Text -> Text
 paddedLine n s = T.replicate (n * 4) " " <> s <> "\n"
 
--- | Format the given export list (at the given indent level). This is
+-- | Format the given export list. This is
 -- just the inside of the parenthesis, so the first term is treated
 -- differently from the rest.
 formatExportList :: [Text] -> Text
@@ -447,7 +461,7 @@ writeModuleInfo verbose dirPrefix minfo = do
   let submoduleNames = map (moduleName) (M.elems (submodules minfo))
       -- We reexport any submodules.
       submoduleExports = map dotModuleName submoduleNames
-      fname = moduleNameToPath (moduleName minfo)
+      fname = moduleNameToPath dirPrefix (moduleName minfo) ".hs"
       dirname = takeDirectory fname
       code = codeToText (moduleCode minfo)
       pragmas = languagePragmas (Set.toList $ modulePragmas minfo)
@@ -464,29 +478,95 @@ writeModuleInfo verbose dirPrefix minfo = do
               NoTypesImport `Set.member` moduleFlags minfo
               then ""
               else "import " <> dotModuleName typesModule
+      callbacksModule = pkgRoot ++ ["Callbacks"]
+      callbacks = if moduleName minfo == callbacksModule ||
+                  NoCallbacksImport `Set.member` moduleFlags minfo
+                  then ""
+                  else "import " <> dotModuleName callbacksModule
 
   when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
   TIO.writeFile fname (T.unlines [pragmas, prelude,
-                                  imports, types, deps, code])
+                                  imports, types, callbacks, deps, code])
+  when (bootCode minfo /= NoCode) $ do
+    let bootFName = moduleNameToPath dirPrefix (moduleName minfo) ".hs-boot"
+    TIO.writeFile bootFName (genHsBoot minfo)
 
-  where
-    moduleNameToPath :: ModuleName -> FilePath
-    moduleNameToPath mn = joinPath (fromMaybe "" dirPrefix : map T.unpack mn)
-                          ++ ".hs"
+-- | Generate the .hs-boot file for the given module.
+genHsBoot :: ModuleInfo -> Text
+genHsBoot minfo =
+    "module " <> (dotModuleName . moduleName) minfo <> " where\n\n" <>
+    moduleImports <> "\n" <>
+    codeToText (bootCode minfo)
+
+-- | Construct the filename corresponding to the given module.
+moduleNameToPath :: Maybe FilePath -> ModuleName -> FilePath -> FilePath
+moduleNameToPath dirPrefix mn ext =
+    joinPath (fromMaybe "" dirPrefix : map T.unpack mn) ++ ext
 
 -- | Turn an abstract module name into its dotted representation. For
 -- instance, ["GI", "Gtk", "Types"] -> GI.Gtk.Types.
 dotModuleName :: ModuleName -> Text
 dotModuleName mn = T.intercalate "." mn
 
--- | Write down the code for a module to disk under the given base
--- directory. This also writes the submodules. It returns the list of
--- written modules.
-writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO [Text]
-writeModuleTree verbose dirPrefix minfo = do
+-- | Write down the code for a module and its submodules to disk under
+-- the given base directory. It returns the list of written modules.
+writeModuleCode :: Bool -> Maybe FilePath -> ModuleInfo -> IO [Text]
+writeModuleCode verbose dirPrefix minfo = do
   submoduleNames <- concat <$> forM (M.elems (submodules minfo))
-                                    (writeModuleTree verbose dirPrefix)
+                                    (writeModuleCode verbose dirPrefix)
   writeModuleInfo verbose dirPrefix minfo
   return $ (dotModuleName (moduleName minfo) : submoduleNames)
+
+-- | List of reexports from the ".Types" module.
+typeReexports :: ModuleName -> [Text] -> Text
+typeReexports typesModule bootFiles =
+    "module " <> dotModuleName typesModule <>
+    "\n    ( " <>
+    formatExportList (map ("module " <>) bootFiles) <>
+    "    ) where\n\n"
+
+-- | Import the given (.hs-boot) modules.
+hsBootImports :: [Text] -> Text
+hsBootImports bootFiles =
+    T.unlines (map ("import {-# SOURCE #-} " <>) bootFiles)
+
+-- | Write down the ".Types" file reexporting all the interfaces
+-- defined in .hs-boot files. Returns the module name for the ".Types" file.
+writeTypes :: Maybe FilePath -> ModuleInfo -> IO Text
+writeTypes dirPrefix minfo = do
+  let pkgRoot = take 2 (moduleName minfo)
+      typesModule = pkgRoot ++ ["Types"]
+      fname = moduleNameToPath dirPrefix typesModule ".hs"
+      dirname = takeDirectory fname
+      bootfiles = map (dotModuleName . moduleName) (collectBootFiles minfo)
+      reexports = map (dotModuleName . moduleName) (collectReexports minfo)
+      exports = typeReexports typesModule (bootfiles ++ reexports)
+
+  createDirectoryIfMissing True dirname
+  TIO.writeFile fname (T.unlines [exports, hsBootImports bootfiles,
+                                  T.unlines (map ("import " <>) reexports) ])
+  return (dotModuleName typesModule)
+
+      where collectBootFiles :: ModuleInfo -> [ModuleInfo]
+            collectBootFiles minfo =
+                let sms = M.elems (submodules minfo)
+                in if bootCode minfo /= NoCode
+                   then minfo : concatMap collectBootFiles sms
+                   else concatMap collectBootFiles sms
+
+            collectReexports :: ModuleInfo -> [ModuleInfo]
+            collectReexports minfo =
+                let sms = M.elems (submodules minfo)
+                in if Reexport `Set.member` moduleFlags minfo
+                   then minfo : concatMap collectReexports sms
+                   else concatMap collectReexports sms
+
+-- | Write down the code for a module and its submodules to disk under
+-- the given base directory. This also writes the submodules, and a
+-- "Types" submodule reexporting all interfaces defined in .hs-boot
+-- files. It returns the list of written modules.
+writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO [Text]
+writeModuleTree verbose dirPrefix minfo =
+  (:) <$> writeTypes dirPrefix minfo <*> writeModuleCode verbose dirPrefix minfo

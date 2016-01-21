@@ -44,7 +44,7 @@ findSignalNames apis = (map T.unpack . S.toList) <$> go apis S.empty
 genOverloadedSignalConnectors :: [(Name, API)] -> CodeGen ()
 genOverloadedSignalConnectors allAPIs = do
   setLanguagePragmas ["DataKinds", "GADTs", "KindSignatures", "FlexibleInstances"]
-  setModuleFlags [ImplicitPrelude, NoTypesImport]
+  setModuleFlags [ImplicitPrelude, NoTypesImport, NoCallbacksImport]
 
   line   "import GHC.TypeLits"
   line   "import GHC.Exts (Constraint)"
@@ -74,7 +74,7 @@ genInstance owner signal = group $ do
   name <- upperName owner
   let sn = (ucFirst . signalHaskellName . T.unpack . sigName) signal
   si <- signalInfoName owner signal
-  line $ "data " ++ si
+  bline $ "data " ++ si
   line $ "instance SignalInfo " ++ si ++ " where"
   indent $ do
       let signalConnectorName = name ++ sn

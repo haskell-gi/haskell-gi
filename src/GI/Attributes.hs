@@ -43,7 +43,7 @@ genPropertyAttr pName = group $ do
 genAllAttributes :: [(Name, API)] -> CodeGen ()
 genAllAttributes allAPIs = do
   setLanguagePragmas ["DataKinds"]
-  setModuleFlags [ImplicitPrelude, NoTypesImport]
+  setModuleFlags [ImplicitPrelude, NoTypesImport, NoCallbacksImport]
 
   line $ "import Data.Proxy (Proxy(..))"
   blank
