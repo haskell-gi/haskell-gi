@@ -9,7 +9,7 @@ import Control.Exception (handle)
 import Data.Char (toLower)
 import Data.Bool (bool)
 import Data.Monoid ((<>))
-import Data.Text (pack, unpack, Text)
+import Data.Text (Text)
 
 import System.Directory (doesFileExist)
 import System.Console.GetOpt
@@ -34,7 +34,7 @@ import GI.Attributes (genAllAttributes)
 import GI.OverloadedSignals (genOverloadedSignalConnectors)
 import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
 import GI.ProjectInfo (licenseText)
-import GI.SymbolNaming (ucFirst)
+import GI.Util (ucFirst)
 
 data Mode = GenerateCode | Dump | Attributes | Signals | Help
 
@@ -89,7 +89,7 @@ showHelp = concatMap optAsLine optDescrs
           "  -" ++ flag ++ "|--" ++ long ++ "\t" ++ desc ++ "\n"
         optAsLine _ = error "showHelp"
 
-printGError = handle (gerrorMessage >=> putStrLn . unpack)
+printGError = handle (gerrorMessage >=> putStrLn . T.unpack)
 
 -- | Load a dependency without further postprocessing.
 loadRawAPIs :: Bool -> Overrides -> [FilePath] -> Text -> IO [(Name, API)]
@@ -126,17 +126,17 @@ genGenericConnectors options ovs modules extraPaths = do
 
 -- Generate the code for the given module, and return the dependencies
 -- for this module.
-processMod :: Options -> Overrides -> [FilePath] -> String -> IO ()
+processMod :: Options -> Overrides -> [FilePath] -> Text -> IO ()
 processMod options ovs extraPaths name = do
-  let version = M.lookup (T.pack name) (nsChooseVersion ovs)
-  (gir, girDeps) <- loadGIRInfo (optVerbose options) (T.pack name) version extraPaths
+  let version = M.lookup name (nsChooseVersion ovs)
+  (gir, girDeps) <- loadGIRInfo (optVerbose options) name version extraPaths
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
 
   let cfg = Config {modName = Just name,
                     verbose = optVerbose options,
                     overrides = ovs}
-      nm = T.pack (ucFirst name)
+      nm = ucFirst name
       mp = T.unpack . ("GI." <>)
 
   putStrLn $ "\t* Generating " ++ mp nm
@@ -153,7 +153,7 @@ processMod options ovs extraPaths name = do
                    return (cabal ++ ".new"))
     putStrLn $ "\t\t+ " ++ fname
     -- The module is not a dep of itself
-    let usedDeps = S.delete (T.pack name) modDeps
+    let usedDeps = S.delete name modDeps
 
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
@@ -169,7 +169,7 @@ processMod options ovs extraPaths name = do
                putStrLn "\t\t+ LICENSE"
                TIO.writeFile "LICENSE" licenseText
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
-                  ++ "\nError was: " ++ msg
+                  ++ "\nError was: " ++ T.unpack msg
 
 dump :: Options -> Overrides -> Text -> IO ()
 dump options ovs name = do
@@ -177,7 +177,7 @@ dump options ovs name = do
   (doc, _) <- loadGIRInfo (optVerbose options) name version (optSearchPaths options)
   mapM_ (putStrLn . ppShow) (girAPIs doc)
 
-process :: Options -> [String] -> IO ()
+process :: Options -> [Text] -> IO ()
 process options names = do
   let extraPaths = optSearchPaths options
   configs <- traverse TIO.readFile (optOverridesFiles options)
@@ -189,9 +189,9 @@ process options names = do
     Right ovs ->
       case optMode options of
         GenerateCode -> forM_ names (processMod options ovs extraPaths)
-        Attributes -> genGenericAttrs options ovs (map T.pack names) extraPaths
-        Signals -> genGenericConnectors options ovs (map T.pack names) extraPaths
-        Dump -> forM_ names (dump options ovs . pack)
+        Attributes -> genGenericAttrs options ovs names extraPaths
+        Signals -> genGenericConnectors options ovs names extraPaths
+        Dump -> forM_ names (dump options ovs)
         Help -> putStr showHelp
 
 main :: IO ()
@@ -208,7 +208,7 @@ main = printGError $ do
 
     case nonOptions of
       [] -> failWithUsage
-      names -> process options names
+      names -> process options (map T.pack names)
     where
       failWithUsage = do
         hPutStrLn stderr "usage: haskell-gi [options] module1 [module2 [...]]"

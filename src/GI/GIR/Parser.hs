@@ -92,7 +92,7 @@ elementDescription element =
 nameInCurrentNS :: Text -> Parser Name
 nameInCurrentNS n = do
   ctx <- ask
-  return $ Name (T.unpack (ctxNamespace ctx)) (T.unpack n)
+  return $ Name (ctxNamespace ctx) n
 
 -- | Return the current namespace.
 currentNamespace :: Parser Text
@@ -106,9 +106,9 @@ resolveQualifiedTypeName ns n = do
   case M.lookup (Alias (ns, n)) (knownAliases ctx) of
     -- The resolved type may be an alias itself, like for
     -- Gtk.Allocation -> Gdk.Rectangle -> cairo.RectangleInt
-    Just (TInterface ns n) -> resolveQualifiedTypeName (T.pack ns) (T.pack n)
+    Just (TInterface ns n) -> resolveQualifiedTypeName ns n
     Just t -> return t
-    Nothing -> return $ TInterface (T.unpack ns) (T.unpack n)
+    Nothing -> return $ TInterface ns n
 
 -- | Return the value of an attribute for the given element. If the
 -- attribute is not present this throws an error.
@@ -155,7 +155,7 @@ optionalAttr attr def parser =
 -- namespace, and otherwise we simply parse it.
 qualifyName :: Text -> Parser Name
 qualifyName n = case T.split (== '.') n of
-    [ns, name] -> return $ Name (T.unpack ns) (T.unpack name)
+    [ns, name] -> return $ Name ns name
     [name] -> nameInCurrentNS name
     _ -> parseError "Could not understand name"
 

@@ -15,7 +15,8 @@ import qualified Data.Map as M
 import Data.Text (Text)
 
 import GI.API
-import GI.Code (findAPIByName, CodeGen, line)
+import GI.Code (findAPIByName, CodeGen, line, (<>))
+import GI.Util (tshow)
 
 -- | Find the parent of a given object when building the
 -- instanceTree. For the purposes of the binding we do not need to
@@ -108,8 +109,8 @@ removeDuplicates inheritables =
               | (p == prop) -> return m -- Duplicated, but isomorphic property
               | otherwise   ->
                 do line   "--- XXX Duplicated object with different types:"
-                   line $ "  --- " ++ show n ++ " -> " ++ show p
-                   line $ "  --- " ++ show name ++ " -> " ++ show prop
+                   line $ "  --- " <> tshow n <> " -> " <> tshow p
+                   line $ "  --- " <> tshow name <> " -> " <> tshow prop
                    -- Tainted
                    return $ M.insert (iName prop) (True, n, p) m
           Nothing -> return $ M.insert (iName prop) (False, name, prop) m

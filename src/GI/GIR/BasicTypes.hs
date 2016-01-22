@@ -8,7 +8,7 @@ module GI.GIR.BasicTypes
 import Data.Text (Text)
 
 -- | Name for a symbol in the GIR file.
-data Name = Name { namespace :: String, name :: String }
+data Name = Name { namespace :: Text, name :: Text }
     deriving (Eq, Ord, Show)
 
 -- | Transfer mode for an argument or property.

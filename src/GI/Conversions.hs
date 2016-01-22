@@ -33,9 +33,9 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (when)
 import Control.Monad.Free (Free(..), liftF)
-import Data.List (intercalate)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import Data.Int
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word
 import GHC.Exts (IsString(..))
@@ -51,10 +51,10 @@ import GI.Util
 -- either (by default) a pure function (indicated by the P
 -- constructor) or a function returning values on a monad (M
 -- constructor). 'Id' denotes the identity function.
-data Constructor = P String | M String | Id
+data Constructor = P Text | M Text | Id
                    deriving (Eq,Show)
 instance IsString Constructor where
-    fromString = P
+    fromString = P . T.pack
 
 data FExpr next = Apply Constructor next
                 | MapC Map Constructor next
@@ -68,13 +68,13 @@ data Map = Map | MapFirst | MapSecond
          deriving (Show)
 
 -- Naming for the maps.
-mapName :: Map -> String
+mapName :: Map -> Text
 mapName Map = "map"
 mapName MapFirst = "mapFirst"
 mapName MapSecond = "mapSecond"
 
 -- Naming for the monadic versions of the maps that we use
-monadicMapName :: Map -> String
+monadicMapName :: Map -> Text
 monadicMapName Map = "mapM"
 monadicMapName MapFirst = "mapFirstA"
 monadicMapName MapSecond = "mapSecondA"
@@ -94,53 +94,53 @@ mapSecond f = liftF $ MapC MapSecond f ()
 literal :: Constructor -> Converter
 literal f = liftF $ Literal f ()
 
-genConversion :: String -> Converter -> CodeGen String
+genConversion :: Text -> Converter -> CodeGen Text
 genConversion l (Pure ()) = return l
 genConversion l (Free k) = do
   let l' = prime l
   case k of
     Apply (P f) next ->
-        do line $ "let " ++ l' ++ " = " ++ f ++ " " ++ l
+        do line $ "let " <> l' <> " = " <> f <> " " <> l
            genConversion l' next
     Apply (M f) next ->
-        do line $ l' ++ " <- " ++ f ++ " " ++ l
+        do line $ l' <> " <- " <> f <> " " <> l
            genConversion l' next
     Apply Id next -> genConversion l next
 
     MapC m (P f) next ->
-        do line $ "let " ++ l' ++ " = " ++ mapName m ++ " " ++ f ++ " " ++ l
+        do line $ "let " <> l' <> " = " <> mapName m <> " " <> f <> " " <> l
            genConversion l' next
     MapC m (M f) next ->
-        do line $ l' ++ " <- " ++ monadicMapName m ++ " " ++ f ++ " " ++ l
+        do line $ l' <> " <- " <> monadicMapName m <> " " <> f <> " " <> l
            genConversion l' next
     MapC _ Id next -> genConversion l next
 
     Literal (P f) next ->
-        do line $ "let " ++ l ++ " = " ++ f
+        do line $ "let " <> l <> " = " <> f
            genConversion l next
     Literal (M f) next ->
-        do line $ l ++ " <- " ++ f
+        do line $ l <> " <- " <> f
            genConversion l next
     Literal Id next -> genConversion l next
 
 -- Given an array, together with its type, return the code for reading
 -- its length.
-computeArrayLength :: String -> Type -> ExcCodeGen String
+computeArrayLength :: Text -> Type -> ExcCodeGen Text
 computeArrayLength array (TCArray _ _ _ t) = do
   reader <- findReader
-  return $ "fromIntegral $ " ++ reader ++ " " ++ array
+  return $ "fromIntegral $ " <> reader <> " " <> array
     where findReader = case t of
                      TBasicType TUInt8 -> return "B.length"
                      TBasicType _      -> return "length"
                      TInterface _ _    -> return "length"
                      TCArray{}         -> return "length"
                      _ -> notImplementedError $
-                          "Don't know how to compute length of " ++ show t
+                          "Don't know how to compute length of " <> tshow t
 computeArrayLength _ t =
     notImplementedError $ "computeArrayLength called on non-CArray type "
-                            ++ show t
+                            <> tshow t
 
-convert :: String -> BaseCodeGen e Converter -> BaseCodeGen e String
+convert :: Text -> BaseCodeGen e Converter -> BaseCodeGen e Text
 convert l c = do
   c' <- c
   genConversion l c'
@@ -247,8 +247,8 @@ hToF' t a hType fType transfer
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
     | TCArray{}  <- t = notImplementedError $
-                   "Don't know how to pack C array of type " ++ show t
-    | otherwise = case (show hType, show fType) of
+                   "Don't know how to pack C array of type " <> tshow t
+    | otherwise = case (tshow hType, tshow fType) of
                ("T.Text", "CString") -> return $ M "textToCString"
                ("[Char]", "CString") -> return $ M "stringToCString"
                ("Char", "CInt")      -> return "(fromIntegral . ord)"
@@ -258,10 +258,10 @@ hToF' t a hType fType transfer
                ("GType", "CGType")   -> return "gtypeToCGType"
                _                     -> notImplementedError $
                                         "Don't know how to convert "
-                                        ++ show hType ++ " into "
-                                        ++ show fType ++ ".\n"
-                                        ++ "Internal type: "
-                                        ++ show t
+                                        <> tshow hType <> " into "
+                                        <> tshow fType <> ".\n"
+                                        <> "Internal type: "
+                                        <> tshow t
 
 getForeignConstructor :: Type -> Transfer -> ExcCodeGen Constructor
 getForeignConstructor t transfer = do
@@ -270,7 +270,7 @@ getForeignConstructor t transfer = do
   fType <- foreignType t
   hToF' t a hType fType transfer
 
-hToF_PackedType :: Type -> String -> Transfer -> ExcCodeGen Converter
+hToF_PackedType :: Type -> Text -> Transfer -> ExcCodeGen Converter
 hToF_PackedType t packer transfer = do
   innerConstructor <- getForeignConstructor t transfer
   return $ do
@@ -279,22 +279,22 @@ hToF_PackedType t packer transfer = do
 
 -- | Try to find the `hash` and `equal` functions appropriate for the
 -- given type, when used as a key in a GHashTable.
-hashTableKeyMappings :: Type -> ExcCodeGen (String, String)
+hashTableKeyMappings :: Type -> ExcCodeGen (Text, Text)
 hashTableKeyMappings (TBasicType TVoid) = return ("gDirectHash", "gDirectEqual")
 hashTableKeyMappings (TBasicType TUTF8) = return ("gStrHash", "gStrEqual")
 hashTableKeyMappings t =
-    notImplementedError $ "GHashTable key of type " ++ show t ++ " unsupported."
+    notImplementedError $ "GHashTable key of type " <> tshow t <> " unsupported."
 
 -- | `GHashTable` tries to fit every type into a pointer, the
 -- following function tries to find the appropriate
 -- (destroy,packer,unpacker) for the given type.
-hashTablePtrPackers :: Type -> ExcCodeGen (String, String, String)
+hashTablePtrPackers :: Type -> ExcCodeGen (Text, Text, Text)
 hashTablePtrPackers (TBasicType TVoid) =
     return ("Nothing", "ptrPackPtr", "ptrUnpackPtr")
 hashTablePtrPackers (TBasicType TUTF8) =
     return ("(Just ptr_to_g_free)", "cstringPackPtr", "cstringUnpackPtr")
 hashTablePtrPackers t =
-    notImplementedError $ "GHashTable element of type " ++ show t ++ " unsupported."
+    notImplementedError $ "GHashTable element of type " <> tshow t <> " unsupported."
 
 hToF_PackGHashTable :: Type -> Type -> ExcCodeGen Converter
 hToF_PackGHashTable keys elems = do
@@ -311,8 +311,8 @@ hToF_PackGHashTable keys elems = do
     mapSecond elemsConstructor
     mapFirst (P keyPack)
     mapSecond (P elemPack)
-    apply (M (intercalate " " ["packGHashTable", keyHash, keyEqual,
-                               keyDestroy, elemDestroy]))
+    apply (M (T.intercalate " " ["packGHashTable", keyHash, keyEqual,
+                                 keyDestroy, elemDestroy]))
 
 hToF :: Type -> Transfer -> ExcCodeGen Converter
 hToF (TGList t) transfer = hToF_PackedType t "packGList" transfer
@@ -326,7 +326,7 @@ hToF (TCArray zt _ _ t@(TCArray{})) transfer = do
   let packer = if zt
                then "packZeroTerminated"
                else "pack"
-  hToF_PackedType t (packer ++ "PtrArray") transfer
+  hToF_PackedType t (packer <> "PtrArray") transfer
 
 hToF (TCArray zt _ _ t@(TInterface _ _)) transfer = do
   isScalar <- getIsScalar t
@@ -334,7 +334,7 @@ hToF (TCArray zt _ _ t@(TInterface _ _)) transfer = do
                then "packZeroTerminated"
                else "pack"
   if isScalar
-  then hToF_PackedType t (packer ++ "StorableArray") transfer
+  then hToF_PackedType t (packer <> "StorableArray") transfer
   else do
     api <- findAPI t
     let size = case api of
@@ -342,8 +342,8 @@ hToF (TCArray zt _ _ t@(TInterface _ _)) transfer = do
                  Just (APIUnion u) -> unionSize u
                  _ -> 0
     if size == 0 || zt
-    then hToF_PackedType t (packer ++ "PtrArray") transfer
-    else hToF_PackedType t (packer ++ "BlockArray " ++ show size) transfer
+    then hToF_PackedType t (packer <> "PtrArray") transfer
+    else hToF_PackedType t (packer <> "BlockArray " <> tshow size) transfer
 
 hToF t transfer = do
   a <- findAPI t
@@ -352,26 +352,26 @@ hToF t transfer = do
   constructor <- hToF' t a hType fType transfer
   return $ apply constructor
 
-boxedForeignPtr :: String -> Transfer -> CodeGen Constructor
+boxedForeignPtr :: Text -> Transfer -> CodeGen Constructor
 boxedForeignPtr constructor transfer = return $
    case transfer of
-     TransferEverything -> M $ parenthesize $ "wrapBoxed " ++ constructor
-     _ -> M $ parenthesize $ "newBoxed " ++ constructor
+     TransferEverything -> M $ parenthesize $ "wrapBoxed " <> constructor
+     _ -> M $ parenthesize $ "newBoxed " <> constructor
 
 suForeignPtr :: Bool -> Int -> TypeRep -> Transfer -> CodeGen Constructor
 suForeignPtr isBoxed size hType transfer = do
-  let constructor = tyConName $ typeRepTyCon hType
+  let constructor = T.pack . tyConName . typeRepTyCon $ hType
   if isBoxed then
       boxedForeignPtr constructor transfer
   else case size of
          0 -> do
            line "-- XXX Wrapping a foreign struct/union with no known destructor, leak?"
            return $ M $ parenthesize $
-                      "\\x -> " ++ constructor ++ " <$> newForeignPtr_ x"
+                      "\\x -> " <> constructor <> " <$> newForeignPtr_ x"
          n -> return $ M $ parenthesize $
               case transfer of
-                TransferEverything -> "wrapPtr " ++ constructor
-                _ -> "newPtr " ++ show n ++ " " ++ constructor
+                TransferEverything -> "wrapPtr " <> constructor
+                _ -> "newPtr " <> tshow n <> " " <> constructor
 
 structForeignPtr :: Struct -> TypeRep -> Transfer -> CodeGen Constructor
 structForeignPtr s =
@@ -383,16 +383,16 @@ unionForeignPtr u =
 
 fObjectToH :: Type -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fObjectToH t hType transfer = do
-  let constructor = tyConName $ typeRepTyCon hType
+  let constructor = T.pack . tyConName . typeRepTyCon $ hType
   isGO <- isGObject t
   case transfer of
     TransferEverything ->
         if isGO
-        then return $ M $ parenthesize $ "wrapObject " ++ constructor
+        then return $ M $ parenthesize $ "wrapObject " <> constructor
         else badIntroError "Got a transfer of something not a GObject"
     _ ->
         if isGO
-        then return $ M $ parenthesize $ "newObject " ++ constructor
+        then return $ M $ parenthesize $ "newObject " <> constructor
         else badIntroError "Wrapping not a GObject with no copy..."
 
 fCallbackToH :: Callback -> TypeRep -> Transfer -> ExcCodeGen Constructor
@@ -444,10 +444,10 @@ fToH' t a hType fType transfer
     | TCArray True _ _ (TBasicType _) <- t =
         return $ M "unpackZeroTerminatedStorableArray"
     | TCArray{}  <- t = notImplementedError $
-                   "Don't know how to unpack C array of type " ++ show t
+                   "Don't know how to unpack C array of type " <> tshow t
     | TByteArray <- t = return $ M "unpackGByteArray"
     | TGHash _ _ <- t = notImplementedError "Foreign Hashes not supported yet"
-    | otherwise = case (show fType, show hType) of
+    | otherwise = case (tshow fType, tshow hType) of
                ("CString", "T.Text") -> return $ M "cstringToText"
                ("CString", "[Char]") -> return $ M "cstringToString"
                ("CInt", "Char")      -> return "(chr . fromIntegral)"
@@ -457,10 +457,10 @@ fToH' t a hType fType transfer
                ("CGType", "GType")   -> return "GType"
                _                     ->
                    notImplementedError $ "Don't know how to convert "
-                                           ++ show fType ++ " into "
-                                           ++ show hType ++ ".\n"
-                                           ++ "Internal type: "
-                                           ++ show t
+                                           <> tshow fType <> " into "
+                                           <> tshow hType <> ".\n"
+                                           <> "Internal type: "
+                                           <> tshow t
 
 getHaskellConstructor :: Type -> Transfer -> ExcCodeGen Constructor
 getHaskellConstructor t transfer = do
@@ -469,7 +469,7 @@ getHaskellConstructor t transfer = do
   fType <- foreignType t
   fToH' t a hType fType transfer
 
-fToH_PackedType :: Type -> String -> Transfer -> ExcCodeGen Converter
+fToH_PackedType :: Type -> Text -> Transfer -> ExcCodeGen Converter
 fToH_PackedType t unpacker transfer = do
   innerConstructor <- getHaskellConstructor t transfer
   return $ do
@@ -514,27 +514,27 @@ fToH t transfer = do
   constructor <- fToH' t a hType fType transfer
   return $ apply constructor
 
-unpackCArray :: String -> Type -> Transfer -> ExcCodeGen Converter
+unpackCArray :: Text -> Type -> Transfer -> ExcCodeGen Converter
 unpackCArray length (TCArray False _ _ t) transfer =
   case t of
     TBasicType TUTF8 -> return $ apply $ M $ parenthesize $
-                        "unpackUTF8CArrayWithLength " ++ length
+                        "unpackUTF8CArrayWithLength " <> length
     TBasicType TFileName -> return $ apply $ M $ parenthesize $
-                            "unpackFileNameArrayWithLength " ++ length
+                            "unpackFileNameArrayWithLength " <> length
     TBasicType TUInt8 -> return $ apply $ M $ parenthesize $
-                         "unpackByteStringWithLength " ++ length
+                         "unpackByteStringWithLength " <> length
     TBasicType TVoid -> return $ apply $ M $ parenthesize $
-                         "unpackPtrArrayWithLength " ++ length
+                         "unpackPtrArrayWithLength " <> length
     TBasicType TBoolean -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength (/= 0) " ++ length
+                         "unpackMapStorableArrayWithLength (/= 0) " <> length
     TBasicType TGType -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength GType " ++ length
+                         "unpackMapStorableArrayWithLength GType " <> length
     TBasicType TFloat -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength realToFrac " ++ length
+                         "unpackMapStorableArrayWithLength realToFrac " <> length
     TBasicType TDouble -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength realToFrac " ++ length
+                         "unpackMapStorableArrayWithLength realToFrac " <> length
     TBasicType _ -> return $ apply $ M $ parenthesize $
-                         "unpackStorableArrayWithLength " ++ length
+                         "unpackStorableArrayWithLength " <> length
     TInterface _ _ -> do
            a <- findAPI t
            isScalar <- getIsScalar t
@@ -547,40 +547,41 @@ unpackCArray length (TCArray False _ _ t) transfer =
                         _ -> (False, 0)
            let unpacker | isScalar    = "unpackStorableArrayWithLength"
                         | (size == 0) = "unpackPtrArrayWithLength"
-                        | boxed       = "unpackBoxedArrayWithLength " ++ show size
-                        | otherwise   = "unpackBlockArrayWithLength " ++ show size
+                        | boxed       = "unpackBoxedArrayWithLength " <> tshow size
+                        | otherwise   = "unpackBlockArrayWithLength " <> tshow size
            return $ do
-             apply $ M $ parenthesize $ unpacker ++ " " ++ length
+             apply $ M $ parenthesize $ unpacker <> " " <> length
              mapC innerConstructor
     _ -> notImplementedError $
-         "unpackCArray : Don't know how to unpack C Array of type " ++ show t
+         "unpackCArray : Don't know how to unpack C Array of type " <> tshow t
 
 unpackCArray _ _ _ = notImplementedError "unpackCArray : unexpected array type."
 
 -- Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
 -- list of typeclass constraints for the type.
-argumentType :: [Char] -> Type -> CodeGen ([Char], String, [String])
+argumentType :: [Char] -> Type -> CodeGen ([Char], Text, [Text])
 argumentType [] _               = error "out of letters"
 argumentType letters (TGList a) = do
   (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" ++ name ++ "]", constraints)
+  return (ls, "[" <> name <> "]", constraints)
 argumentType letters (TGSList a) = do
   (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" ++ name ++ "]", constraints)
+  return (ls, "[" <> name <> "]", constraints)
 argumentType letters@(l:ls) t   = do
   api <- findAPI t
-  s <- show <$> haskellType t
+  s <- tshow <$> haskellType t
   case api of
     Just (APIInterface _) -> do
-             let constraints = [classConstraint s ++ " " ++ [l]]
-             return (ls, [l], constraints)
+             let constraints = [classConstraint s <> " " <> T.singleton l]
+             return (ls, T.singleton l, constraints)
     -- Instead of restricting to the actual class,
     -- we allow for any object descending from it.
     Just (APIObject _) -> do
         isGO <- isGObject t
         if isGO
-        then return (ls, [l], [classConstraint s ++ " " ++ [l]])
+        then return (ls, T.singleton l,
+                     [classConstraint s <> " " <> T.singleton l])
         else return (letters, s, [])
     _ -> return (letters, s, [])
 
@@ -638,7 +639,7 @@ haskellType (TInterface "GObject" "Closure") = return $ "Closure" `con` []
 haskellType t@(TInterface ns n) = do
   prefix <- qualify ns
   api <- findAPI t
-  let tname = T.pack (prefix ++ n) `con` []
+  let tname = (prefix <> n) `con` []
   return $ case api of
              Just (APIFlags _) -> "[]" `con` [tname]
              _ -> tname
@@ -699,8 +700,8 @@ foreignType t@(TInterface ns n) = do
     prefix <- qualify ns
     return $ case api of
                Just (APICallback _) ->
-                   funptr $ T.pack (prefix ++ n ++ "C") `con` []
-               _ -> ptr $ T.pack (prefix ++ n) `con` []
+                   funptr $ (prefix <> n <> "C") `con` []
+               _ -> ptr $ (prefix <> n) `con` []
 
 getIsScalar :: Type -> CodeGen Bool
 getIsScalar t = do
@@ -747,16 +748,16 @@ isNullable t = do
 
 -- If the given type maps to a list in Haskell, return the type of the
 -- elements, and the function that maps over them.
-elementTypeAndMap :: Type -> String -> Maybe (Type, String)
+elementTypeAndMap :: Type -> Text -> Maybe (Type, Text)
 -- Passed along as a raw pointer.
 elementTypeAndMap (TCArray False (-1) (-1) _) _ = Nothing
 -- ByteString
 elementTypeAndMap (TCArray _ _ _ (TBasicType TUInt8)) _ = Nothing
 elementTypeAndMap (TCArray True _ _ t) _ = Just (t, "mapZeroTerminatedCArray")
 elementTypeAndMap (TCArray False (-1) _ t) len =
-    Just (t, parenthesize $ "mapCArrayWithLength " ++ len)
+    Just (t, parenthesize $ "mapCArrayWithLength " <> len)
 elementTypeAndMap (TCArray False fixed _ t) _ =
-    Just (t, parenthesize $ "mapCArrayWithLength " ++ show fixed)
+    Just (t, parenthesize $ "mapCArrayWithLength " <> tshow fixed)
 elementTypeAndMap (TGArray t) _ = Just (t, "mapGArray")
 elementTypeAndMap (TPtrArray t) _ = Just (t, "mapPtrArray")
 elementTypeAndMap (TGList t) _ = Just (t, "mapGList")
@@ -769,5 +770,5 @@ elementType :: Type -> Maybe Type
 elementType t = fst <$> elementTypeAndMap t undefined
 
 -- Return just the map.
-elementMap :: Type -> String -> Maybe String
+elementMap :: Type -> Text -> Maybe Text
 elementMap t len = snd <$> elementTypeAndMap t len

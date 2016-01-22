@@ -309,7 +309,7 @@ fixupInterface csymbolMap (n@(Name ns _), APIInterface iface) = do
   prereqs <- case ifTypeInit iface of
                Nothing -> return []
                Just ti -> do
-                 gtype <- girLoadGType (T.pack ns) ti
+                 gtype <- girLoadGType ns ti
                  prereqGTypes <- gtypeInterfaceListPrereqs gtype
                  forM prereqGTypes $ \p -> do
                    case M.lookup p csymbolMap of
@@ -340,7 +340,7 @@ fixupStructIsBoxed (Name ns _) s = do
   isBoxed <- case structTypeInit s of
                Nothing -> return False
                Just ti -> do
-                 gtype <- girLoadGType (T.pack ns) ti
+                 gtype <- girLoadGType ns ti
                  return (gtypeIsBoxed gtype)
   return (s {structIsBoxed = isBoxed})
 
@@ -348,7 +348,7 @@ fixupStructIsBoxed (Name ns _) s = do
 -- by using libgirepository than reading the GIR file directly.
 fixupStructSizeAndOffsets :: Name -> Struct -> IO Struct
 fixupStructSizeAndOffsets (Name ns n) s = do
-  (size, offsetMap) <- girStructSizeAndOffsets (T.pack ns) (T.pack n)
+  (size, offsetMap) <- girStructSizeAndOffsets ns n
   return (s { structSize = size
             , structFields = map (fixupField offsetMap) (structFields s)})
 
@@ -362,7 +362,7 @@ fixupUnion _ api = return api
 -- | Like 'fixupStructSizeAndOffset' above.
 fixupUnionSizeAndOffsets :: Name -> Union -> IO Union
 fixupUnionSizeAndOffsets (Name ns n) u = do
-  (size, offsetMap) <- girUnionSizeAndOffsets (T.pack ns) (T.pack n)
+  (size, offsetMap) <- girUnionSizeAndOffsets ns n
   return (u { unionSize = size
             , unionFields = map (fixupField offsetMap) (unionFields u)})
 

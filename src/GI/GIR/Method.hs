@@ -5,7 +5,6 @@ module GI.GIR.Method
     ) where
 
 import Data.Text (Text)
-import qualified Data.Text as T
 
 import GI.GIR.Callable (Callable(..), parseCallable)
 import GI.GIR.Parser
@@ -28,7 +27,7 @@ parseMethod mType = do
   name <- parseName
   shadows <- queryAttr "shadows"
   let exposedName = case shadows of
-                      Just n -> name {name = T.unpack n}
+                      Just n -> name {name = n}
                       Nothing -> name
   callable <- parseCallable
   symbol <- getAttrWithNamespace CGIRNS "identifier"

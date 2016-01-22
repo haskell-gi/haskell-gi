@@ -42,7 +42,7 @@ data Type
     | TGArray Type
     | TPtrArray Type
     | TByteArray
-    | TInterface String String
+    | TInterface Text Text
     | TGList Type
     | TGSList Type
     | TGHash Type Type

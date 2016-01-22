@@ -1,60 +1,48 @@
 module GI.Util
-  ( maybeWithCString
-  , getList
-  , toFlags
-  , split
-
-  , prime
-  , unprime
+  ( prime
   , parenthesize
 
   , padTo
   , withComment
+
+  , ucFirst
+  , lcFirst
+
+  , tshow
+  , terror
   ) where
 
-import Foreign
-import Foreign.C
+import Data.Monoid ((<>))
+import Data.Char (toLower, toUpper)
+import Data.Text (Text)
+import qualified Data.Text as T
 
-import Data.List (unfoldr)
+padTo :: Int -> Text -> Text
+padTo n s = s <> T.replicate (n - T.length s) " "
 
-padTo n s = s ++ replicate (n - length s) ' '
-withComment a b = padTo 40 a ++ "-- " ++ b
+withComment :: Text -> Text -> Text
+withComment a b = padTo 40 a <> "-- " <> b
 
-maybeWithCString :: Maybe String -> (CString -> IO a) -> IO a
-maybeWithCString = maybe ($ nullPtr) withCString
+prime :: Text -> Text
+prime = (<> "'")
 
-getList :: (a -> IO CInt) -> (a -> CInt -> IO b) -> a -> IO [b]
-getList getN getOne x = do
-    n <- getN x
-    mapM (getOne x) [0..n - 1]
+parenthesize :: Text -> Text
+parenthesize s = "(" <> s <> ")"
 
-toFlags :: Enum a => CInt -> [a]
-toFlags n = loop n (sizeOf n * 8 - 1) -- Number of bits in the argument
-    where loop _ (-1) = []
-          loop n e =
-              let rest = loop n (e - 1)
-               in if testBit n e then toEnum (2 ^ e) : rest else rest
+-- | Construct the `Text` representation of a showable.
+tshow :: Show a => a -> Text
+tshow = T.pack . show
 
--- Splits a string separated by the given separator into a list of
--- constituents. For example: split '.' "A.BC.D" = ["A", "BC", "D"]
-split :: Char -> String -> [String]
-split sep = unfoldr span'
-    where span' :: String -> Maybe (String, String)
-          span' [] = Nothing
-          span' s@(x:xs)
-              | x == sep  = Just $ span (/= sep) xs
-              | otherwise = Just $ span (/= sep) s
+-- | Throw an error with the given `Text`.
+terror :: Text -> a
+terror = error . T.unpack
 
-prime :: String -> String
-prime = (++ "'")
+-- | Capitalize the first character of the given string.
+ucFirst :: Text -> Text
+ucFirst "" = terror "ucFirst: empty text!"
+ucFirst t = T.cons (toUpper $ T.head t) (T.tail t)
 
--- Remove the prime at the end of the given string
-unprime :: String -> String
-unprime "" = error "Empty variable to unprime!"
-unprime primed =
-    case last primed of
-      '\'' -> init primed
-      _ -> error $ primed ++ " is not primed!"
-
-parenthesize :: String -> String
-parenthesize s = "(" ++ s ++ ")"
+-- | Make the first character of the given string lowercase.
+lcFirst :: Text -> Text
+lcFirst "" = terror "lcFirst: empty string"
+lcFirst t = T.cons (toLower $ T.head t) (T.tail t)

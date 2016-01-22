@@ -1,7 +1,6 @@
+{-# LANGUAGE ViewPatterns #-}
 module GI.SymbolNaming
     ( qualify
-    , ucFirst
-    , lcFirst
     , lowerName
     , upperName
     , noName
@@ -11,31 +10,22 @@ module GI.SymbolNaming
     , underscoresToCamelCase
     ) where
 
-import Data.Char (toLower, toUpper)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (Monoid)
 #endif
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.String (IsString)
 
 import GI.API
 import GI.Code
 import GI.Config (Config(modName))
-import GI.Util (split)
+import GI.Util (lcFirst, ucFirst)
 
-classConstraint :: (Monoid a, IsString a) => a -> a
+classConstraint :: Text -> Text
 classConstraint n = n <> "K"
 
--- See importDeps in Code.hs for a `Text` implementation.
-ucFirst (x:xs) = toUpper x : xs
-ucFirst "" = error "ucFirst: empty string"
-
-lcFirst (x:xs) = toLower x : xs
-lcFirst "" = error "lcFirst: empty string"
-
-lowerName :: Name -> CodeGen String
-lowerName (Name _ s) = return $ concat . rename $ split '_' s
+lowerName :: Name -> CodeGen Text
+lowerName (Name _ s) = return . T.concat . rename . T.split (== '_') $ s
     where
       rename [w] = [lcFirst w]
       rename (w:ws) = lcFirst w : map ucFirst' ws
@@ -44,59 +34,58 @@ lowerName (Name _ s) = return $ concat . rename $ split '_' s
       ucFirst' "" = "_"
       ucFirst' x = ucFirst x
 
-upperNameWithSuffix :: String -> Name -> CodeGen String
+upperNameWithSuffix :: Text -> Name -> CodeGen Text
 upperNameWithSuffix suffix (Name ns s) = do
           prefix <- qualifyWithSuffix suffix ns
-          return $ prefix ++ uppered
-    where uppered = concatMap ucFirst' $ split '_' $ sanitize s
+          return $ prefix <> uppered
+    where uppered = T.concat . map ucFirst' . T.split (== '_') $ sanitize s
           -- Move leading underscores to the end (for example in
           -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
-          sanitize ('_':xs) = sanitize xs ++ "_"
+          sanitize (T.uncons -> Just ('_', xs)) = sanitize xs <> "_"
           sanitize xs = xs
 
           ucFirst' "" = "_"
           ucFirst' x = ucFirst x
 
-upperName :: Name -> CodeGen String
+upperName :: Name -> CodeGen Text
 upperName = upperNameWithSuffix "."
 
 -- | Return a qualified prefix for the given namespace. In case the
 -- namespace corresponds to the current module the empty string is
 -- returned, otherwise the namespace ++ suffix is returned. Suffix is
 -- typically just ".", see `qualify` below.
-qualifyWithSuffix :: String -> String -> CodeGen String
+qualifyWithSuffix :: Text -> Text -> CodeGen Text
 qualifyWithSuffix suffix ns = do
      cfg <- config
      if modName cfg == Just ns then
          return ""
      else do
-       loadDependency (T.pack ns) -- Make sure that the given
-                                  -- namespace is listed as a
-                                  -- dependency of this module.
-       return $ ucFirst ns ++ suffix
+       loadDependency ns -- Make sure that the given namespace is
+                         -- listed as a dependency of this module.
+       return $ ucFirst ns <> suffix
 
 -- | Return the qualified namespace (ns ++ "." or "", depending on
 -- whether ns is the current namespace).
-qualify :: String -> CodeGen String
+qualify :: Text -> CodeGen Text
 qualify = qualifyWithSuffix "."
 
 -- | Save a bit of typing for optional arguments in the case that we
 -- want to pass Nothing.
-noName :: String -> CodeGen ()
+noName :: Text -> CodeGen ()
 noName name' = group $ do
-                 line $ "no" ++ name' ++ " :: Maybe " ++ name'
-                 line $ "no" ++ name' ++ " = Nothing"
-                 export ("no" ++ name')
+                 line $ "no" <> name' <> " :: Maybe " <> name'
+                 line $ "no" <> name' <> " = Nothing"
+                 export ("no" <> name')
 
 -- | For a string of the form "one-sample-string" return "OneSampleString"
-hyphensToCamelCase :: String -> String
-hyphensToCamelCase str = concatMap ucFirst $ split '-' str
+hyphensToCamelCase :: Text -> Text
+hyphensToCamelCase = T.concat . map ucFirst . T.split (== '-')
 
 -- | Similarly, turn a name separated_by_underscores into CamelCase.
-underscoresToCamelCase :: String -> String
-underscoresToCamelCase str = concatMap ucFirst $ split '_' str
+underscoresToCamelCase :: Text -> Text
+underscoresToCamelCase = T.concat . map ucFirst . T.split (== '_')
 
-escapeReserved :: Text -> String
+escapeReserved :: Text -> Text
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"
 escapeReserved "data" = "data_"
@@ -123,6 +112,6 @@ escapeReserved "sizeOf" = "sizeOf_"
 escapeReserved "when" = "when_"
 escapeReserved "default" = "default_"
 escapeReserved s
-    | "set_" `T.isPrefixOf` s = T.unpack s <> "_"
-    | "get_" `T.isPrefixOf` s = T.unpack s <> "_"
-    | otherwise = T.unpack s
+    | "set_" `T.isPrefixOf` s = s <> "_"
+    | "get_" `T.isPrefixOf` s = s <> "_"
+    | otherwise = s

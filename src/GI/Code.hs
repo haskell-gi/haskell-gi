@@ -53,7 +53,6 @@ import Data.Monoid (Monoid(..))
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Control.Monad.Except
-import Data.Char (toUpper)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
@@ -70,6 +69,7 @@ import System.FilePath (joinPath, takeDirectory)
 import GI.API (API, Name(..))
 import GI.Config (Config(..))
 import GI.Type (Type(..))
+import GI.Util (tshow, terror, ucFirst)
 
 data Code
     = NoCode              -- ^ No code
@@ -132,9 +132,9 @@ data CodeGenConfig = CodeGenConfig {
     , loadedAPIs :: M.Map Name API -- ^ APIs available to the generator.
     }
 
-data CGError = CGErrorNotImplemented String
-             | CGErrorBadIntrospectionInfo String
-             | CGErrorMissingInfo String
+data CGError = CGErrorNotImplemented Text
+             | CGErrorBadIntrospectionInfo Text
+             | CGErrorMissingInfo Text
                deriving (Show)
 
 type BaseCodeGen excType a =
@@ -300,18 +300,18 @@ transitiveModuleDeps minfo =
 
 -- | Give a friendly textual description of the error for presenting
 -- to the user.
-describeCGError :: CGError -> String
-describeCGError (CGErrorNotImplemented e) = "Not implemented: " ++ show e
-describeCGError (CGErrorBadIntrospectionInfo e) = "Bad introspection data: " ++ show e
-describeCGError (CGErrorMissingInfo e) = "Missing info: " ++ show e
+describeCGError :: CGError -> Text
+describeCGError (CGErrorNotImplemented e) = "Not implemented: " <> tshow e
+describeCGError (CGErrorBadIntrospectionInfo e) = "Bad introspection data: " <> tshow e
+describeCGError (CGErrorMissingInfo e) = "Missing info: " <> tshow e
 
-notImplementedError :: String -> ExcCodeGen a
+notImplementedError :: Text -> ExcCodeGen a
 notImplementedError s = throwError $ CGErrorNotImplemented s
 
-badIntroError :: String -> ExcCodeGen a
+badIntroError :: Text -> ExcCodeGen a
 badIntroError s = throwError $ CGErrorBadIntrospectionInfo s
 
-missingInfoError :: String -> ExcCodeGen a
+missingInfoError :: Text -> ExcCodeGen a
 missingInfoError s = throwError $ CGErrorMissingInfo s
 
 findAPI :: Type -> CodeGen (Maybe API)
@@ -325,19 +325,19 @@ findAPIByName n@(Name ns _) = do
     case M.lookup n apis of
         Just api -> return api
         Nothing ->
-            error $ "couldn't find API description for " ++ ns ++ "." ++ name n
+            terror $ "couldn't find API description for " <> ns <> "." <> name n
 
 -- | Add some code to the current generator.
 tellCode :: Code -> CodeGen ()
 tellCode c = modify' (\s -> s {moduleCode = moduleCode s <> c})
 
 -- | Print out a (newline-terminated) line.
-line :: String -> CodeGen ()
-line = tellCode . Line . T.pack
+line :: Text -> CodeGen ()
+line = tellCode . Line
 
 -- | Print out the given line both to the normal module, and to the
 -- HsBoot file.
-bline :: String -> CodeGen ()
+bline :: Text -> CodeGen ()
 bline l = hsBoot (line l) >> line l
 
 -- | A blank line
@@ -367,9 +367,9 @@ hsBoot cg = do
   return x
 
 -- | Add a export to the current module.
-export :: String -> CodeGen ()
+export :: Text -> CodeGen ()
 export e =
-    modify' $ \s -> s{moduleExports = Set.insert (T.pack e) (moduleExports s)}
+    modify' $ \s -> s{moduleExports = Set.insert e (moduleExports s)}
 
 -- | Set the language pragmas for the current module.
 setLanguagePragmas :: [Text] -> CodeGen ()
@@ -438,10 +438,7 @@ importDeps :: [Text] -> Text
 importDeps [] = ""
 importDeps deps = T.unlines . map toImport $ deps
     where toImport :: Text -> Text
-          toImport dep = let ucFirst :: Text -> Text
-                             ucFirst "" = error "importDeps: empty module name!"
-                             ucFirst t = T.cons (toUpper $ T.head t) (T.tail t)
-                             ucDep = ucFirst dep
+          toImport dep = let ucDep = ucFirst dep
                          in "import qualified GI." <> ucDep <> " as " <> ucDep
 
 -- | Standard imports.

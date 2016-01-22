@@ -4,6 +4,7 @@ module GI.GIR.Deprecation
     , queryDeprecated
     ) where
 
+import Data.Monoid ((<>))
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -19,16 +20,16 @@ data DeprecationInfo = DeprecationInfo {
 
 -- | Encode the given `DeprecationInfo` for the given symbol as a
 -- deprecation pragma.
-deprecatedPragma :: String -> Maybe DeprecationInfo -> String
+deprecatedPragma :: Text -> Maybe DeprecationInfo -> Text
 deprecatedPragma _    Nothing     = ""
-deprecatedPragma name (Just info) = "{-# DEPRECATED " ++ name ++ " " ++
-                                    show (note ++ reason) ++ "#-}"
+deprecatedPragma name (Just info) = "{-# DEPRECATED " <> name <> " " <>
+                                    (T.pack . show) (note <> reason) <> "#-}"
         where reason = case deprecationMessage info of
                          Nothing -> []
-                         Just msg -> (lines . T.unpack) msg
+                         Just msg -> T.lines msg
               note = case deprecatedSinceVersion info of
                        Nothing -> []
-                       Just v -> ["(Since version " ++ T.unpack v ++ ")"]
+                       Just v -> ["(Since version " <> v <> ")"]
 
 -- | Parse the deprecation information for the given element of the GIR file.
 queryDeprecated :: Element -> Maybe DeprecationInfo

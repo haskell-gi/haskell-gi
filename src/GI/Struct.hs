@@ -9,9 +9,9 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, unless, when)
 
-import Data.List (isSuffixOf)
 import Data.Maybe (mapMaybe, isJust)
-import Data.Text (unpack)
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import GI.API
 import GI.Conversions
@@ -23,15 +23,13 @@ import GI.Util
 -- | Whether (not) to generate bindings for the given struct.
 ignoreStruct :: Name -> Struct -> Bool
 ignoreStruct (Name _ name) s = isJust (gtypeStructFor s) ||
-                               "Private" `isSuffixOf` name
+                               "Private" `T.isSuffixOf` name
 
 -- | Canonical name for the type of a callback type embedded in a
 -- struct field.
-fieldCallbackType :: String -> Field -> String
-fieldCallbackType structName field = structName
-                                     ++ (underscoresToCamelCase . unpack .
-                                         fieldName) field
-                                     ++ "FieldCallback"
+fieldCallbackType :: Text -> Field -> Text
+fieldCallbackType structName field =
+    structName <> (underscoresToCamelCase . fieldName) field <> "FieldCallback"
 
 -- | Fix the interface names of callback fields in the struct to
 -- correspond to the ones that we are going to generate.
@@ -74,23 +72,23 @@ buildFieldGetter :: Name -> Field -> ExcCodeGen ()
 buildFieldGetter n@(Name ns _) field = do
   name' <- upperName n
 
-  hType <- show <$> haskellType (fieldType field)
-  fType <- show <$> foreignType (fieldType field)
-  unless ("Private" `isSuffixOf` hType) $ do
-     fName <- upperName $ Name ns (unpack . fieldName $ field)
-     let getter = lcFirst name' ++ "Read" ++ fName
-     line $ getter ++ " :: " ++ name' ++ " -> IO " ++
-                 if ' ' `elem` hType
+  hType <- tshow <$> haskellType (fieldType field)
+  fType <- tshow <$> foreignType (fieldType field)
+  unless ("Private" `T.isSuffixOf` hType) $ do
+     fName <- upperName $ Name ns (fieldName field)
+     let getter = lcFirst name' <> "Read" <> fName
+     line $ getter <> " :: " <> name' <> " -> IO " <>
+                 if T.any (== ' ') hType
                  then parenthesize hType
                  else hType
-     line $ getter ++ " s = withManagedPtr s $ \\ptr -> do"
+     line $ getter <> " s = withManagedPtr s $ \\ptr -> do"
      indent $ do
-       line $ "val <- peek (ptr `plusPtr` " ++ show (fieldOffset field)
-            ++ ") :: IO " ++ if ' ' `elem` fType
+       line $ "val <- peek (ptr `plusPtr` " <> tshow (fieldOffset field)
+            <> ") :: IO " <> if T.any (== ' ') fType
                             then parenthesize fType
                             else fType
        result <- convert "val" $ fToH (fieldType field) TransferNothing
-       line $ "return " ++ result
+       line $ "return " <> result
 
      export getter
 
@@ -99,7 +97,7 @@ genStructOrUnionFields n fields = do
   name' <- upperName n
 
   forM_ fields $ \field -> when (fieldVisible field) $ group $
-      handleCGExc (\e -> line ("-- XXX Skipped getter for \"" ++ name' ++
-                               ":" ++ unpack (fieldName field) ++ "\" :: " ++
+      handleCGExc (\e -> line ("-- XXX Skipped getter for \"" <> name' <>
+                               ":" <> fieldName field <> "\" :: " <>
                                describeCGError e))
                   (buildFieldGetter n field)

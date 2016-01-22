@@ -60,7 +60,7 @@ instance Monoid Overrides where
 
 -- | We have a bit of context (the current namespace), and can fail,
 -- encode this in a monad.
-type Parser = WriterT Overrides (StateT (Maybe String) (Except Text)) ()
+type Parser = WriterT Overrides (StateT (Maybe Text) (Except Text)) ()
 
 -- | Parse the given config file (as a set of lines) for a given
 -- introspection namespace, filling in the configuration as needed. In
@@ -77,8 +77,7 @@ parseOneLine :: Text -> Parser
 parseOneLine line | T.null line = return ()
 -- Comments
 parseOneLine (T.stripPrefix "#" -> Just _) = return ()
-parseOneLine (T.stripPrefix "namespace " -> Just ns) =
-    (put . Just . T.unpack . T.strip) ns
+parseOneLine (T.stripPrefix "namespace " -> Just ns) = (put . Just . T.strip) ns
 parseOneLine (T.stripPrefix "ignore " -> Just ign) = get >>= parseIgnore ign
 parseOneLine (T.stripPrefix "seal " -> Just s) = get >>= parseSeal s
 parseOneLine (T.stripPrefix "pkg-config-name" -> Just s) = parsePkgConfigName s
@@ -87,22 +86,22 @@ parseOneLine (T.stripPrefix "namespace-version" -> Just s) = parseNsVersion s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 
 -- | Ignored elements.
-parseIgnore :: Text -> Maybe String -> Parser
+parseIgnore :: Text -> Maybe Text -> Parser
 parseIgnore _ Nothing =
     throwError "'ignore' requires a namespace to be defined first."
 parseIgnore (T.words -> [T.splitOn "." -> [api,elem]]) (Just ns) =
-    tell $ defaultOverrides {ignoredElems = M.singleton (Name ns (T.unpack api))
+    tell $ defaultOverrides {ignoredElems = M.singleton (Name ns api)
                                          (S.singleton elem)}
 parseIgnore (T.words -> [T.splitOn "." -> [api]]) (Just ns) =
-    tell $ defaultOverrides {ignoredAPIs = S.singleton (Name ns (T.unpack api))}
+    tell $ defaultOverrides {ignoredAPIs = S.singleton (Name ns api)}
 parseIgnore ignore _ =
     throwError ("Ignore syntax is of the form \"ignore API.elem\" with '.elem' optional.\nGot \"ignore " <> ignore <> "\" instead.")
 
 -- | Sealed structures.
-parseSeal :: Text -> Maybe String -> Parser
+parseSeal :: Text -> Maybe Text -> Parser
 parseSeal _ Nothing = throwError "'seal' requires a namespace to be defined first."
 parseSeal (T.words -> [s]) (Just ns) = tell $
-    defaultOverrides {sealedStructs = S.singleton (Name ns (T.unpack s))}
+    defaultOverrides {sealedStructs = S.singleton (Name ns s)}
 parseSeal seal _ =
     throwError ("seal syntax is of the form \"seal name\".\nGot \"seal "
                 <> seal <> "\" instead.")
@@ -140,7 +139,7 @@ parseCabalPkgVersion t =
 -- ignore.
 filterNamed :: [(Name, a)] -> S.Set Text -> [(Name, a)]
 filterNamed set ignores =
-    filter ((`S.notMember` ignores) . T.pack . name . fst) set
+    filter ((`S.notMember` ignores) . name . fst) set
 
 -- | Filter one API according to the given config.
 filterOneAPI :: Overrides -> (Name, API, Maybe (S.Set Text)) -> (Name, API)

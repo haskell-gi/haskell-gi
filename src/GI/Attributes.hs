@@ -7,12 +7,12 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_)
 import qualified Data.Set as S
-import qualified Data.Text as T
 import Data.Text (Text)
 
 import GI.API
 import GI.Code
 import GI.SymbolNaming
+import GI.Util (lcFirst)
 
 -- A list of distinct property names for all GObjects appearing in the
 -- given list of APIs.
@@ -34,11 +34,11 @@ findObjectPropNames apis = S.toList <$> go apis S.empty
 
 genPropertyAttr :: Text -> CodeGen ()
 genPropertyAttr pName = group $ do
-  line $ "-- Property \"" ++ T.unpack pName ++ "\""
-  let name = (hyphensToCamelCase  . T.unpack) pName
-  line $ "_" ++ lcFirst name ++ " :: Proxy \"" ++ T.unpack pName ++ "\""
-  line $ "_" ++ lcFirst name ++ " = Proxy"
-  export ("_" ++ lcFirst name)
+  line $ "-- Property \"" <> pName <> "\""
+  let name = hyphensToCamelCase  pName
+  line $ "_" <> lcFirst name <> " :: Proxy \"" <> pName <> "\""
+  line $ "_" <> lcFirst name <> " = Proxy"
+  export ("_" <> lcFirst name)
 
 genAllAttributes :: [(Name, API)] -> CodeGen ()
 genAllAttributes allAPIs = do

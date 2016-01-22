@@ -12,16 +12,16 @@ module GI.ProjectInfo
 import Data.FileEmbed (embedStringFile)
 import Data.Text (Text)
 
-homepage :: String
+homepage :: Text
 homepage = "https://github.com/haskell-gi/haskell-gi"
 
-authors :: String
+authors :: Text
 authors = "Will Thompson, Iñaki García Etxebarria and Jonas Platte"
 
-maintainers :: String
+maintainers :: Text
 maintainers = "Iñaki García Etxebarria (garetxe@gmail.com)"
 
-license :: String
+license :: Text
 license = "LGPL-2.1"
 
 licenseText :: Text
