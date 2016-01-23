@@ -31,9 +31,14 @@ module GI.Code
     , group
     , hsBoot
     , submodule
-    , export
     , setLanguagePragmas
     , setModuleFlags
+
+    , exportToplevel
+    , exportDecl
+    , exportMethod
+    , exportProperty
+    , exportSignal
 
     , findAPI
     , findAPIByName
@@ -53,7 +58,8 @@ import Data.Monoid (Monoid(..))
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Control.Monad.Except
-import Data.Maybe (fromMaybe)
+import qualified Data.Foldable as F
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Monoid ((<>))
 import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
 import qualified Data.Map.Strict as M
@@ -69,7 +75,7 @@ import System.FilePath (joinPath, takeDirectory)
 import GI.API (API, Name(..))
 import GI.Config (Config(..))
 import GI.Type (Type(..))
-import GI.Util (tshow, terror, ucFirst)
+import GI.Util (tshow, terror, ucFirst, padTo)
 
 data Code
     = NoCode              -- ^ No code
@@ -93,6 +99,31 @@ instance Monoid Code where
 type Deps = Set.Set Text
 type ModuleName = [Text]
 
+-- | Subsection of the haddock documentation where the export should
+-- be located.
+type HaddockSection = Text
+
+-- | Symbol to export.
+type SymbolName = Text
+
+-- | Possible exports for a given module. Every export type
+-- constructor has two parameters: the section of the haddocks where
+-- it should appear, and the symbol name to export in the export list
+-- of the module.
+data Export = Export {
+      exportType    :: ExportType       -- ^ Which kind of export.
+    , exportSymbol  :: SymbolName       -- ^ Actual symbol to export.
+    } deriving (Show, Eq, Ord)
+
+-- | Possible types of exports.
+data ExportType = ExportTypeDecl -- ^ A type declaration.
+                | ExportToplevel -- ^ An export in no specific section.
+                | ExportMethod HaddockSection -- ^ A method for a struct/union, etc.
+                | ExportProperty HaddockSection -- ^ A property for an object/interface.
+                | ExportSignal HaddockSection  -- ^ A signal for an object/interface.
+                | ExportModule   -- ^ Reexport of a whole module.
+                  deriving (Show, Eq, Ord)
+
 -- | Information on a generated module.
 data ModuleInfo = ModuleInfo {
       moduleName :: ModuleName -- ^ Full module name: ["GI", "Gtk", "Label"].
@@ -101,7 +132,7 @@ data ModuleInfo = ModuleInfo {
     , submodules :: M.Map Text ModuleInfo -- ^ Indexed by the relative
                                           -- module name.
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
-    , moduleExports :: Set.Set Text -- ^ Set of exports for the current module.
+    , moduleExports :: Seq Export -- ^ Exports for the module.
     , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
     , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
     }
@@ -121,7 +152,7 @@ emptyModule m = ModuleInfo { moduleName = m
                            , bootCode = NoCode
                            , submodules = M.empty
                            , moduleDeps = Set.empty
-                           , moduleExports = Set.empty
+                           , moduleExports = S.empty
                            , modulePragmas = Set.empty
                            , moduleFlags = Set.empty
                            }
@@ -168,7 +199,7 @@ recurseCG cg = do
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
   let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
-                       bootCode = NoCode }
+                       bootCode = NoCode, moduleExports = S.empty }
   liftIO (runCodeGen cg cfg info) >>= \case
      Left e -> throwError e
      Right (r, new) -> put (mergeInfoState oldInfo new) >>
@@ -182,7 +213,7 @@ recurseWithAPIs apis cg = do
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
   let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
-                       bootCode = NoCode }
+                       bootCode = NoCode, moduleExports = S.empty }
       cfg' = cfg {loadedAPIs = apis}
   liftIO (runCodeGen cg cfg' info) >>= \case
      Left e -> throwError e
@@ -193,7 +224,7 @@ mergeInfoState :: ModuleInfo -> ModuleInfo -> ModuleInfo
 mergeInfoState oldState newState =
     let newDeps = Set.union (moduleDeps oldState) (moduleDeps newState)
         newSubmodules = M.unionWith mergeInfo (submodules oldState) (submodules newState)
-        newExports = Set.union (moduleExports oldState) (moduleExports newState)
+        newExports = moduleExports oldState <> moduleExports newState
         newPragmas = Set.union (modulePragmas oldState) (modulePragmas newState)
         newFlags = Set.union (moduleFlags oldState) (moduleFlags newState)
         newBoot = bootCode oldState <> bootCode newState
@@ -231,7 +262,7 @@ handleCGExc fallback
     cfg <- ask
     oldInfo <- get
     let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
-                         bootCode = NoCode }
+                         bootCode = NoCode, moduleExports = S.empty }
     liftIO (runCodeGen action cfg info) >>= \case
         Left e -> fallback e
         Right (r, newInfo) -> do
@@ -367,9 +398,29 @@ hsBoot cg = do
   return x
 
 -- | Add a export to the current module.
-export :: Text -> CodeGen ()
+export :: Export -> CodeGen ()
 export e =
-    modify' $ \s -> s{moduleExports = Set.insert e (moduleExports s)}
+    modify' $ \s -> s{moduleExports = moduleExports s |> e}
+
+-- | Export a toplevel (i.e. belonging to no section) symbol.
+exportToplevel :: SymbolName -> CodeGen ()
+exportToplevel t = export (Export ExportToplevel t)
+
+-- | Add a type declaration-related export.
+exportDecl :: SymbolName -> CodeGen ()
+exportDecl d = export (Export ExportTypeDecl d)
+
+-- | Add a method export under the given section.
+exportMethod :: HaddockSection -> SymbolName -> CodeGen ()
+exportMethod s n = export (Export (ExportMethod s) n)
+
+-- | Add a property-related export under the given section.
+exportProperty :: HaddockSection -> SymbolName -> CodeGen ()
+exportProperty s n = export (Export (ExportProperty s) n)
+
+-- | Add a signal-related export under the given section.
+exportSignal :: HaddockSection -> SymbolName -> CodeGen ()
+exportSignal s n = export (Export (ExportSignal s) n)
 
 -- | Set the language pragmas for the current module.
 setLanguagePragmas :: [Text] -> CodeGen ()
@@ -400,13 +451,100 @@ codeToText c = T.concat $ str 0 c []
 paddedLine :: Int -> Text -> Text
 paddedLine n s = T.replicate (n * 4) " " <> s <> "\n"
 
--- | Format the given export list. This is
--- just the inside of the parenthesis, so the first term is treated
--- differently from the rest.
-formatExportList :: [Text] -> Text
-formatExportList [] = ""
-formatExportList (f:rest) = T.concat $
-                            f <> "\n" : (map (paddedLine 1 . (", " <>))) rest
+-- | Put a (padded) comma at the end of the text.
+comma :: Text -> Text
+comma s = padTo 40 s <> ","
+
+-- | Format the list of exported modules.
+formatExportedModules :: [Export] -> Maybe Text
+formatExportedModules [] = Nothing
+formatExportedModules exports =
+    Just . T.unlines . map ( paddedLine 1
+                           . comma
+                           . ("module " <>)
+                           . exportSymbol)
+          . filter ((== ExportModule) . exportType) $ exports
+
+-- | Format the toplevel exported symbols.
+formatToplevel :: [Export] -> Maybe Text
+formatToplevel [] = Nothing
+formatToplevel exports =
+    Just . T.unlines . map (paddedLine 1 . comma . exportSymbol)
+          . filter ((== ExportToplevel) . exportType) $ exports
+
+-- | Format the type declarations section.
+formatTypeDecls :: [Export] -> Maybe Text
+formatTypeDecls exports =
+    let exportedTypes = filter ((== ExportTypeDecl) . exportType) exports
+    in if exportedTypes == []
+       then Nothing
+       else Just . T.unlines $ [ "-- * Exported types"
+                               , T.unlines . map ( paddedLine 1
+                                                 . comma
+                                                 . exportSymbol )
+                                      $ exportedTypes ]
+
+-- | Format a given section made of subsections.
+formatSection :: Text -> (Export -> Maybe (HaddockSection, SymbolName)) ->
+                 [Export] -> Maybe Text
+formatSection section filter exports =
+    if M.null exportedSubsections
+    then Nothing
+    else Just . T.unlines $ [" -- * " <> section
+                            , ( T.unlines
+                              . map formatSubsection
+                              . M.toList ) exportedSubsections]
+
+    where
+      filteredExports :: [(HaddockSection, SymbolName)]
+      filteredExports = catMaybes (map filter exports)
+
+      exportedSubsections :: M.Map HaddockSection (Set.Set SymbolName)
+      exportedSubsections = foldr extract M.empty filteredExports
+
+      extract :: (HaddockSection, SymbolName) ->
+                 M.Map Text (Set.Set Text) -> M.Map Text (Set.Set Text)
+      extract (subsec, m) secs =
+          M.insertWith Set.union subsec (Set.singleton m) secs
+
+      formatSubsection :: (HaddockSection, Set.Set SymbolName) -> Text
+      formatSubsection (subsec, symbols) =
+          T.unlines [ "-- ** " <> subsec
+                    , ( T.unlines
+                      . map (paddedLine 1 . comma)
+                      . Set.toList ) symbols]
+
+-- | Format the list of methods.
+formatMethods :: [Export] -> Maybe Text
+formatMethods = formatSection "Methods" toMethod
+    where toMethod :: Export -> Maybe (HaddockSection, SymbolName)
+          toMethod (Export (ExportMethod s) m) = Just (s, m)
+          toMethod _ = Nothing
+
+-- | Format the list of properties.
+formatProperties :: [Export] -> Maybe Text
+formatProperties = formatSection "Properties" toProperty
+    where toProperty :: Export -> Maybe (HaddockSection, SymbolName)
+          toProperty (Export (ExportProperty s) m) = Just (s, m)
+          toProperty _ = Nothing
+
+-- | Format the list of signals.
+formatSignals :: [Export] -> Maybe Text
+formatSignals = formatSection "Signals" toSignal
+    where toSignal :: Export -> Maybe (HaddockSection, SymbolName)
+          toSignal (Export (ExportSignal s) m) = Just (s, m)
+          toSignal _ = Nothing
+
+-- | Format the given export list. This is just the inside of the
+-- parenthesis.
+formatExportList :: [Export] -> Text
+formatExportList exports =
+    T.unlines . catMaybes $ [ formatExportedModules exports
+                            , formatToplevel exports
+                            , formatTypeDecls exports
+                            , formatMethods exports
+                            , formatProperties exports
+                            , formatSignals exports ]
 
 -- | Write down the list of language pragmas.
 languagePragmas :: [Text] -> Text
@@ -414,7 +552,7 @@ languagePragmas [] = ""
 languagePragmas ps = "{-# LANGUAGE " <> T.intercalate ", " ps <> " #-}\n"
 
 -- | Generic module prelude. We reexport all of the submodules.
-modulePrelude :: Text -> [Text] -> [Text] -> Text
+modulePrelude :: Text -> [Export] -> [Text] -> Text
 modulePrelude name [] [] = "module " <> name <> " () where\n"
 modulePrelude name exports [] =
     "module " <> name <> "\n    ( "
@@ -422,12 +560,12 @@ modulePrelude name exports [] =
     <> "    ) where\n"
 modulePrelude name [] reexportedModules =
     "module " <> name <> "\n    ( "
-    <> formatExportList (map ("module " <>) reexportedModules)
+    <> formatExportList (map (Export ExportModule) reexportedModules)
     <> "    ) where\n\n"
     <> T.unlines (map ("import " <>) reexportedModules)
 modulePrelude name exports reexportedModules =
     "module " <> name <> "\n    ( "
-    <> formatExportList (map ("module " <>) reexportedModules)
+    <> formatExportList (map (Export ExportModule) reexportedModules)
     <> "\n    , "
     <> formatExportList exports
     <> "    ) where\n\n"
@@ -463,7 +601,7 @@ writeModuleInfo verbose dirPrefix minfo = do
       code = codeToText (moduleCode minfo)
       pragmas = languagePragmas (Set.toList $ modulePragmas minfo)
       prelude = modulePrelude (dotModuleName $ moduleName minfo)
-                (Set.toList $ moduleExports minfo)
+                (F.toList (moduleExports minfo))
                 submoduleExports
       imports = if ImplicitPrelude `Set.member` moduleFlags minfo
                 then ""
@@ -521,7 +659,7 @@ typeReexports :: ModuleName -> [Text] -> Text
 typeReexports typesModule bootFiles =
     "module " <> dotModuleName typesModule <>
     "\n    ( " <>
-    formatExportList (map ("module " <>) bootFiles) <>
+    formatExportList (map (Export ExportModule) bootFiles) <>
     "    ) where\n\n"
 
 -- | Import the given (.hs-boot) modules.

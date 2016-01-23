@@ -46,7 +46,7 @@ genConstant (Name _ name) (Constant t value deprecated) =
 
       handleCGExc (\e -> line $ "-- XXX: Could not generate constant: " <> describeCGError e)
                   (assignValue name t value >>
-                   export ("pattern " <> name))
+                   exportToplevel ("pattern " <> name))
 
 -- | Assign to the given name the given constant value, in a way that
 -- can be assigned to the corresponding Haskell type.

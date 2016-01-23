@@ -75,7 +75,7 @@ noName :: Text -> CodeGen ()
 noName name' = group $ do
                  line $ "no" <> name' <> " :: Maybe " <> name'
                  line $ "no" <> name' <> " = Nothing"
-                 export ("no" <> name')
+                 exportDecl ("no" <> name')
 
 -- | For a string of the form "one-sample-string" return "OneSampleString"
 hyphensToCamelCase :: Text -> Text

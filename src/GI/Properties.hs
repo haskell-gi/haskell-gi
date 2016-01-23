@@ -228,7 +228,7 @@ genOneProperty owner prop = do
                          then ["'AttrGet"]
                          else [])
     it <- infoType owner prop
-    export it
+    exportProperty cName it
     bline $ "data " <> it
     line $ "instance AttrInfo " <> it <> " where"
     indent $ do
@@ -251,7 +251,8 @@ genPlaceholderProperty :: Name -> Property -> CodeGen ()
 genPlaceholderProperty owner prop = do
   line $ "-- XXX Placeholder"
   it <- infoType owner prop
-  export it
+  let cName = (hyphensToCamelCase . propName) prop
+  exportProperty cName it
   line $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"
   indent $ do
@@ -276,5 +277,8 @@ genProperties n ownedProps allProps = do
                      genPlaceholderProperty n prop)
                   (genOneProperty n prop)
 
-  group $ line $ "type instance AttributeList " <> name <> " = '[ "
-            <> T.intercalate ", " allProps <> "]"
+  group $ do
+    let propListType = name <> "AttributeList"
+    line $ "type instance AttributeList " <> name <> " = " <> propListType
+    line $ "type " <> propListType <> " = ('[ "
+             <> T.intercalate ", " allProps <> "] :: [(Symbol, *)])"

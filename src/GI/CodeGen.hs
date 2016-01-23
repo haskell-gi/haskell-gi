@@ -87,7 +87,7 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
   line $ deprecatedPragma name' isDeprecated
 
   group $ do
-    export (name' <> "(..)")
+    exportDecl (name' <> "(..)")
     line $ "data " <> name' <> " = "
     indent $
       case fields' of
@@ -162,8 +162,8 @@ genErrorDomain name' domain = do
             line   "IO a ->"
             line   "IO a"
     line $ handler <> " = handleGErrorJustDomain"
-  export ("catch" <> name')
-  export ("handle" <> name')
+  exportToplevel ("catch" <> name')
+  exportToplevel ("handle" <> name')
 
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
@@ -176,7 +176,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
 
       when (structIsBoxed s) $
            genBoxedObject n (fromJust $ structTypeInit s)
-      export (name' <> ("(..)"))
+      exportDecl (name' <> ("(..)"))
 
       noName name'
 
@@ -204,7 +204,7 @@ genUnion n u = do
 
      when (unionIsBoxed u) $
           genBoxedObject n (fromJust $ unionTypeInit u)
-     export (name' <> "(..)")
+     exportDecl (name' <> "(..)")
 
      noName name'
 
@@ -305,7 +305,9 @@ genGObjectCasts isIU n cn_ parents = do
     indent $ line $ "c_" <> cn_ <> " :: IO GType"
 
   group $ do
-    line $ "type instance ParentTypes " <> name' <> " = '[" <>
+    let parentObjectsType = name' <> "ParentTypes"
+    line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
+    line $ "type " <> parentObjectsType <> " = '[" <>
          T.intercalate ", " qualifiedParents <> "]"
 
   group $ do
@@ -316,7 +318,7 @@ genGObjectCasts isIU n cn_ parents = do
 
   let className = classConstraint name'
   group $ do
-    export className
+    exportDecl className
     bline $ "class GObject o => " <> className <> " o"
     bline $ "instance (GObject o, IsDescendantOf " <> name' <> " o) => "
              <> className <> " o"
@@ -324,7 +326,7 @@ genGObjectCasts isIU n cn_ parents = do
   -- Safe downcasting.
   group $ do
     let safeCast = "to" <> name'
-    export safeCast
+    exportDecl safeCast
     line $ safeCast <> " :: " <> className <> " o => o -> IO " <> name'
     line $ safeCast <> " = unsafeCastTo " <> name'
 
@@ -343,14 +345,14 @@ genObject n o = do
   else submodule "Objects" $ submodule name' $
        do
          bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+         exportDecl (name' <> "(..)")
+
          -- Type safe casting to parent objects, and implemented interfaces.
          isIU <- isInitiallyUnowned t
          parents <- instanceTree n
          genGObjectCasts isIU n (objTypeInit o) (parents <> objInterfaces o)
 
          noName name'
-
-         export (name' <> "(..)")
 
          forM_ (objSignals o) $ \s ->
           handleCGExc
@@ -378,7 +380,7 @@ genInterface n iface = do
      line $ "-- interface " <> name' <> " "
      line $ deprecatedPragma name' $ ifDeprecated iface
      bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
-     export (name' <> "(..)")
+     exportDecl (name' <> "(..)")
 
      noName name'
 
@@ -403,10 +405,12 @@ genInterface n iface = do
 
      else group $ do
        let cls = classConstraint name'
-       export cls
+       exportDecl cls
        bline $ "class ForeignPtrNewtype a => " <> cls <> " a"
        bline $ "instance (ForeignPtrNewtype o, IsDescendantOf " <> name' <> " o) => " <> cls <> " o"
-       line $ "type instance ParentTypes " <> name' <> " = '[]"
+       let parentObjectsType = name' <> "ParentTypes"
+       line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
+       line $ "type " <> parentObjectsType <> " = '[]"
 
      -- Methods
      forM_ (ifMethods iface) $ \(mn, f) -> do

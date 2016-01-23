@@ -27,8 +27,7 @@ import GI.Util (padTo, tshow)
 import Paths_haskell_gi (version)
 
 cabalConfig :: Text
-cabalConfig = T.unlines ["documentation: False",
-                         "optimization: False"]
+cabalConfig = T.unlines ["optimization: False"]
 
 setupHs :: Text
 setupHs = T.unlines ["#!/usr/bin/env runhaskell",

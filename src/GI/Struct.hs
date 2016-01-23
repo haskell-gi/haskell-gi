@@ -90,7 +90,7 @@ buildFieldGetter n@(Name ns _) field = do
        result <- convert "val" $ fToH (fieldType field) TransferNothing
        line $ "return " <> result
 
-     export getter
+     exportProperty fName getter
 
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do

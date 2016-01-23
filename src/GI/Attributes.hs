@@ -38,7 +38,7 @@ genPropertyAttr pName = group $ do
   let name = hyphensToCamelCase  pName
   line $ "_" <> lcFirst name <> " :: Proxy \"" <> pName <> "\""
   line $ "_" <> lcFirst name <> " = Proxy"
-  export ("_" <> lcFirst name)
+  exportToplevel ("_" <> lcFirst name)
 
 genAllAttributes :: [(Name, API)] -> CodeGen ()
 genAllAttributes allAPIs = do

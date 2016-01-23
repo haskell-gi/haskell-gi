@@ -58,7 +58,7 @@ genOverloadedSignalConnectors allAPIs = do
     forM_ signalNames $ \sn ->
         line $ padTo (maxLength + 1) (ucFirst (signalHaskellName sn)) <>
                  ":: SignalProxy \"" <> sn <> "\" \"\" NoConstraint"
-  export "SignalProxy(..)"
+  exportToplevel "SignalProxy(..)"
 
 -- | Qualified name for the "(sigName, info)" tag for a given signal.
 signalInfoName :: Name -> Signal -> CodeGen Text
@@ -80,7 +80,7 @@ genInstance owner signal = group $ do
           cbHaskellType = signalConnectorName <> "Callback"
       line $ "type HaskellCallbackType " <> si <> " = " <> cbHaskellType
       line $ "connectSignal _ = " <> "connect" <> name <> sn
-  export si
+  exportSignal sn si
 
 -- | Signal instances for (GObject-derived) objects.
 genObjectSignals :: Name -> Object -> CodeGen ()
@@ -98,8 +98,11 @@ genObjectSignals n o = do
        -- connecting to property notifications.
        let allSignals = infos <>
                         ["'(\"notify::[property]\", GObjectNotifySignalInfo)"]
-       group . line $ "type instance SignalList " <> name <>
-             " = '[ " <> T.intercalate ", " allSignals <> "]"
+       group $ do
+         let signalListType = name <> "SignalList"
+         line $ "type instance SignalList " <> name <> " = " <> signalListType
+         line $ "type " <> signalListType <> " = ('[ "
+                  <> T.intercalate ", " allSignals <> "] :: [(Symbol, *)])"
 
 -- | Signal instances for interfaces.
 genInterfaceSignals :: Name -> Interface -> CodeGen ()
@@ -118,5 +121,8 @@ genInterfaceSignals n iface = do
           if isGO
           then infos <> ["'(\"notify::[property]\", GObjectNotifySignalInfo)"]
           else infos
-  group . line $ "type instance SignalList " <> name <>
-            " = '[ " <> T.intercalate ", " allSignals <> "]"
+  group $ do
+    let signalListType = name <> "SignalList"
+    line $ "type instance SignalList " <> name <> " = " <> signalListType
+    line $ "type " <> signalListType <> " = ('[ "
+             <> T.intercalate ", " allSignals <> "] :: [(Symbol, *)])"
