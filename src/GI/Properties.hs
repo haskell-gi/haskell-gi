@@ -229,6 +229,9 @@ genOneProperty owner prop = do
                          else [])
     it <- infoType owner prop
     exportProperty cName it
+    when (getter /= "undefined") (exportProperty cName getter)
+    when (setter /= "undefined") (exportProperty cName setter)
+    when (constructor /= "undefined") (exportProperty cName constructor)
     bline $ "data " <> it
     line $ "instance AttrInfo " <> it <> " where"
     indent $ do
