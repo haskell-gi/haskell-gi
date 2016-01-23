@@ -31,6 +31,8 @@ module Data.GI.Base.ShortPrelude
     , module Data.GI.Base.Signals
     , module Data.GI.Base.Utils
 
+    , module GHC.TypeLits
+
     , Enum(fromEnum, toEnum)
     , Show(..)
     , Eq(..)
@@ -85,3 +87,4 @@ import Data.GI.Base.Properties hiding (new)
 import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId, SignalInfo(..))
 import Data.GI.Base.Utils
 
+import GHC.TypeLits (Symbol)
