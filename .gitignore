@@ -11,6 +11,8 @@ dist/
 bindings/*/LICENSE
 bindings/*/Setup.hs
 bindings/sdists
+examples/GI/*
+test/GI/*
 
 # For Emacs
 TAGS
