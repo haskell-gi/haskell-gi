@@ -459,7 +459,7 @@ comma s = padTo 40 s <> ","
 formatExportedModules :: [Export] -> Maybe Text
 formatExportedModules [] = Nothing
 formatExportedModules exports =
-    Just . T.unlines . map ( paddedLine 1
+    Just . T.concat . map ( paddedLine 1
                            . comma
                            . ("module " <>)
                            . exportSymbol)
@@ -469,8 +469,8 @@ formatExportedModules exports =
 formatToplevel :: [Export] -> Maybe Text
 formatToplevel [] = Nothing
 formatToplevel exports =
-    Just . T.unlines . map (paddedLine 1 . comma . exportSymbol)
-          . filter ((== ExportToplevel) . exportType) $ exports
+    Just . T.concat . map (paddedLine 1 . comma . exportSymbol)
+         . filter ((== ExportToplevel) . exportType) $ exports
 
 -- | Format the type declarations section.
 formatTypeDecls :: [Export] -> Maybe Text
@@ -479,9 +479,9 @@ formatTypeDecls exports =
     in if exportedTypes == []
        then Nothing
        else Just . T.unlines $ [ "-- * Exported types"
-                               , T.unlines . map ( paddedLine 1
-                                                 . comma
-                                                 . exportSymbol )
+                               , T.concat . map ( paddedLine 1
+                                                . comma
+                                                . exportSymbol )
                                       $ exportedTypes ]
 
 -- | Format a given section made of subsections.
@@ -510,7 +510,7 @@ formatSection section filter exports =
       formatSubsection :: (HaddockSection, Set.Set SymbolName) -> Text
       formatSubsection (subsec, symbols) =
           T.unlines [ "-- ** " <> subsec
-                    , ( T.unlines
+                    , ( T.concat
                       . map (paddedLine 1 . comma)
                       . Set.toList ) symbols]
 
