@@ -6,3 +6,6 @@ ignore TreeModelFilter.set_modify_func
 
 # Signal with an (out) (caller-allocates) parameter, which we do not support.
 ignore Overlay.get-child-position
+
+# gtk_widget_path_iter_add_qclass isn't exported despite being present in Gtk-3.0.typelib
+ignore WidgetPath.iter_add_qclass
