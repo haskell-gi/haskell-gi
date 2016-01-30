@@ -8,4 +8,5 @@ ignore TreeModelFilter.set_modify_func
 ignore Overlay.get-child-position
 
 # gtk_widget_path_iter_add_qclass isn't exported despite being present in Gtk-3.0.typelib
+# upstream issue: https://bugzilla.gnome.org/show_bug.cgi?id=761339
 ignore WidgetPath.iter_add_qclass
