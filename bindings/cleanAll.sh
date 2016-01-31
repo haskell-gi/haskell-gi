@@ -2,16 +2,19 @@
 
 set -e
 
-build()
+clean()
 {
     for mod in $@; do
         pushd $mod > /dev/null
         rm -rf GI
 	rm -rf dist
+        rm -f Setup.hs
+        rm -f LICENSE
+        rm -f cabal.config
 	rm -f $mod.cabal
 	rm -f Setup.hs
 	popd > /dev/null
     done
 }
 
-build GLib GObject Atk Gio Soup cairo Pango GdkPixbuf Gdk Gtk Vte Notify
+clean $(cat PKGS)

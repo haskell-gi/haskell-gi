@@ -29,4 +29,4 @@ generate()
     done
 }
 
-generate GLib Atk cairo Gdk GdkPixbuf Gio GIRepository GObject Gtk Notify Pango Soup Vte JavaScriptCore-3.0 JavaScriptCore-4.0 WebKit WebKit2
+generate $(cat PKGS)
