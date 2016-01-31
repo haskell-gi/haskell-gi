@@ -174,6 +174,8 @@ genStruct n s = unless (ignoreStruct n s) $ do
       hsBoot decl
       decl
 
+      addModuleDocumentation (structDocumentation s)
+
       when (structIsBoxed s) $
            genBoxedObject n (fromJust $ structTypeInit s)
       exportDecl (name' <> ("(..)"))

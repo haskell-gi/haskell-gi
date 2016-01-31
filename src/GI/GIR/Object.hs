@@ -17,6 +17,7 @@ data Object = Object {
     objTypeName :: Text,
     objInterfaces :: [Name],
     objDeprecated :: Maybe DeprecationInfo,
+    objDocumentation :: Maybe Documentation,
     objMethods :: [(Name, Method)],
     objProperties :: [Property],
     objSignals :: [Signal]
@@ -26,6 +27,7 @@ parseObject :: Parser (Name, Object)
 parseObject = do
   name <- parseName
   deprecated <- parseDeprecation
+  doc <- parseDocumentation
   methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
   constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
   functions <- parseChildrenWithLocalName "function" (parseMethod MemberFunction)
@@ -42,6 +44,7 @@ parseObject = do
           , objTypeName = typeName
           , objInterfaces = interfaces
           , objDeprecated = deprecated
+          , objDocumentation = doc
           , objMethods = constructors ++ methods ++ functions
           , objProperties = props
           , objSignals = signals

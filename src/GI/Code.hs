@@ -33,6 +33,7 @@ module GI.Code
     , submodule
     , setLanguagePragmas
     , setModuleFlags
+    , addModuleDocumentation
 
     , exportToplevel
     , exportDecl
@@ -76,6 +77,8 @@ import GI.API (API, Name(..))
 import GI.Config (Config(..))
 import GI.Type (Type(..))
 import GI.Util (tshow, terror, ucFirst, padTo)
+import GI.ProjectInfo (authors, license, maintainers)
+import GI.GIR.Documentation (Documentation(..))
 
 data Code
     = NoCode              -- ^ No code
@@ -135,6 +138,7 @@ data ModuleInfo = ModuleInfo {
     , moduleExports :: Seq Export -- ^ Exports for the module.
     , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
     , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
+    , moduleDoc     :: Maybe Text -- ^ Documentation for the module.
     }
 
 -- | Flags for module code generation.
@@ -155,6 +159,7 @@ emptyModule m = ModuleInfo { moduleName = m
                            , moduleExports = S.empty
                            , modulePragmas = Set.empty
                            , moduleFlags = Set.empty
+                           , moduleDoc = Nothing
                            }
 
 -- | Information for the code generator.
@@ -190,6 +195,13 @@ runCodeGen :: BaseCodeGen e a -> CodeGenConfig -> ModuleInfo ->
               IO (Either e (a, ModuleInfo))
 runCodeGen cg cfg state = runExceptT (runStateT (runReaderT cg cfg) state)
 
+-- | This is useful when we plan run a subgenerator, and `mconcat` the
+-- result to the original structure later.
+cleanInfo :: ModuleInfo -> ModuleInfo
+cleanInfo info = info { moduleCode = NoCode, submodules = M.empty,
+                        bootCode = NoCode, moduleExports = S.empty,
+                        moduleDoc = Nothing }
+
 -- | Run the given code generator using the state and config of an
 -- ambient CodeGen, but without adding the generated code to
 -- `moduleCode`, instead returning it explicitly.
@@ -198,8 +210,7 @@ recurseCG cg = do
   cfg <- ask
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
-  let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
-                       bootCode = NoCode, moduleExports = S.empty }
+  let info = cleanInfo oldInfo
   liftIO (runCodeGen cg cfg info) >>= \case
      Left e -> throwError e
      Right (r, new) -> put (mergeInfoState oldInfo new) >>
@@ -212,8 +223,7 @@ recurseWithAPIs apis cg = do
   cfg <- ask
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
-  let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
-                       bootCode = NoCode, moduleExports = S.empty }
+  let info = cleanInfo oldInfo
       cfg' = cfg {loadedAPIs = apis}
   liftIO (runCodeGen cg cfg' info) >>= \case
      Left e -> throwError e
@@ -228,9 +238,11 @@ mergeInfoState oldState newState =
         newPragmas = Set.union (modulePragmas oldState) (modulePragmas newState)
         newFlags = Set.union (moduleFlags oldState) (moduleFlags newState)
         newBoot = bootCode oldState <> bootCode newState
+        newDoc = moduleDoc oldState <> moduleDoc newState
     in oldState {moduleDeps = newDeps, submodules = newSubmodules,
                  moduleExports = newExports, modulePragmas = newPragmas,
-                 moduleFlags = newFlags, bootCode = newBoot }
+                 moduleFlags = newFlags, bootCode = newBoot,
+                 moduleDoc = newDoc }
 
 -- | Merge the infos, including code too.
 mergeInfo :: ModuleInfo -> ModuleInfo -> ModuleInfo
@@ -261,8 +273,7 @@ handleCGExc fallback
  action = do
     cfg <- ask
     oldInfo <- get
-    let info = oldInfo { moduleCode = NoCode, submodules = M.empty,
-                         bootCode = NoCode, moduleExports = S.empty }
+    let info = cleanInfo oldInfo
     liftIO (runCodeGen action cfg info) >>= \case
         Left e -> fallback e
         Right (r, newInfo) -> do
@@ -432,6 +443,13 @@ setModuleFlags :: [ModuleFlag] -> CodeGen ()
 setModuleFlags flags =
     modify' $ \s -> s{moduleFlags = Set.fromList flags}
 
+-- | Add the given text to the module-level documentation for the
+-- module being generated.
+addModuleDocumentation :: Maybe Documentation -> CodeGen ()
+addModuleDocumentation Nothing = return ()
+addModuleDocumentation (Just doc) =
+    modify' $ \s -> s{moduleDoc = moduleDoc s <> Just (docText doc)}
+
 -- | Return a text representation of the `Code`.
 codeToText :: Code -> Text
 codeToText c = T.concat $ str 0 c []
@@ -551,6 +569,18 @@ languagePragmas :: [Text] -> Text
 languagePragmas [] = ""
 languagePragmas ps = "{-# LANGUAGE " <> T.intercalate ", " ps <> " #-}\n"
 
+-- | Standard fields for every module.
+standardFields :: Text
+standardFields = T.unlines [ "Copyright  : " <> authors
+                           , "License    : " <> license
+                           , "Maintainer : " <> maintainers ]
+
+-- | The haddock header for the module, including optionally a description.
+moduleHaddock :: Maybe Text -> Text
+moduleHaddock Nothing = T.unlines ["{- |", standardFields <> "-}"]
+moduleHaddock (Just description) = T.unlines ["{- |", standardFields,
+                                              description, "-}"]
+
 -- | Generic module prelude. We reexport all of the submodules.
 modulePrelude :: Text -> [Export] -> [Text] -> Text
 modulePrelude name [] [] = "module " <> name <> " () where\n"
@@ -618,11 +648,12 @@ writeModuleInfo verbose dirPrefix minfo = do
                   NoCallbacksImport `Set.member` moduleFlags minfo
                   then ""
                   else "import " <> dotModuleName callbacksModule
+      haddock = moduleHaddock (moduleDoc minfo)
 
   when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
-  TIO.writeFile fname (T.unlines [pragmas, prelude,
+  TIO.writeFile fname (T.unlines [pragmas, haddock, prelude,
                                   imports, types, callbacks, deps, code])
   when (bootCode minfo /= NoCode) $ do
     let bootFName = moduleNameToPath dirPrefix (moduleName minfo) ".hs-boot"

@@ -8,6 +8,7 @@ module GI.GIR.Parser
 
     , parseName
     , parseDeprecation
+    , parseDocumentation
     , parseIntegral
     , parseBool
     , parseChildrenWithLocalName
@@ -29,6 +30,7 @@ module GI.GIR.Parser
     , Element
     , GIRXMLNamespace(..)
     , DeprecationInfo
+    , Documentation
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -51,6 +53,7 @@ import GI.Type (Type(TInterface))
 
 import GI.GIR.BasicTypes (Name(..), Alias(..))
 import GI.GIR.Deprecation (DeprecationInfo, queryDeprecated)
+import GI.GIR.Documentation (Documentation, queryDocumentation)
 import GI.GIR.XMLUtils (localName, GIRXMLNamespace(..),
                         childElemsWithLocalName, childElemsWithNSName,
                         lookupAttr, lookupAttrWithNamespace)
@@ -168,6 +171,12 @@ parseDeprecation :: Parser (Maybe DeprecationInfo)
 parseDeprecation = do
   ctx <- ask
   return $ queryDeprecated (currentElement ctx)
+
+-- | Parse the documentation text, if present.
+parseDocumentation :: Parser (Maybe Documentation)
+parseDocumentation = do
+  ctx <- ask
+  return $ queryDocumentation (currentElement ctx)
 
 -- | Parse a signed integral number.
 parseIntegral :: Integral a => Text -> Parser a

@@ -19,13 +19,15 @@ data Struct = Struct {
     structIsDisguised :: Bool,
     structFields :: [Field],
     structMethods :: [(Name, Method)],
-    structDeprecated :: Maybe DeprecationInfo }
+    structDeprecated :: Maybe DeprecationInfo,
+    structDocumentation :: Maybe Documentation }
     deriving Show
 
 parseStruct :: Parser (Name, Struct)
 parseStruct = do
   name <- parseName
   deprecated <- parseDeprecation
+  doc <- parseDocumentation
   structFor <- queryAttrWithNamespace GLibGIRNS "is-gtype-struct-for" >>= \case
                Just t -> (fmap Just . qualifyName) t
                Nothing -> return Nothing
@@ -44,4 +46,5 @@ parseStruct = do
           , structFields = fields
           , structMethods = constructors ++ methods
           , structDeprecated = deprecated
+          , structDocumentation = doc
           })
