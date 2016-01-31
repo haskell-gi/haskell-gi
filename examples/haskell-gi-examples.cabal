@@ -19,11 +19,10 @@ executable SimpleBrowser
   main-is:             SimpleBrowser.hs
   build-depends:       base >= 4.7 && < 5,
                        basic-prelude >= 0.5 && <0.6,
-                       haskell-gi-base >= 0.9 && < 1,
-                       gi-glib == 0.2.44.*,
-                       gi-gobject == 0.2.44.*,
-                       gi-gtk == 0.3.16.*,
-                       gi-webkit == 0.2.4.*,
+                       haskell-gi-base >= 0.12 && < 1,
+                       gi-glib >= 0.2.44 && < 1,
+                       gi-gtk >= 0.3.16 && < 1,
+                       gi-webkit >= 0.2.4 && < 1,
                        text >= 1.0
 
   extensions:          OverloadedStrings, NoImplicitPrelude
