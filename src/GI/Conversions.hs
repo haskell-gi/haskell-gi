@@ -601,6 +601,8 @@ haskellBasicType TFloat    = typeOf (0 :: Float)
 haskellBasicType TDouble   = typeOf (0 :: Double)
 haskellBasicType TUniChar  = typeOf ('\0' :: Char)
 haskellBasicType TFileName = "[Char]" `con` []
+haskellBasicType TIntPtr   = "CIntPtr" `con` []
+haskellBasicType TUIntPtr  = "CUIntPtr" `con` []
 
 -- This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen TypeRep

@@ -91,5 +91,7 @@ showBasicType TUTF8    s       = return . tshow $ s
 showBasicType TFileName fn     = return . tshow $ fn
 showBasicType TUniChar c       = return $ "'" <> c <> "'"
 showBasicType TGType   gtype   = return $ "GType " <> gtype
+showBasicType TIntPtr  ptr     = return ptr
+showBasicType TUIntPtr ptr     = return ptr
 -- We take care of this one separately above
 showBasicType TVoid    _       = notImplementedError $ "Cannot directly show a pointer"

@@ -13,7 +13,6 @@ import Data.Typeable
 import qualified Data.Text as T
 import Data.Text (Text)
 
--- This enum mirrors the definition in gitypes.h.
 data BasicType
      = TVoid
      | TBoolean
@@ -31,6 +30,8 @@ data BasicType
      | TGType
      | TUTF8
      | TFileName
+     | TIntPtr
+     | TUIntPtr
     deriving (Eq, Enum, Show, Ord)
 
 -- This type represents the types found in GObject Introspection

@@ -39,6 +39,8 @@ nameToBasicType "gunichar" = Just TUniChar
 nameToBasicType "GType"    = Just TGType
 nameToBasicType "utf8"     = Just TUTF8
 nameToBasicType "filename" = Just TFileName
+nameToBasicType "gintptr"  = Just TIntPtr
+nameToBasicType "guintptr" = Just TUIntPtr
 nameToBasicType "gshort"   = case sizeOf (0 :: CShort) of
                                2 -> Just TInt16
                                4 -> Just TInt32
