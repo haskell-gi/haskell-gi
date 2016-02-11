@@ -22,7 +22,7 @@ executable SimpleBrowser
                        haskell-gi-base >= 0.12 && < 1,
                        gi-glib >= 0.2.44 && < 1,
                        gi-gtk >= 0.3.16 && < 1,
-                       gi-webkit >= 0.2.4 && < 1,
+                       gi-webkit2 >= 0.2.8 && < 1,
                        text >= 1.0
 
   extensions:          OverloadedStrings, NoImplicitPrelude

@@ -3,12 +3,13 @@ import BasicPrelude hiding (on, error)
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.GLib as GLib
-import GI.WebKit
+import GI.WebKit2
 
 import GI.Properties
 import GI.Signals
 import Data.GI.Base
 
+import Foreign.Ptr (castPtr)
 import System.Mem (performGC)
 
 import Data.Text (pack)
@@ -36,13 +37,10 @@ main = do
   on win Destroy mainQuit
 
   view <- new WebView []
-  on view CloseWebView $ do
-    widgetDestroy win
-    return True
+  on view Close $ widgetDestroy win
   webViewLoadUri view "http://www.haskell.org"
 
-  scroll <- new ScrolledWindow [_child := view]
-  containerAdd win scroll
+  containerAdd win view
 
   uriEntry <- new Entry [_placeholderText := "Type the address to load here",
                          _widthChars := 50]
@@ -55,12 +53,17 @@ main = do
                            _title := "A simple WebKit browser"]
   windowSetTitlebar win (Just header)
 
-  on view (PropertyNotify _loadStatus) $ \_ -> do
-    status <- view `get` _loadStatus
-    print status
+  on view (PropertyNotify _estimatedLoadProgress) $ \_ -> do
+    status <- view `get` _estimatedLoadProgress
+    uriEntry `set` [_progressFraction := if status /= 1.0
+                                         then status
+                                         else 0]
 
-  on view LoadError $ \_ uri error -> do
-    errMsg <- gerrorMessage error
+  on view LoadChanged $ \event -> do
+    putStrLn $ "Load: " <> show event
+
+  on view LoadFailed $ \_ uri error -> do
+    errMsg <- newBoxed GError (castPtr error) >>= gerrorMessage
     putStrLn $ "Error when reading \"" <> uri <> "\": " <> errMsg
     -- Keep processing, so WebKit shows the error page
     return False

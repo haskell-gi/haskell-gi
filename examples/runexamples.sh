@@ -4,8 +4,8 @@ set -e
 set -x
 
 cabal clean
-haskell-gi -a Gtk WebKit
-haskell-gi -c Gtk WebKit
+haskell-gi -a Gtk WebKit2
+haskell-gi -c Gtk WebKit2
 cabal configure
 time cabal build
 
