@@ -97,11 +97,10 @@ gflagsToWord flags = fromIntegral (go flags)
     where go (f:fs) = fromEnum f .|. go fs
           go [] = 0
 
-wordToGFlags :: forall a b. (Storable a, Integral a, Bits a, IsGFlag b) =>
-                a -> [b]
+wordToGFlags :: (Storable a, Integral a, Bits a, IsGFlag b) => a -> [b]
 wordToGFlags w = go 0
     where
-      nbits = (sizeOf (undefined :: a))*8
+      nbits = (sizeOf w)*8
       go k
           | k == nbits = []
           | otherwise = if mask .&. w /= 0
