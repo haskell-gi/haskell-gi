@@ -64,8 +64,12 @@ assignValue name t@(TInterface _ _) value = do
   case api of
     Just (APIEnum _) ->
         writePattern name (ExplicitSynonym "fromEnum" "toEnum" value ht)
-    Just (APIFlags _) ->
-        writePattern name (ExplicitSynonym "gflagsToWord" "wordToGFlags" value ht)
+    Just (APIFlags _) -> do
+        -- gflagsToWord and wordToGFlags are polymorphic, so in this
+        -- case we need to specialize so the type of the pattern is
+        -- not ambiguous.
+        let wordValue = "(" <> value <> " :: Word64)"
+        writePattern name (ExplicitSynonym "gflagsToWord" "wordToGFlags" wordValue ht)
     _ -> notImplementedError $ "Don't know how to treat constants of type " <> tshow t
 assignValue _ t _ = notImplementedError $ "Don't know how to treat constants of type " <> tshow t
 
