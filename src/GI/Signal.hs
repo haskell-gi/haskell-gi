@@ -23,7 +23,8 @@ import GI.Conversions
 import GI.SymbolNaming
 import GI.Transfer (freeContainerType)
 import GI.Type
-import GI.Util (parenthesize, withComment, tshow, terror, ucFirst, lcFirst)
+import GI.Util (parenthesize, withComment, tshow, terror, ucFirst, lcFirst,
+                prime)
 
 -- The prototype of the callback on the Haskell side (what users of
 -- the binding will see)
@@ -160,7 +161,19 @@ saveOutArg arg = do
       name' = "out" <> name
   when (transfer arg /= TransferEverything) $
        notImplementedError $ "Unexpected transfer type for \"" <> name <> "\""
-  name'' <- convert name' $ hToF (argType arg) TransferEverything
+  isMaybe <- wrapMaybe arg
+  name'' <- if isMaybe
+            then do
+              let name'' = prime name'
+              line $ name'' <> " <- case " <> name' <> " of"
+              indent $ do
+                   line "Nothing -> return nullPtr"
+                   line $ "Just " <> name'' <> " -> do"
+                   indent $ do
+                         converted <- convert name'' $ hToF (argType arg) TransferEverything
+                         line $ "return " <> converted
+              return name''
+            else convert name' $ hToF (argType arg) TransferEverything
   line $ "poke " <> name <> " " <> name''
 
 -- The wrapper itself, marshalling to and from Haskell. The first
