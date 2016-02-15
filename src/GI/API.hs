@@ -213,8 +213,9 @@ loadDependencies verbose requested loaded extraPaths
   let (name, version) = S.elemAt 0 requested
   doc <- readGiRepository verbose name (Just version) extraPaths
   let newLoaded = M.insert (name, version) doc loaded
+      loadedSet = S.fromList (M.keys newLoaded)
       newRequested = S.union requested (documentListIncludes doc)
-      notYetLoaded = S.filter (/= (name, version)) newRequested
+      notYetLoaded = S.difference newRequested loadedSet
   loadDependencies verbose notYetLoaded newLoaded extraPaths
 
 -- | Load a given GIR file and recursively its dependencies
