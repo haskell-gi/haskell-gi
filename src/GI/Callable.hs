@@ -70,7 +70,7 @@ mkForeignImport symbol callable throwsGError = do
                   else
                       ptr ft
         let start = tshow ft' <> " -> "
-        return $ padTo 40 start <> "-- " <> (argName arg)
+        return $ padTo 40 start <> "-- " <> (argCName arg)
                    <> " : " <> tshow (argType arg)
     last = tshow <$> io <$> case returnType callable of
                              TBasicType TVoid -> return $ typeOf ()
@@ -94,7 +94,7 @@ wrapMaybe arg =
              nullable <- isNullable (argType arg)
              if nullable
              then return True
-             else badIntroError $ "argument \"" <> (argName arg)
+             else badIntroError $ "argument \"" <> (argCName arg)
                       <> "\" is not of nullable type (" <> tshow (argType arg)
                       <> "), but it is marked as such."
     else return False
@@ -171,8 +171,8 @@ readInArrayLengths name callable hInArgs = do
 -- Read the length of an array into the corresponding variable.
 readInArrayLength :: Arg -> Arg -> ExcCodeGen ()
 readInArrayLength array length = do
-  let lvar = escapeReserved $ argName length
-      avar = escapeReserved $ argName array
+  let lvar = escapedArgName length
+      avar = escapedArgName array
   wrapMaybe array >>= bool
                 (do
                   al <- computeArrayLength avar (argType array)
@@ -191,10 +191,10 @@ checkInArrayLength :: Name -> Arg -> Arg -> Arg -> ExcCodeGen ()
 checkInArrayLength n array length previous = do
   name <- lowerName n
   let funcName = namespace n <> "." <> name
-      lvar = escapeReserved $ argName length
-      avar = escapeReserved $ argName array
+      lvar = escapedArgName length
+      avar = escapedArgName array
       expectedLength = avar <> "_expected_length_"
-      pvar = escapeReserved $ argName previous
+      pvar = escapedArgName previous
   wrapMaybe array >>= bool
             (do
               al <- computeArrayLength avar (argType array)
@@ -229,13 +229,13 @@ freeInArgs' freeFn callable nameMap = concat <$> actions
     where
       actions :: ExcCodeGen [[Text]]
       actions = forM (args callable) $ \arg ->
-        case Map.lookup (escapeReserved $ argName arg) nameMap of
+        case Map.lookup (escapedArgName arg) nameMap of
           Just name -> freeFn arg name $
                        -- Pass in the length argument in case it's needed.
                        case argType arg of
                          TCArray False (-1) (-1) _ -> undefined
                          TCArray False (-1) length _ ->
-                             escapeReserved $ argName $ (args callable)!!length
+                             escapedArgName $ (args callable)!!length
                          _ -> undefined
           Nothing -> badIntroError $ "freeInArgs: do not understand " <> tshow arg
 
@@ -263,7 +263,7 @@ prepareArgForCall omitted arg = do
 
   case direction arg of
     DirectionIn -> if arg `elem` omitted
-                   then return . escapeReserved . argName $ arg
+                   then return . escapedArgName $ arg
                    else if isCallback
                         then prepareInCallback arg
                         else prepareInArg arg
@@ -272,7 +272,7 @@ prepareArgForCall omitted arg = do
 
 prepareInArg :: Arg -> ExcCodeGen Text
 prepareInArg arg = do
-  let name = escapeReserved $ argName arg
+  let name = escapedArgName arg
   wrapMaybe arg >>= bool
             (convert name $ hToF (argType arg) (transfer arg))
             (do
@@ -291,7 +291,7 @@ prepareInArg arg = do
 -- Callbacks are a fairly special case, we treat them separately.
 prepareInCallback :: Arg -> ExcCodeGen Text
 prepareInCallback arg = do
-  let name = escapeReserved $ argName arg
+  let name = escapedArgName arg
       ptrName = "ptr" <> name
       scope = argScope arg
 
@@ -365,7 +365,7 @@ prepareInoutArg arg = do
 
 prepareOutArg :: Arg -> CodeGen Text
 prepareOutArg arg = do
-  let name = escapeReserved $ argName arg
+  let name = escapedArgName arg
   ft <- foreignType $ argType arg
   allocInfo <- requiresAlloc (argType arg)
   case allocInfo of
@@ -394,7 +394,7 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
   else do
     when (length == -1) $
          badIntroError $ "Unknown length for \"" <> aname <> "\""
-    let lname = escapeReserved $ argName $ (args callable)!!length
+    let lname = escapedArgName $ (args callable)!!length
     lname' <- case Map.lookup lname nameMap of
                 Just n -> return n
                 Nothing ->
@@ -413,7 +413,7 @@ convertOutCArray _ t _ _ _ =
 -- Read the array lengths for out arguments.
 readOutArrayLengths :: Callable -> Map.Map Text Text -> ExcCodeGen ()
 readOutArrayLengths callable nameMap = do
-  let lNames = nub $ map (escapeReserved . argName) $
+  let lNames = nub $ map escapedArgName $
                filter ((/= DirectionIn) . direction) $
                arrayLengths callable
   forM_ lNames $ \lname -> do
@@ -428,7 +428,7 @@ readOutArrayLengths callable nameMap = do
 -- C function was called.
 touchInArg :: Arg -> ExcCodeGen ()
 touchInArg arg = when (direction arg /= DirectionOut) $ do
-  let name = escapeReserved $ argName arg
+  let name = escapedArgName arg
   case elementType (argType arg) of
     Just a -> do
       managed <- isManaged a
@@ -480,8 +480,8 @@ prepareClosures callable nameMap = do
                                 <> "\n" <> T.pack (ppShow m)
                                 <> "\n" <> tshow closure
         Just cb -> do
-          let closureName = escapeReserved $ argName $ (args callable)!!closure
-              n = escapeReserved $ argName cb
+          let closureName = escapedArgName $ (args callable)!!closure
+              n = escapedArgName cb
           n' <- case Map.lookup n nameMap of
                   Just n -> return n
                   Nothing -> badIntroError $ "Cannot find closure name!! "
@@ -497,7 +497,7 @@ prepareClosures callable nameMap = do
                           "ScopeTypeNotified without destructor! "
                            <> T.pack (ppShow callable)
                   k -> let destroyName =
-                            escapeReserved . argName $ (args callable)!!k in
+                            escapedArgName $ (args callable)!!k in
                        line $ "let " <> destroyName <> " = safeFreeFunPtrPtr"
             ScopeTypeAsync ->
                 line $ "let " <> closureName <> " = nullPtr"
@@ -506,7 +506,7 @@ prepareClosures callable nameMap = do
 freeCallCallbacks :: Callable -> Map.Map Text Text -> ExcCodeGen ()
 freeCallCallbacks callable nameMap =
     forM_ (args callable) $ \arg -> do
-       let name = escapeReserved $ argName arg
+       let name = escapedArgName arg
        name' <- case Map.lookup name nameMap of
                   Just n -> return n
                   Nothing -> badIntroError $ "Could not find " <> name
@@ -521,7 +521,7 @@ hSignature hInArgs retType = do
   indent $ do
       line $ "(" <> T.intercalate ", " ("MonadIO m" : argConstraints) <> ") =>"
       forM_ (zip types hInArgs) $ \(t, a) ->
-           line $ withComment (t <> " ->") $ (argName a)
+           line $ withComment (t <> " ->") $ (escapedArgName a)
       line . tshow $ "m" `con` [retType]
 
 genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
@@ -554,20 +554,19 @@ genCallable n symbol callable throwsGError = do
     ignoreReturn = skipRetVal callable throwsGError
 
     wrapper = group $ do
-        let argName' = escapeReserved . argName
         name <- lowerName n
         exportMethod name name
         line $ deprecatedPragma name $ callableDeprecated callable
         line $ name <> " ::"
         hSignature hInArgs =<< hOutType callable hOutArgs ignoreReturn
-        line $ name <> " " <> T.intercalate " " (map argName' hInArgs) <> " = liftIO $ do"
+        line $ name <> " " <> T.intercalate " " (map escapedArgName hInArgs) <> " = liftIO $ do"
         indent $ do
             readInArrayLengths n callable hInArgs
             inArgNames <- forM (args callable) $ \arg ->
                           prepareArgForCall omitted arg
             -- Map from argument names to names passed to the C function
             let nameMap = Map.fromList $ flip zip inArgNames
-                                               $ map argName' $ args callable
+                                       $ map escapedArgName $ args callable
             prepareClosures callable nameMap
             if throwsGError
             then do
@@ -650,7 +649,7 @@ genCallable n symbol callable throwsGError = do
     convertOut nameMap = do
         -- Convert out parameters and result
         forM hOutArgs $ \arg -> do
-            let name = escapeReserved $ argName arg
+            let name = escapedArgName arg
             inName <- case Map.lookup name nameMap of
                 Just name' -> return name'
                 Nothing -> badIntroError $ "Parameter " <> name <> " not found!"

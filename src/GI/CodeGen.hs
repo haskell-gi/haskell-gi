@@ -255,7 +255,7 @@ fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
                         else arg
 
       objArg = Arg {
-                 argName = "_obj",
+                 argCName = "_obj",
                  argType = TInterface (namespace cn) (name cn),
                  direction = DirectionIn,
                  mayBeNull = False,

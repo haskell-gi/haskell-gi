@@ -4,7 +4,7 @@ module GI.SymbolNaming
     , lowerName
     , upperName
     , noName
-    , escapeReserved
+    , escapedArgName
     , classConstraint
     , hyphensToCamelCase
     , underscoresToCamelCase
@@ -85,6 +85,16 @@ hyphensToCamelCase = T.concat . map ucFirst . T.split (== '-')
 underscoresToCamelCase :: Text -> Text
 underscoresToCamelCase = T.concat . map ucFirst . T.split (== '_')
 
+-- | Name for the given argument, making sure it is a valid Haskell
+-- argument name (and escaping it if not).
+escapedArgName :: Arg -> Text
+escapedArgName arg
+    | "_" `T.isPrefixOf` argCName arg = argCName arg
+    | otherwise =
+        escapeReserved . lcFirst . underscoresToCamelCase . argCName $ arg
+
+-- | Reserved symbols, either because they are Haskell syntax or
+-- because the clash with symbols in scope for the generated bindings.
 escapeReserved :: Text -> Text
 escapeReserved "type" = "type_"
 escapeReserved "in" = "in_"

@@ -39,10 +39,10 @@ terror = error . T.unpack
 
 -- | Capitalize the first character of the given string.
 ucFirst :: Text -> Text
-ucFirst "" = terror "ucFirst: empty text!"
+ucFirst "" = ""
 ucFirst t = T.cons (toUpper $ T.head t) (T.tail t)
 
 -- | Make the first character of the given string lowercase.
 lcFirst :: Text -> Text
-lcFirst "" = terror "lcFirst: empty string"
+lcFirst "" = ""
 lcFirst t = T.cons (toLower $ T.head t) (T.tail t)

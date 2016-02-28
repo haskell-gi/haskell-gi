@@ -26,7 +26,9 @@ data Scope = ScopeTypeInvalid
              deriving (Show, Eq, Ord)
 
 data Arg = Arg {
-        argName :: Text,
+        argCName :: Text,  -- ^ "C" name for the argument. For a
+                           -- escaped name valid in Haskell code, use
+                           -- `GI.SymbolNaming.escapedArgName`.
         argType :: Type,
         direction :: Direction,
         mayBeNull :: Bool,
@@ -65,7 +67,7 @@ parseArg = do
   destroy <- optionalAttr "destroy" (-1) parseIntegral
   nullable <- optionalAttr "nullable" False parseBool
   t <- parseType
-  return $ Arg { argName = name
+  return $ Arg { argCName = name
                , argType = t
                , direction = d
                , mayBeNull = nullable

@@ -120,7 +120,7 @@ convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname =
     -- the callback deal with it.
     return aname
   where
-    lname = escapeReserved $ argName $ args callable !! length
+    lname = escapedArgName $ args callable !! length
 
     convertAndFree :: ExcCodeGen Text
     convertAndFree = do
@@ -142,7 +142,7 @@ prepareArgForCall cb arg = case direction arg of
 
 prepareInArg :: Callable -> Arg -> ExcCodeGen Text
 prepareInArg cb arg = do
-  let name = (escapeReserved . argName) arg
+  let name = escapedArgName arg
   case argType arg of
     t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
     _ -> do
@@ -151,13 +151,13 @@ prepareInArg cb arg = do
 
 prepareInoutArg :: Arg -> ExcCodeGen Text
 prepareInoutArg arg = do
-  let name = (escapeReserved . argName) arg
+  let name = escapedArgName arg
   name' <- genConversion name $ apply $ M "peek"
   convert name' $ fToH (argType arg) (transfer arg)
 
 saveOutArg :: Arg -> ExcCodeGen ()
 saveOutArg arg = do
-  let name = (escapeReserved . argName) arg
+  let name = escapedArgName arg
       name' = "out" <> name
   when (transfer arg /= TransferEverything) $
        notImplementedError $ "Unexpected transfer type for \"" <> name <> "\""
@@ -187,7 +187,7 @@ genCallbackWrapper :: Text -> Callable -> Text -> [Arg] -> [Arg] -> [Arg] ->
 genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
   let cName arg = if arg `elem` dataptrs
                   then "_"
-                  else (escapeReserved . argName) arg
+                  else escapedArgName arg
       cArgNames = map cName (args cb)
       wrapperName = lcFirst name' <> "Wrapper"
 
@@ -222,8 +222,7 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
       let maybeReturn = case returnType cb of
                           TBasicType TVoid -> []
                           _                -> ["result"]
-          argName' = escapeReserved . argName
-          returnVars = maybeReturn <> map (("out"<>) . argName') hOutArgs
+          returnVars = maybeReturn <> map (("out"<>) . escapedArgName) hOutArgs
           returnBind = case returnVars of
                          []  -> ""
                          [r] -> r <> " <- "
