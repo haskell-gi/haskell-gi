@@ -10,9 +10,6 @@ module GI.SymbolNaming
     , underscoresToCamelCase
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Data.Monoid (Monoid)
-#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 
