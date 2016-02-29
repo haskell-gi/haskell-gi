@@ -141,13 +141,22 @@ class AttrInfo (info :: *) where
 
 -- | Result of checking whether an op is allowed on an attribute.
 data OpAllowed tag attrName =
-    OpIsAllowed | AttrOpNotAllowed Symbol tag Symbol attrName
+    OpIsAllowed
+#if !MIN_VERSION_base(4,9,0)
+        | AttrOpNotAllowed Symbol tag Symbol attrName
+#endif
 
 -- | Look in the given list to see if the given `AttrOp` is a member,
 -- if not return an error type.
 type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Symbol) :: OpAllowed AttrOpTag Symbol where
     AttrOpIsAllowed tag '[] label =
+#if !MIN_VERSION_base(4,9,0)
         'AttrOpNotAllowed "Error: operation " tag " not allowed for attribute type " label
+#else
+        TypeError ('Text "Attribute \"" ':<>: 'Text label ':<>:
+                   'Text "\" is not " ':<>:
+                   'Text (AttrOpText tag) ':<>: 'Text ".")
+#endif
     AttrOpIsAllowed tag (tag ': ops) label = 'OpIsAllowed
     AttrOpIsAllowed tag (other ': ops) label = AttrOpIsAllowed tag ops label
 
@@ -159,6 +168,15 @@ type family AttrOpAllowed (tag :: AttrOpTag) (info :: *) :: Constraint where
 
 -- | Possible operations on an attribute.
 data AttrOpTag = AttrGet | AttrSet | AttrConstruct
+
+#if MIN_VERSION_base(4,9,0)
+-- | A user friendly description of the `AttrOpTag`, useful when
+-- printing type errors.
+type family AttrOpText (tag :: AttrOpTag) :: Symbol where
+    AttrOpText 'AttrGet = "gettable"
+    AttrOpText 'AttrSet = "settable"
+    AttrOpText 'AttrConstruct = "constructible"
+#endif
 
 -- | Constructors for the different operations allowed on an attribute.
 data AttrOp obj (tag :: AttrOpTag) where
