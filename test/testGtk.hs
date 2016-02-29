@@ -141,56 +141,31 @@ testPolymorphicLenses parent message = do
     Just _ -> return ()
     Nothing -> error "Could not convert message area to Box"
 
+  -- Failed compilation tests follow, uncomment the lines to reproduce
+  -- the errors. The given error messages are for ghc >= 8.0, for
+  -- previous ghc versions the messages are more verbose.
+
   -- This should fail to compile with
 {-
-    Couldn't match type ‘Data.GI.Base.Attributes.AttrOpIsAllowed
-                           'AttrSet
-                           (AttrAllowedOps
-                              (Data.GI.Base.Overloading.UnknownAttribute
-                                 "Error: could not find attribute"
-                                 "authors"
-                                 "for object"
-                                 MessageDialog))
-                           (AttrLabel
-                              (Data.GI.Base.Overloading.UnknownAttribute
-                                 "Error: could not find attribute"
-                                 "authors"
-                                 "for object"
-                                 MessageDialog))’
-                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
+    • Unknown attribute "authors" for object "MessageDialog".
 -}
   -- set messageBox [ _authors := undefined ]
 
   -- Should fail to compile, with
 {-
-      Couldn't match type ‘'Data.GI.Base.Attributes.AttrOpNotAllowed
-                           "Error: operation "
-                           'AttrSet
-                           " not allowed for attribute type "
-                           "MessageDialog::message-area"’
-                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
+    • Attribute "MessageDialog::message-area" is not settable.
 -}
   -- set messageBox [_messageArea := undefined]
 
   -- Should fail to compile, with
 {-
-    Couldn't match type ‘'Data.GI.Base.Attributes.AttrOpNotAllowed
-                           "Error: operation "
-                           'AttrSet
-                           " not allowed for attribute type "
-                           "MessageDialog::buttons"’
-                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
+    • Attribute "MessageDialog::buttons" is not settable.
 -}
   -- set messageBox [_buttons := ButtonsTypeYesNo]
 
   -- This should fail to compile with
 {-
-    Couldn't match type ‘'Data.GI.Base.Attributes.AttrOpNotAllowed
-                           "Error: operation "
-                           'AttrGet
-                           " not allowed for attribute type "
-                           "Container::child"’
-                   with ‘'Data.GI.Base.Attributes.OpIsAllowed’
+    • Attribute "Container::child" is not gettable.
 -}
   -- get messageBox _child
 
