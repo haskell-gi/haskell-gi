@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeOperators, KindSignatures, DataKinds, PolyKinds,
              TypeFamilies, UndecidableInstances, EmptyDataDecls,
-             MultiParamTypeClasses, FlexibleInstances, ConstraintKinds #-}
+             MultiParamTypeClasses, FlexibleInstances, ConstraintKinds,
+             MagicHash #-}
 
 -- | Helpers for dealing with `GObject`s.
 
@@ -19,10 +20,22 @@ module Data.GI.Base.Overloading
     , SignalList
     , ResolveSignal
     , HasSignal
+
+    -- * Overloaded labels
+    , IsLabelProxy(..)
     ) where
 
 import GHC.Exts (Constraint)
 import GHC.TypeLits
+import Data.Proxy (Proxy)
+
+-- | Support for overloaded labels in ghc < 8.0. This is like the
+-- `IsLabel` class introduced in ghc 8.0 (for use with the
+-- OverloadedLabels extension) with the difference that the `Proxy`
+-- argument is lifted. (Using the unlifted Proxy# type in user code is
+-- a bit of a pain, hence the choice.)
+class IsLabelProxy (x :: Symbol) a where
+  fromLabelProxy :: Proxy x -> a
 
 -- | Join two lists.
 type family JoinLists (as :: [a]) (bs :: [a]) :: [a] where
@@ -62,9 +75,9 @@ type family CheckForAncestorType t (a :: *) (as :: [*]) :: AncestorCheck * * whe
 #if !MIN_VERSION_base(4,9,0)
         'DoesNotHaveRequiredAncestor "Error: Required ancestor" a "not found for type" t
 #else
-        TypeError ('Text "Required ancestor \"" ':<>: 'ShowType a
-                  ':<>: 'Text "\" not found for type \"" ':<>: 'ShowType t
-                  ':<>: 'Text "\".")
+        TypeError ('Text "Required ancestor ‘" ':<>: 'ShowType a
+                  ':<>: 'Text "’ not found for type ‘" ':<>: 'ShowType t
+                  ':<>: 'Text "’.")
 #endif
     CheckForAncestorType t a (a ': as) = 'HasAncestor a t
     CheckForAncestorType t a (b ': as) = CheckForAncestorType t a as
@@ -100,9 +113,9 @@ type family ResolveAttribute (s :: Symbol) (o :: *) :: * where
 #if !MIN_VERSION_base(4,9,0)
                            (UnknownAttribute "Error: could not find attribute" s "for object" o)
 #else
-                           ('Text "Unknown attribute \"" ':<>:
-                            'Text s ':<>: 'Text "\" for object \"" ':<>:
-                            'ShowType o ':<>: 'Text "\".")
+                           ('Text "Unknown attribute ‘" ':<>:
+                            'Text s ':<>: 'Text "’ for object ‘" ':<>:
+                            'ShowType o ':<>: 'Text "’.")
 #endif
 
 -- | Whether a given type is in the given list. If found, return
@@ -136,9 +149,9 @@ type family HasAttribute (attr :: Symbol) (o :: *) where
 #if !MIN_VERSION_base(4,9,0)
                           ('DoesNotHaveAttribute "Error: attribute" attr "not found for type" o)
 #else
-                          ('Text "Attribute \"" ':<>: 'Text attr ':<>:
-                           'Text "\" not found for type \"" ':<>:
-                           'ShowType o ':<>: 'Text "\".")
+                          ('Text "Attribute ‘" ':<>: 'Text attr ':<>:
+                           'Text "’ not found for type ‘" ':<>:
+                           'ShowType o ':<>: 'Text "’.")
 #endif
                           ~ 'HasAttribute
 
@@ -165,9 +178,9 @@ type family ResolveSignal (s :: Symbol) (o :: *) :: * where
 #if !MIN_VERSION_base(4,9,0)
                         (UnknownSignal "Error: could not find signal" s "for object" o)
 #else
-                        ('Text "Unknown signal \"" ':<>:
-                         'Text s ':<>: 'Text "\" for object \"" ':<>:
-                         'ShowType o ':<>: 'Text "\".")
+                        ('Text "Unknown signal ‘" ':<>:
+                         'Text s ':<>: 'Text "’ for object ‘" ':<>:
+                         'ShowType o ':<>: 'Text "’.")
 #endif
 
 -- | Isomorphic to Bool, but having some extra debug information.
@@ -184,8 +197,8 @@ type family HasSignal (s :: Symbol) (o :: *) where
 #if !MIN_VERSION_base(4,9,0)
                     ('DoesNotHaveSignal "Error: signal" s "not found for type" o)
 #else
-                    ('Text "Signal \"" ':<>: 'Text s ':<>:
-                     'Text "\" not found for type \"" ':<>:
-                     'ShowType o ':<>: 'Text "\".")
+                    ('Text "Signal ‘" ':<>: 'Text s ':<>:
+                     'Text "’ not found for type ‘" ':<>:
+                     'ShowType o ':<>: 'Text "’.")
 #endif
                     ~ 'HasSignal

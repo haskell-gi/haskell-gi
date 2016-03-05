@@ -6,9 +6,6 @@ EmptyDataDecls, ConstraintKinds #-}
 module Data.GI.Base.Properties
     ( new
 
-    , PropertyNotify(..)
-    , GObjectNotifySignalInfo
-
     , setObjectPropertyString
     , setObjectPropertyStringArray
     , setObjectPropertyPtr
@@ -84,16 +81,9 @@ import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Attributes
-import Data.GI.Base.GParamSpec (newGParamSpecFromPtr)
 import Data.GI.Base.GValue
 import Data.GI.Base.GVariant (newGVariantFromPtr)
-import Data.GI.Base.Overloading (ResolveAttribute, HasAttr)
-import Data.GI.Base.Signals (SignalConnectMode, SignalHandlerId,
-                         connectSignalFunPtr,
-                         SignalInfo(HaskellCallbackType, connectSignal))
-
-import GHC.Exts (Constraint)
-import GHC.TypeLits
+import Data.GI.Base.Overloading (ResolveAttribute)
 
 import Foreign hiding (new)
 import Foreign.C
@@ -129,7 +119,7 @@ new constructor attrs = liftIO $ do
   mapM_ (touchManagedPtr . snd) props
   wrapObject constructor (result :: Ptr o)
   where
-    resolve :: proxy attr -> Proxy (ResolveAttribute attr o)
+    resolve :: AttrLabelProxy attr -> Proxy (ResolveAttribute attr o)
     resolve _ = Proxy
 
     construct :: AttrOp o 'AttrConstruct ->
@@ -159,44 +149,6 @@ new constructor attrs = liftIO $ do
         do cstr <- peek (castPtr dataPtr) :: IO CString
            free cstr
            freeStrings (n-1) (dataPtr `plusPtr` gparameterSize)
-
--- | Proxy for "notify::property-name" signals.
-data PropertyNotify (s :: Symbol) (propName :: Symbol) (constraint :: * -> Constraint) where
-  PropertyNotify :: KnownSymbol propName => proxy propName ->
-                    PropertyNotify "notify::[property]" propName (HasAttr propName)
-
--- | Connection information for a "notify" signal indicating that a
--- specific property changed (see `PropertyNotify` for the relevant
--- constructor).
-data GObjectNotifySignalInfo
-instance SignalInfo GObjectNotifySignalInfo where
-  type HaskellCallbackType GObjectNotifySignalInfo = GObjectNotifyCallback
-  connectSignal = connectGObjectNotify
-
--- | Type for a `GObject` `notify` callback.
-type GObjectNotifyCallback = GParamSpec -> IO ()
-
-gobjectNotifyCallbackWrapper ::
-    GObjectNotifyCallback -> Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
-gobjectNotifyCallbackWrapper _cb _ pspec _ = do
-    pspec' <- newGParamSpecFromPtr pspec
-    _cb  pspec'
-
-type GObjectNotifyCallbackC = Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
-
-foreign import ccall "wrapper"
-    mkGObjectNotifyCallback :: GObjectNotifyCallbackC -> IO (FunPtr GObjectNotifyCallbackC)
-
--- | Connect the given notify callback for a GObject.
-connectGObjectNotify :: forall o i proxy propName constraint.
-                        (GObject o, constraint o, KnownSymbol propName) =>
-                        proxy (i :: *) (propName :: Symbol) (constraint :: * -> Constraint) ->
-                        o -> GObjectNotifyCallback ->
-                        SignalConnectMode -> IO SignalHandlerId
-connectGObjectNotify _ obj cb after = do
-  cb' <- mkGObjectNotifyCallback (gobjectNotifyCallbackWrapper cb)
-  let signalName = "notify::" ++ symbolVal (Proxy :: Proxy propName)
-  connectSignalFunPtr obj signalName cb' after
 
 foreign import ccall "g_object_set_property" g_object_set_property ::
     Ptr a -> CString -> Ptr GValue -> IO ()

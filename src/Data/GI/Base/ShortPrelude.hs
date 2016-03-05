@@ -84,7 +84,7 @@ import Data.GI.Base.GValue
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Overloading
 import Data.GI.Base.Properties hiding (new)
-import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId, SignalInfo(..))
+import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId, SignalInfo(..), GObjectNotifySignalInfo)
 import Data.GI.Base.Utils
 
 import GHC.TypeLits (Symbol)
