@@ -121,6 +121,13 @@ genPropertyConstructor pName prop = group $ do
   line $ "construct" <> pName <> " val = constructObjectProperty" <> tStr
            <> " \"" <> propName prop <> "\" val"
 
+-- | The property name as a lexically valid Haskell identifier. Note
+-- that this is not escaped, since it is assumed that it will be used
+-- with a prefix, so if a property is named "class", for example, this
+-- will return "class".
+hPropName :: Property -> Text
+hPropName = lcFirst . hyphensToCamelCase . propName
+
 genObjectProperties :: Name -> Object -> CodeGen ()
 genObjectProperties n o = do
   isGO <- apiIsGObject n (APIObject o)
@@ -129,7 +136,7 @@ genObjectProperties n o = do
     allProps <- fullObjectPropertyList n o >>=
                 mapM (\(owner, prop) -> do
                         pi <- infoType owner prop
-                        return $ "'(\"" <> propName prop
+                        return $ "'(\"" <> hPropName prop
                                    <> "\", " <> pi <> ")")
     genProperties n (objProperties o) allProps
 
@@ -138,7 +145,7 @@ genInterfaceProperties n iface = do
   allProps <- fullInterfacePropertyList n iface >>=
                 mapM (\(owner, prop) -> do
                         pi <- infoType owner prop
-                        return $ "'(\"" <> propName prop
+                        return $ "'(\"" <> hPropName prop
                                    <> "\", " <> pi <> ")")
   genProperties n (ifProperties iface) allProps
 
@@ -242,8 +249,7 @@ genOneProperty owner prop = do
             line $ "type AttrBaseTypeConstraint " <> it
                      <> " = " <> classConstraint name
             line $ "type AttrGetType " <> it <> " = " <> outType
-            line $ "type AttrLabel " <> it <> " = \""
-                     <> name <> "::" <> propName prop <> "\""
+            line $ "type AttrLabel " <> it <> " = \"" <> propName prop <> "\""
             line $ "attrGet _ = " <> getter
             line $ "attrSet _ = " <> setter
             line $ "attrConstruct _ = " <> constructor

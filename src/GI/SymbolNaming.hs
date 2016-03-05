@@ -21,8 +21,8 @@ import GI.Util (lcFirst, ucFirst)
 classConstraint :: Text -> Text
 classConstraint n = n <> "K"
 
-lowerName :: Name -> CodeGen Text
-lowerName (Name _ s) = return . T.concat . rename . T.split (== '_') $ s
+lowerName :: Name -> Text
+lowerName (Name _ s) = T.concat . rename . T.split (== '_') $ s
     where
       rename [w] = [lcFirst w]
       rename (w:ws) = lcFirst w : map ucFirst' ws

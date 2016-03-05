@@ -189,8 +189,8 @@ readInArrayLength array length = do
 -- variable.
 checkInArrayLength :: Name -> Arg -> Arg -> Arg -> ExcCodeGen ()
 checkInArrayLength n array length previous = do
-  name <- lowerName n
-  let funcName = namespace n <> "." <> name
+  let name = lowerName n
+      funcName = namespace n <> "." <> name
       lvar = escapedArgName length
       avar = escapedArgName array
       expectedLength = avar <> "_expected_length_"
@@ -554,7 +554,7 @@ genCallable n symbol callable throwsGError = do
     ignoreReturn = skipRetVal callable throwsGError
 
     wrapper = group $ do
-        name <- lowerName n
+        let name = lowerName n
         exportMethod name name
         line $ deprecatedPragma name $ callableDeprecated callable
         line $ name <> " ::"

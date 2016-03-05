@@ -35,17 +35,19 @@ findObjectPropNames apis = S.toList <$> go apis S.empty
 genPropertyAttr :: Text -> CodeGen ()
 genPropertyAttr pName = group $ do
   line $ "-- Property \"" <> pName <> "\""
-  let name = hyphensToCamelCase  pName
-  line $ "_" <> lcFirst name <> " :: Proxy \"" <> pName <> "\""
-  line $ "_" <> lcFirst name <> " = Proxy"
-  exportToplevel ("_" <> lcFirst name)
+  let name = (lcFirst . hyphensToCamelCase) pName
+  line $ "_" <> name <> " :: IsLabelProxy \"" <> name <> "\" a => a"
+  line $ "_" <> name <> " = fromLabelProxy (Proxy :: Proxy \""
+           <> name <> "\")"
+  exportToplevel ("_" <> name)
 
 genAllAttributes :: [(Name, API)] -> CodeGen ()
 genAllAttributes allAPIs = do
-  setLanguagePragmas ["DataKinds"]
+  setLanguagePragmas ["DataKinds", "FlexibleContexts"]
   setModuleFlags [ImplicitPrelude, NoTypesImport, NoCallbacksImport]
 
   line $ "import Data.Proxy (Proxy(..))"
+  line $ "import Data.GI.Base.Overloading (IsLabelProxy(..))"
   blank
 
   propNames <- findObjectPropNames allAPIs

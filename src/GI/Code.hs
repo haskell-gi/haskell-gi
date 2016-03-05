@@ -32,6 +32,7 @@ module GI.Code
     , hsBoot
     , submodule
     , setLanguagePragmas
+    , setGHCOptions
     , setModuleFlags
     , addModuleDocumentation
 
@@ -137,6 +138,7 @@ data ModuleInfo = ModuleInfo {
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
     , moduleExports :: Seq Export -- ^ Exports for the module.
     , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
+    , moduleGHCOpts :: Set.Set Text -- ^ GHC options for compiling the module.
     , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
     , moduleDoc     :: Maybe Text -- ^ Documentation for the module.
     }
@@ -158,6 +160,7 @@ emptyModule m = ModuleInfo { moduleName = m
                            , moduleDeps = Set.empty
                            , moduleExports = S.empty
                            , modulePragmas = Set.empty
+                           , moduleGHCOpts = Set.empty
                            , moduleFlags = Set.empty
                            , moduleDoc = Nothing
                            }
@@ -236,13 +239,14 @@ mergeInfoState oldState newState =
         newSubmodules = M.unionWith mergeInfo (submodules oldState) (submodules newState)
         newExports = moduleExports oldState <> moduleExports newState
         newPragmas = Set.union (modulePragmas oldState) (modulePragmas newState)
+        newGHCOpts = Set.union (moduleGHCOpts oldState) (moduleGHCOpts newState)
         newFlags = Set.union (moduleFlags oldState) (moduleFlags newState)
         newBoot = bootCode oldState <> bootCode newState
         newDoc = moduleDoc oldState <> moduleDoc newState
     in oldState {moduleDeps = newDeps, submodules = newSubmodules,
                  moduleExports = newExports, modulePragmas = newPragmas,
-                 moduleFlags = newFlags, bootCode = newBoot,
-                 moduleDoc = newDoc }
+                 moduleGHCOpts = newGHCOpts, moduleFlags = newFlags,
+                 bootCode = newBoot, moduleDoc = newDoc }
 
 -- | Merge the infos, including code too.
 mergeInfo :: ModuleInfo -> ModuleInfo -> ModuleInfo
@@ -438,6 +442,11 @@ setLanguagePragmas :: [Text] -> CodeGen ()
 setLanguagePragmas ps =
     modify' $ \s -> s{modulePragmas = Set.fromList ps}
 
+-- | Set the GHC options for compiling this module (in a OPTIONS_GHC pragma).
+setGHCOptions :: [Text] -> CodeGen ()
+setGHCOptions opts =
+    modify' $ \s -> s{moduleGHCOpts = Set.fromList opts}
+
 -- | Set the given flags for the module.
 setModuleFlags :: [ModuleFlag] -> CodeGen ()
 setModuleFlags flags =
@@ -569,6 +578,11 @@ languagePragmas :: [Text] -> Text
 languagePragmas [] = ""
 languagePragmas ps = "{-# LANGUAGE " <> T.intercalate ", " ps <> " #-}\n"
 
+-- | Write down the list of GHC options.
+ghcOptions :: [Text] -> Text
+ghcOptions [] = ""
+ghcOptions opts = "{-# OPTIONS_GHC " <> T.intercalate ", " opts <> " #-}\n"
+
 -- | Standard fields for every module.
 standardFields :: Text
 standardFields = T.unlines [ "Copyright  : " <> authors
@@ -630,6 +644,7 @@ writeModuleInfo verbose dirPrefix minfo = do
       dirname = takeDirectory fname
       code = codeToText (moduleCode minfo)
       pragmas = languagePragmas (Set.toList $ modulePragmas minfo)
+      optionsGHC = ghcOptions (Set.toList $ moduleGHCOpts minfo)
       prelude = modulePrelude (dotModuleName $ moduleName minfo)
                 (F.toList (moduleExports minfo))
                 submoduleExports
@@ -653,7 +668,7 @@ writeModuleInfo verbose dirPrefix minfo = do
   when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
-  TIO.writeFile fname (T.unlines [pragmas, haddock, prelude,
+  TIO.writeFile fname (T.unlines [pragmas, optionsGHC, haddock, prelude,
                                   imports, types, callbacks, deps, code])
   when (bootCode minfo /= NoCode) $ do
     let bootFName = moduleNameToPath dirPrefix (moduleName minfo) ".hs-boot"

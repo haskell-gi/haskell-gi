@@ -1,4 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables, PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
+#if MIN_VERSION_base(4,9,0)
+{-# LANGUAGE OverloadedLabels #-}
+#endif
+#if !MIN_VERSION_base(4,9,0)
+{-# LANGUAGE PatternSynonyms #-}
+#endif
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import BasicPrelude hiding (on, error)
 import qualified BasicPrelude as BP
@@ -8,6 +15,7 @@ import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
 import qualified GI.GObject as GObject
 import qualified GI.GLib as GLib
+
 import GI.Properties
 import GI.Signals
 
@@ -364,6 +372,17 @@ testConstantPatternMatching = do
             checkDigits GLib.CSET_DIGITS = True
             checkDigits _                = False
 
+#if MIN_VERSION_base(4,9,0)
+testOverloadedLabels :: IO ()
+testOverloadedLabels = do
+  putStrLn "*** Overloaded labels test"
+  address <- Gio.inetAddressNewFromString "173.194.40.51"
+  family <- address `get` #family
+  when (family /= Gio.SocketFamilyIpv4) $
+       error $ "Got unexpected socket family: " ++ show family
+  putStrLn "+++ Overloaded labels test done"
+#endif
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -457,6 +476,9 @@ main = do
         testArrayOfArrays
         testUnexpectedNullHandling
         testConstantPatternMatching
+#if MIN_VERSION_base(4,9,0)
+        testOverloadedLabels
+#endif
 
         widgetShowAll win
 

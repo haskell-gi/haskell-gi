@@ -18,8 +18,8 @@ import GI.Code
 import GI.Inheritance (fullObjectSignalList, fullInterfaceSignalList)
 import GI.GObject (apiIsGObject)
 import GI.Signal (signalHaskellName)
-import GI.SymbolNaming (upperName)
-import GI.Util (padTo, ucFirst)
+import GI.SymbolNaming (upperName, hyphensToCamelCase)
+import GI.Util (lcFirst, ucFirst)
 
 -- A list of distinct signal names for all GObjects appearing in the
 -- given list of APIs.
@@ -42,23 +42,28 @@ findSignalNames apis = S.toList <$> go apis S.empty
 -- | Generate the overloaded signal connectors: "Clicked", "ActivateLink", ...
 genOverloadedSignalConnectors :: [(Name, API)] -> CodeGen ()
 genOverloadedSignalConnectors allAPIs = do
-  setLanguagePragmas ["DataKinds", "GADTs", "KindSignatures", "FlexibleInstances"]
+  setLanguagePragmas ["DataKinds", "PatternSynonyms", "CPP",
+                      -- For ghc 7.8 support
+                      "RankNTypes", "ScopedTypeVariables", "TypeFamilies"]
   setModuleFlags [ImplicitPrelude, NoTypesImport, NoCallbacksImport]
 
-  line   "import GHC.TypeLits"
-  line   "import GHC.Exts (Constraint)"
+  line "import Data.GI.Base.Signals (SignalProxy(..))"
+  line "import Data.GI.Base.Overloading (ResolveSignal)"
   blank
-  line   "class NoConstraint a"
-  line   "instance NoConstraint a"
-  blank
-  line   "data SignalProxy (a :: Symbol) (b :: Symbol) (c :: * -> Constraint) where"
-  indent $ do
-    signalNames <- findSignalNames allAPIs
-    let maxLength = maximum $ map (T.length . signalHaskellName) signalNames
-    forM_ signalNames $ \sn ->
-        line $ padTo (maxLength + 1) (ucFirst (signalHaskellName sn)) <>
-                 ":: SignalProxy \"" <> sn <> "\" \"\" NoConstraint"
-  exportToplevel "SignalProxy(..)"
+  signalNames <- findSignalNames allAPIs
+  forM_ signalNames $ \sn -> group $ do
+    let camelName = hyphensToCamelCase sn
+    line $ "#if MIN_VERSION_base(4,8,0)"
+    line $ "pattern " <> camelName <>
+             " :: SignalProxy object (ResolveSignal \""
+             <> lcFirst camelName <> "\" object)"
+    line $ "pattern " <> camelName <> " = SignalProxy"
+    line $ "#else"
+    line $ "pattern " <> camelName <> " = SignalProxy :: forall info object. "
+             <> "info ~ ResolveSignal \"" <> lcFirst camelName
+             <> "\" object => SignalProxy object info"
+    line $ "#endif"
+    exportDecl $ "pattern " <> camelName
 
 -- | Qualified name for the "(sigName, info)" tag for a given signal.
 signalInfoName :: Name -> Signal -> CodeGen Text
@@ -92,17 +97,13 @@ genObjectSignals n o = do
        infos <- fullObjectSignalList n o >>=
                 mapM (\(owner, signal) -> do
                       si <- signalInfoName owner signal
-                      return $ "'(\"" <> sigName signal
+                      return $ "'(\"" <> (lcFirst . hyphensToCamelCase . sigName) signal
                                  <> "\", " <> si <> ")")
-       -- The "notify::[property]" signal is a generic signal used for
-       -- connecting to property notifications.
-       let allSignals = infos <>
-                        ["'(\"notify::[property]\", GObjectNotifySignalInfo)"]
        group $ do
          let signalListType = name <> "SignalList"
          line $ "type instance SignalList " <> name <> " = " <> signalListType
          line $ "type " <> signalListType <> " = ('[ "
-                  <> T.intercalate ", " allSignals <> "] :: [(Symbol, *)])"
+                  <> T.intercalate ", " infos <> "] :: [(Symbol, *)])"
 
 -- | Signal instances for interfaces.
 genInterfaceSignals :: Name -> Interface -> CodeGen ()
@@ -112,17 +113,10 @@ genInterfaceSignals n iface = do
   infos <- fullInterfaceSignalList n iface >>=
            mapM (\(owner, signal) -> do
                    si <- signalInfoName owner signal
-                   return $ "'(\"" <> sigName signal
+                   return $ "'(\"" <> (lcFirst . hyphensToCamelCase . sigName) signal
                               <> "\", " <> si <> ")")
-  isGO <- apiIsGObject n (APIInterface iface)
-  -- The "notify::[property]" signal is a generic signal used for
-  -- connecting to property notifications of a GObject.
-  let allSignals =
-          if isGO
-          then infos <> ["'(\"notify::[property]\", GObjectNotifySignalInfo)"]
-          else infos
   group $ do
     let signalListType = name <> "SignalList"
     line $ "type instance SignalList " <> name <> " = " <> signalListType
     line $ "type " <> signalListType <> " = ('[ "
-             <> T.intercalate ", " allSignals <> "] :: [(Symbol, *)])"
+             <> T.intercalate ", " infos <> "] :: [(Symbol, *)])"
