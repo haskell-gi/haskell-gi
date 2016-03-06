@@ -5,7 +5,7 @@ import qualified GI.Gtk as Gtk
 import qualified GI.GLib as GLib
 import GI.WebKit2
 
-import GI.Properties
+import GI.OverloadedLabels
 import GI.Signals
 import Data.GI.Base
 
@@ -37,21 +37,21 @@ main = do
   on win Destroy mainQuit
 
   view <- new WebView []
-  on view Close $ widgetDestroy win
-  webViewLoadUri view "http://www.haskell.org"
+  on view Close $ _destroy win
+  _loadUri view "http://www.haskell.org"
 
-  containerAdd win view
+  _add win view
 
   uriEntry <- new Entry [_placeholderText := "Type the address to load here",
                          _widthChars := 50]
   on uriEntry Activate $ do
     uri <- uriEntry `get` _text
-    webViewLoadUri view uri
+    _loadUri view uri
 
   header <- new HeaderBar [_showCloseButton := True,
                            _customTitle := uriEntry,
                            _title := "A simple WebKit browser"]
-  windowSetTitlebar win (Just header)
+  _setTitlebar win (Just header)
 
   on view (PropertyNotify _estimatedLoadProgress) $ \_ -> do
     status <- view `get` _estimatedLoadProgress
@@ -68,6 +68,6 @@ main = do
     -- Keep processing, so WebKit shows the error page
     return False
 
-  widgetShowAll win
+  _showAll win
 
   Gtk.main

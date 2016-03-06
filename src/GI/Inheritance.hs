@@ -4,13 +4,15 @@ module GI.Inheritance
     , fullInterfacePropertyList
     , fullObjectSignalList
     , fullInterfaceSignalList
+    , fullObjectMethodList
+    , fullInterfaceMethodList
     , instanceTree
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*>))
 #endif
-import Control.Monad (foldM)
+import Control.Monad (foldM, when)
 import qualified Data.Map as M
 import Data.Text (Text)
 
@@ -55,6 +57,11 @@ instance Inheritable Signal where
     objInheritables = objSignals
     iName = sigName
 
+instance Inheritable Method where
+    ifInheritables = ifMethods
+    objInheritables = objMethods
+    iName = name . methodName
+
 -- Returns a list of all inheritables defined for this object
 -- (including those defined by its ancestors and the interfaces it
 -- implements), together with the name of the interface defining the
@@ -96,8 +103,8 @@ fullInterfaceInheritableList n iface =
 -- they are not isomorphic we refuse to set either, and print a
 -- warning in the generated code.
 removeDuplicates :: forall i. (Eq i, Show i, Inheritable i) =>
-                        [(Name, i)] -> CodeGen [(Name, i)]
-removeDuplicates inheritables =
+                        Bool -> [(Name, i)] -> CodeGen [(Name, i)]
+removeDuplicates verbose inheritables =
     (filterTainted . M.toList) <$> foldM filterDups M.empty inheritables
     where
       filterDups :: M.Map Text (Bool, Name, i) -> (Name, i) ->
@@ -108,9 +115,10 @@ removeDuplicates inheritables =
               | tainted     -> return m
               | (p == prop) -> return m -- Duplicated, but isomorphic property
               | otherwise   ->
-                do line   "--- XXX Duplicated object with different types:"
-                   line $ "  --- " <> tshow n <> " -> " <> tshow p
-                   line $ "  --- " <> tshow name <> " -> " <> tshow prop
+                do when verbose $ do
+                     line   "--- XXX Duplicated object with different types:"
+                     line $ "  --- " <> tshow n <> " -> " <> tshow p
+                     line $ "  --- " <> tshow name <> " -> " <> tshow prop
                    -- Tainted
                    return $ M.insert (iName prop) (True, n, p) m
           Nothing -> return $ M.insert (iName prop) (False, name, prop) m
@@ -122,22 +130,34 @@ removeDuplicates inheritables =
 -- defined by its ancestors.
 fullObjectPropertyList :: Name -> Object -> CodeGen [(Name, Property)]
 fullObjectPropertyList n o = fullObjectInheritableList n o >>=
-                         removeDuplicates
+                         removeDuplicates True
 
 -- | List all properties defined for an interface, including those
 -- defined by its prerequisites.
 fullInterfacePropertyList :: Name -> Interface -> CodeGen [(Name, Property)]
 fullInterfacePropertyList n i = fullInterfaceInheritableList n i >>=
-                            removeDuplicates
+                            removeDuplicates True
 
 -- | List all signals defined for an object, including those
 -- defined by its ancestors.
 fullObjectSignalList :: Name -> Object -> CodeGen [(Name, Signal)]
 fullObjectSignalList n o = fullObjectInheritableList n o >>=
-                           removeDuplicates
+                           removeDuplicates True
 
 -- | List all signals defined for an interface, including those
 -- defined by its prerequisites.
 fullInterfaceSignalList :: Name -> Interface -> CodeGen [(Name, Signal)]
 fullInterfaceSignalList n i = fullInterfaceInheritableList n i >>=
-                              removeDuplicates
+                              removeDuplicates True
+
+-- | List all methods defined for an object, including those defined
+-- by its ancestors.
+fullObjectMethodList :: Name -> Object -> CodeGen [(Name, Method)]
+fullObjectMethodList n o = fullObjectInheritableList n o >>=
+                           removeDuplicates False
+
+-- | List all methods defined for an interface, including those
+-- defined by its prerequisites.
+fullInterfaceMethodList :: Name -> Interface -> CodeGen [(Name, Method)]
+fullInterfaceMethodList n i = fullInterfaceInheritableList n i >>=
+                              removeDuplicates False

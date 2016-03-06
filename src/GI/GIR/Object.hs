@@ -18,7 +18,7 @@ data Object = Object {
     objInterfaces :: [Name],
     objDeprecated :: Maybe DeprecationInfo,
     objDocumentation :: Maybe Documentation,
-    objMethods :: [(Name, Method)],
+    objMethods :: [Method],
     objProperties :: [Property],
     objSignals :: [Signal]
     } deriving Show

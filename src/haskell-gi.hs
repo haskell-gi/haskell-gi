@@ -30,13 +30,13 @@ import GI.Cabal (cabalConfig, setupHs, genCabalProject)
 import GI.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, writeModuleCode, moduleCode, codeToText)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
-import GI.Attributes (genAllAttributes)
+import GI.OverloadedLabels (genOverloadedLabels)
 import GI.OverloadedSignals (genOverloadedSignalConnectors)
 import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
 import GI.ProjectInfo (licenseText)
 import GI.Util (ucFirst)
 
-data Mode = GenerateCode | Dump | Attributes | Signals | Help
+data Mode = GenerateCode | Dump | Labels | Signals | Help
 
 data Options = Options {
   optMode :: Mode,
@@ -62,12 +62,12 @@ optDescrs :: [OptDescr (Options -> Options)]
 optDescrs = [
   Option "h" ["help"] (NoArg $ \opt -> opt { optMode = Help })
     "\tprint this gentle help text",
-  Option "a" ["attributes"] (NoArg $ \opt -> opt {optMode = Attributes})
-    "generate generic attribute accesors",
   Option "c" ["connectors"] (NoArg $ \opt -> opt {optMode = Signals})
     "generate generic signal connectors",
   Option "d" ["dump"] (NoArg $ \opt -> opt { optMode = Dump })
     "\tdump internal representation",
+  Option "l" ["labels"] (NoArg $ \opt -> opt {optMode = Labels})
+    "generate overloaded labels",
   Option "n" ["no-cabal"] (NoArg $ \opt -> opt {optCabal = False})
     "\tdo not generate .cabal file",
   Option "o" ["overrides"] (ReqArg
@@ -98,16 +98,17 @@ loadRawAPIs verbose ovs extraPaths name = do
   gir <- loadRawGIRInfo verbose name version extraPaths
   return (girAPIs gir)
 
--- Generate all generic accessor functions ("_label", for example).
-genGenericAttrs :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
-genGenericAttrs options ovs modules extraPaths = do
+-- | Generate overloaded labels ("_label", for example).
+genLabels :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
+genLabels options ovs modules extraPaths = do
   apis <- mapM (loadRawAPIs (optVerbose options) ovs extraPaths) modules
   let allAPIs = M.unions (map M.fromList apis)
       cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
                     overrides = ovs}
-  putStrLn $ "\t* Generating GI.Properties"
-  m <- genCode cfg allAPIs ["GI", "Properties"] (genAllAttributes (M.toList allAPIs))
+  putStrLn $ "\t* Generating GI.OverloadedLabels"
+  m <- genCode cfg allAPIs ["GI", "OverloadedLabels"]
+       (genOverloadedLabels (M.toList allAPIs))
   _ <- writeModuleCode (optVerbose options) (optOutputDir options) m
   return ()
 
@@ -189,7 +190,7 @@ process options names = do
     Right ovs ->
       case optMode options of
         GenerateCode -> forM_ names (processMod options ovs extraPaths)
-        Attributes -> genGenericAttrs options ovs names extraPaths
+        Labels -> genLabels options ovs names extraPaths
         Signals -> genGenericConnectors options ovs names extraPaths
         Dump -> forM_ names (dump options ovs)
         Help -> putStr showHelp

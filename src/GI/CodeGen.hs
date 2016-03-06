@@ -11,7 +11,7 @@ import Data.Traversable (traverse)
 import Control.Monad (forM, forM_, when, unless, filterM)
 import Data.List (nub)
 import Data.Tuple (swap)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe, catMaybes)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -24,9 +24,12 @@ import GI.Callable (genCallable)
 import GI.Constant (genConstant)
 import GI.Code
 import GI.GObject
-import GI.Inheritance (instanceTree)
+import GI.Inheritance (instanceTree, fullObjectMethodList,
+                       fullInterfaceMethodList)
 import GI.Properties (genInterfaceProperties, genObjectProperties)
 import GI.OverloadedSignals (genInterfaceSignals, genObjectSignals)
+import GI.OverloadedMethods (genMethodList, genMethodInfo,
+                             genUnsupportedMethodInfo)
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct)
@@ -186,14 +189,20 @@ genStruct n s = unless (ignoreStruct n s) $ do
       genStructOrUnionFields n (structFields s)
 
       -- Methods
-      forM_ (structMethods s) $ \(mn, f) ->
-          do isFunction <- symbolFromFunction (methodSymbol f)
-             unless isFunction $
-                  handleCGExc
+      methods <- forM (structMethods s) $ \f -> do
+          let mn = methodName f
+          isFunction <- symbolFromFunction (methodSymbol f)
+          if not isFunction
+          then handleCGExc
                   (\e -> line ("-- XXX Could not generate method "
                                <> name' <> "::" <> name mn <> "\n"
-                               <> "-- Error was : " <> describeCGError e))
-                  (genMethod n mn f)
+                               <> "-- Error was : " <> describeCGError e) >>
+                   return Nothing)
+                  (genMethod n f >> return (Just (n, f)))
+          else return Nothing
+
+      -- Overloaded methods
+      genMethodList n (catMaybes methods)
 
 genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
@@ -214,14 +223,20 @@ genUnion n u = do
      genStructOrUnionFields n (unionFields u)
 
      -- Methods
-     forM_ (unionMethods u) $ \(mn, f) ->
-         do isFunction <- symbolFromFunction (methodSymbol f)
-            unless isFunction $
-                   handleCGExc
+     methods <- forM (unionMethods u) $ \f -> do
+         let mn = methodName f
+         isFunction <- symbolFromFunction (methodSymbol f)
+         if not isFunction
+         then handleCGExc
                    (\e -> line ("-- XXX Could not generate method "
                                 <> name' <> "::" <> name mn <> "\n"
-                                <> "-- Error was : " <> describeCGError e))
-                   (genMethod n mn f)
+                                <> "-- Error was : " <> describeCGError e)
+                   >> return Nothing)
+                   (genMethod n f >> return (Just (n, f)))
+         else return Nothing
+
+     -- Overloaded methods
+     genMethodList n (catMaybes methods)
 
 -- Add the implicit object argument to methods of an object.  Since we
 -- are prepending an argument we need to adjust the offset of the
@@ -275,13 +290,14 @@ fixConstructorReturnType returnsGObject cn c = c { returnType = returnType' }
                     else
                         returnType c
 
-genMethod :: Name -> Name -> Method -> ExcCodeGen ()
-genMethod cn mn (Method {
-                    methodSymbol = sym,
-                    methodCallable = c,
-                    methodType = t,
-                    methodThrows = throws
-                 }) = do
+genMethod :: Name -> Method -> ExcCodeGen ()
+genMethod cn m@(Method {
+                  methodName = mn,
+                  methodSymbol = sym,
+                  methodCallable = c,
+                  methodType = t,
+                  methodThrows = throws
+                }) = do
     name' <- upperName cn
     returnsGObject <- isGObject (returnType c)
     line $ "-- method " <> name' <> "::" <> name mn
@@ -295,6 +311,8 @@ genMethod cn mn (Method {
               then fixMethodArgs cn c'
               else c'
     genCallable mn' sym c'' throws
+
+    genMethodInfo cn (m {methodCallable = c''})
 
 -- Type casting with type checking
 genGObjectCasts :: Bool -> Name -> Text -> [Name] -> CodeGen ()
@@ -356,6 +374,8 @@ genObject n o = do
 
          noName name'
 
+         fullObjectMethodList n o >>= genMethodList n
+
          forM_ (objSignals o) $ \s ->
           handleCGExc
           (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
@@ -367,12 +387,13 @@ genObject n o = do
          genObjectSignals n o
 
          -- Methods
-         forM_ (objMethods o) $ \(mn, f) ->
-           handleCGExc
-           (\e -> line ("-- XXX Could not generate method "
-                        <> name' <> "::" <> name mn <> "\n"
-                        <> "-- Error was : " <> describeCGError e))
-           (genMethod n mn f)
+         forM_ (objMethods o) $ \f -> do
+           let mn = methodName f
+           handleCGExc (\e -> line ("-- XXX Could not generate method "
+                                   <> name' <> "::" <> name mn <> "\n"
+                                   <> "-- Error was : " <> describeCGError e)
+                       >> genUnsupportedMethodInfo n f)
+                       (genMethod n f)
 
 genInterface :: Name -> Interface -> CodeGen ()
 genInterface n iface = do
@@ -385,6 +406,8 @@ genInterface n iface = do
      exportDecl (name' <> "(..)")
 
      noName name'
+
+     fullInterfaceMethodList n iface >>= genMethodList n
 
      forM_ (ifSignals iface) $ \s -> handleCGExc
           (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
@@ -415,14 +438,16 @@ genInterface n iface = do
        line $ "type " <> parentObjectsType <> " = '[]"
 
      -- Methods
-     forM_ (ifMethods iface) $ \(mn, f) -> do
+     forM_ (ifMethods iface) $ \f -> do
+         let mn = methodName f
          isFunction <- symbolFromFunction (methodSymbol f)
          unless isFunction $
                 handleCGExc
                 (\e -> line ("-- XXX Could not generate method "
                              <> name' <> "::" <> name mn <> "\n"
-                             <> "-- Error was : " <> describeCGError e))
-                (genMethod n mn f)
+                             <> "-- Error was : " <> describeCGError e)
+                >> genUnsupportedMethodInfo n f)
+                (genMethod n f)
 
 -- Some type libraries include spurious interface/struct methods,
 -- where a method Mod.Foo::func also appears as an ordinary function

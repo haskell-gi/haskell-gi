@@ -15,7 +15,7 @@ data Interface = Interface {
         ifPrerequisites :: [Name],
         ifProperties :: [Property],
         ifSignals :: [Signal],
-        ifMethods :: [(Name, Method)],
+        ifMethods :: [Method],
         ifDeprecated :: Maybe DeprecationInfo
     } deriving Show
 

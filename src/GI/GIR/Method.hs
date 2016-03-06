@@ -16,13 +16,14 @@ data MethodType = Constructor    -- ^ Constructs an instance of the parent type
                   deriving (Eq, Show)
 
 data Method = Method {
+      methodName        :: Name,
       methodSymbol      :: Text,
       methodThrows      :: Bool,
       methodType        :: MethodType,
       methodCallable    :: Callable
-    } deriving Show
+    } deriving (Eq, Show)
 
-parseMethod :: MethodType -> Parser (Name, Method)
+parseMethod :: MethodType -> Parser Method
 parseMethod mType = do
   name <- parseName
   shadows <- queryAttr "shadows"
@@ -32,10 +33,10 @@ parseMethod mType = do
   callable <- parseCallable
   symbol <- getAttrWithNamespace CGIRNS "identifier"
   throws <- optionalAttr "throws" False parseBool
-  return $ (exposedName,
-            Method {
-              methodSymbol = symbol
+  return $ Method {
+              methodName = exposedName
+            , methodSymbol = symbol
             , methodThrows = throws
             , methodType = mType
             , methodCallable = callable
-            })
+            }

@@ -5,6 +5,7 @@ module GI.Callable
     , hOutType
     , arrayLengths
     , arrayLengthsMap
+    , callableSignature
 
     , wrapMaybe
     , inArgInterfaces
@@ -515,14 +516,45 @@ freeCallCallbacks callable nameMap =
        when (argScope arg == ScopeTypeCall) $
             line $ "safeFreeFunPtr $ castFunPtrToPtr " <> name'
 
-hSignature :: [Arg] -> TypeRep -> ExcCodeGen ()
-hSignature hInArgs retType = do
-  (argConstraints, types) <- inArgInterfaces hInArgs
+formatHSignature :: Callable -> Bool -> ExcCodeGen ()
+formatHSignature callable throwsGError = do
+  (constraints, vars) <- callableSignature callable throwsGError
   indent $ do
-      line $ "(" <> T.intercalate ", " ("MonadIO m" : argConstraints) <> ") =>"
-      forM_ (zip types hInArgs) $ \(t, a) ->
-           line $ withComment (t <> " ->") $ (escapedArgName a)
-      line . tshow $ "m" `con` [retType]
+      line $ "(" <> T.intercalate ", " constraints <> ") =>"
+      forM_ (zip ("" : repeat "-> ") vars) $ \(prefix, (t, name)) ->
+           line $ withComment (prefix <> t) name
+
+-- | The Haskell signature for the given callable. It returns a tuple
+-- ([constraints], [(type, argname)]).
+callableSignature :: Callable -> Bool -> ExcCodeGen ([Text], [(Text, Text)])
+callableSignature callable throwsGError = do
+  let (hInArgs, _) = callableHInArgs callable
+  (argConstraints, types) <- inArgInterfaces hInArgs
+  let constraints = ("MonadIO m" : argConstraints)
+      ignoreReturn = skipRetVal callable throwsGError
+  outType <- hOutType callable (callableHOutArgs callable) ignoreReturn
+  let allNames = map escapedArgName hInArgs ++ ["result"]
+      allTypes = types ++ [tshow ("m" `con` [outType])]
+  return (constraints, zip allTypes allNames)
+
+-- | "In" arguments for the given callable on the Haskell side,
+-- together with the omitted arguments.
+callableHInArgs :: Callable -> ([Arg], [Arg])
+callableHInArgs callable =
+    let inArgs = filter ((/= DirectionOut) . direction) $ args callable
+                 -- We do not expose user_data arguments,
+                 -- destroynotify arguments, and C array length
+                 -- arguments to Haskell code.
+        closures = map (args callable!!) . filter (/= -1) . map argClosure $ inArgs
+        destroyers = map (args callable!!) . filter (/= -1) . map argDestroy $ inArgs
+        omitted = arrayLengths callable <> closures <> destroyers
+    in (filter (`notElem` omitted) inArgs, omitted)
+
+-- | "Out" arguments for the given callable on the Haskell side.
+callableHOutArgs :: Callable -> [Arg]
+callableHOutArgs callable =
+    let outArgs = filter ((/= DirectionIn) . direction) $ args callable
+    in filter (`notElem` (arrayLengths callable)) outArgs
 
 genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
 genCallable n symbol callable throwsGError = do
@@ -541,15 +573,8 @@ genCallable n symbol callable throwsGError = do
     wrapper
 
     where
-    inArgs = filter ((/= DirectionOut) . direction) $ args callable
-    -- We do not expose user_data arguments, destroynotify arguments,
-    -- and C array length arguments to Haskell code.
-    closures = map (args callable!!) . filter (/= -1) . map argClosure $ inArgs
-    destroyers = map (args callable!!) . filter (/= -1) . map argDestroy $ inArgs
-    omitted = arrayLengths callable <> closures <> destroyers
-    hInArgs = filter (`notElem` omitted) inArgs
-    outArgs = filter ((/= DirectionIn) . direction) $ args callable
-    hOutArgs = filter (`notElem` (arrayLengths callable)) outArgs
+    (hInArgs, omitted) = callableHInArgs callable
+    hOutArgs = callableHOutArgs callable
 
     ignoreReturn = skipRetVal callable throwsGError
 
@@ -558,7 +583,7 @@ genCallable n symbol callable throwsGError = do
         exportMethod name name
         line $ deprecatedPragma name $ callableDeprecated callable
         line $ name <> " ::"
-        hSignature hInArgs =<< hOutType callable hOutArgs ignoreReturn
+        formatHSignature callable ignoreReturn
         line $ name <> " " <> T.intercalate " " (map escapedArgName hInArgs) <> " = liftIO $ do"
         indent $ do
             readInArrayLengths n callable hInArgs

@@ -137,15 +137,15 @@ parseCabalPkgVersion t =
 
 -- | Filter a set of named objects based on a lookup list of names to
 -- ignore.
-filterNamed :: [(Name, a)] -> S.Set Text -> [(Name, a)]
-filterNamed set ignores =
-    filter ((`S.notMember` ignores) . name . fst) set
+filterMethods :: [Method] -> S.Set Text -> [Method]
+filterMethods set ignores =
+    filter ((`S.notMember` ignores) . name . methodName) set
 
 -- | Filter one API according to the given config.
 filterOneAPI :: Overrides -> (Name, API, Maybe (S.Set Text)) -> (Name, API)
 filterOneAPI ovs (n, APIStruct s, maybeIgnores) =
     (n, APIStruct s {structMethods = maybe (structMethods s)
-                                     (filterNamed (structMethods s))
+                                     (filterMethods (structMethods s))
                                      maybeIgnores,
                      structFields = if n `S.member` sealedStructs ovs
                                     then []
@@ -153,17 +153,17 @@ filterOneAPI ovs (n, APIStruct s, maybeIgnores) =
 -- The rest only apply if there are ignores.
 filterOneAPI _ (n, api, Nothing) = (n, api)
 filterOneAPI _ (n, APIObject o, Just ignores) =
-    (n, APIObject o {objMethods = filterNamed (objMethods o) ignores,
+    (n, APIObject o {objMethods = filterMethods (objMethods o) ignores,
                      objSignals = filter ((`S.notMember` ignores) . sigName)
                                   (objSignals o)
                     })
 filterOneAPI _ (n, APIInterface i, Just ignores) =
-    (n, APIInterface i {ifMethods = filterNamed (ifMethods i) ignores,
+    (n, APIInterface i {ifMethods = filterMethods (ifMethods i) ignores,
                         ifSignals = filter ((`S.notMember` ignores) . sigName)
                                     (ifSignals i)
                        })
 filterOneAPI _ (n, APIUnion u, Just ignores) =
-    (n, APIUnion u {unionMethods = filterNamed (unionMethods u) ignores})
+    (n, APIUnion u {unionMethods = filterMethods (unionMethods u) ignores})
 filterOneAPI _ (n, api, _) = (n, api)
 
 -- | Given a list of APIs modify them according to the given config.

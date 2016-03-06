@@ -16,7 +16,7 @@ import qualified GI.Gio as Gio
 import qualified GI.GObject as GObject
 import qualified GI.GLib as GLib
 
-import GI.Properties
+import GI.OverloadedLabels
 import GI.Signals
 
 import Data.GI.Base
@@ -377,9 +377,14 @@ testOverloadedLabels :: IO ()
 testOverloadedLabels = do
   putStrLn "*** Overloaded labels test"
   address <- Gio.inetAddressNewFromString "173.194.40.51"
+  -- Overloaded attributes
   family <- address `get` #family
   when (family /= Gio.SocketFamilyIpv4) $
-       error $ "Got unexpected socket family: " ++ show family
+       error $ "Got unexpected socket family from attr: " ++ show family
+  -- Overloaded methods
+  family <- #getFamily address
+  when (family /= Gio.SocketFamilyIpv4) $
+       error $ "Got unexpected socket family from method: " ++ show family
   putStrLn "+++ Overloaded labels test done"
 #endif
 
@@ -432,7 +437,7 @@ main = do
         on label ActivateLink $ \uri -> do
           testPolymorphicLenses win ("Link " ++ uri ++ " clicked, thanks!")
           return True -- Link processed, do not open with the browser
-        containerAdd grid label
+        _add grid label
 
         button <- new Button [_label := "_Click me!",
                               _useUnderline := True]
@@ -450,13 +455,13 @@ main = do
                 putStrLn $ "New button text is "
                              ++ show newLabel
                              ++ " and sensitive is " ++ show sensitive
-        containerAdd grid button
+        _add grid button
 
         popupButton <- new Button [_label := "_Pop-up menu",
                                    _useUnderline := True]
         menu <- buildPopupMenu
         on popupButton Clicked (testMenuPopup menu)
-        containerAdd grid popupButton
+        _add grid popupButton
 
         testBoxedOutArgs
         testGio
@@ -480,6 +485,6 @@ main = do
         testOverloadedLabels
 #endif
 
-        widgetShowAll win
+        _showAll win
 
         Gtk.main

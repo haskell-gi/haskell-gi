@@ -16,7 +16,7 @@ data Union = Union {
     unionSize :: Int,
     unionTypeInit :: Maybe Text,
     unionFields :: [Field],
-    unionMethods :: [(Name, Method)],
+    unionMethods :: [Method],
     unionDeprecated :: Maybe DeprecationInfo }
     deriving Show
 

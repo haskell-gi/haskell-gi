@@ -18,7 +18,7 @@ data Struct = Struct {
     -- https://bugzilla.gnome.org/show_bug.cgi?id=560248
     structIsDisguised :: Bool,
     structFields :: [Field],
-    structMethods :: [(Name, Method)],
+    structMethods :: [Method],
     structDeprecated :: Maybe DeprecationInfo,
     structDocumentation :: Maybe Documentation }
     deriving Show

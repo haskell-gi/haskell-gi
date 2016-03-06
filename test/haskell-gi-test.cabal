@@ -34,5 +34,5 @@ executable testGtk
 
   extensions:          OverloadedStrings, NoImplicitPrelude, DoAndIfThenElse, LambdaCase
   ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing
-  other-modules:       GI.Properties,
+  other-modules:       GI.OverloadedLabels,
                        GI.Signals
