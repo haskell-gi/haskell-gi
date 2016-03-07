@@ -33,6 +33,10 @@ module Data.GI.Base.ShortPrelude
 
     , module GHC.TypeLits
 
+#if MIN_VERSION_base(4,9,0)
+    , module GHC.OverloadedLabels
+#endif
+
     , Enum(fromEnum, toEnum)
     , Show(..)
     , Eq(..)
@@ -88,3 +92,6 @@ import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalH
 import Data.GI.Base.Utils
 
 import GHC.TypeLits (Symbol)
+#if MIN_VERSION_base(4,9,0)
+import GHC.OverloadedLabels (IsLabel(..))
+#endif
