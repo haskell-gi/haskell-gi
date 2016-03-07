@@ -99,6 +99,8 @@ genUnsupportedMethodInfo n m = do
   line $ "-- XXX: Dummy instance, since code generation failed.\n"
            <> "-- Please file a bug at http://github.com/haskell-gi/haskell-gi."
   bline $ "data " <> infoName
-  line $ "instance (p ~ (), o ~ ()) => MethodInfo " <> infoName <> " o p where"
+  line $ "instance (p ~ (), o ~ MethodResolutionFailed \""
+           <> lowerName (methodName m) <> "\" " <> name n
+           <> ") => MethodInfo " <> infoName <> " o p where"
   indent $ line $ "overloadedMethod _ = undefined"
   exportMethod "Unsupported methods" infoName
