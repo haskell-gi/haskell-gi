@@ -27,7 +27,7 @@ import Text.Show.Pretty (ppShow)
 
 import GI.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import GI.Cabal (cabalConfig, setupHs, genCabalProject)
-import GI.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, writeModuleCode, moduleCode, codeToText)
+import GI.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, writeModuleCode, moduleCode, codeToText, minBaseVersion)
 import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.OverloadedLabels (genOverloadedLabels)
@@ -155,11 +155,11 @@ processMod options ovs extraPaths name = do
     putStrLn $ "\t\t+ " ++ fname
     -- The module is not a dep of itself
     let usedDeps = S.delete name modDeps
-
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
         actualDeps = filter ((`S.member` usedDeps) . girNSName) girDeps
-    (err, m) <- evalCodeGen cfg allAPIs [] (genCabalProject gir actualDeps moduleList)
+        baseVersion = minBaseVersion m
+    (err, m) <- evalCodeGen cfg allAPIs [] (genCabalProject gir actualDeps moduleList baseVersion)
     case err of
       Nothing -> do
                TIO.writeFile fname (codeToText (moduleCode m))

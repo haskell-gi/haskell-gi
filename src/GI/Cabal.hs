@@ -117,8 +117,9 @@ readMajorMinor version =
 
 -- | Try to generate the cabal project. In case of error return the
 -- corresponding error string.
-genCabalProject :: GIRInfo -> [GIRInfo] -> [Text] -> CodeGen (Maybe Text)
-genCabalProject gir deps exposedModules =
+genCabalProject :: GIRInfo -> [GIRInfo] -> [Text] -> BaseVersion ->
+                   CodeGen (Maybe Text)
+genCabalProject gir deps exposedModules minBaseVersion =
     handleCGExc (return . Just . describeCGError) $ do
       cfg <- config
       let pkMap = pkgConfigMap (overrides cfg)
@@ -156,7 +157,8 @@ genCabalProject gir deps exposedModules =
               line $ padTo 20 "" <> mod
         line $ padTo 20 "pkgconfig-depends:" <> pcName <> " >= "
                  <> tshow major <> "." <> tshow minor
-        line $ padTo 20 "build-depends: base >= 4.7 && <5,"
+        line $ padTo 20 "build-depends: base >= "
+                 <> showBaseVersion minBaseVersion <> " && <5,"
         indent $ do
           line $ "haskell-gi-base >= "
                    <> tshow haskellGIAPIVersion <> "." <> tshow haskellGIMinor

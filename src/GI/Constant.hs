@@ -32,9 +32,11 @@ writePattern :: Text -> PatternSynonym -> CodeGen ()
 writePattern name (SimpleSynonym value t) = line $
       "pattern " <> name <> " = " <> value <> " :: " <> t
 writePattern name (ExplicitSynonym view expression value t) = do
-    line $
-      "pattern " <> name <> " <- (" <> view <> " -> " <> value <> ") :: " <> t <> " where"
-    indent $ line $
+  -- Supported only on ghc >= 7.10
+  setModuleMinBase Base48
+  line $ "pattern " <> name <> " <- (" <> view <> " -> "
+           <> value <> ") :: " <> t <> " where"
+  indent $ line $
           name <> " = " <> expression <> " " <> value <> " :: " <> t
 
 genConstant :: Name -> Constant -> CodeGen ()

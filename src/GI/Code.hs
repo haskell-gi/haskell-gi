@@ -13,6 +13,9 @@ module GI.Code
     , writeModuleCode
     , codeToText
     , transitiveModuleDeps
+    , minBaseVersion
+    , BaseVersion(..)
+    , showBaseVersion
 
     , loadDependency
     , getDeps
@@ -34,6 +37,7 @@ module GI.Code
     , setLanguagePragmas
     , setGHCOptions
     , setModuleFlags
+    , setModuleMinBase
     , addModuleDocumentation
 
     , exportToplevel
@@ -141,6 +145,8 @@ data ModuleInfo = ModuleInfo {
     , moduleGHCOpts :: Set.Set Text -- ^ GHC options for compiling the module.
     , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
     , moduleDoc     :: Maybe Text -- ^ Documentation for the module.
+    , moduleMinBase :: BaseVersion -- ^ Minimal version of base the
+                                   -- module will work on.
     }
 
 -- | Flags for module code generation.
@@ -150,6 +156,16 @@ data ModuleFlag = ImplicitPrelude  -- ^ Use the standard prelude,
                 | NoCallbacksImport-- ^ Do not import a "Callbacks" submodule.
                 | Reexport         -- ^ Reexport the module (as is) from .Types
                   deriving (Show, Eq, Ord)
+
+-- | Minimal version of base supported by a given module.
+data BaseVersion = Base47  -- ^ 4.7.0
+                 | Base48  -- ^ 4.8.0
+                   deriving (Show, Eq, Ord)
+
+-- | A `Text` representation of the given base version bound.
+showBaseVersion :: BaseVersion -> Text
+showBaseVersion Base47 = "4.7"
+showBaseVersion Base48 = "4.8"
 
 -- | Generate the empty module.
 emptyModule :: ModuleName -> ModuleInfo
@@ -163,6 +179,7 @@ emptyModule m = ModuleInfo { moduleName = m
                            , moduleGHCOpts = Set.empty
                            , moduleFlags = Set.empty
                            , moduleDoc = Nothing
+                           , moduleMinBase = Base47
                            }
 
 -- | Information for the code generator.
@@ -203,7 +220,7 @@ runCodeGen cg cfg state = runExceptT (runStateT (runReaderT cg cfg) state)
 cleanInfo :: ModuleInfo -> ModuleInfo
 cleanInfo info = info { moduleCode = NoCode, submodules = M.empty,
                         bootCode = NoCode, moduleExports = S.empty,
-                        moduleDoc = Nothing }
+                        moduleDoc = Nothing, moduleMinBase = Base47 }
 
 -- | Run the given code generator using the state and config of an
 -- ambient CodeGen, but without adding the generated code to
@@ -243,10 +260,12 @@ mergeInfoState oldState newState =
         newFlags = Set.union (moduleFlags oldState) (moduleFlags newState)
         newBoot = bootCode oldState <> bootCode newState
         newDoc = moduleDoc oldState <> moduleDoc newState
+        newMinBase = max (moduleMinBase oldState) (moduleMinBase newState)
     in oldState {moduleDeps = newDeps, submodules = newSubmodules,
                  moduleExports = newExports, modulePragmas = newPragmas,
                  moduleGHCOpts = newGHCOpts, moduleFlags = newFlags,
-                 bootCode = newBoot, moduleDoc = newDoc }
+                 bootCode = newBoot, moduleDoc = newDoc,
+                 moduleMinBase = newMinBase }
 
 -- | Merge the infos, including code too.
 mergeInfo :: ModuleInfo -> ModuleInfo -> ModuleInfo
@@ -343,6 +362,13 @@ transitiveModuleDeps :: ModuleInfo -> Deps
 transitiveModuleDeps minfo =
     Set.unions (moduleDeps minfo
                : map transitiveModuleDeps (M.elems $ submodules minfo))
+
+-- | Return the minimal base version supported by the module and all
+-- its submodules.
+minBaseVersion :: ModuleInfo -> BaseVersion
+minBaseVersion minfo =
+    maximum (moduleMinBase minfo
+            : map minBaseVersion (M.elems $ submodules minfo))
 
 -- | Give a friendly textual description of the error for presenting
 -- to the user.
@@ -451,6 +477,11 @@ setGHCOptions opts =
 setModuleFlags :: [ModuleFlag] -> CodeGen ()
 setModuleFlags flags =
     modify' $ \s -> s{moduleFlags = Set.fromList flags}
+
+-- | Set the minimum base version supported by the current module.
+setModuleMinBase :: BaseVersion -> CodeGen ()
+setModuleMinBase v =
+    modify' $ \s -> s{moduleMinBase = max v (moduleMinBase s)}
 
 -- | Add the given text to the module-level documentation for the
 -- module being generated.
