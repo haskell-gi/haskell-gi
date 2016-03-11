@@ -19,8 +19,6 @@ import qualified GI.GLib as GLib
 import GI.OverloadedLabels
 import GI.Signals
 
-import Data.GI.Base
-
 import Foreign.C
 
 import System.Mem (performGC)

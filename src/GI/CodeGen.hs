@@ -500,6 +500,11 @@ genModule' apis = do
 
 genModule :: M.Map Name API -> CodeGen ()
 genModule apis = do
+  -- Reexport Data.GI.Base for convenience (so it does not need to be
+  -- imported separately).
+  line "import Data.GI.Base"
+  exportModule "Data.GI.Base"
+
   -- Some API symbols are embedded into structures, extract these and
   -- inject them into the set of APIs loaded and being generated.
   let embeddedAPIs = (M.fromList

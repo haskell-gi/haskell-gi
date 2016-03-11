@@ -41,6 +41,7 @@ module GI.Code
     , addModuleDocumentation
 
     , exportToplevel
+    , exportModule
     , exportDecl
     , exportMethod
     , exportProperty
@@ -443,6 +444,10 @@ export :: Export -> CodeGen ()
 export e =
     modify' $ \s -> s{moduleExports = moduleExports s |> e}
 
+-- | Reexport a whole module.
+exportModule :: SymbolName -> CodeGen ()
+exportModule m = export (Export ExportModule m)
+
 -- | Export a toplevel (i.e. belonging to no section) symbol.
 exportToplevel :: SymbolName -> CodeGen ()
 exportToplevel t = export (Export ExportToplevel t)
@@ -641,7 +646,7 @@ modulePrelude name [] reexportedModules =
 modulePrelude name exports reexportedModules =
     "module " <> name <> "\n    ( "
     <> formatExportList (map (Export ExportModule) reexportedModules)
-    <> "\n    , "
+    <> "\n"
     <> formatExportList exports
     <> "    ) where\n\n"
     <> T.unlines (map ("import " <>) reexportedModules)

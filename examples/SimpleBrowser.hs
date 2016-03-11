@@ -7,7 +7,6 @@ import GI.WebKit2
 
 import GI.OverloadedLabels
 import GI.Signals
-import Data.GI.Base
 
 import Foreign.Ptr (castPtr)
 import System.Mem (performGC)
