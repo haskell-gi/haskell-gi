@@ -556,106 +556,30 @@ callableHOutArgs callable =
     let outArgs = filter ((/= DirectionIn) . direction) $ args callable
     in filter (`notElem` (arrayLengths callable)) outArgs
 
-genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
-genCallable n symbol callable throwsGError = do
-    group $ do
-        line $ "-- Args : " <> (tshow $ args callable)
-        line $ "-- Lengths : " <> (tshow $ arrayLengths callable)
-        line $ "-- hInArgs : " <> tshow hInArgs
-        line $ "-- returnType : " <> (tshow $ returnType callable)
-        line $ "-- throws : " <> (tshow throwsGError)
-        line $ "-- Skip return : " <> (tshow $ skipReturn callable)
-        when (skipReturn callable && returnType callable /= TBasicType TBoolean) $
-             do line "-- XXX return value ignored, but it is not a boolean."
-                line "--     This may be a memory leak?"
-    mkForeignImport symbol callable throwsGError
-    blank
-    wrapper
+-- | Convert the result of the foreign call to Haskell.
+convertResult :: Callable -> Text -> Bool -> Map.Map Text Text ->
+                 ExcCodeGen Text
+convertResult callable symbol ignoreReturn nameMap =
+    if ignoreReturn || returnType callable == TBasicType TVoid
+    then return (error "convertResult: unreachable code reached, bug!")
+    else do
+      if returnMayBeNull callable
+      then do
+        line $ "maybeResult <- convertIfNonNull result $ \\result' -> do"
+        indent $ do
+             converted <- unwrappedConvertResult "result'"
+             line $ "return " <> converted
+             return "maybeResult"
+      else do
+        nullable <- isNullable (returnType callable)
+        when nullable $
+             line $ "checkUnexpectedReturnNULL \"" <> symbol
+                      <> "\" result"
+        unwrappedConvertResult "result"
 
     where
-    (hInArgs, omitted) = callableHInArgs callable
-    hOutArgs = callableHOutArgs callable
-
-    ignoreReturn = skipRetVal callable throwsGError
-
-    wrapper = group $ do
-        let name = lowerName n
-        exportMethod name name
-        line $ deprecatedPragma name $ callableDeprecated callable
-        line $ name <> " ::"
-        formatHSignature callable ignoreReturn
-        line $ name <> " " <> T.intercalate " " (map escapedArgName hInArgs) <> " = liftIO $ do"
-        indent $ do
-            readInArrayLengths n callable hInArgs
-            inArgNames <- forM (args callable) $ \arg ->
-                          prepareArgForCall omitted arg
-            -- Map from argument names to names passed to the C function
-            let nameMap = Map.fromList $ flip zip inArgNames
-                                       $ map escapedArgName $ args callable
-            prepareClosures callable nameMap
-            if throwsGError
-            then do
-                line "onException (do"
-                indent $ do
-                    invokeCFunction inArgNames
-                    readOutArrayLengths callable nameMap
-                    result <- convertResult nameMap
-                    pps <- convertOut nameMap
-                    freeCallCallbacks callable nameMap
-                    forM_ (args callable) touchInArg
-                    mapM_ line =<< freeInArgs callable nameMap
-                    returnResult result pps
-                line " ) (do"
-                indent $ do
-                    freeCallCallbacks callable nameMap
-                    actions <- freeInArgsOnError callable nameMap
-                    case actions of
-                        [] -> line $ "return ()"
-                        _ -> mapM_ line actions
-                line " )"
-            else do
-                invokeCFunction inArgNames
-                readOutArrayLengths callable nameMap
-                result <- convertResult nameMap
-                pps <- convertOut nameMap
-                freeCallCallbacks callable nameMap
-                forM_ (args callable) touchInArg
-                mapM_ line =<< freeInArgs callable nameMap
-                returnResult result pps
-
-    invokeCFunction argNames = do
-        let returnBind = case returnType callable of
-                           TBasicType TVoid -> ""
-                           _                -> if ignoreReturn
-                                               then "_ <- "
-                                               else "result <- "
-            maybeCatchGErrors = if throwsGError
-                                then "propagateGError $ "
-                                else ""
-        line $ returnBind <> maybeCatchGErrors
-                 <> symbol <> (T.concat . map (" " <>)) argNames
-
-    convertResult :: Map.Map Text Text -> ExcCodeGen Text
-    convertResult nameMap =
-        if ignoreReturn || returnType callable == TBasicType TVoid
-        then return (error "convertResult: unreachable code reached, bug!")
-        else do
-            if returnMayBeNull callable
-            then do
-                line $ "maybeResult <- convertIfNonNull result $ \\result' -> do"
-                indent $ do
-                    converted <- unwrappedConvertResult "result'"
-                    line $ "return " <> converted
-                return "maybeResult"
-            else do
-              nullable <- isNullable (returnType callable)
-              when nullable $
-                 line $ "checkUnexpectedReturnNULL \"" <> symbol
-                          <> "\" result"
-              unwrappedConvertResult "result"
-
-        where
-        unwrappedConvertResult rname = case returnType callable of
+      unwrappedConvertResult rname =
+          case returnType callable of
             -- Arrays without length information are just passed
             -- along.
             TCArray False (-1) (-1) _ -> return rname
@@ -670,62 +594,161 @@ genCallable n symbol callable throwsGError = do
                 freeContainerType (returnTransfer callable) t rname undefined
                 return result
 
-    convertOut :: Map.Map Text Text -> ExcCodeGen [Text]
-    convertOut nameMap = do
-        -- Convert out parameters and result
-        forM hOutArgs $ \arg -> do
-            let name = escapedArgName arg
-            inName <- case Map.lookup name nameMap of
-                Just name' -> return name'
-                Nothing -> badIntroError $ "Parameter " <> name <> " not found!"
-            case argType arg of
-                -- Passed along as a raw pointer
-                TCArray False (-1) (-1) _ -> genConversion inName $ apply $ M "peek"
-                t@(TCArray False _ _ _) -> do
-                    aname' <- genConversion inName $ apply $ M "peek"
-                    let wrapArray a = convertOutCArray callable t a
-                                          nameMap (transfer arg)
-                    wrapMaybe arg >>= bool
-                           (wrapArray aname')
-                           (do line $ "maybe" <> ucFirst aname'
-                                   <> " <- convertIfNonNull " <> aname'
-                                   <> " $ \\" <> prime aname' <> " -> do"
-                               indent $ do
-                                   wrapped <- wrapArray (prime aname')
-                                   line $ "return " <> wrapped
-                               return $ "maybe" <> ucFirst aname')
-                t -> do
-                    weAlloc <- isJust <$> requiresAlloc t
-                    peeked <- if weAlloc
-                             then return inName
-                             else genConversion inName $ apply $ M "peek"
-                    -- If we alloc we always take control of the resulting
-                    -- memory, otherwise we may leak.
-                    let transfer' = if weAlloc
-                                   then TransferEverything
-                                   else transfer arg
-                    result <- do
-                        let wrap ptr = convert ptr $ fToH (argType arg) transfer'
-                        wrapMaybe arg >>= bool
-                            (wrap peeked)
-                            (do line $ "maybe" <> ucFirst peeked
-                                    <> " <- convertIfNonNull " <> peeked
-                                    <> " $ \\" <> prime peeked <> " -> do"
-                                indent $ do
-                                    wrapped <- wrap (prime peeked)
-                                    line $ "return " <> wrapped
-                                return $ "maybe" <> ucFirst peeked)
-                    -- Free the memory associated with the out argument
-                    freeContainerType transfer' t peeked undefined
-                    return result
+-- | Marshal a foreign out argument to Haskell, returning the name of
+-- the variable containing the converted Haskell value.
+convertOutArg :: Callable -> Map.Map Text Text -> Arg -> ExcCodeGen Text
+convertOutArg callable nameMap arg = do
+  let name = escapedArgName arg
+  inName <- case Map.lookup name nameMap of
+      Just name' -> return name'
+      Nothing -> badIntroError $ "Parameter " <> name <> " not found!"
+  case argType arg of
+      -- Passed along as a raw pointer
+      TCArray False (-1) (-1) _ -> genConversion inName $ apply $ M "peek"
+      t@(TCArray False _ _ _) -> do
+          aname' <- genConversion inName $ apply $ M "peek"
+          let wrapArray a = convertOutCArray callable t a
+                                nameMap (transfer arg)
+          wrapMaybe arg >>= bool
+                 (wrapArray aname')
+                 (do line $ "maybe" <> ucFirst aname'
+                         <> " <- convertIfNonNull " <> aname'
+                         <> " $ \\" <> prime aname' <> " -> do"
+                     indent $ do
+                         wrapped <- wrapArray (prime aname')
+                         line $ "return " <> wrapped
+                     return $ "maybe" <> ucFirst aname')
+      t -> do
+          weAlloc <- isJust <$> requiresAlloc t
+          peeked <- if weAlloc
+                   then return inName
+                   else genConversion inName $ apply $ M "peek"
+          -- If we alloc we always take control of the resulting
+          -- memory, otherwise we may leak.
+          let transfer' = if weAlloc
+                         then TransferEverything
+                         else transfer arg
+          result <- do
+              let wrap ptr = convert ptr $ fToH (argType arg) transfer'
+              wrapMaybe arg >>= bool
+                  (wrap peeked)
+                  (do line $ "maybe" <> ucFirst peeked
+                          <> " <- convertIfNonNull " <> peeked
+                          <> " $ \\" <> prime peeked <> " -> do"
+                      indent $ do
+                          wrapped <- wrap (prime peeked)
+                          line $ "return " <> wrapped
+                      return $ "maybe" <> ucFirst peeked)
+          -- Free the memory associated with the out argument
+          freeContainerType transfer' t peeked undefined
+          return result
 
-    returnResult :: Text -> [Text] -> CodeGen ()
-    returnResult result pps =
-        if ignoreReturn || returnType callable == TBasicType TVoid
-        then case pps of
-            []      -> line "return ()"
-            (pp:[]) -> line $ "return " <> pp
-            _       -> line $ "return (" <> T.intercalate ", " pps <> ")"
-        else case pps of
-            [] -> line $ "return " <> result
-            _  -> line $ "return (" <> T.intercalate ", " (result : pps) <> ")"
+-- | Convert the list of out arguments to Haskell, returning the
+-- names of the corresponding variables containing the marshaled values.
+convertOutArgs :: Callable -> Map.Map Text Text -> [Arg] -> ExcCodeGen [Text]
+convertOutArgs callable nameMap hOutArgs =
+    forM hOutArgs (convertOutArg callable nameMap)
+
+-- | Invoke the given C function, taking care of errors.
+invokeCFunction :: Callable -> Text -> Bool -> Bool -> [Text] -> CodeGen ()
+invokeCFunction callable symbol throwsGError ignoreReturn argNames = do
+  let returnBind = case returnType callable of
+                     TBasicType TVoid -> ""
+                     _                -> if ignoreReturn
+                                         then "_ <- "
+                                         else "result <- "
+      maybeCatchGErrors = if throwsGError
+                          then "propagateGError $ "
+                          else ""
+  line $ returnBind <> maybeCatchGErrors
+           <> symbol <> (T.concat . map (" " <>)) argNames
+
+-- | Return the result of the call, possibly including out arguments.
+returnResult :: Callable -> Bool -> Text -> [Text] -> CodeGen ()
+returnResult callable ignoreReturn result pps =
+    if ignoreReturn || returnType callable == TBasicType TVoid
+    then case pps of
+        []      -> line "return ()"
+        (pp:[]) -> line $ "return " <> pp
+        _       -> line $ "return (" <> T.intercalate ", " pps <> ")"
+    else case pps of
+        [] -> line $ "return " <> result
+        _  -> line $ "return (" <> T.intercalate ", " (result : pps) <> ")"
+
+-- | Generate a Haskell wrapper for the given foreign function.
+genHaskellWrapper :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
+genHaskellWrapper n symbol callable throwsGError = group $ do
+    let name = lowerName n
+        (hInArgs, omitted) = callableHInArgs callable
+        hOutArgs = callableHOutArgs callable
+        ignoreReturn = skipRetVal callable throwsGError
+
+    line $ name <> " ::"
+    formatHSignature callable ignoreReturn
+    line $ name <> " " <> T.intercalate " " (map escapedArgName hInArgs) <> " = liftIO $ do"
+    indent (genWrapperBody n symbol callable throwsGError
+                           ignoreReturn hInArgs hOutArgs omitted)
+
+-- | Generate the body of the Haskell wrapper for the given foreign symbol.
+genWrapperBody :: Name -> Text -> Callable -> Bool ->
+                  Bool -> [Arg] -> [Arg] -> [Arg] ->
+                  ExcCodeGen ()
+genWrapperBody n symbol callable throwsGError
+               ignoreReturn hInArgs hOutArgs omitted = do
+    readInArrayLengths n callable hInArgs
+    inArgNames <- forM (args callable) $ \arg ->
+                  prepareArgForCall omitted arg
+    -- Map from argument names to names passed to the C function
+    let nameMap = Map.fromList $ flip zip inArgNames
+                               $ map escapedArgName $ args callable
+    prepareClosures callable nameMap
+    if throwsGError
+    then do
+        line "onException (do"
+        indent $ do
+            invokeCFunction callable symbol throwsGError
+                            ignoreReturn inArgNames
+            readOutArrayLengths callable nameMap
+            result <- convertResult callable symbol ignoreReturn nameMap
+            pps <- convertOutArgs callable nameMap hOutArgs
+            freeCallCallbacks callable nameMap
+            forM_ (args callable) touchInArg
+            mapM_ line =<< freeInArgs callable nameMap
+            returnResult callable ignoreReturn result pps
+        line " ) (do"
+        indent $ do
+            freeCallCallbacks callable nameMap
+            actions <- freeInArgsOnError callable nameMap
+            case actions of
+                [] -> line $ "return ()"
+                _ -> mapM_ line actions
+        line " )"
+    else do
+        invokeCFunction callable symbol throwsGError
+                        ignoreReturn inArgNames
+        readOutArrayLengths callable nameMap
+        result <- convertResult callable symbol ignoreReturn nameMap
+        pps <- convertOutArgs callable nameMap hOutArgs
+        freeCallCallbacks callable nameMap
+        forM_ (args callable) touchInArg
+        mapM_ line =<< freeInArgs callable nameMap
+        returnResult callable ignoreReturn result pps
+
+genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
+genCallable n symbol callable throwsGError = do
+    group $ do
+        line $ "-- Args : " <> (tshow $ args callable)
+        line $ "-- Lengths : " <> (tshow $ arrayLengths callable)
+        line $ "-- returnType : " <> (tshow $ returnType callable)
+        line $ "-- throws : " <> (tshow throwsGError)
+        line $ "-- Skip return : " <> (tshow $ skipReturn callable)
+        when (skipReturn callable && returnType callable /= TBasicType TBoolean) $
+             do line "-- XXX return value ignored, but it is not a boolean."
+                line "--     This may be a memory leak?"
+    mkForeignImport symbol callable throwsGError
+
+    blank
+
+    line $ deprecatedPragma (lowerName n) (callableDeprecated callable)
+    exportMethod (lowerName n) (lowerName n)
+    genHaskellWrapper n symbol callable throwsGError
