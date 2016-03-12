@@ -42,7 +42,7 @@ import Control.Monad (when, void)
 
 import Data.Coerce (coerce)
 
-import Foreign (finalizerFree, poke)
+import Foreign (poke)
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr)
 import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv, touchForeignPtr)
@@ -233,7 +233,7 @@ freeBoxed boxed = do
 -- | Wrap a pointer, taking ownership of it.
 wrapPtr :: (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapPtr constructor ptr = do
-  fPtr <- newForeignPtr finalizerFree ptr
+  fPtr <- newForeignPtr ptr_to_g_free ptr
   return $! constructor fPtr
 
 -- | Wrap a pointer to n bytes, making a copy of the data.
@@ -241,5 +241,5 @@ newPtr :: Int -> (ForeignPtr a -> a) -> Ptr a -> IO a
 newPtr n constructor ptr = do
   ptr' <- callocBytes n :: IO (Ptr a)
   memcpy ptr' ptr n
-  fPtr <- newForeignPtr finalizerFree ptr'
+  fPtr <- newForeignPtr ptr_to_g_free ptr'
   return $! constructor fPtr
