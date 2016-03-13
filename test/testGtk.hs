@@ -35,12 +35,25 @@ import System.Random (randomRIO)
 error :: Text -> a
 error = BP.error . unpack
 
+-- Make sure we use the right allocator/deallocator for zero-filled
+-- structs.
+testAllocations :: IO ()
+testAllocations = do
+  performGC
+  putStrLn "*** Allocations test"
+  replicateM_ 100 $ do
+        _ <- Gdk.newZeroColor -- boxed
+        _ <- GLib.newZeroTimeVal -- unboxed
+        return ()
+  performGC
+  putStrLn "+++ Allocations test done"
+
 testBoxedOutArgs :: IO ()
 testBoxedOutArgs = do
   performGC
   putStrLn "*** Boxed out args test"
   replicateM_ 100 $ do
-    (success, color) <- Gdk.newZeroColor >>= Gdk.colorParse "green"
+    (success, color) <- Gdk.colorParse "green"
     when (success /= True) $
          error $ "Color parsing failed"
     colorString <- Gdk.colorToString color
@@ -202,8 +215,7 @@ testOutStructs = do
   performGC
   putStrLn "*** Out Structs test"
   replicateM_ 100 $ do
-      (result, timeval) <- GLib.newZeroTimeVal >>=
-                           GLib.timeValFromIso8601 "2013-12-15T11:11:07Z"
+      (result, timeval) <- GLib.timeValFromIso8601 "2013-12-15T11:11:07Z"
       if result == True
       then do
         GLib.timeValAdd timeval (60*1000000)
@@ -504,6 +516,7 @@ main = do
         on popupButton Clicked (testMenuPopup menu)
         _add grid popupButton
 
+        testAllocations
         testBoxedOutArgs
         testGio
         testExceptions

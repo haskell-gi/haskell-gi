@@ -755,11 +755,12 @@ genWrapperBody n symbol callable throwsGError
 -- arguments instead. The semantics are somewhat tricky: for memory
 -- management purposes they should be treated as "in" arguments, but
 -- from the point of view of the exposed API they should be treated as
--- "inout". Unfortunately we cannot just assume that they are purely
--- "out", so in many cases the generated API is somewhat suboptimal
--- (since the initial values are not important): for example for
--- g_io_channel_read_chars the size of the buffer to read is
--- determined by the caller-allocates argument.
+-- "inout". Unfortunately we cannot always just assume that they are
+-- purely "out", so in many cases the generated API is somewhat
+-- suboptimal (since the initial values are not important): for
+-- example for g_io_channel_read_chars the size of the buffer to read
+-- is determined by the caller-allocates argument. As a compromise, we
+-- assume that we can allocate anything that is not a TCArray.
 fixupCallerAllocates :: Callable -> Callable
 fixupCallerAllocates c =
     c{args = map (fixupLength . fixupArg . normalize) (args c)}
@@ -781,14 +782,11 @@ fixupCallerAllocates c =
                                 then a {direction = DirectionIn}
                                 else a
 
-          -- We impose that out of inout arguments of scalar type are
-          -- never caller-allocates. (Some libraries include such
-          -- erroneous annotations.)
+          -- We impose that out or inout arguments of non-array type
+          -- are never caller-allocates.
           normalize :: Arg -> Arg
-          normalize a
-              | isBasicScalar (argType a) && direction a /= DirectionIn
-                  = a {argCallerAllocates = False}
-              | otherwise = a
+          normalize (a@Arg{argType = TCArray _ _ _ _}) = a
+          normalize a = a {argCallerAllocates = False}
 
 genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
 genCallable n symbol callable throwsGError = do
