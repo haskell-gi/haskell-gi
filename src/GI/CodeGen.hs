@@ -32,7 +32,7 @@ import GI.OverloadedMethods (genMethodList, genMethodInfo,
                              genUnsupportedMethodInfo)
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructOrUnionFields, extractCallbacksInStruct,
-                  fixAPIStructs, ignoreStruct, genZeroStruct)
+                  fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion)
 import GI.SymbolNaming (upperName, classConstraint, noName)
 import GI.Type
 import GI.Util (tshow)
@@ -219,6 +219,9 @@ genUnion n u = do
      when (unionIsBoxed u) $
           genBoxedObject n (fromJust $ unionTypeInit u)
      exportDecl (name' <> "(..)")
+
+     -- Generate a builder for a structure filled with zeroes.
+     genZeroUnion n u
 
      noName name'
 

@@ -1,5 +1,6 @@
 module GI.Struct ( genStructOrUnionFields
                  , genZeroStruct
+                 , genZeroUnion
                  , extractCallbacksInStruct
                  , fixAPIStructs
                  , ignoreStruct)
@@ -103,18 +104,26 @@ genStructOrUnionFields n fields = do
                                describeCGError e))
                   (buildFieldGetter n field)
 
--- | Generate a constructor for a zero-filled structure of the given
--- type, using the GLib allocator.
-genZeroStruct :: Name -> Struct -> CodeGen ()
-genZeroStruct n s =
-    when (structSize s /= 0) $ group $ do
+-- | Generate a constructor for a zero-filled struct/union of the given
+-- type, using the boxed (or GLib, for unboxed types) allocator.
+genZeroSU :: Name -> Int -> Bool -> CodeGen ()
+genZeroSU n size isBoxed =
+    when (size /= 0) $ group $ do
       name <- upperName n
       let builder = "newZero" <> name
-          size = tshow (structSize s)
+          tsize = tshow size
       line $ "-- | Construct a `" <> name <> "` struct initialized to zero."
       line $ builder <> " :: MonadIO m => m " <> name
       line $ builder <> " = liftIO $ " <>
-           if structIsBoxed s
-           then "callocBoxedBytes " <> size <> " >>= wrapBoxed " <> name
-           else "callocBytes " <> size <> " >>= wrapPtr " <> name
+           if isBoxed
+           then "callocBoxedBytes " <> tsize <> " >>= wrapBoxed " <> name
+           else "callocBytes " <> tsize <> " >>= wrapPtr " <> name
       exportDecl builder
+
+-- | Specialization for structs of `genZeroSU`.
+genZeroStruct :: Name -> Struct -> CodeGen ()
+genZeroStruct n s = genZeroSU n (structSize s) (structIsBoxed s)
+
+-- | Specialization for unions of `genZeroSU`.
+genZeroUnion :: Name -> Union -> CodeGen ()
+genZeroUnion n u = genZeroSU n (unionSize u) (unionIsBoxed u)
