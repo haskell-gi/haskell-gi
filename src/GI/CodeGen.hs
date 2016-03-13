@@ -32,7 +32,7 @@ import GI.OverloadedMethods (genMethodList, genMethodInfo,
                              genUnsupportedMethodInfo)
 import GI.Signal (genSignal, genCallback)
 import GI.Struct (genStructOrUnionFields, extractCallbacksInStruct,
-                  fixAPIStructs, ignoreStruct)
+                  fixAPIStructs, ignoreStruct, genZeroStruct)
 import GI.SymbolNaming (upperName, classConstraint, noName)
 import GI.Type
 import GI.Util (tshow)
@@ -183,6 +183,9 @@ genStruct n s = unless (ignoreStruct n s) $ do
            genBoxedObject n (fromJust $ structTypeInit s)
       exportDecl (name' <> ("(..)"))
 
+      -- Generate a builder for a structure filled with zeroes.
+      genZeroStruct n s
+
       noName name'
 
       -- Generate code for fields.
@@ -277,6 +280,7 @@ fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
                  argScope = ScopeTypeInvalid,
                  argClosure = -1,
                  argDestroy = -1,
+                 argCallerAllocates = False,
                  transfer = TransferNothing }
 
 -- For constructors we want to return the actual type of the object,

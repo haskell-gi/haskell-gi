@@ -233,7 +233,12 @@ freeInArg arg label len = do
   then case direction arg of
          DirectionIn -> freeIn (transfer arg) (argType arg) label len
          DirectionOut -> freeOut label
-         DirectionInout -> freeOut label
+         DirectionInout ->
+             -- Caller-allocates arguments are like "in" arguments for
+             -- memory management purposes.
+             if argCallerAllocates arg
+             then freeIn (transfer arg) (argType arg) label len
+             else freeOut label
   else return []
 
 -- | Same thing as freeInArg, but called in case the call to C didn't
@@ -244,4 +249,9 @@ freeInArgOnError arg label len =
     case direction arg of
       DirectionIn -> freeInOnError (transfer arg) (argType arg) label len
       DirectionOut -> freeOut label
-      DirectionInout -> freeOut label
+      DirectionInout ->
+          -- Caller-allocates arguments are like "in" arguments for
+          -- memory management purposes.
+          if argCallerAllocates arg
+          then freeInOnError (transfer arg) (argType arg) label len
+          else freeOut label

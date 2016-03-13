@@ -6,6 +6,7 @@ module GI.Callable
     , arrayLengths
     , arrayLengthsMap
     , callableSignature
+    , fixupCallerAllocates
 
     , wrapMaybe
     , inArgInterfaces
@@ -18,6 +19,7 @@ import Control.Monad (forM, forM_, when)
 import Data.Bool (bool)
 import Data.List (nub, (\\))
 import Data.Maybe (isJust)
+import Data.Tuple (swap)
 import Data.Typeable (TypeRep, typeOf)
 import qualified Data.Map as Map
 import qualified Data.Text as T
@@ -66,7 +68,9 @@ mkForeignImport symbol callable throwsGError = do
     fArgStr arg = do
         ft <- foreignType $ argType arg
         weAlloc <- isJust <$> requiresAlloc (argType arg)
-        let ft' = if direction arg == DirectionIn || weAlloc then
+        let ft' = if direction arg == DirectionIn || weAlloc
+                     || argCallerAllocates arg
+                  then
                       ft
                   else
                       ptr ft
@@ -359,10 +363,13 @@ prepareInoutArg arg = do
              -- The semantics of this case are somewhat undefined.
             (notImplementedError "Nullable inout structs not supported")
     Nothing -> do
-      name'' <- genConversion (prime name') $
-                literal $ M $ "allocMem :: " <> tshow (io $ ptr ft)
-      line $ "poke " <> name'' <> " " <> name'
-      return name''
+      if argCallerAllocates arg
+      then return name'
+      else do
+        name'' <- genConversion (prime name') $
+                  literal $ M $ "allocMem :: " <> tshow (io $ ptr ft)
+        line $ "poke " <> name'' <> " " <> name'
+        return name''
 
 prepareOutArg :: Arg -> CodeGen Text
 prepareOutArg arg = do
@@ -383,9 +390,9 @@ prepareOutArg arg = do
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
 convertOutCArray :: Callable -> Type -> Text -> Map.Map Text Text ->
-                    Transfer -> ExcCodeGen Text
+                    Transfer -> (Text -> Text) -> ExcCodeGen Text
 convertOutCArray callable t@(TCArray False fixed length _) aname
-                 nameMap transfer = do
+                 nameMap transfer primeLength = do
   if fixed > -1
   then do
     unpacked <- convert aname $ unpackCArray (tshow fixed) t transfer
@@ -401,14 +408,14 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
                 Nothing ->
                     badIntroError $ "Couldn't find out array length " <>
                                             lname
-    let lname'' = prime lname'
+    let lname'' = primeLength lname'
     unpacked <- convert aname $ unpackCArray lname'' t transfer
     -- Free the memory associated with the array
     freeContainerType transfer t aname lname''
     return unpacked
 
 -- Remove the warning, this should never be reached.
-convertOutCArray _ t _ _ _ =
+convertOutCArray _ t _ _ _ _ =
     terror $ "convertOutCArray : unexpected " <> tshow t
 
 -- Read the array lengths for out arguments.
@@ -587,7 +594,7 @@ convertResult callable symbol ignoreReturn nameMap =
             -- length, so we deal with them directly.
             t@(TCArray False _ _ _) ->
                 convertOutCArray callable t rname nameMap
-                                 (returnTransfer callable)
+                                 (returnTransfer callable) prime
             t -> do
                 result <- convert rname $ fToH (returnType callable)
                                                (returnTransfer callable)
@@ -604,11 +611,19 @@ convertOutArg callable nameMap arg = do
       Nothing -> badIntroError $ "Parameter " <> name <> " not found!"
   case argType arg of
       -- Passed along as a raw pointer
-      TCArray False (-1) (-1) _ -> genConversion inName $ apply $ M "peek"
+      TCArray False (-1) (-1) _ ->
+          if argCallerAllocates arg
+          then return inName
+          else genConversion inName $ apply $ M "peek"
       t@(TCArray False _ _ _) -> do
-          aname' <- genConversion inName $ apply $ M "peek"
-          let wrapArray a = convertOutCArray callable t a
-                                nameMap (transfer arg)
+          aname' <- if argCallerAllocates arg
+                    then return inName
+                    else genConversion inName $ apply $ M "peek"
+          let arrayLength = if argCallerAllocates arg
+                            then id
+                            else prime
+              wrapArray a = convertOutCArray callable t a
+                                nameMap (transfer arg) arrayLength
           wrapMaybe arg >>= bool
                  (wrapArray aname')
                  (do line $ "maybe" <> ucFirst aname'
@@ -620,12 +635,12 @@ convertOutArg callable nameMap arg = do
                      return $ "maybe" <> ucFirst aname')
       t -> do
           weAlloc <- isJust <$> requiresAlloc t
-          peeked <- if weAlloc
+          peeked <- if weAlloc || argCallerAllocates arg
                    then return inName
                    else genConversion inName $ apply $ M "peek"
           -- If we alloc we always take control of the resulting
           -- memory, otherwise we may leak.
-          let transfer' = if weAlloc
+          let transfer' = if weAlloc || argCallerAllocates arg
                          then TransferEverything
                          else transfer arg
           result <- do
@@ -734,6 +749,47 @@ genWrapperBody n symbol callable throwsGError
         mapM_ line =<< freeInArgs callable nameMap
         returnResult callable ignoreReturn result pps
 
+-- | caller-allocates arguments are arguments that the caller
+-- allocates, and the called function modifies. They are marked as
+-- 'out' argumens in the introspection data, we treat them as 'inout'
+-- arguments instead. The semantics are somewhat tricky: for memory
+-- management purposes they should be treated as "in" arguments, but
+-- from the point of view of the exposed API they should be treated as
+-- "inout". Unfortunately we cannot just assume that they are purely
+-- "out", so in many cases the generated API is somewhat suboptimal
+-- (since the initial values are not important): for example for
+-- g_io_channel_read_chars the size of the buffer to read is
+-- determined by the caller-allocates argument.
+fixupCallerAllocates :: Callable -> Callable
+fixupCallerAllocates c =
+    c{args = map (fixupLength . fixupArg . normalize) (args c)}
+    where fixupArg :: Arg -> Arg
+          fixupArg a = if argCallerAllocates a
+                       then a {direction = DirectionInout}
+                       else a
+
+          lengthsMap :: Map.Map Arg Arg
+          lengthsMap = Map.fromList (map swap (arrayLengthsMap c))
+
+          -- Length arguments of caller-allocates arguments should be
+          -- treated as "in".
+          fixupLength :: Arg -> Arg
+          fixupLength a = case Map.lookup a lengthsMap of
+                            Nothing -> a
+                            Just array ->
+                                if argCallerAllocates array
+                                then a {direction = DirectionIn}
+                                else a
+
+          -- We impose that out of inout arguments of scalar type are
+          -- never caller-allocates. (Some libraries include such
+          -- erroneous annotations.)
+          normalize :: Arg -> Arg
+          normalize a
+              | isBasicScalar (argType a) && direction a /= DirectionIn
+                  = a {argCallerAllocates = False}
+              | otherwise = a
+
 genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
 genCallable n symbol callable throwsGError = do
     group $ do
@@ -745,10 +801,13 @@ genCallable n symbol callable throwsGError = do
         when (skipReturn callable && returnType callable /= TBasicType TBoolean) $
              do line "-- XXX return value ignored, but it is not a boolean."
                 line "--     This may be a memory leak?"
-    mkForeignImport symbol callable throwsGError
+
+    let callable' = fixupCallerAllocates callable
+
+    mkForeignImport symbol callable' throwsGError
 
     blank
 
     line $ deprecatedPragma (lowerName n) (callableDeprecated callable)
     exportMethod (lowerName n) (lowerName n)
-    genHaskellWrapper n symbol callable throwsGError
+    genHaskellWrapper n symbol callable' throwsGError

@@ -35,6 +35,7 @@ data Arg = Arg {
         argScope :: Scope,
         argClosure :: Int,
         argDestroy :: Int,
+        argCallerAllocates :: Bool,
         transfer :: Transfer
     } deriving (Show, Eq, Ord)
 
@@ -66,6 +67,7 @@ parseArg = do
   closure <- optionalAttr "closure" (-1) parseIntegral
   destroy <- optionalAttr "destroy" (-1) parseIntegral
   nullable <- optionalAttr "nullable" False parseBool
+  callerAllocates <- optionalAttr "caller-allocates" False parseBool
   t <- parseType
   return $ Arg { argCName = name
                , argType = t
@@ -74,5 +76,6 @@ parseArg = do
                , argScope = scope
                , argClosure = closure
                , argDestroy = destroy
+               , argCallerAllocates = callerAllocates
                , transfer = ownership
                }

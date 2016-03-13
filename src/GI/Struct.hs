@@ -1,4 +1,5 @@
 module GI.Struct ( genStructOrUnionFields
+                 , genZeroStruct
                  , extractCallbacksInStruct
                  , fixAPIStructs
                  , ignoreStruct)
@@ -101,3 +102,19 @@ genStructOrUnionFields n fields = do
                                ":" <> fieldName field <> "\" :: " <>
                                describeCGError e))
                   (buildFieldGetter n field)
+
+-- | Generate a constructor for a zero-filled structure of the given
+-- type, using the GLib allocator.
+genZeroStruct :: Name -> Struct -> CodeGen ()
+genZeroStruct n s =
+    when (structSize s /= 0) $ group $ do
+      name <- upperName n
+      let builder = "newZero" <> name
+          size = tshow (structSize s)
+      line $ "-- | Construct a `" <> name <> "` struct initialized to zero."
+      line $ builder <> " :: MonadIO m => m " <> name
+      line $ builder <> " = liftIO $ " <>
+           if structIsBoxed s
+           then "callocBoxedBytes " <> size <> " >>= wrapBoxed " <> name
+           else "callocBytes " <> size <> " >>= wrapPtr " <> name
+      exportDecl builder

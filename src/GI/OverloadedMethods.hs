@@ -9,7 +9,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import GI.API
-import GI.Callable (callableSignature)
+import GI.Callable (callableSignature, fixupCallerAllocates)
 import GI.Code
 import GI.SymbolNaming (lowerName, upperName)
 import GI.Util (ucFirst)
@@ -74,8 +74,8 @@ genMethodInfo n m =
     when (methodType m == OrdinaryMethod) $
       group $ do
         infoName <- methodInfoName n m
-        (constraints, types) <- callableSignature (methodCallable m)
-                                (methodThrows m)
+        let callable = fixupCallerAllocates (methodCallable m)
+        (constraints, types) <- callableSignature callable (methodThrows m)
         bline $ "data " <> infoName
         -- This should not happen, since ordinary methods always
         -- have the instance as first argument.

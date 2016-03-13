@@ -1,6 +1,7 @@
 
 module GI.Type
     ( BasicType(..)
+    , isBasicScalar
     , Type(..)
     , io
     , ptr
@@ -51,6 +52,20 @@ data Type
     | TVariant
     | TParamSpec
     deriving (Eq, Show, Ord)
+
+-- | Whether the given type is a basic scalar, i.e. everything that is
+-- not a pointer to a memory region.
+isBasicScalar :: Type -> Bool
+isBasicScalar (TBasicType b) = basicIsScalar b
+isBasicScalar _ = False
+
+-- | Whether the given basic type is a scalar, i.e. not a pointer to a
+-- memory region.
+basicIsScalar :: BasicType -> Bool
+basicIsScalar TVoid = False
+basicIsScalar TUTF8 = False
+basicIsScalar TFileName = False
+basicIsScalar _ = True
 
 con :: Text -> [TypeRep] -> TypeRep
 con "[]" xs = mkTyConApp listCon xs

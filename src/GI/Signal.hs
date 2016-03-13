@@ -17,7 +17,7 @@ import Data.Text (Text)
 import Text.Show.Pretty (ppShow)
 
 import GI.API
-import GI.Callable (hOutType, arrayLengths, wrapMaybe)
+import GI.Callable (hOutType, arrayLengths, wrapMaybe, fixupCallerAllocates)
 import GI.Code
 import GI.Conversions
 import GI.SymbolNaming
@@ -265,15 +265,16 @@ genCallback n (Callback cb) = submodule "Callbacks" $ do
              <> T.pack (ppShow n) <> "\n" <> T.pack (ppShow cb)
   else do
     let closure = lcFirst name' <> "Closure"
+        cb' = fixupCallerAllocates cb
 
     handleCGExc (\e -> line ("-- XXX Could not generate callback wrapper for "
                              <> name' <>
                              "\n-- Error was : " <> describeCGError e))
        (genClosure name' name' closure False >>
-        genCCallbackPrototype name' cb name' False >>
+        genCCallbackPrototype name' cb' name' False >>
         genCallbackWrapperFactory name' name' >>
-        genHaskellCallbackPrototype name' cb name' hInArgs hOutArgs >>
-        genCallbackWrapper name' cb name' dataptrs hInArgs hOutArgs False)
+        genHaskellCallbackPrototype name' cb' name' hInArgs hOutArgs >>
+        genCallbackWrapper name' cb' name' dataptrs hInArgs hOutArgs False)
 
 -- | Return the name for the signal in Haskell CamelCase conventions.
 signalHaskellName :: Text -> Text

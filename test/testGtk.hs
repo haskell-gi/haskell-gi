@@ -37,14 +37,16 @@ error = BP.error . unpack
 
 testBoxedOutArgs :: IO ()
 testBoxedOutArgs = do
+  performGC
   putStrLn "*** Boxed out args test"
   replicateM_ 100 $ do
-    (success, color) <- Gdk.colorParse "green"
+    (success, color) <- Gdk.newZeroColor >>= Gdk.colorParse "green"
     when (success /= True) $
          error $ "Color parsing failed"
     colorString <- Gdk.colorToString color
     when (colorString /= "#000080800000") $
          error $ "Unexpected result from parsing : " ++ colorString
+  performGC
   putStrLn "+++ Boxed out args test done"
 
 -- The allocation strategy is slightly different with GObjects which
@@ -53,18 +55,20 @@ testBoxedOutArgs = do
 -- this.
 testInitiallyOwned :: IO ()
 testInitiallyOwned = do
+  performGC
   putStrLn "*** Initially owned allocation test"
   replicateM_ 100 $ do
     eb <- new EntryBuffer [_text := "Hello, this is a test"]
     t <- eb `get` _text
     when (t /= "Hello, this is a test") $
          error "Test text did not match!"
+  performGC
   putStrLn "*** Initially owned allocation test done"
 
 testGio :: IO ()
 testGio = do
+  performGC
   putStrLn "*** Gio test"
-
   infos <- Gio.appInfoGetAll
   putStrLn $ "(" ++ show (length infos) ++ " entries total, showing first 5)"
   forM_ (take 5 infos) $ \info -> do
@@ -72,10 +76,12 @@ testGio = do
             exe <- Gio.appInfoGetExecutable info
             putStrLn $ "name: " ++ name
             putStrLn $ "exe: " ++ exe
+  performGC
   putStrLn "+++ Gio test done"
 
 testExceptions :: IO ()
 testExceptions = do
+  performGC
   putStrLn "*** Exception test"
   -- This should work fine, without emitting any exception
   contents <- GLib.fileGetContents "testGtk.hs"
@@ -93,11 +99,12 @@ testExceptions = do
                        return ""
              _ -> error $ "Unexpected error code : \"" ++ show code ++
                             "\" with message : \"" ++ msg ++ "\""
-
+  performGC
   putStrLn "+++ Exception test done"
 
 testNullableArgs :: IO ()
 testNullableArgs = do
+  performGC
   putStrLn "*** Nullable args test"
   uri <- GLib.filenameToUri "/usr/lib/test" Nothing
   when (uri /= "file:///usr/lib/test") $
@@ -106,16 +113,20 @@ testNullableArgs = do
   uri' <- GLib.filenameToUri "/usr/lib/test" (Just "gnome.org")
   when (uri' /= "file://gnome.org/usr/lib/test") $
        error $ "Second nullable test failed : " ++ uri'
+  performGC
   putStrLn "+++ Nullable args test done"
 
 testOutArgs :: IO ()
 testOutArgs = do
+  performGC
   putStrLn "*** Out args test"
   iconThemeGetDefault >>= iconThemeGetSearchPath >>= print
+  performGC
   putStrLn "+++ Out args test done"
 
 testBoxed :: IO ()
 testBoxed = do
+  performGC
   putStrLn "*** Boxed test"
   replicateM_ 500 $ do
     r <- randomRIO (0,6)
@@ -124,17 +135,21 @@ testBoxed = do
     weekday <- GLib.dateGetWeekday date
     when (weekday /= expected) $
          error $ show r ++ " -> Got wrong weekday! : " ++ show weekday
+  performGC
   putStrLn "+++ Boxed test done"
 
 testImportedLenses :: IO ()
 testImportedLenses = do
+  performGC
   putStrLn "*** Imported lenses test"
   address <- Gio.inetAddressNewFromString "173.194.40.51"
   print =<< address `get` _family
+  performGC
   putStrLn "+++ Imported lenses test done"
 
 testPolymorphicLenses :: Window -> Text -> IO ()
 testPolymorphicLenses parent message = do
+  performGC
   putStrLn "*** Polymorphic lenses test"
   messageBox <- new MessageDialog
                 [ _buttons := ButtonsTypeYesNo, -- ConstructOnly
@@ -179,13 +194,16 @@ testPolymorphicLenses parent message = do
   putStrLn $ " >>> " ++ show ((toEnum . fromIntegral) result :: ResponseType)
 
   widgetDestroy messageBox
+  performGC
   putStrLn "+++ Polymorphic lenses test done"
 
 testOutStructs :: IO ()
 testOutStructs = do
+  performGC
   putStrLn "*** Out Structs test"
   replicateM_ 100 $ do
-      (result, timeval) <- GLib.timeValFromIso8601 "2013-12-15T11:11:07Z"
+      (result, timeval) <- GLib.newZeroTimeVal >>=
+                           GLib.timeValFromIso8601 "2013-12-15T11:11:07Z"
       if result == True
       then do
         GLib.timeValAdd timeval (60*1000000)
@@ -193,10 +211,12 @@ testOutStructs = do
         when (timevalStr /= "2013-12-15T11:12:07Z") $
              error $ "Time conversion failed, got " ++ timevalStr
       else error $ "timeValFromIso8601 failed!"
+  performGC
   putStrLn "+++ Out Structs test done"
 
 testOutBlockPacks :: IO ()
 testOutBlockPacks = do
+  performGC
   putStrLn "*** Out Block packs test"
   replicateM_ 100 $ do
     (result, palette) <- colorSelectionPaletteFromString "BlanchedAlmond:RoyalBlue:#ffccaa"
@@ -206,10 +226,12 @@ testOutBlockPacks = do
       when (paletteStr /= "#FFEBCD:#4169E1:#FFCCAA") $
            error $ "Color conversion failed, got " ++ paletteStr
     else error $ "colorSelecionPaletteFromString failed!"
+  performGC
   putStrLn "+++ Out Block packs test done"
 
 testFlags :: IO ()
 testFlags = do
+  performGC
   putStrLn "*** Flags test"
   replicateM_ 100 $ do
      let w = gflagsToWord [DebugFlagUpdates, DebugFlagNoPixelCache] :: Integer
@@ -218,11 +240,13 @@ testFlags = do
      let fs = wordToGFlags (3072 :: CUInt)
      when (fs /= [DebugFlagPrinting, DebugFlagBuilder]) $
           error $ "Word -> Flags failed, got " ++ show fs
+  performGC
   putStrLn "+++ Flags test done"
 
 -- ScopeTypeNotify callback test
 testTimeout :: IO ()
 testTimeout = do
+  performGC
   putStrLn "*** Timeout test"
   now <- GLib.getMonotonicTime
   putStrLn $ "Now is " ++ show now ++ " , adding timeout."
@@ -230,6 +254,7 @@ testTimeout = do
                 andNow <- GLib.getMonotonicTime
                 putStrLn $ "Timeout called @ " ++ show andNow
                 return False
+  performGC
   putStrLn "+++ Timeout test done"
 
 -- Build the menu for the ScopeTypeAsync callback test. We build the
@@ -242,21 +267,25 @@ testTimeout = do
 -- exits.
 buildPopupMenu :: IO Menu
 buildPopupMenu = do
+  performGC
   putStrLn "*** Building popup menu"
   menuitem <- new MenuItem [_label := "TestAsync"]
   on menuitem Activate $ putStrLn "Menuitem activated!"
   menu <- new Menu []
   menuShellAppend menu menuitem
   widgetShowAll menu
+  performGC
   putStrLn "+++ Menu constructed"
   return menu
 
 -- ScopeTypeAsync callback test
 testMenuPopup :: Menu -> IO ()
 testMenuPopup menu = do
+  performGC
   putStrLn "*** ScopeTypeAsync test"
   curtime <- getCurrentEventTime
   menuPopup menu noWidget noWidget (Just positionFunc) 0 curtime
+  performGC
   putStrLn "+++ ScopeTypeAsync test done"
       where positionFunc _ _ _ = do
                   putStrLn "+++ Pos func"
@@ -268,10 +297,12 @@ testMenuPopup menu = do
 -- ScopeTypeCall callback test
 testForeach :: ContainerK a => a -> IO ()
 testForeach container = do
+  performGC
   putStrLn "*** ScopeTypeCall test"
   containerForeach container $ \widget -> do
            path <- widgetGetPath widget
            putStrLn =<< widgetPathToString path
+  performGC
   putStrLn "+++ ScopeTypeCall test done"
 
 roundtrip :: (IsGVariant a, Eq a, Show a) => a -> IO ()
@@ -285,6 +316,7 @@ roundtrip value =
 -- Test of proper marshalling of GVariants
 testGVariant :: IO ()
 testGVariant = do
+  performGC
   putStrLn "*** GVariant test"
   replicateM_ 100 $ do
        roundtrip (True :: Bool)
@@ -325,10 +357,12 @@ testGVariant = do
        let dict :: M.Map Text Double
            dict = M.fromList [("One", 1), ("Two", 2.001), ("Three", 3)]
        roundtrip dict
+  performGC
   putStrLn "+++ GVariant test done"
 
 testCast :: IO ()
 testCast =  do
+  performGC
   putStrLn "*** castTo test"
   label <- new Label []
   _ <- toWidget label -- Safe cast, should always succeed.
@@ -339,16 +373,20 @@ testCast =  do
         Just _ -> return ()
         Nothing -> error "Could not upcast back to a Label!"
     Nothing -> error "Downcast to Widget failed!"
+  performGC
   putStrLn "+++ castTo test done"
 
 testArrayOfArrays :: IO ()
 testArrayOfArrays = do
+  performGC
   putStrLn "*** Array of array test"
   Gio.desktopAppInfoSearch "text" >>= print
+  performGC
   putStrLn "+++ Array of array test done"
 
 testUnexpectedNullHandling :: IO ()
 testUnexpectedNullHandling = do
+  performGC
   putStrLn "*** Unexpected NULL handling test"
   builder <- builderNewFromString "<interface></interface>" (-1)
   result <- catch (Just <$> builderGetObject builder "zzz")
@@ -356,15 +394,18 @@ testUnexpectedNullHandling = do
   case (result :: Maybe GObject.Object) of
     Nothing -> return ()
     Just _ -> error "Unexpected success in builderGetObject!"
+  performGC
   putStrLn "+++ Unexpected NULL handling test done"
 
 testConstantPatternMatching :: IO ()
 testConstantPatternMatching = do
+  performGC
   putStrLn "*** Constant pattern matching test"
   when (not $ checkDigits "0123456789") $
        error "Digit check failed!"
   when (checkDigits GLib.CSET_A_2_Z) $
        error "Digit check succeeded unexpectedly!"
+  performGC
   putStrLn "+++ Constant pattern matching test done"
       where checkDigits :: Text -> Bool
             checkDigits GLib.CSET_DIGITS = True
@@ -373,6 +414,7 @@ testConstantPatternMatching = do
 #if MIN_VERSION_base(4,9,0)
 testOverloadedLabels :: IO ()
 testOverloadedLabels = do
+  performGC
   putStrLn "*** Overloaded labels test"
   address <- Gio.inetAddressNewFromString "173.194.40.51"
   -- Overloaded attributes
@@ -383,6 +425,7 @@ testOverloadedLabels = do
   family <- #getFamily address
   when (family /= Gio.SocketFamilyIpv4) $
        error $ "Got unexpected socket family from method: " ++ show family
+  performGC
   putStrLn "+++ Overloaded labels test done"
 #endif
 

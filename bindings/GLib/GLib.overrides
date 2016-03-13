@@ -1,8 +1,5 @@
 namespace GLib
 
-# Caller allocates, which we do not support yet.
-ignore IOChannel.read_chars
-
 # "terminator_pos" is not marked as out.
 ignore IOChannel.read_line_string
 
