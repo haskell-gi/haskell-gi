@@ -36,6 +36,7 @@ parseStruct = do
   fields <- parseFields
   constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
   methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
+  functions <- parseChildrenWithLocalName "function" (parseMethod MemberFunction)
   return (name,
           Struct {
             structIsBoxed = error ("[boxed] unfixed struct " ++ show name)
@@ -44,7 +45,7 @@ parseStruct = do
           , gtypeStructFor = structFor
           , structIsDisguised = disguised
           , structFields = fields
-          , structMethods = constructors ++ methods
+          , structMethods = constructors ++ methods ++ functions
           , structDeprecated = deprecated
           , structDocumentation = doc
           })

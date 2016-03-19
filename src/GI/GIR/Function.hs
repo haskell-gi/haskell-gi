@@ -9,9 +9,10 @@ import GI.GIR.Callable (Callable(..), parseCallable)
 import GI.GIR.Parser
 
 data Function = Function {
-        fnSymbol :: Text,
-        fnThrows :: Bool,
-        fnCallable :: Callable
+      fnSymbol   :: Text
+    , fnThrows   :: Bool
+    , fnMovedTo  :: Maybe Text
+    , fnCallable :: Callable
     } deriving Show
 
 parseFunction :: Parser (Name, Function)
@@ -24,9 +25,11 @@ parseFunction = do
   callable <- parseCallable
   symbol <- getAttrWithNamespace CGIRNS "identifier"
   throws <- optionalAttr "throws" False parseBool
+  movedTo <- queryAttr "moved-to"
   return $ (exposedName,
             Function {
               fnSymbol = symbol
             , fnCallable = callable
             , fnThrows = throws
+            , fnMovedTo = movedTo
             })

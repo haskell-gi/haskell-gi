@@ -28,13 +28,14 @@ parseUnion = do
   fields <- parseFields
   constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
   methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
+  functions <- parseChildrenWithLocalName "function" (parseMethod MemberFunction)
   return (name,
           Union {
             unionIsBoxed = isJust typeInit
           , unionTypeInit = typeInit
           , unionSize = error ("unfixed union size " ++ show name)
           , unionFields = fields
-          , unionMethods = constructors ++ methods
+          , unionMethods = constructors ++ methods ++ functions
           , unionDeprecated = deprecated
           })
 

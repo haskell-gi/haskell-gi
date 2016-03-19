@@ -11,7 +11,7 @@ import Data.Traversable (traverse)
 import Control.Monad (forM, forM_, when, unless, filterM)
 import Data.List (nub)
 import Data.Tuple (swap)
-import Data.Maybe (fromJust, fromMaybe, catMaybes)
+import Data.Maybe (fromJust, fromMaybe, catMaybes, mapMaybe, isNothing)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -38,13 +38,15 @@ import GI.Type
 import GI.Util (tshow)
 
 genFunction :: Name -> Function -> CodeGen ()
-genFunction n (Function symbol throws callable) =
-    submodule "Functions" $ group $ do
-      line $ "-- function " <> symbol
-      handleCGExc (\e -> line ("-- XXX Could not generate function "
+genFunction n (Function symbol throws fnMovedTo callable) =
+    -- Only generate the function if it has not been moved.
+    when (Nothing == fnMovedTo) $
+      submodule "Functions" $ group $ do
+        line $ "-- function " <> symbol
+        handleCGExc (\e -> line ("-- XXX Could not generate function "
                            <> symbol
                            <> "\n-- Error was : " <> describeCGError e))
-                   (genCallable n symbol callable throws)
+                        (genCallable n symbol callable throws)
 
 genBoxedObject :: Name -> Text -> CodeGen ()
 genBoxedObject n typeInit = do
@@ -458,20 +460,38 @@ genInterface n iface = do
 
 -- Some type libraries include spurious interface/struct methods,
 -- where a method Mod.Foo::func also appears as an ordinary function
--- in the list of APIs. If we find a matching function, we don't
--- generate the method.
+-- in the list of APIs. If we find a matching function (without the
+-- "moved-to" annotation), we don't generate the method.
 --
 -- It may be more expedient to keep a map of symbol -> function.
---
--- XXX Maybe the GIR helps here? Sometimes such functions are
--- annotated with the "moved-to".
 symbolFromFunction :: Text -> CodeGen Bool
 symbolFromFunction sym = do
     apis <- getAPIs
     return $ any (hasSymbol sym . snd) $ M.toList apis
     where
-        hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2 })) = sym1 == sym2
+        hasSymbol sym1 (APIFunction (Function { fnSymbol = sym2,
+                                                fnMovedTo = movedTo })) =
+            sym1 == sym2 && movedTo == Nothing
         hasSymbol _ _ = False
+
+-- | Remove functions and methods annotated with "moved-to".
+dropMovedItems :: API -> Maybe API
+dropMovedItems (APIFunction f) = if fnMovedTo f == Nothing
+                                 then Just (APIFunction f)
+                                 else Nothing
+dropMovedItems (APIInterface i) =
+    (Just . APIInterface) i {ifMethods = filterMovedMethods (ifMethods i)}
+dropMovedItems (APIObject o) =
+    (Just . APIObject) o {objMethods = filterMovedMethods (objMethods o)}
+dropMovedItems (APIStruct s) =
+    (Just . APIStruct) s {structMethods = filterMovedMethods (structMethods s)}
+dropMovedItems (APIUnion u) =
+    (Just . APIUnion) u {unionMethods = filterMovedMethods (unionMethods u)}
+dropMovedItems a = Just a
+
+-- | Drop the moved methods.
+filterMovedMethods :: [Method] -> [Method]
+filterMovedMethods = filter (isNothing . methodMovedTo)
 
 genAPI :: Name -> API -> CodeGen ()
 genAPI n (APIConst c) = genConstant n c
@@ -496,6 +516,7 @@ genModule' apis = do
                                , Name "GLib" "Variant"
                                , Name "GObject" "Value"
                                , Name "GObject" "Closure"]) . fst)
+          $ mapMaybe (traverse dropMovedItems)
             -- Some callback types are defined inside structs
           $ map fixAPIStructs
           $ M.toList

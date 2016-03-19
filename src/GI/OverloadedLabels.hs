@@ -5,6 +5,7 @@ module GI.OverloadedLabels
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
+import Data.Maybe (isNothing)
 import Control.Monad (forM_)
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -32,23 +33,23 @@ findOverloaded apis = S.toList <$> go apis S.empty
       scanObject :: Object -> S.Set Text -> S.Set Text
       scanObject o set =
           let props = (map propToLabel . objProperties) o
-              methods = (map methodToLabel . objMethods) o
+              methods = (map methodToLabel . filterMoved . objMethods) o
           in S.unions [set, S.fromList props, S.fromList methods]
 
       scanInterface :: Interface -> S.Set Text -> S.Set Text
       scanInterface i set =
           let props = (map propToLabel . ifProperties) i
-              methods = (map methodToLabel . ifMethods) i
+              methods = (map methodToLabel . filterMoved . ifMethods) i
           in S.unions [set, S.fromList props, S.fromList methods]
 
       scanStruct :: Struct -> S.Set Text -> S.Set Text
       scanStruct s set =
-          let methods = (map methodToLabel . structMethods) s
+          let methods = (map methodToLabel . filterMoved . structMethods) s
           in S.unions [set, S.fromList methods]
 
       scanUnion :: Union -> S.Set Text -> S.Set Text
       scanUnion u set =
-          let methods = (map methodToLabel . unionMethods) u
+          let methods = (map methodToLabel . filterMoved . unionMethods) u
           in S.unions [set, S.fromList methods]
 
       propToLabel :: Property -> Text
@@ -56,6 +57,9 @@ findOverloaded apis = S.toList <$> go apis S.empty
 
       methodToLabel :: Method -> Text
       methodToLabel = lowerName . methodName
+
+      filterMoved :: [Method] -> [Method]
+      filterMoved = filter (isNothing . methodMovedTo)
 
 genOverloadedLabel :: Text -> CodeGen ()
 genOverloadedLabel l = group $ do

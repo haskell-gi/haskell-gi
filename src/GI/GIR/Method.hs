@@ -20,6 +20,7 @@ data Method = Method {
       methodSymbol      :: Text,
       methodThrows      :: Bool,
       methodType        :: MethodType,
+      methodMovedTo     :: Maybe Text,
       methodCallable    :: Callable
     } deriving (Eq, Show)
 
@@ -33,10 +34,12 @@ parseMethod mType = do
   callable <- parseCallable
   symbol <- getAttrWithNamespace CGIRNS "identifier"
   throws <- optionalAttr "throws" False parseBool
+  movedTo <- queryAttr "moved-to"
   return $ Method {
               methodName = exposedName
             , methodSymbol = symbol
             , methodThrows = throws
             , methodType = mType
+            , methodMovedTo = movedTo
             , methodCallable = callable
             }
