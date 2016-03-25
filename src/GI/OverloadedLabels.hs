@@ -33,23 +33,23 @@ findOverloaded apis = S.toList <$> go apis S.empty
       scanObject :: Object -> S.Set Text -> S.Set Text
       scanObject o set =
           let props = (map propToLabel . objProperties) o
-              methods = (map methodToLabel . filterMoved . objMethods) o
+              methods = (map methodToLabel . filterMethods . objMethods) o
           in S.unions [set, S.fromList props, S.fromList methods]
 
       scanInterface :: Interface -> S.Set Text -> S.Set Text
       scanInterface i set =
           let props = (map propToLabel . ifProperties) i
-              methods = (map methodToLabel . filterMoved . ifMethods) i
+              methods = (map methodToLabel . filterMethods . ifMethods) i
           in S.unions [set, S.fromList props, S.fromList methods]
 
       scanStruct :: Struct -> S.Set Text -> S.Set Text
       scanStruct s set =
-          let methods = (map methodToLabel . filterMoved . structMethods) s
+          let methods = (map methodToLabel . filterMethods . structMethods) s
           in S.unions [set, S.fromList methods]
 
       scanUnion :: Union -> S.Set Text -> S.Set Text
       scanUnion u set =
-          let methods = (map methodToLabel . filterMoved . unionMethods) u
+          let methods = (map methodToLabel . filterMethods . unionMethods) u
           in S.unions [set, S.fromList methods]
 
       propToLabel :: Property -> Text
@@ -58,8 +58,9 @@ findOverloaded apis = S.toList <$> go apis S.empty
       methodToLabel :: Method -> Text
       methodToLabel = lowerName . methodName
 
-      filterMoved :: [Method] -> [Method]
-      filterMoved = filter (isNothing . methodMovedTo)
+      filterMethods :: [Method] -> [Method]
+      filterMethods = filter (\m -> (isNothing . methodMovedTo) m &&
+                                    methodType m == OrdinaryMethod)
 
 genOverloadedLabel :: Text -> CodeGen ()
 genOverloadedLabel l = group $ do
