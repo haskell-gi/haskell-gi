@@ -24,7 +24,7 @@ executable testGtk
                        bytestring >= 0.10,
                        containers >= 0.5 && < 0.6,
                        random >= 1.1 && < 1.2,
-                       haskell-gi-base >= 0.12 && < 1,
+                       haskell-gi-base >= 0.13 && < 1,
                        gi-glib >= 0.2.44 && < 1,
                        gi-gdk >= 0.3.16 && < 1,
                        gi-gio >= 0.2.44 && < 1,

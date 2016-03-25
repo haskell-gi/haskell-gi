@@ -19,7 +19,7 @@ executable SimpleBrowser
   main-is:             SimpleBrowser.hs
   build-depends:       base >= 4.7 && < 5,
                        basic-prelude >= 0.5 && <0.6,
-                       haskell-gi-base >= 0.12 && < 1,
+                       haskell-gi-base >= 0.13 && < 1,
                        gi-glib >= 0.2.44 && < 1,
                        gi-gtk >= 0.3.16 && < 1,
                        gi-webkit2 >= 0.2.8 && < 1,
