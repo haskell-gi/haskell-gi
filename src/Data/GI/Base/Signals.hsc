@@ -166,7 +166,7 @@ connectGObjectNotify :: forall o i. GObject o =>
                         SignalProxy o (i :: *) ->
                         o -> GObjectNotifyCallback ->
                         SignalConnectMode -> IO SignalHandlerId
-connectGObjectNotify propName _ obj cb after = do
+connectGObjectNotify propName _ obj cb mode = do
   cb' <- mkGObjectNotifyCallback (gobjectNotifyCallbackWrapper cb)
   let signalName = "notify::" ++ propName
-  connectSignalFunPtr obj signalName cb' after
+  connectSignalFunPtr obj signalName cb' mode

@@ -10,7 +10,8 @@
 -- module deal with the memory management of such managed pointers.
 
 module Data.GI.Base.ManagedPtr
-    ( -- * Managed pointers
+    (
+    -- * Managed pointers
       withManagedPtr
     , withManagedPtrList
     , unsafeManagedPtrGetPtr

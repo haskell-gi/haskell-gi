@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 module Data.GI.Base.BasicConversions
     ( gflagsToWord
     , wordToGFlags

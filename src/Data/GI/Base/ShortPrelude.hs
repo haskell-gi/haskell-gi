@@ -1,7 +1,8 @@
 -- | The Haskell Prelude exports a number of symbols that can easily
 -- collide with functions appearing in bindings. The generated code
--- requires just a small subset of the functions in the Prelude, which
--- we reexport explicitly here.
+-- requires just a small subset of the functions in the Prelude,
+-- together with some of the functionality in Data.GI.Base, we
+-- reexport this explicitly here.
 module Data.GI.Base.ShortPrelude
     ( module Data.Char
     , module Data.Int
@@ -20,9 +21,11 @@ module Data.GI.Base.ShortPrelude
     , module Data.GI.Base.BasicTypes
     , module Data.GI.Base.BasicConversions
     , module Data.GI.Base.Closure
+    , module Data.GI.Base.Constructible
     , module Data.GI.Base.GError
     , module Data.GI.Base.GHashTable
     , module Data.GI.Base.GParamSpec
+    , module Data.GI.Base.GObject
     , module Data.GI.Base.GVariant
     , module Data.GI.Base.GValue
     , module Data.GI.Base.ManagedPtr
@@ -80,14 +83,16 @@ import Data.GI.Base.Attributes hiding (get, set)
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions
 import Data.GI.Base.Closure
+import Data.GI.Base.Constructible
 import Data.GI.Base.GError
 import Data.GI.Base.GHashTable
+import Data.GI.Base.GObject
 import Data.GI.Base.GParamSpec
 import Data.GI.Base.GVariant
 import Data.GI.Base.GValue
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Overloading
-import Data.GI.Base.Properties hiding (new)
+import Data.GI.Base.Properties
 import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId, SignalInfo(..), GObjectNotifySignalInfo)
 import Data.GI.Base.Utils
 
