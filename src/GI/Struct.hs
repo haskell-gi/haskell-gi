@@ -91,6 +91,33 @@ buildFieldReader getter n field = group $ do
     result <- convert "val" $ fToH (fieldType field) TransferNothing
     line $ "return " <> result
 
+-- | Write a field into a struct. Note that, since we cannot know for
+-- sure who will be deallocating the fields in the struct, we leave
+-- any conversions that involve pointers to the caller. What this
+-- means in practice is that scalar fields will get marshalled to/from
+-- Haskell, while anything that involves pointers will be returned in
+-- the C representation.
+buildFieldWriter :: Text -> Name -> Field -> ExcCodeGen ()
+buildFieldWriter setter n field = group $ do
+  name' <- upperName n
+
+  nullable <- isNullable (fieldType field)
+
+  fType <- tshow <$> foreignType (fieldType field)
+  hType <- if nullable
+           then return fType
+           else tshow <$> haskellType (fieldType field)
+
+  line $ setter <> " :: MonadIO m => " <> name' <> " -> "
+           <> hType <> " -> m ()"
+  line $ setter <> " s val = liftIO $ withManagedPtr s $ \\ptr -> do"
+  indent $ do
+    converted <- if nullable
+                 then return "val"
+                 else convert "val" $ hToF (fieldType field) TransferNothing
+    line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
+         <> ") (" <> converted <> " :: " <> fType <> ")"
+
 buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe (Text, Text))
 buildFieldAttributes n field
     | not (fieldVisible field) = return Nothing
@@ -104,10 +131,13 @@ buildFieldAttributes n field
   else do
      let fName = (underscoresToCamelCase . fieldName) field
          getter = lcFirst name' <> "Read" <> ucFirst fName
+         setter = lcFirst name' <> "Write" <> ucFirst fName
 
      buildFieldReader getter n field
+     buildFieldWriter setter n field
 
      exportProperty fName getter
+     exportProperty fName setter
 
      return Nothing
 
