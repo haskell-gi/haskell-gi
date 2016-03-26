@@ -149,7 +149,7 @@ genCabalProject gir deps exposedModules minBaseVersion =
       line $ "library"
       indent $ do
         line $ padTo 20 "default-language:" <> "Haskell2010"
-        line $ padTo 20 "default-extensions:" <> "ScopedTypeVariables, CPP, OverloadedStrings, NegativeLiterals, ConstraintKinds, TypeFamilies, MultiParamTypeClasses, KindSignatures, FlexibleInstances, UndecidableInstances, DataKinds, FlexibleContexts"
+        line $ padTo 20 "default-extensions:" <> "NoImplicitPrelude, ScopedTypeVariables, CPP, OverloadedStrings, NegativeLiterals, ConstraintKinds, TypeFamilies, MultiParamTypeClasses, KindSignatures, FlexibleInstances, UndecidableInstances, DataKinds, FlexibleContexts"
         line $ padTo 20 "other-extensions:" <> "PatternSynonyms ViewPatterns"
         line $ padTo 20 "ghc-options:" <> "-fno-warn-unused-imports -fno-warn-warnings-deprecations"
         line $ padTo 20 "exposed-modules:" <> head exposedModules
