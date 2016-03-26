@@ -48,6 +48,18 @@ testAllocations = do
   performGC
   putStrLn "+++ Allocations test done"
 
+-- Overloaded syntax for `new` for structs.
+testConstructible :: IO ()
+testConstructible = do
+  performGC
+  putStrLn "*** Constructible test"
+  replicateM_ 100 $ do
+    _ <- new Gdk.RGBA [] -- boxed
+    _ <- new GLib.TimeVal [] -- unboxed
+    return ()
+  performGC
+  putStrLn "+++ Constructible test done"
+
 testBoxedOutArgs :: IO ()
 testBoxedOutArgs = do
   performGC
@@ -538,6 +550,7 @@ main = do
 #if MIN_VERSION_base(4,9,0)
         testOverloadedLabels
 #endif
+        testConstructible
 
         _showAll win
 
