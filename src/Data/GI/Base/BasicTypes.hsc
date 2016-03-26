@@ -22,6 +22,7 @@ module Data.GI.Base.BasicTypes
     , gtypeStrv
     , gtypeBoxed
     , gtypeObject
+    , gtypeInvalid
 
      -- * Memory management
 
@@ -126,6 +127,10 @@ gtypeBoxed = GType #const G_TYPE_BOXED
 -- | `GType` corresponding to a `GObject`.
 gtypeObject :: GType
 gtypeObject = GType #const G_TYPE_OBJECT
+
+-- | An invalid `GType` used as error return value in some functions which return a `GType`.
+gtypeInvalid :: GType
+gtypeInvalid = GType #const G_TYPE_INVALID
 
 -- | A constraint ensuring that the given type is coercible to a
 -- ForeignPtr. It will hold for newtypes of the form
