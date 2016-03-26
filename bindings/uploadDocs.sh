@@ -6,7 +6,7 @@ uploadDocs()
 {
     for modName in $@; do
         pushd $modName > /dev/null
-        neil docs -u=$USER
+        cabal upload -d
         popd > /dev/null
     done
 }
