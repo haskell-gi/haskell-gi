@@ -58,7 +58,9 @@ testConstructible = do
     Gdk.rGBAToString rgba >>=
            \s -> when (s /= "rgb(179,0,0)") $
                  error $ "Unexpected RGBA: " <> show s
-    rgba `get` _red >>=
+    -- We could also use "_red" here, but this serves as a test of the
+    -- namespaced attributes.
+    rgba `get` Gdk.rGBARed >>=
          -- Here it is fine to compare doubles for equality, since we
          -- want to make sure that the roundtripping does not introduce
          -- errors.
@@ -521,7 +523,7 @@ main = do
                 -- set button [widgetSensitive := False, ...] would be
                 -- more natural, but this serves as a test of
                 -- attribute updating functions.
-                set button [_sensitive :~ not,
+                set button [widgetSensitive :~ not,
                             _relief := ReliefStyleNone,
                             _label := "Thanks for clicking!"]
                 sensitive <- get button _sensitive

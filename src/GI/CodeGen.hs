@@ -26,7 +26,8 @@ import GI.Code
 import GI.GObject
 import GI.Inheritance (instanceTree, fullObjectMethodList,
                        fullInterfaceMethodList)
-import GI.Properties (genInterfaceProperties, genObjectProperties)
+import GI.Properties (genInterfaceProperties, genObjectProperties,
+                      genNamespacedPropLabels)
 import GI.OverloadedSignals (genInterfaceSignals, genObjectSignals)
 import GI.OverloadedMethods (genMethodList, genMethodInfo,
                              genUnsupportedMethodInfo)
@@ -393,6 +394,7 @@ genObject n o = do
           (genSignal s n)
 
          genObjectProperties n o
+         genNamespacedPropLabels n (objProperties o) (objMethods o)
          genObjectSignals n o
 
          -- Methods
@@ -425,6 +427,7 @@ genInterface n iface = do
           (genSignal s n)
 
      genInterfaceProperties n iface
+     genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
      genInterfaceSignals n iface
 
      isGO <- apiIsGObject n (APIInterface iface)

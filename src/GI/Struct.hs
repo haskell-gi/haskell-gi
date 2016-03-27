@@ -170,6 +170,15 @@ genAttrInfo owner field = do
     line $ "attrSet _ = " <> fieldSetter owner field
     line $ "attrConstruct = undefined"
 
+  blank
+
+  group $ do
+    let labelProxy = lcFirst on <> fName field
+    line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst (fName field) <> "\""
+    line $ labelProxy <> " = AttrLabelProxy"
+
+    exportProperty (fName field) labelProxy
+
   return $ "'(\"" <> (lcFirst  . fName) field <> "\", " <> it <> ")"
 
 buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe Text)
@@ -208,7 +217,6 @@ genStructOrUnionFields n fields = do
     line $ "type instance AttributeList " <> name' <> " = " <> attrListName
     line $ "type " <> attrListName <> " = ('[ " <>
          T.intercalate ", " (catMaybes attrs) <> "] :: [(Symbol, *)])"
-
 
 -- | Generate a constructor for a zero-filled struct/union of the given
 -- type, using the boxed (or GLib, for unboxed types) allocator.

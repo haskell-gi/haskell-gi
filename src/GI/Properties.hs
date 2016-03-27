@@ -1,6 +1,7 @@
 module GI.Properties
     ( genInterfaceProperties
     , genObjectProperties
+    , genNamespacedPropLabels
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -9,6 +10,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM_, when, unless)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Set as S
 
 import Foreign.Storable (sizeOf)
 import Foreign.C (CInt, CUInt)
@@ -18,7 +20,8 @@ import GI.Conversions
 import GI.Code
 import GI.GObject
 import GI.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
-import GI.SymbolNaming (upperName, classConstraint, qualify, hyphensToCamelCase)
+import GI.SymbolNaming (upperName, classConstraint, qualify,
+                        hyphensToCamelCase, lowerName)
 import GI.Type
 import GI.Util
 
@@ -291,3 +294,30 @@ genProperties n ownedProps allProps = do
     line $ "type instance AttributeList " <> name <> " = " <> propListType
     line $ "type " <> propListType <> " = ('[ "
              <> T.intercalate ", " allProps <> "] :: [(Symbol, *)])"
+
+-- | Generate gtk2hs compatible attribute labels (to ease
+-- porting). These are namespaced labels, for examples
+-- `widgetSensitive`. We take the list of methods, since there may be
+-- name clashes (an example is Auth::is_for_proxy method in libsoup,
+-- and the corresponding Auth::is-for-proxy property). When there is a
+-- clash we give priority to the method.
+genNamespacedPropLabels :: Name -> [Property] -> [Method] -> CodeGen ()
+genNamespacedPropLabels owner props methods =
+    let lName = lcFirst . hyphensToCamelCase . propName
+    in genNamespacedAttrLabels owner (map lName props) methods
+
+genNamespacedAttrLabels :: Name -> [Text] -> [Method] -> CodeGen ()
+genNamespacedAttrLabels owner attrNames methods = do
+  name <- upperName owner
+
+  let methodNames = S.fromList (map (lowerName . methodName) methods)
+      filteredAttrs = filter (`S.notMember` methodNames) attrNames
+
+  forM_ filteredAttrs $ \attr -> group $ do
+    let cName = ucFirst attr
+        labelProxy = lcFirst name <> cName
+
+    line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst cName <> "\""
+    line $ labelProxy <> " = AttrLabelProxy"
+
+    exportProperty cName labelProxy
