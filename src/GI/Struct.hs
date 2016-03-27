@@ -9,9 +9,9 @@ module GI.Struct ( genStructOrUnionFields
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM_, when)
+import Control.Monad (forM, when)
 
-import Data.Maybe (mapMaybe, isJust)
+import Data.Maybe (mapMaybe, isJust, catMaybes)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -70,10 +70,19 @@ extractCallbacksInStruct (n@(Name ns structName), APIStruct s)
                     return (Name ns n', APICallback callback)
 extractCallbacksInStruct _ = []
 
+-- | The name of the type encoding the information for a field in a
+-- struct/union.
+infoType :: Name -> Field -> CodeGen Text
+infoType owner field = do
+  name <- upperName owner
+  let fName = (underscoresToCamelCase . fieldName) field
+  return $ name <> fName <> "FieldInfo"
+
 -- | Extract a field from a struct.
-buildFieldReader :: Text -> Name -> Field -> ExcCodeGen ()
-buildFieldReader getter n field = group $ do
+buildFieldReader :: Name -> Field -> ExcCodeGen ()
+buildFieldReader n field = group $ do
   name' <- upperName n
+  let getter = fieldGetter n field
 
   hType <- tshow <$> haskellType (fieldType field)
   fType <- tshow <$> foreignType (fieldType field)
@@ -97,9 +106,10 @@ buildFieldReader getter n field = group $ do
 -- means in practice is that scalar fields will get marshalled to/from
 -- Haskell, while anything that involves pointers will be returned in
 -- the C representation.
-buildFieldWriter :: Text -> Name -> Field -> ExcCodeGen ()
-buildFieldWriter setter n field = group $ do
+buildFieldWriter :: Name -> Field -> ExcCodeGen ()
+buildFieldWriter n field = group $ do
   name' <- upperName n
+  let setter = fieldSetter n field
 
   nullable <- isNullable (fieldType field)
 
@@ -118,41 +128,86 @@ buildFieldWriter setter n field = group $ do
     line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
          <> ") (" <> converted <> " :: " <> fType <> ")"
 
-buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe (Text, Text))
+-- | Name for the getter function
+fieldGetter :: Name -> Field -> Text
+fieldGetter name' field = lowerName name' <> "Read" <> fName field
+
+-- | Name for the setter function
+fieldSetter :: Name -> Field -> Text
+fieldSetter name' field = lowerName name' <> "Write" <> fName field
+
+-- | Haskell name for the field
+fName :: Field -> Text
+fName = underscoresToCamelCase . fieldName
+
+-- | Support for modifying fields as attributes. Returns a tuple with
+-- the name of the overloaded label to be used for the field, and the
+-- associated info type.
+genAttrInfo :: Name -> Field -> CodeGen Text
+genAttrInfo owner field = do
+  it <- infoType owner field
+  on <- upperName owner
+
+  nullable <- isNullable (fieldType field)
+
+  outType <- tshow <$> haskellType (fieldType field)
+  inType <- if nullable
+            then tshow <$> foreignType (fieldType field)
+            else tshow <$> haskellType (fieldType field)
+
+  line $ "data " <> it
+  line $ "instance AttrInfo " <> it <> " where"
+  indent $ do
+    line $ "type AttrAllowedOps " <> it <> " = '[ 'AttrSet, 'AttrGet]"
+    line $ "type AttrSetTypeConstraint " <> it <> " = (~) "
+             <> if T.any (== ' ') inType
+                then parenthesize inType
+                else inType
+    line $ "type AttrBaseTypeConstraint " <> it <> " = (~) " <> on
+    line $ "type AttrGetType " <> it <> " = " <> outType
+    line $ "type AttrLabel " <> it <> " = \"" <> fieldName field <> "\""
+    line $ "attrGet _ = " <> fieldGetter owner field
+    line $ "attrSet _ = " <> fieldSetter owner field
+    line $ "attrConstruct = undefined"
+
+  return $ "'(\"" <> (lcFirst  . fName) field <> "\", " <> it <> ")"
+
+buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe Text)
 buildFieldAttributes n field
     | not (fieldVisible field) = return Nothing
-    | otherwise = do
-  name' <- upperName n
+    | otherwise = group $ do
 
   hType <- tshow <$> haskellType (fieldType field)
   if ("Private" `T.isSuffixOf` hType ||
      not (fieldVisible field))
   then return Nothing
   else do
-     let fName = (underscoresToCamelCase . fieldName) field
-         getter = lcFirst name' <> "Read" <> ucFirst fName
-         setter = lcFirst name' <> "Write" <> ucFirst fName
+     buildFieldReader n field
+     buildFieldWriter n field
 
-     buildFieldReader getter n field
-     buildFieldWriter setter n field
+     exportProperty (fName field) (fieldGetter n field)
+     exportProperty (fName field) (fieldSetter n field)
 
-     exportProperty fName getter
-     exportProperty fName setter
-
-     return Nothing
+     Just <$> genAttrInfo n field
 
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do
   name' <- upperName n
 
-  _ <- forM_ fields $ \field ->
+  attrs <- forM fields $ \field ->
       handleCGExc (\e -> line ("-- XXX Skipped attribute for \"" <> name' <>
                                ":" <> fieldName field <> "\" :: " <>
                                describeCGError e) >>
                    return Nothing)
                   (buildFieldAttributes n field)
 
-  line $ "type instance AttributeList " <> name' <> " = '[]"
+  blank
+
+  group $ do
+    let attrListName = name' <> "AttributeList"
+    line $ "type instance AttributeList " <> name' <> " = " <> attrListName
+    line $ "type " <> attrListName <> " = ('[ " <>
+         T.intercalate ", " (catMaybes attrs) <> "] :: [(Symbol, *)])"
 
 
 -- | Generate a constructor for a zero-filled struct/union of the given

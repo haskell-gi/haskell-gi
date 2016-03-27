@@ -9,6 +9,7 @@ import Data.Maybe (isNothing)
 import Control.Monad (forM_)
 import qualified Data.Set as S
 import Data.Text (Text)
+import qualified Data.Text as T
 
 import GI.API
 import GI.Code
@@ -44,13 +45,15 @@ findOverloaded apis = S.toList <$> go apis S.empty
 
       scanStruct :: Struct -> S.Set Text -> S.Set Text
       scanStruct s set =
-          let methods = (map methodToLabel . filterMethods . structMethods) s
-          in S.unions [set, S.fromList methods]
+          let attrs = (map fieldToLabel . filterFields . structFields) s
+              methods = (map methodToLabel . filterMethods . structMethods) s
+          in S.unions [set, S.fromList attrs, S.fromList methods]
 
       scanUnion :: Union -> S.Set Text -> S.Set Text
       scanUnion u set =
-          let methods = (map methodToLabel . filterMethods . unionMethods) u
-          in S.unions [set, S.fromList methods]
+          let attrs = (map fieldToLabel . filterFields . unionFields) u
+              methods = (map methodToLabel . filterMethods . unionMethods) u
+          in S.unions [set, S.fromList attrs, S.fromList methods]
 
       propToLabel :: Property -> Text
       propToLabel = lcFirst . hyphensToCamelCase . propName
@@ -58,9 +61,16 @@ findOverloaded apis = S.toList <$> go apis S.empty
       methodToLabel :: Method -> Text
       methodToLabel = lowerName . methodName
 
+      fieldToLabel :: Field -> Text
+      fieldToLabel = lcFirst . underscoresToCamelCase . fieldName
+
       filterMethods :: [Method] -> [Method]
       filterMethods = filter (\m -> (isNothing . methodMovedTo) m &&
                                     methodType m == OrdinaryMethod)
+
+      filterFields :: [Field] -> [Field]
+      filterFields = filter (\f -> fieldVisible f &&
+                            (not . T.null . fieldName) f)
 
 genOverloadedLabel :: Text -> CodeGen ()
 genOverloadedLabel l = group $ do

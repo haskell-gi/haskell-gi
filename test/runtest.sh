@@ -4,7 +4,7 @@ set -e
 set -x
 
 cabal clean
-haskell-gi -l Gtk
+haskell-gi -l Gtk Gdk
 haskell-gi -c Gtk
 cabal configure
 time cabal build

@@ -54,7 +54,16 @@ testConstructible = do
   performGC
   putStrLn "*** Constructible test"
   replicateM_ 100 $ do
-    _ <- new Gdk.RGBA [] -- boxed
+    rgba <- new Gdk.RGBA [_red := 0.7, _alpha := 1] -- boxed
+    Gdk.rGBAToString rgba >>=
+           \s -> when (s /= "rgb(179,0,0)") $
+                 error $ "Unexpected RGBA: " <> show s
+    rgba `get` _red >>=
+         -- Here it is fine to compare doubles for equality, since we
+         -- want to make sure that the roundtripping does not introduce
+         -- errors.
+             \r -> when (r /= 0.7) $
+                   error $ "Unexpected \"red\" value: " <> show r
     _ <- new GLib.TimeVal [] -- unboxed
     return ()
   performGC

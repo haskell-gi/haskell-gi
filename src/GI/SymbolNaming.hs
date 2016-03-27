@@ -21,28 +21,23 @@ import GI.Util (lcFirst, ucFirst)
 classConstraint :: Text -> Text
 classConstraint n = n <> "K"
 
-lowerName :: Name -> Text
-lowerName (Name _ s) = T.concat . rename . T.split (== '_') $ s
-    where
-      rename [w] = [lcFirst w]
-      rename (w:ws) = lcFirst w : map ucFirst' ws
-      rename [] = error "rename: empty list"
+-- | Move leading underscores to the end (for example in
+-- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
+sanitize :: Text -> Text
+sanitize (T.uncons -> Just ('_', xs)) = sanitize xs <> "_"
+sanitize xs = xs
 
-      ucFirst' "" = "_"
-      ucFirst' x = ucFirst x
+lowerName :: Name -> Text
+lowerName (Name _ s) =
+    case underscoresToCamelCase (sanitize s) of
+      "" -> error "empty name!!"
+      n -> lcFirst n
 
 upperNameWithSuffix :: Text -> Name -> CodeGen Text
 upperNameWithSuffix suffix (Name ns s) = do
           prefix <- qualifyWithSuffix suffix ns
           return $ prefix <> uppered
-    where uppered = T.concat . map ucFirst' . T.split (== '_') $ sanitize s
-          -- Move leading underscores to the end (for example in
-          -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
-          sanitize (T.uncons -> Just ('_', xs)) = sanitize xs <> "_"
-          sanitize xs = xs
-
-          ucFirst' "" = "_"
-          ucFirst' x = ucFirst x
+    where uppered = underscoresToCamelCase (sanitize s)
 
 upperName :: Name -> CodeGen Text
 upperName = upperNameWithSuffix "."
@@ -78,9 +73,15 @@ noName name' = group $ do
 hyphensToCamelCase :: Text -> Text
 hyphensToCamelCase = T.concat . map ucFirst . T.split (== '-')
 
--- | Similarly, turn a name separated_by_underscores into CamelCase.
+-- | Similarly, turn a name separated_by_underscores into
+-- CamelCase. We preserve final and initial underscores, and n>1
+-- consecutive underscores are transformed into n-1 underscores.
 underscoresToCamelCase :: Text -> Text
-underscoresToCamelCase = T.concat . map ucFirst . T.split (== '_')
+underscoresToCamelCase =
+    T.concat . map normalize . map ucFirst . T.split (== '_')
+        where normalize :: Text -> Text
+              normalize "" = "_"
+              normalize s = s
 
 -- | Name for the given argument, making sure it is a valid Haskell
 -- argument name (and escaping it if not).
