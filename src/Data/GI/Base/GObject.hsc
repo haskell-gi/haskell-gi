@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables, DataKinds, TypeFamilies #-}
 
 module Data.GI.Base.GObject
     ( constructGObject
