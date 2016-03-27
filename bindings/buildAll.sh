@@ -19,4 +19,4 @@ build()
 mkdir -p sdists
 rm -f sdists/*
 
-build $(cat PKGS)
+build $(./PKGS.sh)

@@ -29,4 +29,4 @@ generate()
     done
 }
 
-generate $(cat PKGS)
+generate $(./PKGS.sh)

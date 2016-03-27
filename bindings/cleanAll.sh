@@ -17,4 +17,4 @@ clean()
     done
 }
 
-clean $(cat PKGS)
+clean $(./PKGS.sh)

@@ -11,4 +11,4 @@ uploadDocs()
     done
 }
 
-uploadDocs $(cat PKGS)
+uploadDocs $(./PKGS.sh)
