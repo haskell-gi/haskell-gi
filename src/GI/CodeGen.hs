@@ -63,20 +63,8 @@ genBoxedObject n typeInit = do
 
   hsBoot $ line $ "instance BoxedObject " <> name' <> " where"
 
-genBoxedEnum :: Name -> Text -> CodeGen ()
-genBoxedEnum n typeInit = do
-  name' <- upperName n
-
-  group $ do
-    line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
-            typeInit <> " :: "
-    indent $ line "IO GType"
-  group $ do
-       line $ "instance BoxedEnum " <> name' <> " where"
-       indent $ line $ "boxedEnumType _ = c_" <> typeInit
-
 genEnumOrFlags :: Name -> Enumeration -> ExcCodeGen ()
-genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storageBytes isDeprecated) = do
+genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain _maybeTypeInit storageBytes isDeprecated) = do
   -- Conversion functions expect enums and flags to map to CUInt,
   -- which we assume to be of 32 bits. Fail early, instead of giving
   -- strange errors at runtime.
@@ -116,7 +104,18 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain maybeTypeInit storag
                 line $ "toEnum " <> tshow v <> " = " <> n
             line $ "toEnum k = Another" <> name' <> " k"
   maybe (return ()) (genErrorDomain name') eDomain
-  maybe (return ()) (genBoxedEnum n) maybeTypeInit
+
+genBoxedEnum :: Name -> Text -> CodeGen ()
+genBoxedEnum n typeInit = do
+  name' <- upperName n
+
+  group $ do
+    line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
+            typeInit <> " :: "
+    indent $ line "IO GType"
+  group $ do
+       line $ "instance BoxedEnum " <> name' <> " where"
+       indent $ line $ "boxedEnumType _ = c_" <> typeInit
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name _ name) enum = submodule "Enums" $ do
@@ -126,7 +125,22 @@ genEnum n@(Name _ name) enum = submodule "Enums" $ do
   setModuleFlags [Reexport, NoTypesImport, NoCallbacksImport]
 
   handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
-              (genEnumOrFlags n enum)
+              (do genEnumOrFlags n enum
+                  case enumTypeInit enum of
+                    Nothing -> return ()
+                    Just ti -> genBoxedEnum n ti)
+
+genBoxedFlags :: Name -> Text -> CodeGen ()
+genBoxedFlags n typeInit = do
+  name' <- upperName n
+
+  group $ do
+    line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
+            typeInit <> " :: "
+    indent $ line "IO GType"
+  group $ do
+       line $ "instance BoxedFlags " <> name' <> " where"
+       indent $ line $ "boxedFlagsType _ = c_" <> typeInit
 
 -- Very similar to enums, but we also declare ourselves as members of
 -- the IsGFlag typeclass.
@@ -140,6 +154,10 @@ genFlags n@(Name _ name) (Flags enum) = submodule "Flags" $ do
   handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
               (do
                 genEnumOrFlags n enum
+
+                case enumTypeInit enum of
+                  Nothing -> return ()
+                  Just ti -> genBoxedFlags n ti
 
                 name' <- upperName n
                 group $ line $ "instance IsGFlag " <> name')
