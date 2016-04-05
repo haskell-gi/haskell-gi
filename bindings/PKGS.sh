@@ -2,7 +2,7 @@
 basever=$(ghc-pkg list base)
 
 # Packages compatible with base >= 4.7
-base47PKGS="GLib GObject Atk Gio Soup cairo Pango GdkPixbuf Gdk Gtk JavaScriptCore-4.0 WebKit2 WebKit2WebExtension GIRepository Poppler JavaScriptCore-3.0 WebKit Vte Notify"
+base47PKGS="GLib GObject Atk Gio Soup cairo Pango GdkPixbuf Gdk Gtk JavaScriptCore-4.0 WebKit2 WebKit2WebExtension GtkSource GIRepository Poppler JavaScriptCore-3.0 WebKit Vte Notify"
 # Packages compatible with base >= 4.8
 base48PKGS="Gst GstBase GstAudio GstVideo"
 
