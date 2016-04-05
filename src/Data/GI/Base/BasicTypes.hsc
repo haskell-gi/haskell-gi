@@ -31,6 +31,7 @@ module Data.GI.Base.BasicTypes
     , ForeignPtrNewtype
     , BoxedObject(..)
     , BoxedEnum(..)
+    , BoxedFlags(..)
     , GObject(..)
     , UnexpectedNullPointerReturn(..)
 
@@ -55,6 +56,7 @@ module Data.GI.Base.BasicTypes
 
 import Control.Exception (Exception)
 import Data.Coerce (Coercible)
+import Data.Proxy (Proxy)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
@@ -188,6 +190,10 @@ class ForeignPtrNewtype a => BoxedObject a where
 -- | Enums with an associated `GType`.
 class BoxedEnum a where
     boxedEnumType :: a -> IO GType
+
+-- | Flags with an associated `GType`.
+class BoxedFlags a where
+    boxedFlagsType :: Proxy a -> IO GType
 
 -- | A wrapped `GObject`.
 class ForeignPtrNewtype a => GObject a where

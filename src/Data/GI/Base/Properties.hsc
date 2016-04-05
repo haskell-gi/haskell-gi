@@ -69,6 +69,7 @@ import Control.Monad ((>=>))
 
 import qualified Data.ByteString.Char8 as B
 import Data.Text (Text)
+import Data.Proxy (Proxy(..))
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions
@@ -345,24 +346,27 @@ getObjectPropertyEnum obj propName = do
                     (\val -> toEnum . fromIntegral <$> get_enum val)
                     gtype
 
-setObjectPropertyFlags :: (IsGFlag b, GObject a) =>
+setObjectPropertyFlags :: forall a b. (IsGFlag b, BoxedFlags b, GObject a) =>
                           a -> String -> [b] -> IO ()
-setObjectPropertyFlags obj propName flags =
-    let cFlags = gflagsToWord flags
-    in setObjectProperty obj propName cFlags set_flags (GType #const G_TYPE_FLAGS)
+setObjectPropertyFlags obj propName flags = do
+  let cFlags = gflagsToWord flags
+  gtype <- boxedFlagsType (Proxy :: Proxy b)
+  setObjectProperty obj propName cFlags set_flags gtype
 
-constructObjectPropertyFlags :: IsGFlag a => String -> [a] ->
-                                IO (String, GValue)
-constructObjectPropertyFlags propName flags =
-    let cFlags = gflagsToWord flags
-    in constructObjectProperty propName cFlags set_flags (GType #const G_TYPE_FLAGS)
+constructObjectPropertyFlags :: forall a. (IsGFlag a, BoxedFlags a)
+                                => String -> [a] -> IO (String, GValue)
+constructObjectPropertyFlags propName flags = do
+  let cFlags = gflagsToWord flags
+  gtype <- boxedFlagsType (Proxy :: Proxy a)
+  constructObjectProperty propName cFlags set_flags gtype
 
-getObjectPropertyFlags :: (GObject a, IsGFlag b) =>
+getObjectPropertyFlags :: forall a b. (GObject a, IsGFlag b, BoxedFlags b) =>
                           a -> String -> IO [b]
-getObjectPropertyFlags obj propName =
-    getObjectProperty obj propName
-                          (\val -> wordToGFlags <$> get_flags val)
-                          (GType #const G_TYPE_FLAGS)
+getObjectPropertyFlags obj propName = do
+  gtype <- boxedFlagsType (Proxy :: Proxy b)
+  getObjectProperty obj propName
+                        (\val -> wordToGFlags <$> get_flags val)
+                        gtype
 
 setObjectPropertyVariant :: GObject a =>
                             a -> String -> GVariant -> IO ()
