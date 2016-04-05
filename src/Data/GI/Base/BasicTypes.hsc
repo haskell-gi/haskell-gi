@@ -22,6 +22,8 @@ module Data.GI.Base.BasicTypes
     , gtypeStrv
     , gtypeBoxed
     , gtypeObject
+    , gtypeVariant
+    , gtypeByteArray
     , gtypeInvalid
 
      -- * Memory management
@@ -76,6 +78,22 @@ foreign import ccall "g_type_name" g_type_name :: GType -> IO CString
 gtypeName :: GType -> IO String
 gtypeName gtype = g_type_name gtype >>= peekCString
 
+{-| [Note: compile-time vs run-time GTypes]
+
+Notice that there are two types of GType's: the fundamental ones,
+which are created with G_TYPE_MAKE_FUNDAMENTAL(n) and always have the
+same runtime representation, and the ones that are registered in the
+GObject type system at runtime, and whose `CGType` may change for each
+program run (and generally does).
+
+For the first type it is safe to use hsc to read the numerical values
+of the CGType at compile type, but for the second type it is essential
+to call the corresponding _get_type() function at runtime, and not use
+the value of the corresponding "constant" at compile time via hsc.
+-}
+
+{- Fundamental types -}
+
 -- | `GType` of strings.
 gtypeString :: GType
 gtypeString = GType #const G_TYPE_STRING
@@ -112,14 +130,6 @@ gtypeDouble = GType #const G_TYPE_DOUBLE
 gtypeBoolean :: GType
 gtypeBoolean = GType #const G_TYPE_BOOLEAN
 
--- | `GType` corresponding to a `GType` itself.
-gtypeGType :: GType
-gtypeGType = GType #const G_TYPE_GTYPE
-
--- | `GType` for a NULL terminated array of strings.
-gtypeStrv :: GType
-gtypeStrv = GType #const G_TYPE_STRV
-
 -- | `GType` corresponding to a `BoxedObject`.
 gtypeBoxed :: GType
 gtypeBoxed = GType #const G_TYPE_BOXED
@@ -128,9 +138,34 @@ gtypeBoxed = GType #const G_TYPE_BOXED
 gtypeObject :: GType
 gtypeObject = GType #const G_TYPE_OBJECT
 
--- | An invalid `GType` used as error return value in some functions which return a `GType`.
+-- | An invalid `GType` used as error return value in some functions
+-- which return a `GType`.
 gtypeInvalid :: GType
 gtypeInvalid = GType #const G_TYPE_INVALID
+
+-- | The `GType` corresponding to a `GVariant`.
+gtypeVariant :: GType
+gtypeVariant = GType #const G_TYPE_VARIANT
+
+{- Run-time types -}
+
+foreign import ccall "g_gtype_get_type" g_gtype_get_type :: CGType
+
+-- | `GType` corresponding to a `GType` itself.
+gtypeGType :: GType
+gtypeGType = GType g_gtype_get_type
+
+foreign import ccall "g_strv_get_type" g_strv_get_type :: CGType
+
+-- | `GType` for a NULL terminated array of strings.
+gtypeStrv :: GType
+gtypeStrv = GType g_strv_get_type
+
+foreign import ccall "g_byte_array_get_type" g_byte_array_get_type :: CGType
+
+-- | `GType` for a boxed type holding a `GByteArray`.
+gtypeByteArray :: GType
+gtypeByteArray = GType g_byte_array_get_type
 
 -- | A constraint ensuring that the given type is coercible to a
 -- ForeignPtr. It will hold for newtypes of the form
