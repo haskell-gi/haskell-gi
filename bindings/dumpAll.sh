@@ -29,4 +29,4 @@ dump()
 mkdir -p dumps
 rm -f dumps/*
 
-dump $(cat PKGS)
+dump $(./PKGS.sh)
