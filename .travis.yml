@@ -4,4 +4,4 @@ ghc:
   - 7.8
 
 script:
-  - cabal configure && cabal build
+  - cabal configure --ghc-options=-Werror && cabal build
