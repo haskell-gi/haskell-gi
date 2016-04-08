@@ -26,7 +26,7 @@ static int print_debug_info ()
   static int __print_debug_info = -1;
 
   if (__print_debug_info == -1) {
-    __print_debug_info = secure_getenv ("HASKELL_GI_DEBUG_MEM") != NULL;
+    __print_debug_info = getenv ("HASKELL_GI_DEBUG_MEM") != NULL;
   }
 
   return __print_debug_info;
