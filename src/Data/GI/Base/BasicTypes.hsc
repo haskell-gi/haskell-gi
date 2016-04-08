@@ -1,5 +1,8 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances,
   DeriveDataTypeable, TypeFamilies, ScopedTypeVariables #-}
+#if !MIN_VERSION_base(4,8,0)
+{-# LANGUAGE OverlappingInstances #-}
+#endif
 -- | Basic types used in the bindings.
 module Data.GI.Base.BasicTypes
     (
@@ -34,7 +37,6 @@ module Data.GI.Base.BasicTypes
     , BoxedFlags(..)
     , GObject(..)
     , UnexpectedNullPointerReturn(..)
-    , UnMaybe(..)
     , NullToNothing(..)
 
     -- * Basic GLib \/ GObject types
@@ -231,18 +233,22 @@ class NullToNothing a where
     -- not return a Maybe type.  This functions lets you work around this
     -- in a way that will not break when the introspection data is fixed.
     --
-    -- When you want to call a `someHakellGIFunction` that may return null
+    -- When you want to call a `someHaskellGIFunction` that may return null
     -- wrap the call like this.
     --
-    -- > nullToNothing (someHakellGIFunction x y)
+    -- > nullToNothing (someHaskellGIFunction x y)
     --
     -- The result will be a Maybe type even if the introspection data has
-    -- not been fixed for `someHakellGIFunction` yet.
+    -- not been fixed for `someHaskellGIFunction` yet.
     nullToNothing :: MonadIO m => IO a -> m (Maybe (UnMaybe a))
 
-instance a ~ UnMaybe a => NullToNothing a where
-    nullToNothing f = liftIO $
-        (Just <$> f) `catch` (\(_::UnexpectedNullPointerReturn) -> return Nothing)
+instance
+#if MIN_VERSION_base(4,8,0)
+    {-# OVERLAPPABLE #-}
+#endif
+    a ~ UnMaybe a => NullToNothing a where
+        nullToNothing f = liftIO $
+            (Just <$> f) `catch` (\(_::UnexpectedNullPointerReturn) -> return Nothing)
 
 instance NullToNothing (Maybe a) where
     nullToNothing = liftIO
