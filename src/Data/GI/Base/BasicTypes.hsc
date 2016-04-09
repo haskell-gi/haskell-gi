@@ -1,5 +1,8 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances,
-  DeriveDataTypeable #-}
+  DeriveDataTypeable, TypeFamilies, ScopedTypeVariables #-}
+#if !MIN_VERSION_base(4,8,0)
+{-# LANGUAGE OverlappingInstances #-}
+#endif
 -- | Basic types used in the bindings.
 module Data.GI.Base.BasicTypes
     (
@@ -34,6 +37,7 @@ module Data.GI.Base.BasicTypes
     , BoxedFlags(..)
     , GObject(..)
     , UnexpectedNullPointerReturn(..)
+    , NullToNothing(..)
 
     -- * Basic GLib \/ GObject types
     , GVariant(..)
@@ -54,7 +58,11 @@ module Data.GI.Base.BasicTypes
     , GDestroyNotify
     ) where
 
-import Control.Exception (Exception)
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+import Control.Exception (Exception, catch)
+import Control.Monad.IO.Class (MonadIO(..))
 import Data.Coerce (Coercible)
 import Data.Proxy (Proxy)
 import qualified Data.Text as T
@@ -214,6 +222,36 @@ data UnexpectedNullPointerReturn =
                                 deriving (Show, Typeable)
 
 instance Exception UnexpectedNullPointerReturn
+
+type family UnMaybe a :: * where
+    UnMaybe (Maybe a) = a
+    UnMaybe a         = a
+
+class NullToNothing a where
+    -- | Some functions are not marked as having a nullable return type
+    -- in the introspection data.  The result is that they currently do
+    -- not return a Maybe type.  This functions lets you work around this
+    -- in a way that will not break when the introspection data is fixed.
+    --
+    -- When you want to call a `someHaskellGIFunction` that may return null
+    -- wrap the call like this.
+    --
+    -- > nullToNothing (someHaskellGIFunction x y)
+    --
+    -- The result will be a Maybe type even if the introspection data has
+    -- not been fixed for `someHaskellGIFunction` yet.
+    nullToNothing :: MonadIO m => IO a -> m (Maybe (UnMaybe a))
+
+instance
+#if MIN_VERSION_base(4,8,0)
+    {-# OVERLAPPABLE #-}
+#endif
+    a ~ UnMaybe a => NullToNothing a where
+        nullToNothing f = liftIO $
+            (Just <$> f) `catch` (\(_::UnexpectedNullPointerReturn) -> return Nothing)
+
+instance NullToNothing (Maybe a) where
+    nullToNothing = liftIO
 
 -- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "Data.GI.Base.GVariant" for further methods.
 newtype GVariant = GVariant (ForeignPtr GVariant)
