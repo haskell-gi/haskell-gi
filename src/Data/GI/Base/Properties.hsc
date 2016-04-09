@@ -76,9 +76,9 @@ import Data.GI.Base.BasicConversions
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.GValue
 import Data.GI.Base.GVariant (newGVariantFromPtr)
-import Data.GI.Base.Utils (freeMem)
+import Data.GI.Base.Utils (freeMem, convertIfNonNull)
 
-import Foreign (Ptr, ForeignPtr, Int32, Word32, Int64, Word64, castPtr)
+import Foreign (Ptr, ForeignPtr, Int32, Word32, Int64, Word64, nullPtr)
 import Foreign.C (CString, withCString)
 
 #include <glib-object.h>
@@ -115,17 +115,17 @@ constructObjectProperty propName propValue setter gtype = do
   return (propName, gvalue)
 
 setObjectPropertyString :: GObject a =>
-                           a -> String -> Text -> IO ()
+                           a -> String -> Maybe Text -> IO ()
 setObjectPropertyString obj propName str =
     setObjectProperty obj propName str set_string gtypeString
 
-constructObjectPropertyString :: String -> Text ->
+constructObjectPropertyString :: String -> Maybe Text ->
                                  IO (String, GValue)
 constructObjectPropertyString propName str =
     constructObjectProperty propName str set_string gtypeString
 
 getObjectPropertyString :: GObject a =>
-                           a -> String -> IO Text
+                           a -> String -> IO (Maybe Text)
 getObjectPropertyString obj propName =
     getObjectProperty obj propName get_string gtypeString
 
@@ -256,71 +256,77 @@ getObjectPropertyGType :: GObject a => a -> String -> IO GType
 getObjectPropertyGType obj propName =
     getObjectProperty obj propName get_gtype gtypeGType
 
-setObjectPropertyObject :: (GObject a, GObject b) =>
-                           a -> String -> b -> IO ()
-setObjectPropertyObject obj propName object = do
-  gtype <- gobjectType object
-  withManagedPtr object $ \objectPtr ->
+setObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
+                           a -> String -> Maybe b -> IO ()
+setObjectPropertyObject obj propName maybeObject = do
+  gtype <- gobjectType (undefined :: b)
+  maybeWithManagedPtr maybeObject $ \objectPtr ->
       setObjectProperty obj propName objectPtr set_object gtype
 
-constructObjectPropertyObject :: GObject a =>
-                                 String -> a -> IO (String, GValue)
-constructObjectPropertyObject propName object = do
-  gtype <- gobjectType object
-  withManagedPtr object $ \objectPtr ->
+constructObjectPropertyObject :: forall a. GObject a =>
+                                 String -> Maybe a -> IO (String, GValue)
+constructObjectPropertyObject propName maybeObject = do
+  gtype <- gobjectType (undefined :: a)
+  maybeWithManagedPtr maybeObject $ \objectPtr ->
       constructObjectProperty propName objectPtr set_object gtype
 
 getObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
-                           a -> String -> (ForeignPtr b -> b) -> IO b
+                           a -> String -> (ForeignPtr b -> b) -> IO (Maybe b)
 getObjectPropertyObject obj propName constructor = do
   gtype <- gobjectType (undefined :: b)
   getObjectProperty obj propName
                         (\val -> (get_object val :: IO (Ptr b))
-                                 >>= newObject constructor)
+                            >>= flip convertIfNonNull (newObject constructor))
                       gtype
 
-setObjectPropertyBoxed :: (GObject a, BoxedObject b) =>
-                          a -> String -> b -> IO ()
-setObjectPropertyBoxed obj propName boxed = do
-  gtype <- boxedType boxed
-  withManagedPtr boxed $ \boxedPtr ->
+setObjectPropertyBoxed :: forall a b. (GObject a, BoxedObject b) =>
+                          a -> String -> Maybe b -> IO ()
+setObjectPropertyBoxed obj propName maybeBoxed = do
+  gtype <- boxedType (undefined :: b)
+  maybeWithManagedPtr maybeBoxed $ \boxedPtr ->
         setObjectProperty obj propName boxedPtr set_boxed gtype
 
-constructObjectPropertyBoxed :: (BoxedObject a) => String -> a ->
-                                IO (String, GValue)
-constructObjectPropertyBoxed propName boxed = do
-  gtype <- boxedType boxed
-  withManagedPtr boxed $ \boxedPtr ->
+constructObjectPropertyBoxed :: forall a. (BoxedObject a) =>
+                                String -> Maybe a -> IO (String, GValue)
+constructObjectPropertyBoxed propName maybeBoxed = do
+  gtype <- boxedType (undefined :: a)
+  maybeWithManagedPtr maybeBoxed $ \boxedPtr ->
       constructObjectProperty propName boxedPtr set_boxed gtype
 
 getObjectPropertyBoxed :: forall a b. (GObject a, BoxedObject b) =>
-                          a -> String -> (ForeignPtr b -> b) -> IO b
+                          a -> String -> (ForeignPtr b -> b) -> IO (Maybe b)
 getObjectPropertyBoxed obj propName constructor = do
   gtype <- boxedType (undefined :: b)
-  getObjectProperty obj propName (get_boxed >=> newBoxed constructor) gtype
+  getObjectProperty obj propName (get_boxed >=>
+                                  flip convertIfNonNull (newBoxed constructor))
+                    gtype
 
 setObjectPropertyStringArray :: GObject a =>
-                                a -> String -> [Text] -> IO ()
-setObjectPropertyStringArray obj propName strv = do
+                                a -> String -> Maybe [Text] -> IO ()
+setObjectPropertyStringArray obj propName Nothing =
+  setObjectProperty obj propName nullPtr set_boxed gtypeStrv
+setObjectPropertyStringArray obj propName (Just strv) = do
   cStrv <- packZeroTerminatedUTF8CArray strv
   setObjectProperty obj propName cStrv set_boxed gtypeStrv
   mapZeroTerminatedCArray freeMem cStrv
   freeMem cStrv
 
-constructObjectPropertyStringArray :: String -> [Text] ->
+constructObjectPropertyStringArray :: String -> Maybe [Text] ->
                                       IO (String, GValue)
-constructObjectPropertyStringArray propName strv = do
+constructObjectPropertyStringArray propName Nothing =
+  constructObjectProperty propName nullPtr set_boxed gtypeStrv
+constructObjectPropertyStringArray propName (Just strv) = do
   cStrv <- packZeroTerminatedUTF8CArray strv
   result <- constructObjectProperty propName cStrv set_boxed gtypeStrv
   mapZeroTerminatedCArray freeMem cStrv
   freeMem cStrv
   return result
 
-getObjectPropertyStringArray :: GObject a =>
-                                a -> String -> IO [Text]
+getObjectPropertyStringArray :: GObject a => a -> String -> IO (Maybe [Text])
 getObjectPropertyStringArray obj propName =
     getObjectProperty obj propName
-                      (get_boxed >=> unpackZeroTerminatedUTF8CArray . castPtr)
+                      (get_boxed >=>
+                       flip convertIfNonNull unpackZeroTerminatedUTF8CArray)
                       gtypeStrv
 
 setObjectPropertyEnum :: (GObject a, Enum b, BoxedEnum b) =>
@@ -369,40 +375,49 @@ getObjectPropertyFlags obj propName = do
                         gtype
 
 setObjectPropertyVariant :: GObject a =>
-                            a -> String -> GVariant -> IO ()
-setObjectPropertyVariant obj propName variant =
-    withManagedPtr variant $ \variantPtr ->
+                            a -> String -> Maybe GVariant -> IO ()
+setObjectPropertyVariant obj propName maybeVariant =
+    maybeWithManagedPtr maybeVariant $ \variantPtr ->
         setObjectProperty obj propName variantPtr set_variant gtypeVariant
 
-constructObjectPropertyVariant :: String -> GVariant -> IO (String, GValue)
-constructObjectPropertyVariant propName obj =
-    withManagedPtr obj $ \objPtr ->
+constructObjectPropertyVariant :: String -> Maybe GVariant
+                               -> IO (String, GValue)
+constructObjectPropertyVariant propName maybeVariant =
+    maybeWithManagedPtr maybeVariant $ \objPtr ->
         constructObjectProperty propName objPtr set_variant gtypeVariant
 
 getObjectPropertyVariant :: GObject a => a -> String ->
-                            IO GVariant
+                            IO (Maybe GVariant)
 getObjectPropertyVariant obj propName =
-    getObjectProperty obj propName (get_variant >=> newGVariantFromPtr) gtypeVariant
+    getObjectProperty obj propName (get_variant >=>
+                                    flip convertIfNonNull newGVariantFromPtr)
+                      gtypeVariant
 
 setObjectPropertyByteArray :: GObject a =>
-                              a -> String -> B.ByteString -> IO ()
-setObjectPropertyByteArray obj propName bytes = do
+                              a -> String -> Maybe B.ByteString -> IO ()
+setObjectPropertyByteArray obj propName Nothing =
+    setObjectProperty obj propName nullPtr set_boxed gtypeByteArray
+setObjectPropertyByteArray obj propName (Just bytes) = do
   packed <- packGByteArray bytes
   setObjectProperty obj propName packed set_boxed gtypeByteArray
   unrefGByteArray packed
 
-constructObjectPropertyByteArray :: String -> B.ByteString ->
+constructObjectPropertyByteArray :: String -> Maybe B.ByteString ->
                                     IO (String, GValue)
-constructObjectPropertyByteArray propName bytes = do
+constructObjectPropertyByteArray propName Nothing =
+    constructObjectProperty propName nullPtr set_boxed gtypeByteArray
+constructObjectPropertyByteArray propName (Just bytes) = do
   packed <- packGByteArray bytes
   result <- constructObjectProperty propName packed set_boxed gtypeByteArray
   unrefGByteArray packed
   return result
 
 getObjectPropertyByteArray :: GObject a =>
-                              a -> String -> IO B.ByteString
+                              a -> String -> IO (Maybe B.ByteString)
 getObjectPropertyByteArray obj propName =
-    getObjectProperty obj propName (get_boxed >=> unpackGByteArray) gtypeByteArray
+    getObjectProperty obj propName (get_boxed >=>
+                                    flip convertIfNonNull unpackGByteArray)
+                      gtypeByteArray
 
 setObjectPropertyPtrGList :: GObject a =>
                               a -> String -> [Ptr b] -> IO ()

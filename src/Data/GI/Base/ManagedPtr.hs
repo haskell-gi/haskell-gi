@@ -13,6 +13,7 @@ module Data.GI.Base.ManagedPtr
     (
     -- * Managed pointers
       withManagedPtr
+    , maybeWithManagedPtr
     , withManagedPtrList
     , unsafeManagedPtrGetPtr
     , unsafeManagedPtrCastPtr
@@ -45,7 +46,7 @@ import Data.Coerce (coerce)
 
 import Foreign (poke)
 import Foreign.C (CInt(..))
-import Foreign.Ptr (Ptr, FunPtr, castPtr)
+import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
 import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv, touchForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
@@ -55,6 +56,17 @@ import Data.GI.Base.Utils
 -- | Perform an IO action on the 'Ptr' inside a managed pointer.
 withManagedPtr :: ForeignPtrNewtype a => a -> (Ptr a -> IO c) -> IO c
 withManagedPtr managed action = do
+  let ptr = unsafeManagedPtrGetPtr managed
+  result <- action ptr
+  touchManagedPtr managed
+  return result
+
+-- | Like `withManagedPtr`, but accepts a `Maybe` type. If the passed
+-- value is `Nothing` the inner action will be executed with a
+-- `nullPtr` argument.
+maybeWithManagedPtr :: ForeignPtrNewtype a => Maybe a -> (Ptr a -> IO c) -> IO c
+maybeWithManagedPtr Nothing action = action nullPtr
+maybeWithManagedPtr (Just managed) action = do
   let ptr = unsafeManagedPtrGetPtr managed
   result <- action ptr
   touchManagedPtr managed

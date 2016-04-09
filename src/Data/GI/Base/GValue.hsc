@@ -45,7 +45,6 @@ module Data.GI.Base.GValue
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad ((>=>))
 
 import Data.Word
 import Data.Int
@@ -53,7 +52,7 @@ import Data.Text (Text, pack, unpack)
 
 import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..))
 import Foreign.C.String (CString)
-import Foreign.Ptr (Ptr)
+import Foreign.Ptr (Ptr, nullPtr)
 import Foreign.ForeignPtr (ForeignPtr)
 
 import Data.GI.Base.BasicTypes
@@ -93,11 +92,11 @@ class IsGValue a where
     toGValue :: a -> IO GValue
     fromGValue :: GValue -> IO a
 
-instance IsGValue String where
-    toGValue = buildGValue gtypeString set_string . pack
-    fromGValue v = unpack <$> get_string v
+instance IsGValue (Maybe String) where
+    toGValue = buildGValue gtypeString set_string . fmap pack
+    fromGValue v = (fmap unpack) <$> get_string v
 
-instance IsGValue Text where
+instance IsGValue (Maybe Text) where
     toGValue = buildGValue gtypeString set_string
     fromGValue = get_string
 
@@ -142,14 +141,21 @@ foreign import ccall "g_value_set_string" _set_string ::
 foreign import ccall "g_value_get_string" _get_string ::
     Ptr GValue -> IO CString
 
-set_string :: GValue -> Text -> IO ()
-set_string gv str = withManagedPtr gv $ \ptr -> do
-                      cstr <- textToCString str
-                      _set_string ptr cstr
-                      freeMem cstr
+set_string :: GValue -> Maybe Text -> IO ()
+set_string gv maybeStr =
+    withManagedPtr gv $ \ptr -> do
+      cstr <- case maybeStr of
+                Just str -> textToCString str
+                Nothing -> return nullPtr
+      _set_string ptr cstr
+      freeMem cstr
 
-get_string :: GValue -> IO Text
-get_string gv = withManagedPtr gv $ _get_string >=> cstringToText
+get_string :: GValue -> IO (Maybe Text)
+get_string gv = withManagedPtr gv $ \gvptr -> do
+                  cstr <- _get_string gvptr
+                  if cstr /= nullPtr
+                  then Just <$> cstringToText cstr
+                  else return Nothing
 
 foreign import ccall unsafe "g_value_set_pointer" _set_pointer ::
     Ptr GValue -> Ptr a -> IO ()
