@@ -47,6 +47,8 @@ module Data.GI.Gtk.ModelView.SeqStore (
   seqStoreToList,
   seqStoreGetSize,
   seqStoreInsert,
+  seqStoreInsertBefore,
+  seqStoreInsertAfter,
   seqStorePrepend,
   seqStoreAppend,
   seqStoreRemove,
@@ -269,6 +271,18 @@ seqStoreInsert (SeqStore model) index value = liftIO $ do
   where insert :: Int -> a -> Seq a -> Seq a
         insert i x xs = front Seq.>< x Seq.<| back
           where (front, back) = Seq.splitAt i xs
+
+-- | Insert an element in front of the given element.
+seqStoreInsertBefore :: MonadIO m => SeqStore a -> TreeIter -> a -> m ()
+seqStoreInsertBefore store iter value = do
+    n <- seqStoreIterToIndex iter
+    seqStoreInsert store n value
+
+-- | Insert an element after the given element.
+seqStoreInsertAfter :: MonadIO m => SeqStore a -> TreeIter -> a -> m ()
+seqStoreInsertAfter store iter value = do
+    n <- seqStoreIterToIndex iter
+    seqStoreInsert store (n + 1) value
 
 -- | Prepend the element to the store.
 seqStorePrepend :: MonadIO m => SeqStore a -> a -> m ()
