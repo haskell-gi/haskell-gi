@@ -5,7 +5,7 @@
 --
 --  Created: 25 April 2004
 --
---  Copyright (C) 2004-2007 Duncan Coutts, Axel Simon
+--  Copyright (C) 2004-2016 Duncan Coutts, Axel Simon, Hamish Mackenzie
 --
 --  This library is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,6 @@
 --  Lesser General Public License for more details.
 --
 -- |
--- Maintainer  : gtk2hs-users@lists.sourceforge.net
 -- Stability   : provisional
 -- Portability : portable (depends on GHC)
 --
@@ -26,7 +25,7 @@
 --
 -- * Module available since Gtk+ version 2.4
 --
-module Graphics.UI.Gtk.MenuComboToolbar.ComboBox (
+module Data.GI.Gtk.ComboBox (
 
 -- * Detail
 --
@@ -84,14 +83,14 @@ import Data.Word (Word32)
 import Data.Int (Int32)
 import Data.GI.Base.BasicTypes (GObject)
 import Data.GI.Base.ManagedPtr (unsafeManagedPtrCastPtr, touchManagedPtr, unsafeCastTo)
-import Graphics.UI.Gtk.ModelView.Types (comboQuark)
-import Graphics.UI.Gtk.ModelView.TreeModel (makeColumnIdString)
-import Graphics.UI.Gtk.ModelView.CustomStore (customStoreSetColumn, customStoreGetRow)
-import Graphics.UI.Gtk.ModelView.ListStore ( ListStore(..), listStoreNew,
-  listStoreInsert, listStorePrepend, listStoreAppend, listStoreRemove,
-  listStoreSafeGetValue )
+import Data.GI.Gtk.ModelView.Types (comboQuark)
+import Data.GI.Gtk.ModelView.TreeModel (makeColumnIdString)
+import Data.GI.Gtk.ModelView.CustomStore (customStoreSetColumn, customStoreGetRow)
+import Data.GI.Gtk.ModelView.SeqStore ( SeqStore(..), seqStoreNew,
+  seqStoreInsert, seqStorePrepend, seqStoreAppend, seqStoreRemove,
+  seqStoreSafeGetValue )
 import GI.Gtk.Objects.ComboBox
-import Graphics.UI.Gtk.ModelView.CellLayout (CellLayout(..), cellLayoutClear, cellLayoutPackStart, cellLayoutSetAttributeFunc, cellLayoutGetCells)
+import Data.GI.Gtk.ModelView.CellLayout (CellLayout(..), cellLayoutClear, cellLayoutPackStart, cellLayoutSetAttributeFunc, cellLayoutGetCells)
 import GI.Gtk.Objects.CellRendererText (CellRendererText(..), cellRendererTextNew, setCellRendererTextText)
 import GI.GObject.Objects.Object (Object, ObjectK, toObject)
 
@@ -156,7 +155,7 @@ comboBoxNewText = do
 
 -- | Create a combo box that holds strings.
 --
--- This function stores a 'Graphics.UI.Gtk.ModelView.ListStore' with the
+-- This function stores a 'Data.GI.Gtk.ModelView.SeqStore' with the
 -- widget and sets the model to the list store. The widget can contain only
 -- strings. The model can be retrieved with 'comboBoxGetModel'. The list
 -- store can be retrieved with 'comboBoxGetModelText'.
@@ -166,11 +165,11 @@ comboBoxNewText = do
 -- 'comboBoxPrependText', 'comboBoxRemoveText' and 'comboBoxGetActiveText'
 -- can be called on a combo box only once 'comboBoxSetModelText' is called.
 --
-comboBoxSetModelText :: (MonadIO m, ComboBoxK self) => self -> m (ListStore Text)
+comboBoxSetModelText :: (MonadIO m, ComboBoxK self) => self -> m (SeqStore Text)
 comboBoxSetModelText combo = liftIO $ do
   layout <- unsafeCastTo CellLayout combo
   cellLayoutClear layout
-  store <- listStoreNew ([] :: [Text])
+  store <- seqStoreNew ([] :: [Text])
   comboBoxSetModel combo (Just store)
   let colId = makeColumnIdString 0
   customStoreSetColumn store colId id
@@ -184,7 +183,7 @@ comboBoxSetModelText combo = liftIO $ do
 
 -- | Retrieve the model that was created with 'comboBoxSetModelText'.
 --
-comboBoxGetModelText :: (MonadIO m, ComboBoxK self) => self -> m (ListStore Text)
+comboBoxGetModelText :: (MonadIO m, ComboBoxK self) => self -> m (SeqStore Text)
 comboBoxGetModelText self = do
   (Just store) <- objectGetAttributeUnsafe self comboQuark
   return store
@@ -196,7 +195,7 @@ comboBoxGetModelText self = do
 comboBoxAppendText :: (MonadIO m, ComboBoxK self) => self -> Text -> m Int32
 comboBoxAppendText self text = do
   store <- comboBoxGetModelText self
-  listStoreAppend store text
+  seqStoreAppend store text
 
 -- %hash c:41de d:8ab0
 -- | Inserts @string@ at @position@ in the list of strings stored in
@@ -209,7 +208,7 @@ comboBoxInsertText :: (MonadIO m, ComboBoxK self) => self
  -> m ()
 comboBoxInsertText self position text = do
   store <- comboBoxGetModelText self
-  listStoreInsert store position text
+  seqStoreInsert store position text
 
 -- | Prepends @string@ to the list of strings stored in @comboBox@. Note that
 -- you can only use this function with combo boxes constructed with
@@ -218,7 +217,7 @@ comboBoxInsertText self position text = do
 comboBoxPrependText :: (MonadIO m, ComboBoxK self) => self -> Text -> m ()
 comboBoxPrependText self text = do
   store <- comboBoxGetModelText self
-  listStorePrepend store text
+  seqStorePrepend store text
 
 -- | Removes the string at @position@ from @comboBox@. Note that you can only
 -- use this function with combo boxes constructed with 'comboBoxNewText'.
@@ -228,7 +227,7 @@ comboBoxRemoveText :: (MonadIO m, ComboBoxK self) => self
  -> m ()
 comboBoxRemoveText self position = do
   store <- comboBoxGetModelText self
-  listStoreRemove store position
+  seqStoreRemove store position
 
 -- | Returns the currently active string in @comboBox@ or @Nothing@ if none is
 -- selected. Note that you can only use this function with combo boxes
@@ -240,6 +239,6 @@ comboBoxGetActiveText self = do
   if activeId < 0
     then return Nothing
     else do
-      listStore <- comboBoxGetModelText self
-      listStoreSafeGetValue listStore (fromIntegral activeId)
+      seqStore <- comboBoxGetModelText self
+      seqStoreSafeGetValue seqStore (fromIntegral activeId)
 

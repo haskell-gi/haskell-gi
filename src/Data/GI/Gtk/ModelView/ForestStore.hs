@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- -*-haskell-*-
 --  GIMP Toolkit (GTK) CustomStore TreeModel
@@ -8,7 +9,7 @@
 --
 --  Created: 11 Feburary 2006
 --
---  Copyright (C) 2005 Duncan Coutts, Axel Simon
+--  Copyright (C) 2005-2016 Duncan Coutts, Axel Simon, Hamish Mackenzie
 --
 --  This library is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU Lesser General Public
@@ -21,41 +22,40 @@
 --  Lesser General Public License for more details.
 --
 -- |
--- Maintainer  : gtk2hs-users@lists.sourceforge.net
 -- Stability   : provisional
 -- Portability : portable (depends on GHC)
 --
 -- Standard model to store hierarchical data.
 --
-module Graphics.UI.Gtk.ModelView.TreeStore (
+module Data.GI.Gtk.ModelView.ForestStore (
 
 -- * Types
-  TreeStore(..),
+  ForestStore(..),
 
 -- * Constructors
-  treeStoreNew,
-  treeStoreNewDND,
+  forestStoreNew,
+  forestStoreNewDND,
 
 -- * Implementation of Interfaces
-  treeStoreDefaultDragSourceIface,
-  treeStoreDefaultDragDestIface,
+  forestStoreDefaultDragSourceIface,
+  forestStoreDefaultDragDestIface,
 
 -- * Methods
-  treeStoreGetValue,
-  treeStoreGetTree,
-  treeStoreLookup,
+  forestStoreGetValue,
+  forestStoreGetTree,
+  forestStoreLookup,
 
-  treeStoreSetValue,
+  forestStoreSetValue,
 
-  treeStoreInsert,
-  treeStoreInsertTree,
-  treeStoreInsertForest,
+  forestStoreInsert,
+  forestStoreInsertTree,
+  forestStoreInsertForest,
 
-  treeStoreRemove,
-  treeStoreClear,
+  forestStoreRemove,
+  forestStoreClear,
 
-  treeStoreChange,
-  treeStoreChangeM,
+  forestStoreChange,
+  forestStoreChangeM,
   ) where
 
 import Data.Bits
@@ -63,7 +63,7 @@ import Data.Word (Word32)
 import Data.Int (Int32)
 import Data.Maybe ( fromMaybe, isJust )
 import Data.Tree
-import Control.Monad ( when )
+import Control.Monad ((>=>), when)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Exception (assert)
 import Data.IORef
@@ -74,8 +74,8 @@ import Data.GI.Base.BasicTypes (GObject(..), GObject)
 import Data.GI.Base.Overloading (ParentTypes)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 
-import Graphics.UI.Gtk.ModelView.Types
-import Graphics.UI.Gtk.ModelView.CustomStore
+import Data.GI.Gtk.ModelView.Types
+import Data.GI.Gtk.ModelView.CustomStore
        (customStoreGetStamp, customStoreGetPrivate,
         TreeModelIface(..), customStoreNew, DragDestIface(..),
         DragSourceIface(..), CustomStore(..), customStoreInvalidateIters)
@@ -87,26 +87,54 @@ import GI.Gtk.Interfaces.TreeModel
 import GI.Gtk.Functions (treeSetRowDragData, treeGetRowDragData)
 import GI.Gtk.Structs.TreePath
        (TreePath)
+import GI.Gtk.Structs.TreeIter
+       (treeIterUserData3, treeIterUserData2, treeIterUserData,
+        treeIterStamp, TreeIter(..))
+import Data.GI.Base (get)
+import Unsafe.Coerce (unsafeCoerce)
+import Data.GI.Base.Constructible (Constructible(..))
+import Data.GI.Base.Attributes (AttrOp(..))
 
 --------------------------------------------
 -- internal model data types
 --
 
+data ForestStoreIter = ForestStoreIter Int32 Word32 Word32 Word32
+
+fromForestStoreIter :: MonadIO m => ForestStoreIter -> m TreeIter
+fromForestStoreIter (ForestStoreIter s u1 u2 u3) = new TreeIter [
+    treeIterStamp     := s,
+    treeIterUserData  := unsafeCoerce u1,
+    treeIterUserData2 := unsafeCoerce u2,
+    treeIterUserData3 := unsafeCoerce u3]
+
+toForestStoreIter :: MonadIO m => TreeIter -> m ForestStoreIter
+toForestStoreIter iter = do
+    stamp <- get iter treeIterStamp
+    u1   <- get iter treeIterUserData
+    u2   <- get iter treeIterUserData2
+    u3   <- get iter treeIterUserData3
+    return $ ForestStoreIter stamp (unsafeCoerce u1) (unsafeCoerce u2) (unsafeCoerce u3)
+
+forestStoreIterSetStamp :: ForestStoreIter -> Int32 -> ForestStoreIter
+forestStoreIterSetStamp (ForestStoreIter _ a b c) s = ForestStoreIter s a b c
+
+
 -- | A store for hierarchical data.
 --
-newtype TreeStore a = TreeStore (ForeignPtr (CustomStore (IORef (Store a)) a))
+newtype ForestStore a = ForestStore (ForeignPtr (CustomStore (IORef (Store a)) a))
 
-mkTreeStore :: CustomStore (IORef (Store a)) a -> TreeStore a
-mkTreeStore (CustomStore ptr) = TreeStore ptr
+mkForestStore :: CustomStore (IORef (Store a)) a -> ForestStore a
+mkForestStore (CustomStore ptr) = ForestStore ptr
 
-type instance ParentTypes (TreeStore a) = TreeStoreParentTypes
-type TreeStoreParentTypes = '[TreeModel, Object]
+type instance ParentTypes (ForestStore a) = ForestStoreParentTypes
+type ForestStoreParentTypes = '[TreeModel, Object]
 
-instance GObject (TreeStore a) where
+instance GObject (ForestStore a) where
     gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModel)
 
-instance TypedTreeModelClass TreeStore
+instance TypedTreeModelK ForestStore
 
 -- | Maximum number of nodes on each level.
 --
@@ -126,7 +154,7 @@ data Store a = Store {
 -- * The given rose tree determines the initial content and may be the empty
 --   list. Each 'Tree' in the forest corresponds to one top-level node.
 --
--- * The TreeStore maintains the initially given Forest and aligns the 'TreePath'
+-- * The ForestStore maintains the initially given Forest and aligns the 'TreePath'
 --   bits to fit in 96-bit length 'TreeIter' storage.
 --
 -- * Additionally, a cache is used to achieve higher performance if operating on
@@ -140,21 +168,21 @@ data Store a = Store {
 --   any further levels in a TreePath will not be encoded in the corresponding TreeIter
 --   storage.
 --
-treeStoreNew :: MonadIO m => Forest a -> m (TreeStore a)
-treeStoreNew forest = treeStoreNewDND forest
-                        (Just treeStoreDefaultDragSourceIface)
-                        (Just treeStoreDefaultDragDestIface)
+forestStoreNew :: MonadIO m => Forest a -> m (ForestStore a)
+forestStoreNew forest = forestStoreNewDND forest
+                        (Just forestStoreDefaultDragSourceIface)
+                        (Just forestStoreDefaultDragDestIface)
 
 -- | Create a new list store.
 --
--- * In addition to 'treeStoreNew', this function takes an two interfaces
+-- * In addition to 'forestStoreNew', this function takes an two interfaces
 --   to implement user-defined drag-and-drop functionality.
 --
-treeStoreNewDND :: MonadIO m => Forest a -- ^ the inital tree stored in this model
-  -> Maybe (DragSourceIface TreeStore a) -- ^ an optional interface for drags
-  -> Maybe (DragDestIface TreeStore a) -- ^ an optional interface to handle drops
-  -> m (TreeStore a)
-treeStoreNewDND forest mDSource mDDest = liftIO $ do
+forestStoreNewDND :: MonadIO m => Forest a -- ^ the inital tree stored in this model
+  -> Maybe (DragSourceIface ForestStore a) -- ^ an optional interface for drags
+  -> Maybe (DragDestIface ForestStore a) -- ^ an optional interface to handle drops
+  -> m (ForestStore a)
+forestStoreNewDND forest mDSource mDDest = liftIO $ do
   (storeRef :: IORef (Store a)) <- newIORef Store {
       depth = calcForestDepth forest,
       content = storeToCache forest
@@ -168,47 +196,49 @@ treeStoreNewDND forest mDSource mDDest = liftIO $ do
         writeIORef storeRef store { content = cache' }
         return result
 
-  customStoreNew storeRef mkTreeStore TreeModelIface {
+  customStoreNew storeRef mkForestStore TreeModelIface {
     treeModelIfaceGetFlags = return [],
 
     treeModelIfaceGetIter = \path -> withStore $
-      \Store { depth = d } -> fromPath d <$> treePathGetIndices' path,
+      \Store { depth = d } -> fromPath d <$> treePathGetIndices' path >>= mapM fromForestStoreIter,
 
-    treeModelIfaceGetPath = \iter -> withStore $
+    treeModelIfaceGetPath = toForestStoreIter >=> \iter -> withStore $
       \Store { depth = d } -> treePathNewFromIndices' $ toPath d iter,
 
-    treeModelIfaceGetRow  = \iter -> withStoreUpdateCache $
+    treeModelIfaceGetRow  = toForestStoreIter >=> \iter -> withStoreUpdateCache $
       \Store { depth = d, content = cache } ->
         case checkSuccess d iter cache of
           (True, cache'@((_, (Node { rootLabel = val }:_)):_)) ->
             (val, cache')
-          _ -> error "TreeStore.getRow: iter does not refer to a valid entry",
+          _ -> error "ForestStore.getRow: iter does not refer to a valid entry",
 
-    treeModelIfaceIterNext = \iter -> withStoreUpdateCache $
-      \Store { depth = d, content = cache } -> iterNext d iter cache,
+    treeModelIfaceIterNext = toForestStoreIter >=> \iter -> withStoreUpdateCache (
+      \Store { depth = d, content = cache } -> iterNext d iter cache) >>= mapM fromForestStoreIter,
 
-    treeModelIfaceIterChildren = \mIter -> withStoreUpdateCache $
-      \Store { depth = d, content = cache } ->
-      let iter = fromMaybe invalidIter mIter
-       in iterNthChild d 0 iter cache,
+    treeModelIfaceIterChildren = \mIter -> do
+        iter <- maybe (return invalidIter) toForestStoreIter mIter
+        withStoreUpdateCache (
+          \Store { depth = d, content = cache } ->
+            iterNthChild d 0 iter cache) >>= mapM fromForestStoreIter,
 
-    treeModelIfaceIterHasChild = \iter -> withStoreUpdateCache $
+    treeModelIfaceIterHasChild = toForestStoreIter >=> \iter -> withStoreUpdateCache $
       \Store { depth = d, content = cache } ->
        let (mIter, cache') = iterNthChild d 0 iter cache
         in (isJust mIter, cache'),
 
-    treeModelIfaceIterNChildren = \mIter -> withStoreUpdateCache $
+    treeModelIfaceIterNChildren = mapM toForestStoreIter >=> \mIter -> withStoreUpdateCache $
       \Store { depth = d, content = cache } ->
       let iter = fromMaybe invalidIter mIter
        in iterNChildren d iter cache,
 
-    treeModelIfaceIterNthChild = \mIter idx  -> withStoreUpdateCache $
-      \Store { depth = d, content = cache } ->
-      let iter = fromMaybe invalidIter mIter
-       in iterNthChild d idx iter cache,
+    treeModelIfaceIterNthChild = \mIter idx  -> do
+        iter <- maybe (return invalidIter) toForestStoreIter mIter
+        withStoreUpdateCache (
+          \Store { depth = d, content = cache } ->
+            iterNthChild d idx iter cache) >>= mapM fromForestStoreIter,
 
-    treeModelIfaceIterParent = \iter -> withStore $
-      \Store { depth = d } -> return $ iterParent d iter,
+    treeModelIfaceIterParent = toForestStoreIter >=> \iter -> withStore $
+      \Store { depth = d } -> mapM fromForestStoreIter (iterParent d iter),
 
     treeModelIfaceRefNode = \_ -> return (),
     treeModelIfaceUnrefNode = \_ -> return ()
@@ -216,26 +246,26 @@ treeStoreNewDND forest mDSource mDDest = liftIO $ do
 
 
 -- | Default drag functions for
--- 'Graphics.UI.Gtk.ModelView.TreeStore'. These functions allow the rows of
+-- 'Data.GI.Gtk.ModelView.ForestStore'. These functions allow the rows of
 -- the model to serve as drag source. Any row is allowed to be dragged and the
 -- data set in the 'SelectionDataM' object is set with 'treeSetRowDragData',
 -- i.e. it contains the model and the 'TreePath' to the row.
-treeStoreDefaultDragSourceIface :: DragSourceIface TreeStore row
-treeStoreDefaultDragSourceIface = DragSourceIface {
+forestStoreDefaultDragSourceIface :: DragSourceIface ForestStore row
+forestStoreDefaultDragSourceIface = DragSourceIface {
     treeDragSourceRowDraggable = \_ _-> return True,
     treeDragSourceDragDataGet = \model path sel -> treeSetRowDragData sel model path,
     treeDragSourceDragDataDelete = \model path -> treePathGetIndices' path >>= \dest@(_:_) -> do
-            liftIO $ treeStoreRemove model path
+            liftIO $ forestStoreRemove model path
             return True
 
   }
 
--- | Default drop functions for 'Graphics.UI.Gtk.ModelView.TreeStore'. These
+-- | Default drop functions for 'Data.GI.Gtk.ModelView.ForestStore'. These
 --   functions accept a row and insert the row into the new location if it is
 --   dragged into a tree view
 -- that uses the same model.
-treeStoreDefaultDragDestIface :: DragDestIface TreeStore row
-treeStoreDefaultDragDestIface = DragDestIface {
+forestStoreDefaultDragDestIface :: DragDestIface ForestStore row
+forestStoreDefaultDragDestIface = DragDestIface {
     treeDragDestRowDropPossible = \model path sel -> do
       mModelPath <- treeGetRowDragData sel
       case mModelPath of
@@ -255,9 +285,9 @@ treeStoreDefaultDragDestIface = DragDestIface {
             withManagedPtr model' $ \m' ->
               if m/=m' then return False
               else do
-                row <- treeStoreGetTree model =<< treePathNewFromIndices' source
+                row <- forestStoreGetTree model =<< treePathNewFromIndices' source
                 initPath <- treePathNewFromIndices' (init dest)
-                treeStoreInsertTree model initPath (fromIntegral $ last dest) row
+                forestStoreInsertTree model initPath (fromIntegral $ last dest) row
                 return True
         _ -> return False
   }
@@ -271,8 +301,8 @@ bitsNeeded n = bitsNeeded' 0 n
   where bitsNeeded' b 0 = b
         bitsNeeded' b n = bitsNeeded' (b+1) (n `shiftR` 1)
 
-getBitSlice :: TreeIterRaw -> Int -> Int -> Word32
-getBitSlice (TreeIterRaw _ a b c) off count =
+getBitSlice :: ForestStoreIter -> Int -> Int -> Word32
+getBitSlice (ForestStoreIter _ a b c) off count =
       getBitSliceWord a  off     count
   .|. getBitSliceWord b (off-32) count
   .|. getBitSliceWord c (off-64) count
@@ -281,13 +311,13 @@ getBitSlice (TreeIterRaw _ a b c) off count =
         getBitSliceWord word off count =
           word `shift` (-off) .&. (1 `shiftL` count - 1)
 
-setBitSlice :: TreeIterRaw -> Int -> Int -> Word32 -> TreeIterRaw
-setBitSlice (TreeIterRaw stamp a b c) off count value =
+setBitSlice :: ForestStoreIter -> Int -> Int -> Word32 -> ForestStoreIter
+setBitSlice (ForestStoreIter stamp a b c) off count value =
   assert (value < 1 `shiftL` count) $
-  TreeIterRaw stamp
-           (setBitSliceWord a  off     count value)
-           (setBitSliceWord b (off-32) count value)
-           (setBitSliceWord c (off-64) count value)
+  ForestStoreIter stamp
+                (setBitSliceWord a  off     count value)
+                (setBitSliceWord b (off-32) count value)
+                (setBitSliceWord c (off-64) count value)
 
   where setBitSliceWord :: Word32 -> Int -> Int -> Word32 -> Word32
         setBitSliceWord word off count value =
@@ -306,8 +336,8 @@ setBitSlice (TreeIterRaw stamp a b c) off count value =
 
 -- | The invalid tree iterator.
 --
-invalidIter :: TreeIterRaw
-invalidIter = TreeIterRaw 0 0 0 0
+invalidIter :: ForestStoreIter
+invalidIter = ForestStoreIter 0 0 0 0
 
 --showIterBits (TreeIter _ a b c) = [showBits a, showBits b, showBits c]
 --
@@ -327,7 +357,7 @@ calcForestDepth f = map bitsNeeded $
 
 -- | Convert an iterator into a path.
 --
-toPath :: Depth -> TreeIterRaw -> [Int32]
+toPath :: Depth -> ForestStoreIter -> [Int32]
 toPath d iter = gP 0 d
   where
   gP pos [] = []
@@ -336,7 +366,7 @@ toPath d iter = gP 0 d
 
 -- | Try to convert a path into a 'TreeIter'.
 --
-fromPath :: Depth -> [Int32] -> Maybe TreeIterRaw
+fromPath :: Depth -> [Int32] -> Maybe ForestStoreIter
 fromPath = fP 0 invalidIter
   where
   fP pos ti _ [] = Just ti -- the remaining bits are zero anyway
@@ -352,7 +382,7 @@ fromPath = fP 0 invalidIter
 --   for which this lookup was started and the innermost frame (the last
 --   element of the list) contains the root of the tree.
 --
-type Cache a = [(TreeIterRaw, Forest a)]
+type Cache a = [(ForestStoreIter, Forest a)]
 
 
 -- | Create a traversal structure that allows a pre-order traversal in linear
@@ -366,7 +396,7 @@ storeToCache :: Forest a -> Cache a
 storeToCache [] = []
 storeToCache forest = [(invalidIter, [Node root forest])]
   where
-  root = error "TreeStore.storeToCache: accessed non-exitent root of tree"
+  root = error "ForestStore.storeToCache: accessed non-exitent root of tree"
 
 -- | Extract the store from the cache data structure.
 cacheToStore :: Cache a -> Forest a
@@ -375,7 +405,7 @@ cacheToStore cache = case last cache of (_, [Node _ forest]) -> forest
 
 -- | Advance the traversal structure to the given 'TreeIter'.
 --
-advanceCache :: Depth -> TreeIterRaw -> Cache a -> Cache a
+advanceCache :: Depth -> ForestStoreIter -> Cache a -> Cache a
 advanceCache depth goal [] = []
 advanceCache depth goal cache@((rootIter,_):_) =
   moveToSameLevel 0 depth
@@ -428,12 +458,12 @@ advanceCache depth goal cache@((rootIter,_):_) =
 
 -- | Advance to the given iterator and return weather this was successful.
 --
-checkSuccess :: Depth -> TreeIterRaw -> Cache a -> (Bool, Cache a)
+checkSuccess :: Depth -> ForestStoreIter -> Cache a -> (Bool, Cache a)
 checkSuccess depth iter cache = case advanceCache depth iter cache of
     cache'@((cur,sibs):_) -> (cmp cur iter && not (null sibs), cache')
     [] -> (False, [])
   where
-  cmp (TreeIterRaw _ a1 b1 c1) (TreeIterRaw _ a2 b2 c2) =
+  cmp (ForestStoreIter _ a1 b1 c1) (ForestStoreIter _ a2 b2 c2) =
       a1==a2 && b1==b2 && c2==c2
 
 -- | Get the leaf index of this iterator.
@@ -444,7 +474,7 @@ checkSuccess depth iter cache = case advanceCache depth iter cache of
 --   triple is (pos, leaf, zero) such that pos..pos+leaf denotes the leaf
 --   index and pos+leaf..pos+leaf+zero denotes the bit field that is zero.
 --
-getTreeIterLeaf :: Depth -> TreeIterRaw -> (Int, Int, Int)
+getTreeIterLeaf :: Depth -> ForestStoreIter -> (Int, Int, Int)
 getTreeIterLeaf ds ti = gTIL 0 0 ds
   where
   gTIL pos dCur (dNext:ds)
@@ -454,7 +484,7 @@ getTreeIterLeaf ds ti = gTIL 0 0 ds
 
 -- | Move an iterator forwards on the same level.
 --
-iterNext :: Depth -> TreeIterRaw -> Cache a -> (Maybe TreeIterRaw, Cache a)
+iterNext :: Depth -> ForestStoreIter -> Cache a -> (Maybe ForestStoreIter, Cache a)
 iterNext depth iter cache = let
     (pos,leaf,_child) = getTreeIterLeaf depth iter
     curIdx = getBitSlice iter pos leaf
@@ -468,8 +498,8 @@ iterNext depth iter cache = let
 
 -- | Move down to the child of the given iterator.
 --
-iterNthChild :: Depth -> Int -> TreeIterRaw -> Cache a  ->
-                (Maybe TreeIterRaw, Cache a)
+iterNthChild :: Depth -> Int -> ForestStoreIter -> Cache a  ->
+                (Maybe ForestStoreIter, Cache a)
 iterNthChild depth childIdx_ iter cache = let
     (pos,leaf,child) = getTreeIterLeaf depth iter
     childIdx = fromIntegral childIdx_+1
@@ -482,7 +512,7 @@ iterNthChild depth childIdx_ iter cache = let
 
 -- | Descend to the first child.
 --
-iterNChildren :: Depth -> TreeIterRaw -> Cache a -> (Int, Cache a)
+iterNChildren :: Depth -> ForestStoreIter -> Cache a -> (Int, Cache a)
 iterNChildren depth iter cache = case checkSuccess depth iter cache of
   (True, cache@((_,Node { subForest = forest}:_):_)) -> (length forest, cache)
   (_, cache) -> (0, cache)
@@ -490,7 +520,7 @@ iterNChildren depth iter cache = case checkSuccess depth iter cache of
 
 -- | Ascend to parent.
 --
-iterParent :: Depth -> TreeIterRaw -> Maybe TreeIterRaw
+iterParent :: Depth -> ForestStoreIter -> Maybe ForestStoreIter
 iterParent depth iter = let
     (pos,leaf,_child) = getTreeIterLeaf depth iter
   in if pos==0 then Nothing else
@@ -505,19 +535,19 @@ iterParent depth iter = let
 --   or greater or equal to the number of children of the node at @path@,
 --   the new nodes are appended to the list.
 --
-treeStoreInsertForest :: MonadIO m
- => TreeStore a -- ^ the store
+forestStoreInsertForest :: MonadIO m
+ => ForestStore a -- ^ the store
  -> TreePath    -- ^ @path@ - the position of the parent
  -> Int         -- ^ @pos@ - the index of the new tree
  -> Forest a    -- ^ the list of trees to be inserted
  -> m ()
-treeStoreInsertForest (TreeStore model) path pos nodes = liftIO $ do
+forestStoreInsertForest (ForestStore model) path pos nodes = liftIO $ do
   ipath <- treePathGetIndices' path
   customStoreInvalidateIters $ CustomStore model
   (idx, toggle) <- atomicModifyIORef (customStoreGetPrivate $ CustomStore model) $
     \store@Store { depth = d, content = cache } ->
     case insertIntoForest (cacheToStore cache) nodes ipath pos of
-      Nothing -> error ("treeStoreInsertForest: path does not exist " ++ show ipath)
+      Nothing -> error ("forestStoreInsertForest: path does not exist " ++ show ipath)
       Just (newForest, idx, toggle) ->
        let depth = calcForestDepth newForest
         in (Store { depth = depth,
@@ -530,12 +560,12 @@ treeStoreInsertForest (TreeStore model) path pos nodes = liftIO $ do
                   Just iter = fromPath depth p'
                in do
                   p'' <- treePathNewFromIndices' p'
-                  treeModelRowInserted (CustomStore model) p'' =<< treeIterFromRaw (treeIterSetStamp iter stamp)
+                  treeModelRowInserted (CustomStore model) p'' =<< fromForestStoreIter (forestStoreIterSetStamp iter stamp)
             | (i, node) <- zip [idx..] nodes
             , p <- paths (fromIntegral i : rpath) node ]
   let Just iter = fromPath depth ipath
   when toggle $ treeModelRowHasChildToggled (CustomStore model) path
-                =<< treeIterFromRaw (treeIterSetStamp iter stamp)
+                =<< fromForestStoreIter (forestStoreIterSetStamp iter stamp)
 
   where paths :: [Int32] -> Tree a -> [[Int32]]
         paths path Node { subForest = ts } =
@@ -543,28 +573,28 @@ treeStoreInsertForest (TreeStore model) path pos nodes = liftIO $ do
 
 -- | Insert a node into the store.
 --
-treeStoreInsertTree :: MonadIO m
- => TreeStore a -- ^ the store
+forestStoreInsertTree :: MonadIO m
+ => ForestStore a -- ^ the store
  -> TreePath    -- ^ @path@ - the position of the parent
  -> Int         -- ^ @pos@ - the index of the new tree
  -> Tree a      -- ^ the value to be inserted
  -> m ()
-treeStoreInsertTree store path pos node =
-  treeStoreInsertForest store path pos [node]
+forestStoreInsertTree store path pos node =
+  forestStoreInsertForest store path pos [node]
 
 -- | Insert a single node into the store.
 --
 -- * This function inserts a single node without children into the tree.
---   Its arguments are similar to those of 'treeStoreInsert'.
+--   Its arguments are similar to those of 'forestStoreInsert'.
 --
-treeStoreInsert :: MonadIO m
- => TreeStore a -- ^ the store
+forestStoreInsert :: MonadIO m
+ => ForestStore a -- ^ the store
  -> TreePath    -- ^ @path@ - the position of the parent
  -> Int         -- ^ @pos@ - the index of the new tree
  -> a           -- ^ the value to be inserted
  -> m ()
-treeStoreInsert store path pos node =
-  treeStoreInsertForest store path pos [Node node []]
+forestStoreInsert store path pos node =
+  forestStoreInsertForest store path pos [Node node []]
 
 -- | Insert nodes into a forest.
 --
@@ -593,13 +623,13 @@ insertIntoForest forest nodes (p:ps) pos = case splitAt (fromIntegral p) forest 
 -- * The node denoted by the path is removed, along with all its children.
 --   The function returns @True@ if the given node was found.
 --
-treeStoreRemove :: MonadIO m => TreeStore a -> TreePath -> m Bool
-treeStoreRemove model path = treePathGetIndices' path >>= treeStoreRemoveImpl model path
+forestStoreRemove :: MonadIO m => ForestStore a -> TreePath -> m Bool
+forestStoreRemove model path = treePathGetIndices' path >>= forestStoreRemoveImpl model path
 
-treeStoreRemoveImpl :: MonadIO m => TreeStore a -> TreePath -> [Int32] -> m Bool
+forestStoreRemoveImpl :: MonadIO m => ForestStore a -> TreePath -> [Int32] -> m Bool
   --TODO: eliminate this special case without segfaulting!
-treeStoreRemoveImpl (TreeStore model) _ [] = return False
-treeStoreRemoveImpl (TreeStore model) path ipath = liftIO $ do
+forestStoreRemoveImpl (ForestStore model) _ [] = return False
+forestStoreRemoveImpl (ForestStore model) path ipath = liftIO $ do
   customStoreInvalidateIters (CustomStore model)
   (found, toggle) <- atomicModifyIORef (customStoreGetPrivate (CustomStore model)) $
     \store@Store { depth = d, content = cache } ->
@@ -615,12 +645,12 @@ treeStoreRemoveImpl (TreeStore model) path ipath = liftIO $ do
       let iparent = init ipath
           Just iter = fromPath depth iparent
       parent <- treePathNewFromIndices' iparent
-      treeModelRowHasChildToggled (CustomStore model) parent =<< treeIterFromRaw iter
+      treeModelRowHasChildToggled (CustomStore model) parent =<< fromForestStoreIter iter
     treeModelRowDeleted (CustomStore model) path
   return found
 
-treeStoreClear :: MonadIO m => TreeStore a -> m ()
-treeStoreClear (TreeStore model) = liftIO $ do
+forestStoreClear :: MonadIO m => ForestStore a -> m ()
+forestStoreClear (ForestStore model) = liftIO $ do
   customStoreInvalidateIters (CustomStore model)
   Store { content = cache } <- readIORef (customStoreGetPrivate (CustomStore model))
   let forest = cacheToStore cache
@@ -653,27 +683,27 @@ deleteFromForest forest (p:ps) =
 
 -- | Set a node in the store.
 --
-treeStoreSetValue :: MonadIO m => TreeStore a -> TreePath -> a -> m ()
-treeStoreSetValue store path value = treeStoreChangeM store path (\_ -> return value)
+forestStoreSetValue :: MonadIO m => ForestStore a -> TreePath -> a -> m ()
+forestStoreSetValue store path value = forestStoreChangeM store path (\_ -> return value)
                                   >> return ()
 
 
 -- | Change a node in the store.
 --
 -- * Returns @True@ if the node was found. For a monadic version, see
---   'treeStoreChangeM'.
+--   'forestStoreChangeM'.
 --
-treeStoreChange :: MonadIO m => TreeStore a -> TreePath -> (a -> a) -> m Bool
-treeStoreChange store path func = treeStoreChangeM store path (return . func)
+forestStoreChange :: MonadIO m => ForestStore a -> TreePath -> (a -> a) -> m Bool
+forestStoreChange store path func = forestStoreChangeM store path (return . func)
 
 
 -- | Change a node in the store.
 --
 -- * Returns @True@ if the node was found. For a purely functional version, see
---   'treeStoreChange'.
+--   'forestStoreChange'.
 --
-treeStoreChangeM :: MonadIO m => TreeStore a -> TreePath -> (a -> m a) -> m Bool
-treeStoreChangeM (TreeStore model) path act = do
+forestStoreChangeM :: MonadIO m => ForestStore a -> TreePath -> (a -> m a) -> m Bool
+forestStoreChangeM (ForestStore model) path act = do
   ipath <- treePathGetIndices' path
   customStoreInvalidateIters (CustomStore model)
   store@Store { depth = d, content = cache } <-
@@ -687,7 +717,7 @@ treeStoreChangeM (TreeStore model) path act = do
   liftIO $ writeIORef (customStoreGetPrivate (CustomStore model)) store'
   let Just iter = fromPath d ipath
   stamp <- customStoreGetStamp (CustomStore model)
-  when found $ treeModelRowChanged (CustomStore model) path =<< treeIterFromRaw (treeIterSetStamp iter stamp)
+  when found $ treeModelRowChanged (CustomStore model) path =<< fromForestStoreIter (forestStoreIterSetStamp iter stamp)
   return found
 
 -- | Change a node in the forest.
@@ -714,14 +744,14 @@ changeForest forest act (p:ps) = case splitAt (fromIntegral p) forest of
 -- | Extract one node from the current model. Fails if the given
 --   'TreePath' refers to a non-existent node.
 --
-treeStoreGetValue :: MonadIO m => TreeStore a -> TreePath -> m a
-treeStoreGetValue model path = fmap rootLabel (treeStoreGetTree model path)
+forestStoreGetValue :: MonadIO m => ForestStore a -> TreePath -> m a
+forestStoreGetValue model path = fmap rootLabel (forestStoreGetTree model path)
 
 -- | Extract a subtree from the current model. Fails if the given
 --   'TreePath' refers to a non-existent node.
 --
-treeStoreGetTree :: MonadIO m => TreeStore a -> TreePath -> m (Tree a)
-treeStoreGetTree (TreeStore model) path = liftIO $ do
+forestStoreGetTree :: MonadIO m => ForestStore a -> TreePath -> m (Tree a)
+forestStoreGetTree (ForestStore model) path = liftIO $ do
   ipath <- treePathGetIndices' path
   store@Store { depth = d, content = cache } <-
       readIORef (customStoreGetPrivate (CustomStore model))
@@ -731,14 +761,14 @@ treeStoreGetTree (TreeStore model) path = liftIO $ do
       writeIORef (customStoreGetPrivate (CustomStore model)) store { content = cache' }
       case cache' of
         ((_,node:_):_) | res -> return node
-        _ -> fail ("treeStoreGetTree: path does not exist " ++ show ipath)
-    _ -> fail ("treeStoreGetTree: path does not exist " ++ show ipath)
+        _ -> fail ("forestStoreGetTree: path does not exist " ++ show ipath)
+    _ -> fail ("forestStoreGetTree: path does not exist " ++ show ipath)
 
--- | Extract a subtree from the current model. Like 'treeStoreGetTree'
+-- | Extract a subtree from the current model. Like 'forestStoreGetTree'
 --   but returns @Nothing@ if the path refers to a non-existant node.
 --
-treeStoreLookup :: MonadIO m => TreeStore a -> TreePath -> m (Maybe (Tree a))
-treeStoreLookup (TreeStore model) path = liftIO $ do
+forestStoreLookup :: MonadIO m => ForestStore a -> TreePath -> m (Maybe (Tree a))
+forestStoreLookup (ForestStore model) path = liftIO $ do
   ipath <- treePathGetIndices' path
   store@Store { depth = d, content = cache } <-
       readIORef (customStoreGetPrivate (CustomStore model))

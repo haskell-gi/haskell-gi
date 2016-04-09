@@ -1,5 +1,4 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE LambdaCase #-}
 -- -*-haskell-*-
 --  GIMP Toolkit (GTK) TreeModel
 --
@@ -7,7 +6,7 @@
 --
 --  Created: 8 May 2001
 --
---  Copyright (C) 1999-2007 Axel Simon
+--  Copyright (C) 1999-2016 Axel Simon, Hamish Mackenzie
 --
 --  This library is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU Lesser General Public
@@ -20,22 +19,21 @@
 --  Lesser General Public License for more details.
 --
 -- |
--- Maintainer  : gtk2hs-users@lists.sourceforge.net
 -- Stability   : provisional
 -- Portability : portable (depends on GHC)
 --
 -- The tree interface used by 'TreeView'.
 --
-module Graphics.UI.Gtk.ModelView.TreeModel (
+module Data.GI.Gtk.ModelView.TreeModel (
 -- * Detail
 --
 -- | The 'TreeModel' interface defines a generic storage object for use by the
 -- 'TreeView' and similar widgets. Specifically, the functions in defined here
 -- are used by Gtk's widgets to access the stored data. Thus, rather than
 -- calling these functions, an application programmer has to implement them.
--- While the module "Graphics.UI.Gtk.ModelView.CustomStore" provides the
+-- While the module "Data.GI.Gtk.ModelView.CustomStore" provides the
 -- necessary functions to implement the 'TreeMode' interface, it is often
--- sufficient to use the wo implementations that come with Gtk2Hs, namely are
+-- sufficient to use the wo implementations that come with gi-gtk-hs, namely are
 -- 'ListStore' and 'TreeStore'.
 --
 -- The model is represented as a hierarchical tree of values. It is important
@@ -52,16 +50,16 @@ module Graphics.UI.Gtk.ModelView.TreeModel (
 -- A 'TreeModel' stores records of the same type. Each record is referred to
 -- as row, just like in a relational database. Defining how the information of
 -- a row is displayed can be done in two ways: If the widget displays data
--- using 'Graphics.UI.Gtk.ModelView.CellRenderer.CellRenderer' or one of its
+-- using 'Data.GI.Gtk.ModelView.CellRenderer.CellRenderer' or one of its
 -- derivatives, it is possible to state how a row is mapped to the attributes
 -- of a renderer using the
--- 'Graphics.UI.Gtk.ModelView.CellLayout.cellLayoutSetAttributes' function.
+-- 'Data.GI.Gtk.ModelView.CellLayout.cellLayoutSetAttributes' function.
 -- Some widgets do not use
--- 'Graphics.UI.Gtk.ModelView.CellRenderer.CellRenderer's to display their
+-- 'Data.GI.Gtk.ModelView.CellRenderer.CellRenderer's to display their
 -- data. In this case an extraction function can be defined that maps a row to
 -- one of a few basic types (like 'String's or 'Int's). This extraction
 -- function is associated with a 'ColumnId' using
--- 'Graphics.UI.Gtk.ModelView.CustomStore.treeModelSetColumn'. The latter can
+-- 'Data.GI.Gtk.ModelView.CustomStore.treeModelSetColumn'. The latter can
 -- be set in the widget for the property that should be set. The widget then
 -- uses the function 'treeModelGetValue' and the 'ColumnId' to extract the
 -- value from the model. As the name suggests, using 'ColumnId's creates a
@@ -111,7 +109,8 @@ module Graphics.UI.Gtk.ModelView.TreeModel (
 -- * Methods
   columnIdToNumber,
   stringToTreePath,
-  treeModelGetValue
+  treeModelGetValue,
+  treeModelGetIter
   ) where
 
 import Data.Int (Int32)
@@ -121,11 +120,13 @@ import Data.GI.Base.ManagedPtr (newObject)
 import Foreign.Ptr (Ptr)
 import GI.GdkPixbuf.Objects.Pixbuf (Pixbuf(..))
 import GI.Gtk.Structs.TreeIter (TreeIter)
-import GI.Gtk.Interfaces.TreeModel as Export hiding (treeModelGetValue)
-import qualified GI.Gtk.Interfaces.TreeModel as GI (treeModelGetValue)
-import Graphics.UI.Gtk.ModelView.Types (stringToTreePath,
+import GI.Gtk.Interfaces.TreeModel as Export hiding (treeModelGetValue, treeModelGetIter)
+import qualified GI.Gtk.Interfaces.TreeModel as GI (treeModelGetValue, treeModelGetIter)
+import Data.GI.Gtk.ModelView.Types (stringToTreePath,
                                         ColumnId(..),
                                         ColumnAccess(..))
+import Control.Monad.IO.Class (MonadIO)
+import GI.Gtk.Structs.TreePath (treePathGetDepth, TreePath(..))
 
 --------------------
 -- Constructors
@@ -176,3 +177,11 @@ treeModelGetValue :: TreeModelK self => self
 treeModelGetValue self iter (ColumnId getter _ colId) =
   GI.treeModelGetValue self iter colId >>= getter
 
+-- | Gets the a `TreeIter` or Nothing if the path is invalid or empty
+treeModelGetIter :: (MonadIO m, TreeModelK model) => model -> TreePath -> m (Maybe TreeIter)
+treeModelGetIter model path =
+    treePathGetDepth path >>= \case
+        0 -> return Nothing
+        _ -> GI.treeModelGetIter model path >>= \case
+            (True, iter) -> return $ Just iter
+            _            -> return Nothing

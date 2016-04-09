@@ -8,7 +8,7 @@
 --
 --  Created: 23 January 2006
 --
---  Copyright (C) 2006 Axel Simon
+--  Copyright (C) 2016-2016 Axel Simon, Hamish Mackenzie
 --
 --  This library is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,6 @@
 --  Lesser General Public License for more details.
 --
 -- |
--- Maintainer  : gtk2hs-users@lists.sourceforge.net
 -- Stability   : provisional
 -- Portability : portable (depends on GHC)
 --
@@ -29,7 +28,7 @@
 --
 -- * Module available since Gtk+ version 2.4
 --
-module Graphics.UI.Gtk.ModelView.CellLayout (
+module Data.GI.Gtk.ModelView.CellLayout (
 -- * Detail
 --
 -- | 'CellLayout' is an interface which is implemented by all objects which
@@ -62,13 +61,14 @@ import Data.GI.Base.ManagedPtr (castTo, withManagedPtr)
 import GI.Gtk.Interfaces.CellLayout
 import GI.Gtk.Objects.TreeModelFilter (TreeModelFilter(..), getTreeModelFilterChildModel, treeModelFilterConvertIterToChildIter)
 import GI.Gtk.Objects.TreeModelSort (TreeModelSort(..), getTreeModelSortModel, treeModelSortConvertIterToChildIter)
-import GI.Gtk.Structs.TreeIter (TreeIter(..))
+import GI.Gtk.Structs.TreeIter
+       (treeIterStamp, treeIterUserData3, treeIterUserData2,
+        treeIterUserData, TreeIter(..))
 import GI.Gtk.Objects.CellRenderer (CellRendererK, CellRenderer(..), toCellRenderer)
-{#import Graphics.UI.Gtk.ModelView.Types#}
-{#import Graphics.UI.Gtk.ModelView.TreeModel#}
-{#import Graphics.UI.Gtk.ModelView.CustomStore#} (customStoreGetRow)
-
-{# context lib="gtk" prefix="gtk" #}
+import Data.GI.Gtk.ModelView.Types
+import Data.GI.Gtk.ModelView.TreeModel
+import Data.GI.Gtk.ModelView.CustomStore (customStoreGetRow)
+import Data.GI.Base (get)
 
 --------------------
 -- Methods
@@ -93,14 +93,14 @@ import GI.Gtk.Objects.CellRenderer (CellRendererK, CellRenderer(..), toCellRende
 -- around 'cellLayoutSetAttributeFunc' in that it sets the cells of the @cell@
 -- with the data retrieved from the model.
 --
--- * Note on using 'Graphics.UI.Gtk.ModelView.TreeModelSort.TreeModelSort' and
--- 'Graphics.UI.Gtk.ModelView.TreeModelFilter.TreeModelFilter': These two models
+-- * Note on using 'Data.GI.Gtk.ModelView.TreeModelSort.TreeModelSort' and
+-- 'Data.GI.Gtk.ModelView.TreeModelFilter.TreeModelFilter': These two models
 -- wrap another model, the so-called child model, instead of storing their own
 -- data. This raises the problem that the data of cell renderers must be set
 -- using the child model, while the 'TreeIter's that the view works with refer to
 -- the model that encapsulates the child model. For convenience, this function
 -- transparently translates an iterator to the child model before extracting the
--- data using e.g. 'Graphics.UI.Gtk.TreeModel.TreeModelSort.treeModelSortConvertIterToChildIter'.
+-- data using e.g. 'Data.GI.Gtk.TreeModel.TreeModelSort.treeModelSortConvertIterToChildIter'.
 -- Hence, it is possible to install the encapsulating model in the view and to
 -- pass the child model to this function.
 --
@@ -108,7 +108,7 @@ cellLayoutSetAttributes :: (MonadIO m,
                             CellLayoutK self,
                             CellRendererK cell,
                             TreeModelK (model row),
-                            TypedTreeModelClass model)
+                            TypedTreeModelK model)
  => self
  -> cell   -- ^ @cell@ - A 'CellRenderer'.
  -> model row -- ^ @model@ - A model containing rows of type @row@.
@@ -176,8 +176,11 @@ convertIterFromParentToChildModel iter parentModel@(TreeModel parentModelPtr) ch
                             then return childIter
                             else convertIterFromParentToChildModel childIter child childModel
                     Nothing -> do
-                        (rawIter :: TreeIterRaw) <- withManagedPtr iter $ \ptr -> peek $ castPtr ptr
-                        error ("CellLayout: don't know how to convert iter "++show rawIter++
+                        stamp <- get iter treeIterStamp
+                        ud1 <- get iter treeIterUserData
+                        ud2 <- get iter treeIterUserData2
+                        ud3 <- get iter treeIterUserData3
+                        error ("CellLayout: don't know how to convert iter "++show (stamp, ud1, ud2, ud3)++
                                " from model "++show parentModelPtr++" to model "++
                                show modelPtr++". Is it possible that you are setting the "++
                                "attributes of a CellRenderer using a different model than "++

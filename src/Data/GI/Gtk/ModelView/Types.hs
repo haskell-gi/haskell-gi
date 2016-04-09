@@ -8,8 +8,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
-{-# OPTIONS_HADDOCK hide #-}
-{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 -- -*-haskell-*-
 --  GIMP Toolkit (GTK) CustomStore TreeModel
 --
@@ -17,7 +15,7 @@
 --
 --  Created: 31 March 2006
 --
---  Copyright (C) 2006-2007 Duncan Coutts, Axel Simon
+--  Copyright (C) 2006-2016 Duncan Coutts, Axel Simon, Hamish Mackenzie
 --
 --  This library is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU Lesser General Public
@@ -32,15 +30,14 @@
 -- #hide
 
 -- |
--- Maintainer  : gtk2hs-users@lists.sourceforge.net
 -- Stability   : provisional
 -- Portability : portable (depends on GHC)
 --
 -- Common types and classes for the ModelView modules.
 --
-module Graphics.UI.Gtk.ModelView.Types (
+module Data.GI.Gtk.ModelView.Types (
   TypedTreeModel(..),
-  TypedTreeModelClass,
+  TypedTreeModelK,
   toTypedTreeModel,
   unsafeTreeModelToGeneric,
 
@@ -48,15 +45,6 @@ module Graphics.UI.Gtk.ModelView.Types (
   unsafeTreeModelSortToGeneric,
   TypedTreeModelFilter(..),
   unsafeTreeModelFilterToGeneric,
-
-  -- TreeIterRaw
-  TreeIterRaw(..),
-  receiveTreeIter,
-  peekTreeIter,
-  treeIterSetStamp,
-  treeIterNew,
-  treeIterFromRaw,
-  treeIterToRaw,
 
   -- TreePath
   treePathNewFromIndices',
@@ -108,8 +96,14 @@ import GI.Gtk.Objects.TreeModelFilter (TreeModelFilter)
 import GI.Gtk.Interfaces.TreeSortable (TreeSortable)
 import GI.GLib.Functions (quarkFromString)
 import GI.GdkPixbuf.Objects.Pixbuf (Pixbuf(..))
-import GI.Gtk.Structs.TreeIter (TreeIter(..), treeIterCopy)
+import GI.Gtk.Structs.TreeIter
+       (treeIterUserData3, treeIterUserData2, treeIterUserData,
+        treeIterStamp, TreeIter(..), treeIterCopy)
 import GI.Gtk.Structs.TreePath (TreePath(..), treePathGetIndices, treePathNewFromIndices, treePathNew, treePathGetDepth)
+import Data.GI.Base.Constructible (Constructible(..))
+import Data.GI.Base.Attributes (AttrOp(..))
+import Unsafe.Coerce (unsafeCoerce)
+import Data.GI.Base (set, get)
 
 nullForeignPtr :: ForeignPtr a
 nullForeignPtr = unsafePerformIO $ newForeignPtr_ nullPtr
@@ -118,23 +112,21 @@ equalManagedPtr :: ForeignPtrNewtype a => a -> a -> Bool
 equalManagedPtr a b =
     (coerce a :: ForeignPtr ()) == (coerce b :: ForeignPtr ())
 
-{# context lib="gtk" prefix="gtk" #}
-
 newtype TypedTreeModel row = TypedTreeModel (ForeignPtr (TypedTreeModel row))
 
-class TypedTreeModelClass model where
+class TypedTreeModelK model where
   dummy :: model a -> a
   dummy _ = error "not used"
   -- this is to get the right kind for model :: * -> *
   -- TODO: when haddock is fixed we can use an explicit kind annotation
 
-toTypedTreeModel :: TypedTreeModelClass model => model row -> TypedTreeModel row
+toTypedTreeModel :: TypedTreeModelK model => model row -> TypedTreeModel row
 toTypedTreeModel = unsafeCoerce#
 
 unsafeTreeModelToGeneric :: TreeModel -> model row
 unsafeTreeModelToGeneric = unsafeCoerce#
 
-instance TypedTreeModelClass TypedTreeModel
+instance TypedTreeModelK TypedTreeModel
 
 newtype TypedTreeModelSort row = TypedTreeModelSort (ForeignPtr (TypedTreeModelSort row))
 
@@ -148,87 +140,16 @@ instance GObject (TypedTreeModelSort row) where
 unsafeTreeModelSortToGeneric :: TreeModelSort -> TypedTreeModelSort row
 unsafeTreeModelSortToGeneric = unsafeCoerce#
 
-instance TypedTreeModelClass TypedTreeModelSort
+instance TypedTreeModelK TypedTreeModelSort
 
 newtype TypedTreeModelFilter row = TypedTreeModelFilter (ForeignPtr (TypedTreeModelFilter row))
 
 unsafeTreeModelFilterToGeneric :: TreeModelFilter -> TypedTreeModelFilter row
 unsafeTreeModelFilterToGeneric = unsafeCoerce#
 
-instance TypedTreeModelClass TypedTreeModelFilter
+instance TypedTreeModelK TypedTreeModelFilter
 
--- | Tree Iterator: a pointer to an entry in a
--- 'Graphics.UI.Gtk.ModelView.TreeModel'. The constructor of this structure is
--- public for the sake of creating custom tree models. The first value is a
--- time stamp that is handled by the functions that interface with Gtk. The
--- time stamps are used to print warnings if programmers use an iter to a
--- model that has changed meanwhile. The other three fields are used by the
--- custom model implementation to implement an indexing scheme. The precise
--- use of the three words is therefore implementation specific. See also
--- 'TreePath'.
---
--- TreeIterRaw is for implementation of
-data TreeIterRaw = TreeIterRaw {-# UNPACK #-} !CInt !Word32 !Word32 !Word32
-              deriving Show
-
-{#pointer *TreeIter as TreeIterRawPtr -> TreeIterRaw #}
-
-treeIterNew :: MonadIO m => CInt -> Word32 -> Word32 -> Word32 -> m TreeIter
-treeIterNew s u1 u2 u3 = treeIterFromRaw (TreeIterRaw s u1 u2 u3)
-
-treeIterFromRaw :: MonadIO m => TreeIterRaw -> m TreeIter
-treeIterFromRaw raw = liftIO $ with raw (\p -> newForeignPtr_ (castPtr p) >>= treeIterCopy . TreeIter )
-
-treeIterToRaw :: MonadIO m => TreeIter -> m TreeIterRaw
-treeIterToRaw i = liftIO $ withManagedPtr i (peek . castPtr)
-
-instance Storable TreeIterRaw where
-  sizeOf _ = {# sizeof TreeIter #}
-  alignment _ = alignment (undefined :: CInt)
-  peek ptr = do
-    stamp      <- {# get TreeIter->stamp      #} ptr
-    user_data  <- {# get TreeIter->user_data  #} ptr
-    user_data2 <- {# get TreeIter->user_data2 #} ptr
-    user_data3 <- {# get TreeIter->user_data3 #} ptr
-    return (TreeIterRaw stamp (ptrToWord user_data)
-                           (ptrToWord user_data2)
-                           (ptrToWord user_data3))
-
-    where ptrToWord :: Ptr a -> Word32
-          ptrToWord ptr = fromIntegral (ptr `minusPtr` nullPtr)
-
-  poke ptr (TreeIterRaw stamp user_data user_data2 user_data3) = do
-    {# set TreeIter->stamp      #} ptr stamp
-    {# set TreeIter->user_data  #} ptr (wordToPtr user_data)
-    {# set TreeIter->user_data2 #} ptr (wordToPtr user_data2)
-    {# set TreeIter->user_data3 #} ptr (wordToPtr user_data3)
-
-    where wordToPtr :: Word32 -> Ptr a
-          wordToPtr word = nullPtr `plusPtr` fromIntegral word
-
--- Pass a pointer to a structure large enough to hold a GtkTreeIter
--- structure. If the function returns true, read the tree iter and
--- return it.
-receiveTreeIter :: (Ptr TreeIterRaw -> IO CInt) -> IO (Maybe TreeIterRaw)
-receiveTreeIter body =
-  alloca $ \iterPtr -> do
-  result <- body iterPtr
-  if toBool result
-    then liftM Just (peek iterPtr)
-    else return Nothing
-
--- Note that this function does throw an error if the pointer is NULL rather
--- than returning some random tree iterator.
-peekTreeIter :: Ptr TreeIterRaw -> IO TreeIterRaw
-peekTreeIter ptr
-  | ptr==nullPtr = fail "peekTreeIter: ptr is NULL, tree iterator is invalid"
-  | otherwise = peek ptr
-
--- update the stamp of a tree iter
-treeIterSetStamp :: TreeIterRaw -> CInt -> TreeIterRaw
-treeIterSetStamp (TreeIterRaw _ a b c) s = (TreeIterRaw s a b c)
-
--- | TreePath : a list of indices to specify a subtree or node in a
+-- | TreePath is a list of indices to specify a subtree or node in a
 -- 'Graphics.UI.Gtk.ModelView.TreeModel.TreeModel'. The node that correspond
 -- to a given 'TreePath' might change if nodes are removed or added and a
 -- 'TreePath' may refer to a different or even non-existent node after a

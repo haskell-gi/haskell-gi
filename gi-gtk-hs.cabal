@@ -1,5 +1,5 @@
 name:                gi-gtk-hs
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 homepage:            https://github.com/haskell-gi/gi-gtk-hs
@@ -17,13 +17,15 @@ library
                        Data.GI.Gtk.ModelView.Types
                        Data.GI.Gtk.ModelView.CellLayout
                        Data.GI.Gtk.ModelView.CustomStore
-                       Data.GI.Gtk.ModelView.ListStore
-                       Data.GI.Gtk.ModelView.TreeStore
+                       Data.GI.Gtk.ModelView.SeqStore
+                       Data.GI.Gtk.ModelView.ForestStore
                        Data.GI.Gtk.ModelView.TreeModel
                        Data.GI.Gtk.ComboBox
 
   build-depends:       base >=4.8 && <4.9,
                        mtl >=2.2 && <2.3,
+                       transformers >=0.4.2.0 && <0.5,
+                       containers >=0.5.6.2 && <0.6,
                        text >=1.2 && <1.3,
                        haskell-gi-base >=0.13 && <0.14,
                        gi-glib >=0.2.44 && <0.2.47,
@@ -34,3 +36,10 @@ library
 
   hs-source-dirs:      src
   default-language:    Haskell2010
+  c-sources:
+        cbits/Gtk2HsStore.c
+  if os(osx)
+        c-sources:
+            cbits/quartzfix.c
+  include-dirs: cbits
+

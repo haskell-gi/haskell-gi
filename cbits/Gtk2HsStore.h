@@ -3,7 +3,7 @@
 
 #include <gtk/gtk.h>
 
-#include "Graphics/UI/Gtk/ModelView/CustomStore_stub.h"
+#include "Data/GI/Gtk/ModelView/CustomStore_stub.h"
 
 G_BEGIN_DECLS
 
@@ -20,7 +20,7 @@ typedef struct _Gtk2HsStoreClass  Gtk2HsStoreClass;
 struct _Gtk2HsStore
 {
   GObject parent;
-  
+
   /*< private >*/
   HsStablePtr     impl;        /* a StablePtr CustomStore */
   HsStablePtr     priv;        /* a StablePtr to private data */

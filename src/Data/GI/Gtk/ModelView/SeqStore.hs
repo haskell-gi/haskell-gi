@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
 -- -*-haskell-*-
@@ -7,7 +8,7 @@
 --
 --  Created: 11 Feburary 2006
 --
---  Copyright (C) 2005 Duncan Coutts, Axel Simon
+--  Copyright (C) 2005-2016 Duncan Coutts, Axel Simon, Hamish Mackenzie
 --
 --  This library is free software; you can redistribute it and/or
 --  modify it under the terms of the GNU Lesser General Public
@@ -20,37 +21,36 @@
 --  Lesser General Public License for more details.
 --
 -- |
--- Maintainer  : gtk2hs-users@lists.sourceforge.net
 -- Stability   : provisional
 -- Portability : portable (depends on GHC)
 --
 -- Standard model to store list data.
 --
-module Graphics.UI.Gtk.ModelView.ListStore (
+module Data.GI.Gtk.ModelView.SeqStore (
 
 -- * Types
-  ListStore(..),
+  SeqStore(..),
 
 -- * Constructors
-  listStoreNew,
-  listStoreNewDND,
+  seqStoreNew,
+  seqStoreNewDND,
 
 -- * Implementation of Interfaces
-  listStoreDefaultDragSourceIface,
-  listStoreDefaultDragDestIface,
+  seqStoreDefaultDragSourceIface,
+  seqStoreDefaultDragDestIface,
 
 -- * Methods
-  listStoreIterToIndex,
-  listStoreGetValue,
-  listStoreSafeGetValue,
-  listStoreSetValue,
-  listStoreToList,
-  listStoreGetSize,
-  listStoreInsert,
-  listStorePrepend,
-  listStoreAppend,
-  listStoreRemove,
-  listStoreClear,
+  seqStoreIterToIndex,
+  seqStoreGetValue,
+  seqStoreSafeGetValue,
+  seqStoreSetValue,
+  seqStoreToList,
+  seqStoreGetSize,
+  seqStoreInsert,
+  seqStorePrepend,
+  seqStoreAppend,
+  seqStoreRemove,
+  seqStoreClear,
   ) where
 
 import Control.Monad (when)
@@ -65,8 +65,8 @@ import Data.Sequence (Seq)
 import qualified Data.Foldable as F
 import Data.Int (Int32)
 
-import Graphics.UI.Gtk.ModelView.Types
-import Graphics.UI.Gtk.ModelView.CustomStore
+import Data.GI.Gtk.ModelView.Types
+import Data.GI.Gtk.ModelView.CustomStore
        (customStoreGetStamp, customStoreGetPrivate,
         TreeModelIface(..), customStoreNew, DragDestIface(..),
         DragSourceIface(..), CustomStore(..))
@@ -80,54 +80,73 @@ import GI.GObject.Objects.Object (Object(..))
 import GI.Gtk.Functions (treeGetRowDragData, treeSetRowDragData)
 import GI.Gtk.Flags (TreeModelFlags(..))
 import Control.Monad.IO.Class (MonadIO)
-import GI.Gtk.Structs.TreeIter (TreeIter(..))
+import GI.Gtk.Structs.TreeIter
+       (treeIterUserData3, treeIterUserData2, treeIterStamp,
+        treeIterUserData, TreeIter(..))
+import Data.GI.Base (get)
+import Data.Word (Word32)
+import Unsafe.Coerce (unsafeCoerce)
+import Data.GI.Base.Constructible (Constructible(..))
+import Data.GI.Base.Attributes (AttrOp(..))
+import Foreign.Ptr (nullPtr)
 
-newtype ListStore a = ListStore (ForeignPtr (CustomStore (IORef (Seq a)) a))
+seqStoreIterNew :: MonadIO m => Int32 -> Int32 -> m TreeIter
+seqStoreIterNew s u1 = new TreeIter [
+    treeIterStamp     := s,
+    treeIterUserData  := unsafeCoerce u1,
+    treeIterUserData2 := nullPtr,
+    treeIterUserData3 := nullPtr]
 
-mkListStore :: CustomStore (IORef (Seq a)) a -> ListStore a
-mkListStore (CustomStore ptr) = ListStore ptr
+newtype SeqStore a = SeqStore (ForeignPtr (CustomStore (IORef (Seq a)) a))
 
-type instance ParentTypes (ListStore a) = ListStoreParentTypes
-type ListStoreParentTypes = '[TreeModel, Object]
+mkSeqStore :: CustomStore (IORef (Seq a)) a -> SeqStore a
+mkSeqStore (CustomStore ptr) = SeqStore ptr
 
-instance GObject (ListStore a) where
+type instance ParentTypes (SeqStore a) = SeqStoreParentTypes
+type SeqStoreParentTypes = '[TreeModel, Object]
+
+instance GObject (SeqStore a) where
     gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModel)
 
-instance TypedTreeModelClass ListStore
+instance TypedTreeModelK SeqStore
 
 -- | Create a new 'TreeModel' that contains a list of elements.
-listStoreNew :: MonadIO m => [a] -> m (ListStore a)
-listStoreNew xs = listStoreNewDND xs (Just listStoreDefaultDragSourceIface)
-                                     (Just listStoreDefaultDragDestIface)
+seqStoreNew :: MonadIO m => [a] -> m (SeqStore a)
+seqStoreNew xs = seqStoreNewDND xs (Just seqStoreDefaultDragSourceIface)
+                                     (Just seqStoreDefaultDragDestIface)
 
 -- | Create a new 'TreeModel' that contains a list of elements. In addition, specify two
 --   interfaces for drag and drop.
 --
-listStoreNewDND :: MonadIO m
+seqStoreNewDND :: MonadIO m
   => [a] -- ^ the initial content of the model
-  -> Maybe (DragSourceIface ListStore a) -- ^ an optional interface for drags
-  -> Maybe (DragDestIface ListStore a) -- ^ an optional interface to handle drops
-  -> m (ListStore a) -- ^ the new model
-listStoreNewDND xs mDSource mDDest = do
+  -> Maybe (DragSourceIface SeqStore a) -- ^ an optional interface for drags
+  -> Maybe (DragDestIface SeqStore a) -- ^ an optional interface to handle drops
+  -> m (SeqStore a) -- ^ the new model
+seqStoreNewDND xs mDSource mDDest = do
   rows <- liftIO $ newIORef (Seq.fromList xs)
 
-  customStoreNew rows mkListStore TreeModelIface {
+  customStoreNew rows mkSeqStore TreeModelIface {
       treeModelIfaceGetFlags      = return [TreeModelFlagsListOnly],
       treeModelIfaceGetIter       = \path -> treePathGetIndices' path >>= \[n] -> readIORef rows >>= \rows ->
-                                     return (if Seq.null rows then Nothing else
-                                             Just (TreeIterRaw 0 (fromIntegral n) 0 0)),
-      treeModelIfaceGetPath       = \(TreeIterRaw _ n _ _) -> treePathNewFromIndices' [fromIntegral n],
-      treeModelIfaceGetRow        = \(TreeIterRaw _ n _ _) ->
-                                 readIORef rows >>= \rows ->
+                                     if Seq.null rows then return Nothing else
+                                             Just <$> seqStoreIterNew 0 (fromIntegral n),
+      treeModelIfaceGetPath       = \i -> do
+                            n <- seqStoreIterToIndex i
+                            treePathNewFromIndices' [fromIntegral n],
+      treeModelIfaceGetRow        = \i -> do
+                            n <- seqStoreIterToIndex i
+                            readIORef rows >>= \rows ->
                                  if inRange (0, Seq.length rows - 1) (fromIntegral n)
                                    then return (rows `Seq.index` fromIntegral n)
-                                   else fail "ListStore.getRow: iter does not refer to a valid entry",
+                                   else fail "SeqStore.getRow: iter does not refer to a valid entry",
 
-      treeModelIfaceIterNext      = \(TreeIterRaw _ n _ _) ->
-                                 readIORef rows >>= \rows ->
+      treeModelIfaceIterNext      = \i -> do
+                            n <- seqStoreIterToIndex i
+                            readIORef rows >>= \rows ->
                                  if inRange (0, Seq.length rows - 1) (fromIntegral (n+1))
-                                   then return (Just (TreeIterRaw 0 (n+1) 0 0))
+                                   then Just <$> seqStoreIterNew 0 (n+1)
                                    else return Nothing,
       treeModelIfaceIterChildren  = \_ -> return Nothing,
       treeModelIfaceIterHasChild  = \_ -> return False,
@@ -136,7 +155,7 @@ listStoreNewDND xs mDSource mDDest = do
                                              Nothing -> return $! Seq.length rows
                                              _       -> return 0,
       treeModelIfaceIterNthChild  = \index n -> case index of
-                                               Nothing -> return (Just (TreeIterRaw 0 (fromIntegral n) 0 0))
+                                               Nothing -> Just <$> seqStoreIterNew 0 (fromIntegral n)
                                                _       -> return Nothing,
       treeModelIfaceIterParent    = \_ -> return Nothing,
       treeModelIfaceRefNode       = \_ -> return (),
@@ -144,32 +163,32 @@ listStoreNewDND xs mDSource mDDest = do
     } mDSource mDDest
 
 
--- | Convert a 'TreeIterRaw' to an an index into the 'ListStore'. Note that this
+-- | Convert a 'TreeIterRaw' to an an index into the 'SeqStore'. Note that this
 --   function merely extracts the second element of the 'TreeIterRaw'.
-listStoreIterToIndex :: MonadIO m => TreeIter -> m Int32
-listStoreIterToIndex i = (\(TreeIterRaw _ n _ _) -> fromIntegral n) <$> treeIterToRaw i
+seqStoreIterToIndex :: MonadIO m => TreeIter -> m Int32
+seqStoreIterToIndex i = unsafeCoerce <$> get i treeIterUserData
 
--- | Default drag functions for 'Graphics.UI.Gtk.ModelView.ListStore'. These
+-- | Default drag functions for 'Data.GI.Gtk.ModelView.SeqStore'. These
 -- functions allow the rows of the model to serve as drag source. Any row is
 -- allowed to be dragged and the data set in the 'SelectionDataM' object is
 -- set with 'treeSetRowDragData', i.e. it contains the model and the
 -- 'TreePath' to the row.
-listStoreDefaultDragSourceIface :: DragSourceIface ListStore row
-listStoreDefaultDragSourceIface = DragSourceIface {
+seqStoreDefaultDragSourceIface :: DragSourceIface SeqStore row
+seqStoreDefaultDragSourceIface = DragSourceIface {
     treeDragSourceRowDraggable = \_ _-> return True,
     treeDragSourceDragDataGet = \model path sel -> treeSetRowDragData sel model path,
     treeDragSourceDragDataDelete = \model path -> treePathGetIndices' path >>= \(dest:_) -> do
-            liftIO $ listStoreRemove model (fromIntegral dest)
+            liftIO $ seqStoreRemove model (fromIntegral dest)
             return True
 
   }
 
--- | Default drop functions for 'Graphics.UI.Gtk.ModelView.ListStore'. These
+-- | Default drop functions for 'Data.GI.Gtk.ModelView.SeqStore'. These
 --   functions accept a row and insert the row into the new location if it is
 --   dragged into a tree view
 -- that uses the same model.
-listStoreDefaultDragDestIface :: DragDestIface ListStore row
-listStoreDefaultDragDestIface = DragDestIface {
+seqStoreDefaultDragDestIface :: DragDestIface SeqStore row
+seqStoreDefaultDragDestIface = DragDestIface {
     treeDragDestRowDropPossible = \model path sel -> do
       dest <- treePathGetIndices' path
       mModelPath <- treeGetRowDragData sel
@@ -190,22 +209,22 @@ listStoreDefaultDragDestIface = DragDestIface {
             withManagedPtr model' $ \m' ->
               if m/=m' then return False
               else do
-                row <- listStoreGetValue model source
-                listStoreInsert model dest row
+                row <- seqStoreGetValue model source
+                seqStoreInsert model dest row
                 return True
         _ -> return False
   }
 
 -- | Extract the value at the given index.
 --
-listStoreGetValue :: MonadIO m => ListStore a -> Int32 -> m a
-listStoreGetValue (ListStore model) index =
+seqStoreGetValue :: MonadIO m => SeqStore a -> Int32 -> m a
+seqStoreGetValue (SeqStore model) index =
   (`Seq.index` fromIntegral index) <$> liftIO (readIORef (customStoreGetPrivate (CustomStore model)))
 
 -- | Extract the value at the given index.
 --
-listStoreSafeGetValue :: MonadIO m => ListStore a -> Int32 -> m (Maybe a)
-listStoreSafeGetValue (ListStore model) index' = do
+seqStoreSafeGetValue :: MonadIO m => SeqStore a -> Int32 -> m (Maybe a)
+seqStoreSafeGetValue (SeqStore model) index' = do
   let index = fromIntegral index'
   seq <- liftIO $ readIORef (customStoreGetPrivate (CustomStore model))
   return $ if index >=0 && index < Seq.length seq
@@ -214,29 +233,29 @@ listStoreSafeGetValue (ListStore model) index' = do
 
 -- | Update the value at the given index. The index must exist.
 --
-listStoreSetValue :: MonadIO m => ListStore a -> Int32 -> a -> m ()
-listStoreSetValue (ListStore model) index value = do
+seqStoreSetValue :: MonadIO m => SeqStore a -> Int32 -> a -> m ()
+seqStoreSetValue (SeqStore model) index value = do
   liftIO $ modifyIORef (customStoreGetPrivate (CustomStore model)) (Seq.update (fromIntegral index) value)
   stamp <- customStoreGetStamp (CustomStore model)
   path <- treePathNewFromIndices' [index]
-  i <- treeIterNew stamp (fromIntegral index) 0 0
+  i <- seqStoreIterNew stamp (fromIntegral index)
   treeModelRowChanged (CustomStore model) path i
 
 -- | Extract all data from the store.
 --
-listStoreToList :: MonadIO m => ListStore a -> m [a]
-listStoreToList (ListStore model) =
+seqStoreToList :: MonadIO m => SeqStore a -> m [a]
+seqStoreToList (SeqStore model) =
   F.toList <$> liftIO (readIORef (customStoreGetPrivate (CustomStore model)))
 
 -- | Query the number of elements in the store.
-listStoreGetSize :: MonadIO m => ListStore a -> m Int32
-listStoreGetSize (ListStore model) =
+seqStoreGetSize :: MonadIO m => SeqStore a -> m Int32
+seqStoreGetSize (SeqStore model) =
   fromIntegral . Seq.length <$> liftIO (readIORef (customStoreGetPrivate (CustomStore model)))
 
 -- | Insert an element in front of the given element. The element is appended
 -- if the index is greater or equal to the size of the list.
-listStoreInsert :: MonadIO m => ListStore a -> Int32 -> a -> m ()
-listStoreInsert (ListStore model) index value = liftIO $ do
+seqStoreInsert :: MonadIO m => SeqStore a -> Int32 -> a -> m ()
+seqStoreInsert (SeqStore model) index value = liftIO $ do
   seq <- readIORef (customStoreGetPrivate (CustomStore model))
   when (index >= 0) $ do
     let index' | fromIntegral index > Seq.length seq = Seq.length seq
@@ -244,7 +263,7 @@ listStoreInsert (ListStore model) index value = liftIO $ do
     writeIORef (customStoreGetPrivate (CustomStore model)) (insert index' value seq)
     stamp <- customStoreGetStamp (CustomStore model)
     p <- treePathNewFromIndices' [fromIntegral index']
-    i <- treeIterNew stamp (fromIntegral index') 0 0
+    i <- seqStoreIterNew stamp (fromIntegral index')
     treeModelRowInserted (CustomStore model) p i
 
   where insert :: Int -> a -> Seq a -> Seq a
@@ -252,35 +271,35 @@ listStoreInsert (ListStore model) index value = liftIO $ do
           where (front, back) = Seq.splitAt i xs
 
 -- | Prepend the element to the store.
-listStorePrepend :: MonadIO m => ListStore a -> a -> m ()
-listStorePrepend (ListStore model) value = do
+seqStorePrepend :: MonadIO m => SeqStore a -> a -> m ()
+seqStorePrepend (SeqStore model) value = do
   liftIO $ modifyIORef (customStoreGetPrivate (CustomStore model))
               (\seq -> value Seq.<| seq)
   stamp <- customStoreGetStamp (CustomStore model)
   p <- treePathNewFromIndices' [0]
-  i <- treeIterNew stamp 0 0 0
+  i <- seqStoreIterNew stamp 0
   treeModelRowInserted (CustomStore model) p i
 
 ---- | Prepend a list to the store. Not implemented yet.
---listStorePrependList :: MonadIO m => ListStore a -> [a] -> m ()
---listStorePrependList store list =
---  mapM_ (listStoreInsert store 0) (reverse list)
+--seqStorePrependList :: MonadIO m => SeqStore a -> [a] -> m ()
+--seqStorePrependList store list =
+--  mapM_ (seqStoreInsert store 0) (reverse list)
 
 -- | Append an element to the store. Returns the index of the inserted
 -- element.
-listStoreAppend :: MonadIO m => ListStore a -> a -> m Int32
-listStoreAppend (ListStore model) value = do
+seqStoreAppend :: MonadIO m => SeqStore a -> a -> m Int32
+seqStoreAppend (SeqStore model) value = do
   index <- liftIO $ atomicModifyIORef (customStoreGetPrivate (CustomStore model))
                              (\seq -> (seq Seq.|> value, Seq.length seq))
   stamp <- customStoreGetStamp (CustomStore model)
   p <- treePathNewFromIndices' [fromIntegral index]
-  i <- treeIterNew stamp (fromIntegral index) 0 0
+  i <- seqStoreIterNew stamp (fromIntegral index)
   treeModelRowInserted (CustomStore model) p i
   return $ fromIntegral index
 
 {-
-listStoreAppendList :: MonadIO m => ListStore a -> [a] -> m ()
-listStoreAppendList (ListStore model) values = do
+seqStoreAppendList :: MonadIO m => SeqStore a -> [a] -> m ()
+seqStoreAppendList (SeqStore model) values = do
   seq <- readIORef (customStoreGetPrivate model)
   let seq' = Seq.fromList values
       startIndex = Seq.length seq
@@ -293,8 +312,8 @@ listStoreAppendList (ListStore model) values = do
 
 -- | Remove the element at the given index.
 --
-listStoreRemove :: MonadIO m => ListStore a -> Int32 -> m ()
-listStoreRemove (ListStore model) index' = liftIO $ do
+seqStoreRemove :: MonadIO m => SeqStore a -> Int32 -> m ()
+seqStoreRemove (SeqStore model) index' = liftIO $ do
   seq <- readIORef (customStoreGetPrivate (CustomStore model))
   when (index >=0 && index < Seq.length seq) $ do
     writeIORef (customStoreGetPrivate (CustomStore model)) (delete index seq)
@@ -306,8 +325,8 @@ listStoreRemove (ListStore model) index' = liftIO $ do
         index = fromIntegral index'
 
 -- | Empty the store.
-listStoreClear :: MonadIO m => ListStore a -> m ()
-listStoreClear (ListStore model) = liftIO $
+seqStoreClear :: MonadIO m => SeqStore a -> m ()
+seqStoreClear (SeqStore model) = liftIO $
 
   -- Since deleting rows can cause callbacks (eg due to selection changes)
   -- we have to make sure the model is consitent with the view at each
@@ -327,20 +346,20 @@ listStoreClear (ListStore model) = liftIO $
          loop (Seq.length seq - 1) (Seq.viewr seq)
 
 ---- | Permute the rows of the store. Not yet implemented.
---listStoreReorder :: MonadIO m => ListStore a -> [Int] -> m ()
---listStoreReorder store = undefined
+--seqStoreReorder :: MonadIO m => SeqStore a -> [Int] -> m ()
+--seqStoreReorder store = undefined
 --
 ---- | Swap two rows of the store. Not yet implemented.
---listStoreSwap :: MonadIO m => ListStore a -> Int -> Int -> m ()
---listStoreSwap store = undefined
+--seqStoreSwap :: MonadIO m => SeqStore a -> Int -> Int -> m ()
+--seqStoreSwap store = undefined
 --
 ---- | Move the element at the first index in front of the element denoted by
 ---- the second index. Not yet implemented.
---listStoreMoveBefore :: MonadIO m => ListStore a -> Int -> Int -> m ()
---listStoreMoveBefore store = undefined
+--seqStoreMoveBefore :: MonadIO m => SeqStore a -> Int -> Int -> m ()
+--seqStoreMoveBefore store = undefined
 --
 ---- | Move the element at the first index past the element denoted by the
 ---- second index. Not yet implemented.
---listStoreMoveAfter :: MonadIO m => ListStore a -> Int -> Int -> m ()
---listStoreMoveAfter store = undefined
+--seqStoreMoveAfter :: MonadIO m => SeqStore a -> Int -> Int -> m ()
+--seqStoreMoveAfter store = undefined
 

@@ -1,4 +1,4 @@
-#include "Graphics/UI/Gtk/ModelView/Gtk2HsStore.h"
+#include "Gtk2HsStore.h"
 
 /* #define DEBUG */
 
@@ -83,7 +83,7 @@ static gboolean     gtk2hs_store_drag_data_received     (GtkTreeDragDest        
 static gboolean     gtk2hs_store_row_drop_possible      (GtkTreeDragDest        *drag_dest,
                                                          GtkTreePath            *dest_path,
                                                          GtkSelectionData       *selection_data);
-                                                                                          
+
 static GObjectClass *parent_class = NULL;
 
 
@@ -151,17 +151,17 @@ gtk2hs_store_get_type (void)
 
     g_type_add_interface_static (gtk2hs_store_type, GTK_TYPE_TREE_MODEL,
     &tree_model_info);
-    
+
     /* The TreeSortable interface is currently not implemented. Uncomment to
     add it. */
 /*    g_type_add_interface_static (gtk2hs_store_type,
                                  GTK_TYPE_TREE_SORTABLE,
                                  &tree_sortable_info);
-*/                                 
+*/
     g_type_add_interface_static (gtk2hs_store_type,
                                  GTK_TYPE_TREE_DRAG_SOURCE,
                                  &tree_drag_source_info);
-                                 
+
     g_type_add_interface_static (gtk2hs_store_type,
                                  GTK_TYPE_TREE_DRAG_DEST,
                                  &tree_drag_dest_info);
@@ -364,7 +364,7 @@ gtk2hs_store_get_column_type (GtkTreeModel *tree_model,
   WHEN_DEBUG(g_debug("calling gtk2hs_store_get_column_type\t(%p, %d)\n", tree_model, index));
   Gtk2HsStore *store = (Gtk2HsStore *) tree_model;
   g_return_val_if_fail (GTK2HS_IS_STORE (tree_model), G_TYPE_INVALID);
-  
+
   GType result = gtk2hs_store_get_column_type_impl(store->impl, index);
   WHEN_DEBUG(g_debug("return  gtk2hs_store_get_column_type\t=%s\n", g_type_name(result)));
   return result;
@@ -412,7 +412,7 @@ gtk2hs_store_get_path (GtkTreeModel *tree_model,
   Gtk2HsStore *store = (Gtk2HsStore *) tree_model;
   g_return_val_if_fail (GTK2HS_IS_STORE (tree_model), NULL);
   g_return_val_if_fail (iter->stamp == store->stamp, NULL);
-  
+
   GtkTreePath * result = gtk2hs_store_get_path_impl(store->impl, iter);
   WHEN_DEBUG(
     gchar *result_str = gtk_tree_path_to_string(result);
@@ -511,7 +511,7 @@ gtk2hs_store_iter_has_child (GtkTreeModel *tree_model,
   g_return_val_if_fail (GTK2HS_IS_STORE (tree_model), FALSE);
   /* don't check if iter->stamp == store->stamp; see the thread culminating in
    * http://sourceforge.net/p/gtk2hs/mailman/message/31887332/ for details */
-  
+
   gboolean result = gtk2hs_store_iter_has_child_impl(store->impl, iter);
   WHEN_DEBUG(g_debug("return  gtk2hs_store_iter_has_child\t=%s\n", result ? "TRUE" : "FALSE"));
   return result;
@@ -587,7 +587,7 @@ gtk2hs_store_iter_parent (GtkTreeModel *tree_model,
   g_return_val_if_fail (GTK2HS_IS_STORE (tree_model), FALSE);
   g_return_val_if_fail (child != NULL, FALSE);
   g_return_val_if_fail (child->stamp == store->stamp, FALSE);
- 
+
   gboolean result = gtk2hs_store_iter_parent_impl(store->impl, iter, child);
   if (result) iter->stamp = store->stamp;
   WHEN_DEBUG(g_debug("return  gtk2hs_store_iter_parent\t\t=%s\n", result ? "TRUE" : "FALSE"));
@@ -626,7 +626,7 @@ gtk2hs_store_get_sort_column_id     (GtkTreeSortable        *sortable,
   WHEN_DEBUG(g_debug("calling gtk2hs_store_get_sort_column_id\t\t(%p)\n", sortable));
   return 0;
 }
-         
+
 static void
 gtk2hs_store_set_sort_column_id (GtkTreeSortable        *sortable,
                                  gint                   sort_column_id,
@@ -645,7 +645,7 @@ gtk2hs_store_set_sort_func (GtkTreeSortable        *sortable,
                             GtkDestroyNotify       destroy)
 {
   WHEN_DEBUG(g_debug("calling gtk2hs_store_set_sort_func\t\t(%p)\n", sortable));
-  return;  
+  return;
 }
 
 static void
@@ -675,7 +675,7 @@ gtk2hs_store_row_draggable (GtkTreeDragSource *drag_source,
   )
   Gtk2HsStore *store = (Gtk2HsStore *) drag_source;
   g_return_val_if_fail (GTK2HS_IS_STORE (drag_source), FALSE);
-                    
+
   gboolean result = gtk2hs_store_row_draggable_impl(drag_source, store->impl, path);
   WHEN_DEBUG(g_debug("return  gtk2hs_store_row_draggable\t\t=%s\n", result ? "TRUE" : "FALSE"));
   return result;
@@ -693,7 +693,7 @@ gtk2hs_store_drag_data_get (GtkTreeDragSource *drag_source,
   Gtk2HsStore *store = (Gtk2HsStore *) drag_source;
   g_return_val_if_fail (GTK2HS_IS_STORE (drag_source), FALSE);
   g_return_val_if_fail (selection_data!=NULL, FALSE);
-  
+
   gboolean result = gtk2hs_store_drag_data_get_impl(drag_source, store->impl, path, selection_data);
   WHEN_DEBUG(g_debug("return  gtk2hs_store_drag_data_get\t\t=%s\n", result ? "TRUE" : "FALSE"));
   return result;
