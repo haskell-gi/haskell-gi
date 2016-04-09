@@ -5,11 +5,6 @@ module Data.GI.Gtk
 import GI.Gtk as Export hiding
     ( treeModelGetValue
     , treeModelGetIter
-    , treeDragDestRowDropPossible
-    , treeDragDestDragDataReceived
-    , treeDragSourceRowDraggable
-    , treeDragSourceDragDataGet
-    , treeDragSourceDragDataDelete
     )
 import Data.GI.Gtk.BuildFn               as Export
 import Data.GI.Gtk.ModelView.Types       as Export

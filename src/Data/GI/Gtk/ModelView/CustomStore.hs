@@ -193,14 +193,14 @@ data DragSourceIface model row = DragSourceIface {
     -- | Determine if the row at the given path is draggable. Return
     --   @False@ if for some reason this row should not be dragged by
     --   the user.
-    treeDragSourceRowDraggable  :: model row -> TreePath -> IO Bool,                 -- query if the row is draggable
+    customDragSourceRowDraggable  :: model row -> TreePath -> IO Bool,                 -- query if the row is draggable
     -- | Fill in the 'SelectionData' structure with information on
     --   the given node using
     --   'Data.GI.Gtk.General.Selection.selectionDataSet'.
-    treeDragSourceDragDataGet   :: model row -> TreePath -> SelectionData -> IO Bool,     -- store row in selection object
+    customDragSourceDragDataGet   :: model row -> TreePath -> SelectionData -> IO Bool,     -- store row in selection object
     -- | The widget is informed that the row at the given path should
     --   be deleted as the result of this drag.
-    treeDragSourceDragDataDelete:: model row -> TreePath -> IO Bool                  -- instruct store to delete the row
+    customDragSourceDragDataDelete:: model row -> TreePath -> IO Bool                  -- instruct store to delete the row
   }
 
 -- | A structure containing functions that enable this widget to be used
@@ -208,11 +208,11 @@ data DragSourceIface model row = DragSourceIface {
 data DragDestIface model row = DragDestIface {
     -- | Tell the drag-and-drop mechanism if the row can be dropped at the
     --   given path.
-    treeDragDestRowDropPossible :: model row -> TreePath -> SelectionData -> IO Bool,     -- query if row drop is possible
+    customDragDestRowDropPossible :: model row -> TreePath -> SelectionData -> IO Bool,     -- query if row drop is possible
     -- | The data in the 'SelectionDataM' structure should be read using
     --   'Data.GI.Gtk.General.Selection.selectionDataGet' and
     --   its information be used to insert a new row at the given path.
-    treeDragDestDragDataReceived:: model row -> TreePath -> SelectionData -> IO Bool      -- insert row from selection object
+    customDragDestDragDataReceived:: model row -> TreePath -> SelectionData -> IO Bool      -- insert row from selection object
   }
 
 -- | Create a new store that implements the 'TreeModelIface' interface and
@@ -230,11 +230,11 @@ customStoreNew :: (MonadIO m, TreeModelK (model row), TypedTreeModelK model) =>
   -> m (model row)
 customStoreNew priv con tmIface mDragSource mDragDest = liftIO $ do
   cMap <- columnMapNew
-  let dummyDragSource = DragSourceIface { treeDragSourceRowDraggable = \_ _ -> return False,
-                                          treeDragSourceDragDataGet  = \_ _ _ -> return False,
-                                          treeDragSourceDragDataDelete = \_ _ -> return False }
-  let dummyDragDest = DragDestIface { treeDragDestRowDropPossible = \_ _ _ -> return False,
-                                      treeDragDestDragDataReceived = \_ _ _ -> return False }
+  let dummyDragSource = DragSourceIface { customDragSourceRowDraggable = \_ _ -> return False,
+                                          customDragSourceDragDataGet  = \_ _ _ -> return False,
+                                          customDragSourceDragDataDelete = \_ _ -> return False }
+  let dummyDragDest = DragDestIface { customDragDestRowDropPossible = \_ _ _ -> return False,
+                                      customDragDestDragDataReceived = \_ _ _ -> return False }
   implPtr <- newStablePtr CustomStoreImplementation {
         customStoreColumns = cMap,
         customStoreIface = tmIface,
@@ -497,58 +497,58 @@ treeModelIfaceUnrefNode_static storePtr iterPtr = do
 foreign export ccall "gtk2hs_store_unref_node_impl"
   treeModelIfaceUnrefNode_static :: StablePtr (CustomStoreImplementation model row) -> Ptr TreeIter -> IO ()
 
-treeDragSourceRowDraggable_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
-treeDragSourceRowDraggable_static mPtr storePtr pathPtr = do
+customDragSourceRowDraggable_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
+customDragSourceRowDraggable_static mPtr storePtr pathPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragSourceIface <$> deRefStablePtr storePtr
   path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
-  fromBool <$> treeDragSourceRowDraggable store (unsafeTreeModelToGeneric model) path
+  fromBool <$> customDragSourceRowDraggable store (unsafeTreeModelToGeneric model) path
 
 foreign export ccall "gtk2hs_store_row_draggable_impl"
-  treeDragSourceRowDraggable_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
+  customDragSourceRowDraggable_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
 
-treeDragSourceDragDataGet_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
-treeDragSourceDragDataGet_static mPtr storePtr pathPtr selectionPtr = do
+customDragSourceDragDataGet_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
+customDragSourceDragDataGet_static mPtr storePtr pathPtr selectionPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragSourceIface <$> deRefStablePtr storePtr
   path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
   selection <- selectionDataCopy . SelectionData =<< newForeignPtr_ selectionPtr
-  fromBool <$> treeDragSourceDragDataGet store (unsafeTreeModelToGeneric model) path selection
+  fromBool <$> customDragSourceDragDataGet store (unsafeTreeModelToGeneric model) path selection
 
 foreign export ccall "gtk2hs_store_drag_data_get_impl"
-  treeDragSourceDragDataGet_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
+  customDragSourceDragDataGet_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
 
-treeDragSourceDragDataDelete_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
-treeDragSourceDragDataDelete_static mPtr storePtr pathPtr = do
+customDragSourceDragDataDelete_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
+customDragSourceDragDataDelete_static mPtr storePtr pathPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragSourceIface <$> deRefStablePtr storePtr
   path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
-  fromBool <$> treeDragSourceDragDataDelete store (unsafeTreeModelToGeneric model) path
+  fromBool <$> customDragSourceDragDataDelete store (unsafeTreeModelToGeneric model) path
 
 foreign export ccall "gtk2hs_store_drag_data_delete_impl"
-  treeDragSourceDragDataDelete_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
+  customDragSourceDragDataDelete_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> IO CInt
 
-treeDragDestDragDataReceived_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
-treeDragDestDragDataReceived_static mPtr storePtr pathPtr selectionPtr = do
+customDragDestDragDataReceived_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
+customDragDestDragDataReceived_static mPtr storePtr pathPtr selectionPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragDestIface <$> deRefStablePtr storePtr
   path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
   selection <- selectionDataCopy . SelectionData =<< newForeignPtr_ selectionPtr
-  fromBool <$> treeDragDestDragDataReceived store (unsafeTreeModelToGeneric model) path selection
+  fromBool <$> customDragDestDragDataReceived store (unsafeTreeModelToGeneric model) path selection
 
 foreign export ccall "gtk2hs_store_drag_data_received_impl"
-  treeDragDestDragDataReceived_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
+  customDragDestDragDataReceived_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
 
-treeDragDestRowDropPossible_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
-treeDragDestRowDropPossible_static mPtr storePtr pathPtr selectionPtr = do
+customDragDestRowDropPossible_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
+customDragDestRowDropPossible_static mPtr storePtr pathPtr selectionPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragDestIface <$> deRefStablePtr storePtr
   path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
   selection <- selectionDataCopy . SelectionData =<< newForeignPtr_ selectionPtr
-  fromBool <$> treeDragDestRowDropPossible store (unsafeTreeModelToGeneric model) path selection
+  fromBool <$> customDragDestRowDropPossible store (unsafeTreeModelToGeneric model) path selection
 
 foreign export ccall "gtk2hs_store_row_drop_possible_impl"
-  treeDragDestRowDropPossible_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
+  customDragDestRowDropPossible_static :: Ptr TreeModel -> StablePtr (CustomStoreImplementation model row) -> Ptr TreePath -> Ptr SelectionData -> IO CInt
 
 maybeNull :: (Ptr a -> IO b) -> Ptr a -> IO (Maybe b)
 maybeNull marshal ptr

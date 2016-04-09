@@ -252,9 +252,9 @@ forestStoreNewDND forest mDSource mDDest = liftIO $ do
 -- i.e. it contains the model and the 'TreePath' to the row.
 forestStoreDefaultDragSourceIface :: DragSourceIface ForestStore row
 forestStoreDefaultDragSourceIface = DragSourceIface {
-    treeDragSourceRowDraggable = \_ _-> return True,
-    treeDragSourceDragDataGet = \model path sel -> treeSetRowDragData sel model path,
-    treeDragSourceDragDataDelete = \model path -> treePathGetIndices' path >>= \dest@(_:_) -> do
+    customDragSourceRowDraggable = \_ _-> return True,
+    customDragSourceDragDataGet = \model path sel -> treeSetRowDragData sel model path,
+    customDragSourceDragDataDelete = \model path -> treePathGetIndices' path >>= \dest@(_:_) -> do
             liftIO $ forestStoreRemove model path
             return True
 
@@ -266,7 +266,7 @@ forestStoreDefaultDragSourceIface = DragSourceIface {
 -- that uses the same model.
 forestStoreDefaultDragDestIface :: DragDestIface ForestStore row
 forestStoreDefaultDragDestIface = DragDestIface {
-    treeDragDestRowDropPossible = \model path sel -> do
+    customDragDestRowDropPossible = \model path sel -> do
       mModelPath <- treeGetRowDragData sel
       case mModelPath of
         (True, Just model', source) -> do
@@ -274,7 +274,7 @@ forestStoreDefaultDragDestIface = DragDestIface {
             withManagedPtr tm $ \m ->
                 withManagedPtr model' $ \m' -> return (m==m')
         _ -> return False,
-    treeDragDestDragDataReceived = \model path sel -> do
+    customDragDestDragDataReceived = \model path sel -> do
       dest@(_:_) <- treePathGetIndices' path
       mModelPath <- treeGetRowDragData sel
       case mModelPath of

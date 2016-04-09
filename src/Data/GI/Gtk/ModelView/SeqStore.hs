@@ -175,9 +175,9 @@ seqStoreIterToIndex i = unsafeCoerce <$> get i treeIterUserData
 -- 'TreePath' to the row.
 seqStoreDefaultDragSourceIface :: DragSourceIface SeqStore row
 seqStoreDefaultDragSourceIface = DragSourceIface {
-    treeDragSourceRowDraggable = \_ _-> return True,
-    treeDragSourceDragDataGet = \model path sel -> treeSetRowDragData sel model path,
-    treeDragSourceDragDataDelete = \model path -> treePathGetIndices' path >>= \(dest:_) -> do
+    customDragSourceRowDraggable = \_ _-> return True,
+    customDragSourceDragDataGet = \model path sel -> treeSetRowDragData sel model path,
+    customDragSourceDragDataDelete = \model path -> treePathGetIndices' path >>= \(dest:_) -> do
             liftIO $ seqStoreRemove model (fromIntegral dest)
             return True
 
@@ -189,7 +189,7 @@ seqStoreDefaultDragSourceIface = DragSourceIface {
 -- that uses the same model.
 seqStoreDefaultDragDestIface :: DragDestIface SeqStore row
 seqStoreDefaultDragDestIface = DragDestIface {
-    treeDragDestRowDropPossible = \model path sel -> do
+    customDragDestRowDropPossible = \model path sel -> do
       dest <- treePathGetIndices' path
       mModelPath <- treeGetRowDragData sel
       case mModelPath of
@@ -198,7 +198,7 @@ seqStoreDefaultDragDestIface = DragDestIface {
             withManagedPtr tm $ \m ->
                 withManagedPtr model' $ \m' -> return (m==m')
         _ -> return False,
-    treeDragDestDragDataReceived = \model path sel -> do
+    customDragDestDragDataReceived = \model path sel -> do
       (dest:_) <- treePathGetIndices' path
       mModelPath <- treeGetRowDragData sel
       case mModelPath of
