@@ -21,6 +21,7 @@ module Data.GI.Base.Utils
     , safeFreeFunPtrPtr
     , maybeReleaseFunPtr
     , checkUnexpectedReturnNULL
+    , checkUnexpectedNothing
     ) where
 
 #include <glib-object.h>
@@ -134,7 +135,7 @@ allocBytes n = g_malloc (fromIntegral n)
 allocMem :: forall a. Storable a => IO (Ptr a)
 allocMem = g_malloc $ (fromIntegral . sizeOf) (undefined :: a)
 
--- | A wrapped for `g_free`.
+-- | A wrapper for `g_free`.
 foreign import ccall "g_free" freeMem :: Ptr a -> IO ()
 
 -- | Pointer to `g_free`.
@@ -177,3 +178,15 @@ checkUnexpectedReturnNULL fnName ptr
                                      <> fnName <> "\"."
                  })
     | otherwise = return ()
+
+-- | An annotated version of `fromJust`, which raises a
+-- `UnexpectedNullPointerReturn` in case it encounters a `Nothing`.
+checkUnexpectedNothing :: T.Text -> IO (Maybe a) -> IO a
+checkUnexpectedNothing fnName action = do
+  result <- action
+  case result of
+    Just r -> return r
+    Nothing -> throwIO (UnexpectedNullPointerReturn {
+                 nullPtrErrorMsg = "Received unexpected nullPtr in \""
+                                     <> fnName <> "\"."
+                 })
