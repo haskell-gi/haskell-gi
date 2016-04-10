@@ -11,5 +11,6 @@ time cabal build
 
 export G_SLICE="debug-blocks"
 export MALLOC_CHECK_=2
+export MALLOC_PERTURB_=$(($RANDOM % 255 + 1))
 #export HASKELL_GI_DEBUG_MEM=1
 dist/build/SimpleBrowser/SimpleBrowser

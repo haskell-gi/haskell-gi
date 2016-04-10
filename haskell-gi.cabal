@@ -73,6 +73,7 @@ executable haskell-gi
                        GI.Config,
                        GI.Constant,
                        GI.Conversions,
+                       GI.Fixups,
                        GI.GObject,
                        GI.GType,
                        GI.Inheritance,

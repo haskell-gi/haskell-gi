@@ -17,7 +17,8 @@ module GI.Conversions
     , elementTypeAndMap
 
     , isManaged
-    , isNullable
+    , typeIsNullable
+    , typeIsPtr
 
     , getIsScalar
     , requiresAlloc
@@ -738,15 +739,28 @@ isManaged t = do
     Just (APIUnion _)     -> return True
     _                     -> return False
 
--- Returns whether the given type is nullable in the C sense,
--- i.e. whether it can be set to NULL.
-isNullable :: Type -> CodeGen Bool
-isNullable (TBasicType TVoid) = return True
-isNullable (TBasicType TUTF8) = return True
-isNullable (TBasicType TFileName) = return True
-isNullable t = do
+-- | Returns whether the given type is represented by a pointer on the
+-- C side.
+typeIsPtr :: Type -> CodeGen Bool
+typeIsPtr (TBasicType TVoid) = return True
+typeIsPtr (TBasicType TUTF8) = return True
+typeIsPtr (TBasicType TFileName) = return True
+typeIsPtr t = do
   ft <- foreignType t
   return (tyConName (typeRepTyCon ft) `elem` ["Ptr", "FunPtr"])
+
+-- | Returns whether the given type should be represented by a
+-- `Maybe` type on the Haskell side. This applies to all properties
+-- which have a C representation in terms of pointers, except for
+-- G(S)Lists, for which NULL is a valid G(S)List, and raw pointers,
+-- which we just pass through to the Haskell side. Notice that
+-- introspection annotations can override this.
+typeIsNullable :: Type -> CodeGen Bool
+typeIsNullable t = case t of
+                     TBasicType TVoid -> return False
+                     TGList _ -> return False
+                     TGSList _ -> return False
+                     _ -> typeIsPtr t
 
 -- If the given type maps to a list in Haskell, return the type of the
 -- elements, and the function that maps over them.

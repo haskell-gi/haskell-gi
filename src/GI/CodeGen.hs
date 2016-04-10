@@ -11,7 +11,7 @@ import Data.Traversable (traverse)
 import Control.Monad (forM, forM_, when, unless, filterM)
 import Data.List (nub)
 import Data.Tuple (swap)
-import Data.Maybe (fromJust, fromMaybe, catMaybes, mapMaybe, isNothing)
+import Data.Maybe (fromJust, fromMaybe, catMaybes, mapMaybe)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -23,6 +23,7 @@ import GI.API
 import GI.Callable (genCallable)
 import GI.Constant (genConstant)
 import GI.Code
+import GI.Fixups (dropMovedItems, guessPropertyNullability)
 import GI.GObject
 import GI.Inheritance (instanceTree, fullObjectMethodList,
                        fullInterfaceMethodList)
@@ -495,25 +496,6 @@ symbolFromFunction sym = do
             sym1 == sym2 && movedTo == Nothing
         hasSymbol _ _ = False
 
--- | Remove functions and methods annotated with "moved-to".
-dropMovedItems :: API -> Maybe API
-dropMovedItems (APIFunction f) = if fnMovedTo f == Nothing
-                                 then Just (APIFunction f)
-                                 else Nothing
-dropMovedItems (APIInterface i) =
-    (Just . APIInterface) i {ifMethods = filterMovedMethods (ifMethods i)}
-dropMovedItems (APIObject o) =
-    (Just . APIObject) o {objMethods = filterMovedMethods (objMethods o)}
-dropMovedItems (APIStruct s) =
-    (Just . APIStruct) s {structMethods = filterMovedMethods (structMethods s)}
-dropMovedItems (APIUnion u) =
-    (Just . APIUnion) u {unionMethods = filterMovedMethods (unionMethods u)}
-dropMovedItems a = Just a
-
--- | Drop the moved methods.
-filterMovedMethods :: [Method] -> [Method]
-filterMovedMethods = filter (isNothing . methodMovedTo)
-
 genAPI :: Name -> API -> CodeGen ()
 genAPI n (APIConst c) = genConstant n c
 genAPI n (APIFunction f) = genFunction n f
@@ -540,6 +522,9 @@ genModule' apis = do
           $ mapMaybe (traverse dropMovedItems)
             -- Some callback types are defined inside structs
           $ map fixAPIStructs
+            -- Try to guess nullability of properties when there is no
+            -- nullability info in the GIR.
+          $ map guessPropertyNullability
           $ M.toList
           $ apis
 

@@ -84,7 +84,10 @@ buildFieldReader n field = group $ do
   name' <- upperName n
   let getter = fieldGetter n field
 
-  hType <- tshow <$> haskellType (fieldType field)
+  isMaybe <- typeIsNullable (fieldType field)
+  hType <- tshow <$> if isMaybe
+                     then maybeT <$> haskellType (fieldType field)
+                     else haskellType (fieldType field)
   fType <- tshow <$> foreignType (fieldType field)
 
   line $ getter <> " :: MonadIO m => " <> name' <> " -> m " <>
@@ -97,7 +100,14 @@ buildFieldReader n field = group $ do
          <> ") :: IO " <> if T.any (== ' ') fType
                          then parenthesize fType
                          else fType
-    result <- convert "val" $ fToH (fieldType field) TransferNothing
+    result <- if not isMaybe
+              then convert "val" $ fToH (fieldType field) TransferNothing
+              else do
+                line $ "result <- convertIfNonNull val $ \\val' -> do"
+                indent $ do
+                  val' <- convert "val'" $ fToH (fieldType field) TransferNothing
+                  line $ "return " <> val'
+                return "result"
     line $ "return " <> result
 
 -- | Write a field into a struct. Note that, since we cannot know for
@@ -111,10 +121,10 @@ buildFieldWriter n field = group $ do
   name' <- upperName n
   let setter = fieldSetter n field
 
-  nullable <- isNullable (fieldType field)
+  isPtr <- typeIsPtr (fieldType field)
 
   fType <- tshow <$> foreignType (fieldType field)
-  hType <- if nullable
+  hType <- if isPtr
            then return fType
            else tshow <$> haskellType (fieldType field)
 
@@ -122,11 +132,25 @@ buildFieldWriter n field = group $ do
            <> hType <> " -> m ()"
   line $ setter <> " s val = liftIO $ withManagedPtr s $ \\ptr -> do"
   indent $ do
-    converted <- if nullable
+    converted <- if isPtr
                  then return "val"
                  else convert "val" $ hToF (fieldType field) TransferNothing
     line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
          <> ") (" <> converted <> " :: " <> fType <> ")"
+
+-- | Write a @NULL@ into a field of a struct of type `Ptr`.
+buildFieldClear :: Name -> Field -> ExcCodeGen ()
+buildFieldClear n field = group $ do
+  name' <- upperName n
+  let clear = fieldClear n field
+
+  fType <- tshow <$> foreignType (fieldType field)
+
+  line $ clear <> " :: MonadIO m => " <> name' <> " -> m ()"
+  line $ clear <> " s = liftIO $ withManagedPtr s $ \\ptr -> do"
+  indent $ do
+    line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
+         <> ") (nullPtr :: " <> fType <> ")"
 
 -- | Name for the getter function
 fieldGetter :: Name -> Field -> Text
@@ -135,6 +159,10 @@ fieldGetter name' field = lowerName name' <> "Read" <> fName field
 -- | Name for the setter function
 fieldSetter :: Name -> Field -> Text
 fieldSetter name' field = lowerName name' <> "Write" <> fName field
+
+-- | Name for the clear function
+fieldClear :: Name -> Field -> Text
+fieldClear name' field = lowerName name' <> "Clear" <> fName field
 
 -- | Haskell name for the field
 fName :: Field -> Text
@@ -148,17 +176,23 @@ genAttrInfo owner field = do
   it <- infoType owner field
   on <- upperName owner
 
-  nullable <- isNullable (fieldType field)
+  isPtr <- typeIsPtr (fieldType field)
 
-  outType <- tshow <$> haskellType (fieldType field)
-  inType <- if nullable
+  isNullable <- typeIsNullable (fieldType field)
+  outType <- tshow <$> if isNullable
+                       then maybeT <$> haskellType (fieldType field)
+                       else haskellType (fieldType field)
+  inType <- if isPtr
             then tshow <$> foreignType (fieldType field)
             else tshow <$> haskellType (fieldType field)
 
   line $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"
   indent $ do
-    line $ "type AttrAllowedOps " <> it <> " = '[ 'AttrSet, 'AttrGet]"
+    line $ "type AttrAllowedOps " <> it <>
+             if isPtr
+             then " = '[ 'AttrSet, 'AttrGet, 'AttrClear]"
+             else " = '[ 'AttrSet, 'AttrGet]"
     line $ "type AttrSetTypeConstraint " <> it <> " = (~) "
              <> if T.any (== ' ') inType
                 then parenthesize inType
@@ -169,6 +203,9 @@ genAttrInfo owner field = do
     line $ "attrGet _ = " <> fieldGetter owner field
     line $ "attrSet _ = " <> fieldSetter owner field
     line $ "attrConstruct = undefined"
+    line $ "attrClear _ = " <> if isPtr
+                               then fieldClear owner field
+                               else "undefined"
 
   blank
 
@@ -191,11 +228,17 @@ buildFieldAttributes n field
      not (fieldVisible field))
   then return Nothing
   else do
+     isPtr <- typeIsPtr (fieldType field)
+
      buildFieldReader n field
      buildFieldWriter n field
+     when isPtr $
+          buildFieldClear n field
 
      exportProperty (fName field) (fieldGetter n field)
      exportProperty (fName field) (fieldSetter n field)
+     when isPtr $
+          exportProperty (fName field) (fieldClear n field)
 
      Just <$> genAttrInfo n field
 

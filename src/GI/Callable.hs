@@ -96,8 +96,8 @@ wrapMaybe arg =
            TGList _ -> return False
            TGSList _ -> return False
            _ -> do
-             nullable <- isNullable (argType arg)
-             if nullable
+             isPtr <- typeIsPtr (argType arg)
+             if isPtr
              then return True
              else badIntroError $ "argument \"" <> (argCName arg)
                       <> "\" is not of nullable type (" <> tshow (argType arg)
@@ -578,8 +578,8 @@ convertResult callable symbol ignoreReturn nameMap =
              line $ "return " <> converted
              return "maybeResult"
       else do
-        nullable <- isNullable (returnType callable)
-        when nullable $
+        isPtr <- typeIsPtr (returnType callable)
+        when isPtr $
              line $ "checkUnexpectedReturnNULL \"" <> symbol
                       <> "\" result"
         unwrappedConvertResult "result"

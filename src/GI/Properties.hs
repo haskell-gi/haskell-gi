@@ -77,44 +77,56 @@ propTypeStr t = case t of
        _ -> error $ "Unknown interface property of type : " ++ show t
    _ -> error $ "Don't know how to handle properties of type " ++ show t
 
--- Given a property, return the set of constraints on the types, and
+-- | Given a property, return the set of constraints on the types, and
 -- the type variables for the object and its value.
 attrType :: Property -> CodeGen ([Text], Text)
 attrType prop = do
   (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
-  if T.any (== ' ') t
-  then return (constraints, parenthesize t)
-  else return (constraints, t)
+  return (constraints, t)
 
 genPropertySetter :: Name -> Text -> Property -> CodeGen ()
 genPropertySetter n pName prop = group $ do
   oName <- upperName n
   (constraints, t) <- attrType prop
+  isNullable <- typeIsNullable (propType prop)
   let constraints' = "MonadIO m":(classConstraint oName <> " o"):constraints
   tStr <- propTypeStr $ propType prop
   line $ "set" <> pName <> " :: (" <> T.intercalate ", " constraints'
            <> ") => o -> " <> t <> " -> m ()"
   line $ "set" <> pName <> " obj val = liftIO $ setObjectProperty" <> tStr
-           <> " obj \"" <> propName prop <> "\" val"
+           <> " obj \"" <> propName prop
+           <> if isNullable
+              then "\" (Just val)"
+              else "\" val"
 
 genPropertyGetter :: Name -> Text -> Property -> CodeGen ()
 genPropertyGetter n pName prop = group $ do
   oName <- upperName n
-  outType <- haskellType (propType prop)
+  isNullable <- typeIsNullable (propType prop)
+  let isMaybe = isNullable && propReadNullable prop /= Just False
+  constructorType <- haskellType (propType prop)
+  tStr <- propTypeStr $ propType prop
   let constraints = "(MonadIO m, " <> classConstraint oName <> " o)"
+      outType = if isMaybe
+                then maybeT constructorType
+                else constructorType
+      getter = if isNullable && not isMaybe
+               then "checkUnexpectedNothing \"get" <> pName
+                        <> "\" $ getObjectProperty" <> tStr
+               else "getObjectProperty" <> tStr
   line $ "get" <> pName <> " :: " <> constraints <>
                 " => o -> " <> tshow ("m" `con` [outType])
-  tStr <- propTypeStr $ propType prop
-  line $ "get" <> pName <> " obj = liftIO $ getObjectProperty" <> tStr
-        <> " obj \"" <> propName prop <> "\"" <>
+  line $ "get" <> pName <> " obj = liftIO $ " <> getter
+           <> " obj \"" <> propName prop <> "\"" <>
            if tStr `elem` ["Object", "Boxed"]
-           then " " <> tshow outType -- These require the constructor too.
+           then " " <> tshow constructorType -- These require the constructor.
            else ""
 
 genPropertyConstructor :: Text -> Property -> CodeGen ()
 genPropertyConstructor pName prop = group $ do
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
+  isNullable <- typeIsNullable (propType prop)
   let constraints' =
           case constraints of
             [] -> ""
@@ -122,7 +134,22 @@ genPropertyConstructor pName prop = group $ do
   line $ "construct" <> pName <> " :: " <> constraints'
            <> t <> " -> IO ([Char], GValue)"
   line $ "construct" <> pName <> " val = constructObjectProperty" <> tStr
-           <> " \"" <> propName prop <> "\" val"
+           <> " \"" <> propName prop
+           <> if isNullable
+              then "\" (Just val)"
+              else "\" val"
+
+genPropertyClear :: Name -> Text -> Property -> CodeGen ()
+genPropertyClear n pName prop = group $ do
+  oName <- upperName n
+  nothingType <- tshow . maybeT <$> haskellType (propType prop)
+  let constraints = ["MonadIO m", classConstraint oName <> " o"]
+  tStr <- propTypeStr $ propType prop
+  line $ "clear" <> pName <> " :: (" <> T.intercalate ", " constraints
+           <> ") => o -> m ()"
+  line $ "clear" <> pName <> " obj = liftIO $ setObjectProperty" <> tStr
+           <> " obj \"" <> propName prop <> "\" (Nothing :: "
+           <> nothingType <> ")"
 
 -- | The property name as a lexically valid Haskell identifier. Note
 -- that this is not escaped, since it is assumed that it will be used
@@ -191,10 +218,15 @@ genOneProperty owner prop = do
                                <> " has unsupported transfer type "
                                <> tshow (propTransfer prop)
 
+  isNullable <- typeIsNullable (propType prop)
+
   getter <- accessorOrUndefined readable "get" owner cName
   setter <- accessorOrUndefined writable "set" owner cName
   constructor <- accessorOrUndefined (writable || constructOnly)
                  "construct" owner cName
+  clear <- accessorOrUndefined (isNullable && writable &&
+                                propWriteNullable prop /= Just False)
+           "clear" owner cName
 
   unless (readable || writable || constructOnly) $
        notImplementedError $ "Property is not readable, writable, or constructible: "
@@ -204,15 +236,21 @@ genOneProperty owner prop = do
     line $ "-- VVV Prop \"" <> propName prop <> "\""
     line $ "   -- Type: " <> tshow (propType prop)
     line $ "   -- Flags: " <> tshow (propFlags prop)
+    line $ "   -- Nullable: " <> tshow (propReadNullable prop,
+                                        propWriteNullable prop)
 
   when readable $ genPropertyGetter owner pName prop
   when writable $ genPropertySetter owner pName prop
   when (writable || constructOnly) $ genPropertyConstructor pName prop
+  when (isNullable && writable && propWriteNullable prop /= Just False) $
+       genPropertyClear owner pName prop
 
   outType <- if not readable
              then return "()"
              else do
-               sOutType <- tshow <$> haskellType (propType prop)
+               sOutType <- if isNullable && propReadNullable prop /= Just False
+                           then tshow . maybeT <$> haskellType (propType prop)
+                           else tshow <$> haskellType (propType prop)
                return $ if T.any (== ' ') sOutType
                         then parenthesize sOutType
                         else sOutType
@@ -237,11 +275,15 @@ genOneProperty owner prop = do
                      <> (if readable
                          then ["'AttrGet"]
                          else [])
+                     <> (if isNullable && propWriteNullable prop /= Just False
+                         then ["'AttrClear"]
+                         else [])
     it <- infoType owner prop
     exportProperty cName it
     when (getter /= "undefined") (exportProperty cName getter)
     when (setter /= "undefined") (exportProperty cName setter)
     when (constructor /= "undefined") (exportProperty cName constructor)
+    when (clear /= "undefined") (exportProperty cName clear)
     bline $ "data " <> it
     line $ "instance AttrInfo " <> it <> " where"
     indent $ do
@@ -256,6 +298,7 @@ genOneProperty owner prop = do
             line $ "attrGet _ = " <> getter
             line $ "attrSet _ = " <> setter
             line $ "attrConstruct _ = " <> constructor
+            line $ "attrClear _ = " <> clear
 
 -- | Generate a placeholder property for those cases in which code
 -- generation failed.
@@ -276,6 +319,7 @@ genPlaceholderProperty owner prop = do
     line $ "attrGet = undefined"
     line $ "attrSet = undefined"
     line $ "attrConstruct = undefined"
+    line $ "attrClear = undefined"
 
 genProperties :: Name -> [Property] -> [Text] -> CodeGen ()
 genProperties n ownedProps allProps = do

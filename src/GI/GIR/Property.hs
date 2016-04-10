@@ -24,6 +24,8 @@ data Property = Property {
         propName :: Text,
         propType :: Type,
         propFlags :: [PropertyFlag],
+        propReadNullable :: Maybe Bool,
+        propWriteNullable :: Maybe Bool,
         propTransfer :: Transfer,
         propDeprecated :: Maybe DeprecationInfo
     } deriving (Show, Eq)
@@ -48,4 +50,7 @@ parseProperty = do
                 , propFlags = flags
                 , propTransfer = transfer
                 , propDeprecated = deprecated
+                -- No support in the GIR for nullability info
+                , propReadNullable = Nothing
+                , propWriteNullable = Nothing
                 }
