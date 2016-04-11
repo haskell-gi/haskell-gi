@@ -163,7 +163,7 @@ convertIterFromParentToChildModel iter parentModel@(TreeModel parentModelPtr) ch
         castTo TreeModelFilter parentModel >>= \case
             Just tmFilter -> do
                 childIter <- treeModelFilterConvertIterToChildIter tmFilter iter
-                child@(TreeModel childPtr) <- getTreeModelFilterChildModel tmFilter
+                Just child@(TreeModel childPtr) <- getTreeModelFilterChildModel tmFilter
                 if childPtr == modelPtr
                     then return childIter
                     else convertIterFromParentToChildModel childIter child childModel
