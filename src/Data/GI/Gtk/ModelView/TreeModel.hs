@@ -127,6 +127,7 @@ import Data.GI.Gtk.ModelView.Types (stringToTreePath,
                                         ColumnAccess(..))
 import Control.Monad.IO.Class (MonadIO)
 import GI.Gtk.Structs.TreePath (treePathGetDepth, TreePath(..))
+import Data.Maybe (fromJust)
 
 --------------------
 -- Constructors
@@ -142,7 +143,7 @@ makeColumnIdBool = ColumnId fromGValue CABool
 
 -- | Create a 'ColumnId' to extract an string.
 makeColumnIdString :: Int32 -> ColumnId row Text
-makeColumnIdString = ColumnId fromGValue CAString
+makeColumnIdString = ColumnId (\v -> fromJust <$> fromGValue v) CAString
 
 -- | Create a 'ColumnId' to extract an 'Pixbuf'.
 makeColumnIdPixbuf :: Int32 -> ColumnId row Pixbuf
