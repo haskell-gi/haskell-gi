@@ -10,6 +10,7 @@ module GI.GIR.XMLUtils
     , childElemsWithNSName
     , firstChildWithLocalName
     , getElementContent
+    , xmlLocalName
     ) where
 
 import Text.XML (Element(elementNodes, elementName, elementAttributes),
@@ -77,3 +78,10 @@ lookupAttrWithNamespace :: GIRXMLNamespace -> Name -> Element -> Maybe Text
 lookupAttrWithNamespace ns attr element =
     let attr' = attr {nameNamespace = Just (girNamespace ns)}
     in M.lookup attr' (elementAttributes element)
+
+
+-- | Construct a `Text.XML.Name` by only giving the local name.
+xmlLocalName :: Text -> Name
+xmlLocalName n = Name { nameLocalName = n
+                      , nameNamespace = Nothing
+                      , namePrefix = Nothing }

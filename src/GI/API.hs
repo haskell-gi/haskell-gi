@@ -6,6 +6,10 @@ module GI.API
     , loadGIRInfo
     , loadRawGIRInfo
 
+    , GIRRule(..)
+    , GIRPath
+    , GIRNodeSpec(..)
+
     -- Reexported from GI.GIR.BasicTypes
     , Name(..)
     , Transfer(..)
@@ -42,6 +46,10 @@ module GI.API
     , Union (..)
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 import Control.Monad ((>=>), forM, forM_)
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -56,6 +64,7 @@ import Foreign (peek)
 import Foreign.C.Types (CUInt)
 
 import Text.XML hiding (Name)
+import qualified Text.XML as XML
 
 import GI.GIR.Alias (documentListAliases)
 import GI.GIR.Arg (Arg(..), Direction(..), Scope(..))
@@ -78,7 +87,8 @@ import GI.GIR.Signal (Signal(..))
 import GI.GIR.Struct (Struct(..), parseStruct)
 import GI.GIR.Union (Union(..), parseUnion)
 import GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr,
-                        lookupAttrWithNamespace, GIRXMLNamespace(..))
+                        lookupAttrWithNamespace, GIRXMLNamespace(..),
+                        xmlLocalName)
 
 import Data.GI.Base.BasicConversions (unpackStorableArrayWithLength)
 import Data.GI.Base.BasicTypes (GType(..), CGType, gtypeName)
@@ -108,6 +118,22 @@ data GIRInfoParse = GIRInfoParse {
     girIPIncludes   :: [Maybe (Text, Text)],
     girIPNamespaces :: [Maybe GIRNamespace]
 } deriving (Show)
+
+-- | Path to a node in the GIR file, starting from the document root
+-- of the GIR file. This is a very simplified version of something
+-- like XPath.
+type GIRPath = [GIRNodeSpec]
+
+-- | Node selector for a path in the GIR file.
+data GIRNodeSpec = GIRNamed Text     -- ^ Node with the given "name" attr.
+                 | GIRType Text      -- ^ Node of the given type.
+                 | GIRTypedName Text Text -- ^ Combination of the above.
+                   deriving (Show)
+
+-- | A rule for modifying the GIR file.
+data GIRRule = GIRSetAttr (GIRPath, XML.Name) Text -- ^ (Path to element,
+                                                   -- attrName), newValue
+             deriving (Show)
 
 data API
     = APIConst Constant
@@ -202,32 +228,37 @@ documentListIncludes doc = S.fromList (mapMaybe parseInclude includes)
     where includes = childElemsWithLocalName "include" (documentRoot doc)
 
 -- | Load a set of dependencies, recursively.
-loadDependencies :: Bool                              -- Verbose
-                 -> S.Set (Text, Text)                -- Requested
-                 -> M.Map (Text, Text) Document       -- Loaded so far
-                 -> [FilePath]                        -- extra path to search
-                 -> IO (M.Map (Text, Text) Document)  -- New loaded set
-loadDependencies verbose requested loaded extraPaths
+loadDependencies :: Bool                              -- ^ Verbose
+                 -> S.Set (Text, Text)                -- ^ Requested
+                 -> M.Map (Text, Text) Document       -- ^ Loaded so far
+                 -> [FilePath]                        -- ^ extra path to search
+                 -> [GIRRule]                         -- ^ fixups
+                 -> IO (M.Map (Text, Text) Document)  -- ^ New loaded set
+loadDependencies verbose requested loaded extraPaths rules
         | S.null requested = return loaded
         | otherwise = do
   let (name, version) = S.elemAt 0 requested
-  doc <- readGiRepository verbose name (Just version) extraPaths
+  doc <- fixupGIRDocument rules <$>
+         readGiRepository verbose name (Just version) extraPaths
   let newLoaded = M.insert (name, version) doc loaded
       loadedSet = S.fromList (M.keys newLoaded)
       newRequested = S.union requested (documentListIncludes doc)
       notYetLoaded = S.difference newRequested loadedSet
-  loadDependencies verbose notYetLoaded newLoaded extraPaths
+  loadDependencies verbose notYetLoaded newLoaded extraPaths rules
 
 -- | Load a given GIR file and recursively its dependencies
 loadGIRFile :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
+            -> [GIRRule]        -- ^ fixups
             -> IO (Document,                    -- ^ loaded document
                    M.Map (Text, Text) Document) -- ^ dependencies
-loadGIRFile verbose name version extraPaths = do
-  doc <- readGiRepository verbose name version extraPaths
-  deps <- loadDependencies verbose (documentListIncludes doc) M.empty extraPaths
+loadGIRFile verbose name version extraPaths rules = do
+  doc <- fixupGIRDocument rules <$>
+         readGiRepository verbose name version extraPaths
+  deps <- loadDependencies verbose (documentListIncludes doc) M.empty
+          extraPaths rules
   return (doc, deps)
 
 -- | Turn a GIRInfoParse into a proper GIRInfo, doing some sanity
@@ -264,10 +295,11 @@ loadGIRInfo :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
+            -> [GIRRule]        -- ^ fixups
             -> IO (GIRInfo,     -- ^ parsed document
                    [GIRInfo])   -- ^ parsed deps
-loadGIRInfo verbose name version extraPaths =  do
-  (doc, deps) <- loadGIRFile verbose name version extraPaths
+loadGIRInfo verbose name version extraPaths rules =  do
+  (doc, deps) <- loadGIRFile verbose name version extraPaths rules
   let aliases = M.unions (map documentListAliases (doc : M.elems deps))
       parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
       parsedDeps = map (toGIRInfo . parseGIRDocument aliases) (M.elems deps)
@@ -396,3 +428,46 @@ fixupGIRInfos doc deps = (fixup fixupInterface >=>
 
         ctypes :: M.Map Text Name
         ctypes = M.unions (map girCTypes (doc:deps))
+
+-- | Given a XML document containing GIR data, apply the given overrides.
+fixupGIRDocument :: [GIRRule] -> XML.Document -> XML.Document
+fixupGIRDocument rules doc =
+    doc {XML.documentRoot = fixupGIR rules (XML.documentRoot doc)}
+
+-- | Looks for the given path in the given subelements of the given
+-- element. If the path is empty apply the corresponding rule,
+-- otherwise return the element ummodified.
+fixupGIR :: [GIRRule] -> XML.Element -> XML.Element
+fixupGIR rules elem =
+    elem {XML.elementNodes = map (\e -> foldr applyGIRRule e rules)
+                             (XML.elementNodes elem)}
+    where applyGIRRule :: GIRRule -> XML.Node -> XML.Node
+          applyGIRRule (GIRSetAttr (path, attr) newVal) n =
+              girSetAttr (path, attr) newVal n
+
+-- | Set an attribute for the child element specified by the given
+-- path.
+girSetAttr :: (GIRPath, XML.Name) -> Text -> XML.Node -> XML.Node
+girSetAttr (spec:rest, attr) newVal n@(XML.NodeElement elem) =
+    if specMatch spec n
+    then if null rest -- Matched the full path, apply
+         then XML.NodeElement (elem {XML.elementAttributes =
+                                     M.insert attr newVal
+                                          (XML.elementAttributes elem)})
+         -- Still some selectors to apply
+         else XML.NodeElement (elem {XML.elementNodes =
+                                     map (girSetAttr (rest, attr) newVal)
+                                     (XML.elementNodes elem)})
+    else n
+girSetAttr _ _ n = n
+
+-- | See if a given node specification applies to the given node.
+specMatch :: GIRNodeSpec -> XML.Node -> Bool
+specMatch (GIRType t) (XML.NodeElement elem) =
+    XML.nameLocalName (XML.elementName elem) == t
+specMatch (GIRNamed name) (XML.NodeElement elem) =
+    M.lookup (xmlLocalName "name") (XML.elementAttributes elem) == Just name
+specMatch (GIRTypedName t name) (XML.NodeElement elem) =
+    XML.nameLocalName (XML.elementName elem) == t &&
+    M.lookup (xmlLocalName "name") (XML.elementAttributes elem) == Just name
+specMatch _ _ = False

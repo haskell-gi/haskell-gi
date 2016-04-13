@@ -32,7 +32,7 @@ import GI.Config (Config(..))
 import GI.CodeGen (genModule)
 import GI.OverloadedLabels (genOverloadedLabels)
 import GI.OverloadedSignals (genOverloadedSignalConnectors)
-import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps)
+import GI.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups)
 import GI.ProjectInfo (licenseText)
 import GI.Util (ucFirst)
 
@@ -131,6 +131,7 @@ processMod :: Options -> Overrides -> [FilePath] -> Text -> IO ()
 processMod options ovs extraPaths name = do
   let version = M.lookup name (nsChooseVersion ovs)
   (gir, girDeps) <- loadGIRInfo (optVerbose options) name version extraPaths
+                    (girFixups ovs)
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
 
@@ -175,7 +176,7 @@ processMod options ovs extraPaths name = do
 dump :: Options -> Overrides -> Text -> IO ()
 dump options ovs name = do
   let version = M.lookup name (nsChooseVersion ovs)
-  (doc, _) <- loadGIRInfo (optVerbose options) name version (optSearchPaths options)
+  (doc, _) <- loadGIRInfo (optVerbose options) name version (optSearchPaths options) []
   mapM_ (putStrLn . ppShow) (girAPIs doc)
 
 process :: Options -> [Text] -> IO ()

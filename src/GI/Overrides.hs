@@ -1,6 +1,6 @@
 {-# LANGUAGE ViewPatterns #-}
 module GI.Overrides
-    ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion)
+    ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion, girFixups)
     , parseOverridesFile
     , filterAPIsAndDeps
     ) where
@@ -16,6 +16,7 @@ import qualified Data.Text as T
 import Data.Text (Text)
 
 import GI.API
+import GI.GIR.XMLUtils (xmlLocalName)
 
 data Overrides = Overrides {
       -- | Ignored elements of a given API.
@@ -28,9 +29,11 @@ data Overrides = Overrides {
       pkgConfigMap    :: M.Map Text Text,
       -- | Version number for the generated .cabal package.
       cabalPkgVersion :: Maybe Text,
-      -- | Prefered version of the namespace
-      nsChooseVersion :: M.Map Text Text
-}
+      -- | Prefered version of the namespace.
+      nsChooseVersion :: M.Map Text Text,
+      -- | Fixups for the GIR data.
+      girFixups       :: [GIRRule]
+} deriving (Show)
 
 -- | Construct the generic config for a module.
 defaultOverrides :: Overrides
@@ -40,7 +43,8 @@ defaultOverrides = Overrides {
               sealedStructs   = S.empty,
               pkgConfigMap    = M.empty,
               cabalPkgVersion = Nothing,
-              nsChooseVersion = M.empty }
+              nsChooseVersion = M.empty,
+              girFixups       = [] }
 
 -- | There is a sensible notion of zero and addition of Overridess,
 -- encode this so that we can view the parser as a writer monad of
@@ -55,12 +59,13 @@ instance Monoid Overrides where
       cabalPkgVersion = if isJust (cabalPkgVersion b)
                         then cabalPkgVersion b
                         else cabalPkgVersion a,
-      nsChooseVersion = nsChooseVersion a <> nsChooseVersion b
+      nsChooseVersion = nsChooseVersion a <> nsChooseVersion b,
+      girFixups = girFixups a <> girFixups b
     }
 
 -- | We have a bit of context (the current namespace), and can fail,
 -- encode this in a monad.
-type Parser = WriterT Overrides (StateT (Maybe Text) (Except Text)) ()
+type Parser a = WriterT Overrides (StateT (Maybe Text) (Except Text)) a
 
 -- | Parse the given config file (as a set of lines) for a given
 -- introspection namespace, filling in the configuration as needed. In
@@ -72,7 +77,7 @@ parseOverridesFile ls = runExcept $ flip evalStateT Nothing $ execWriterT $
 
 -- | Parse a single line of the config file, modifying the
 -- configuration as appropriate.
-parseOneLine :: Text -> Parser
+parseOneLine :: Text -> Parser ()
 -- Empty lines
 parseOneLine line | T.null line = return ()
 -- Comments
@@ -83,10 +88,11 @@ parseOneLine (T.stripPrefix "seal " -> Just s) = get >>= parseSeal s
 parseOneLine (T.stripPrefix "pkg-config-name" -> Just s) = parsePkgConfigName s
 parseOneLine (T.stripPrefix "cabal-pkg-version" -> Just s) = parseCabalPkgVersion s
 parseOneLine (T.stripPrefix "namespace-version" -> Just s) = parseNsVersion s
+parseOneLine (T.stripPrefix "set-attr" -> Just s) = parseSetAttr s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 
 -- | Ignored elements.
-parseIgnore :: Text -> Maybe Text -> Parser
+parseIgnore :: Text -> Maybe Text -> Parser ()
 parseIgnore _ Nothing =
     throwError "'ignore' requires a namespace to be defined first."
 parseIgnore (T.words -> [T.splitOn "." -> [api,elem]]) (Just ns) =
@@ -98,7 +104,7 @@ parseIgnore ignore _ =
     throwError ("Ignore syntax is of the form \"ignore API.elem\" with '.elem' optional.\nGot \"ignore " <> ignore <> "\" instead.")
 
 -- | Sealed structures.
-parseSeal :: Text -> Maybe Text -> Parser
+parseSeal :: Text -> Maybe Text -> Parser ()
 parseSeal _ Nothing = throwError "'seal' requires a namespace to be defined first."
 parseSeal (T.words -> [s]) (Just ns) = tell $
     defaultOverrides {sealedStructs = S.singleton (Name ns s)}
@@ -107,7 +113,7 @@ parseSeal seal _ =
                 <> seal <> "\" instead.")
 
 -- | Mapping from GObject Introspection namespaces to pkg-config.
-parsePkgConfigName :: Text -> Parser
+parsePkgConfigName :: Text -> Parser ()
 parsePkgConfigName (T.words -> [gi,pc]) = tell $
     defaultOverrides {pkgConfigMap =
                           M.singleton (T.toLower gi) pc}
@@ -117,7 +123,7 @@ parsePkgConfigName t =
                 "Got \"pkg-config-name " <> t <> "\" instead.")
 
 -- | Choose a preferred namespace version to load.
-parseNsVersion :: Text -> Parser
+parseNsVersion :: Text -> Parser ()
 parseNsVersion (T.words -> [ns,version]) = tell $
     defaultOverrides {nsChooseVersion =
                           M.singleton ns version}
@@ -127,13 +133,39 @@ parseNsVersion t =
                 "Got \"namespace-version " <> t <> "\" instead.")
 
 -- | Specifying the cabal package version by hand.
-parseCabalPkgVersion :: Text -> Parser
+parseCabalPkgVersion :: Text -> Parser ()
 parseCabalPkgVersion (T.words -> [version]) = tell $
     defaultOverrides {cabalPkgVersion = Just version}
 parseCabalPkgVersion t =
     throwError ("cabal-pkg-version syntax is of the form\n" <>
                "\t\"cabal-pkg-version version\"\n" <>
                "Got \"cabal-pkg-version " <> t <> "\" instead.")
+
+-- | Set a given attribute in the GIR file.
+parseSetAttr :: Text -> Parser ()
+parseSetAttr (T.words -> [path, attr, newVal]) = do
+  pathSpec <- parsePathSpec path
+  tell $ defaultOverrides {girFixups =
+                           [GIRSetAttr (pathSpec, xmlLocalName attr) newVal]}
+parseSetAttr t =
+    throwError ("set-attr syntax is of the form\n" <>
+               "\t\"set-attr nodePath attrName newValue\"\n" <>
+               "Got \"set-attr " <> t <> "\" instead.")
+
+-- | Parse a path specification, which is of the form
+-- "nodeSpec1/nodeSpec2/../nodeSpecN", where nodeSpec is a node
+-- specification of the form "nodeType[:name attribute]".
+parsePathSpec :: Text -> Parser GIRPath
+parsePathSpec spec = mapM parseNodeSpec (T.splitOn "/" spec)
+
+-- | Parse a single node specification.
+parseNodeSpec :: Text -> Parser GIRNodeSpec
+parseNodeSpec spec = case T.splitOn "@" spec of
+                       [n] -> return (GIRNamed n)
+                       ["", t] -> return (GIRType t)
+                       [n, t] -> return (GIRTypedName t n)
+                       _ -> throwError ("Could not understand node spec \""
+                                        <> spec <> "\".")
 
 -- | Filter a set of named objects based on a lookup list of names to
 -- ignore.
