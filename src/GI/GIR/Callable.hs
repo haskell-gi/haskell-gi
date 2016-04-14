@@ -30,10 +30,11 @@ parseArgs = do
 parseOneReturn :: Parser (Type, Bool, Transfer, Bool)
 parseOneReturn = do
   returnType <- parseType
-  mayBeNull <- optionalAttr "allow-none" False parseBool
+  allowNone <- optionalAttr "allow-none" False parseBool
+  nullable <- optionalAttr "nullable" False parseBool
   transfer <- parseTransfer
   skip <- optionalAttr "skip" False parseBool
-  return (returnType, mayBeNull, transfer, skip)
+  return (returnType, allowNone || nullable, transfer, skip)
 
 parseReturn :: Parser (Type, Bool, Transfer, Bool)
 parseReturn = do
