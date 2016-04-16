@@ -7,10 +7,10 @@ import GI.Type (Type)
 import GI.GIR.Arg (Arg(..), parseArg, parseTransfer)
 import GI.GIR.BasicTypes (Transfer(..))
 import GI.GIR.Parser
-import GI.GIR.Type (parseType)
+import GI.GIR.Type (parseOptionalType)
 
 data Callable = Callable {
-        returnType :: Type,
+        returnType :: Maybe Type,
         returnMayBeNull :: Bool,
         returnTransfer :: Transfer,
         args :: [Arg],
@@ -27,16 +27,16 @@ parseArgs = do
     _ -> parseError $ "Unexpected multiple \"parameters\" tag"
   where parseArgSet = parseChildrenWithLocalName "parameter" parseArg
 
-parseOneReturn :: Parser (Type, Bool, Transfer, Bool)
+parseOneReturn :: Parser (Maybe Type, Bool, Transfer, Bool)
 parseOneReturn = do
-  returnType <- parseType
+  returnType <- parseOptionalType
   allowNone <- optionalAttr "allow-none" False parseBool
   nullable <- optionalAttr "nullable" False parseBool
   transfer <- parseTransfer
   skip <- optionalAttr "skip" False parseBool
   return (returnType, allowNone || nullable, transfer, skip)
 
-parseReturn :: Parser (Type, Bool, Transfer, Bool)
+parseReturn :: Parser (Maybe Type, Bool, Transfer, Bool)
 parseReturn = do
   returnSets <- parseChildrenWithLocalName "return-value" parseOneReturn
   case returnSets of

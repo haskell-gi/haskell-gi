@@ -272,7 +272,7 @@ genUnion n u = do
 fixMethodArgs :: Name -> Callable -> Callable
 fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
     where
-      returnType' = fixCArrayLength $ returnType c
+      returnType' = maybe Nothing (Just . fixCArrayLength) (returnType c)
       args' = objArg : map (fixDestroyers . fixClosures . fixLengthArg) (args c)
 
       fixLengthArg :: Arg -> Arg
@@ -315,7 +315,7 @@ fixConstructorReturnType :: Bool -> Name -> Callable -> Callable
 fixConstructorReturnType returnsGObject cn c = c { returnType = returnType' }
     where
       returnType' = if returnsGObject then
-                        TInterface (namespace cn) (name cn)
+                        Just (TInterface (namespace cn) (name cn))
                     else
                         returnType c
 
@@ -328,7 +328,7 @@ genMethod cn m@(Method {
                   methodThrows = throws
                 }) = do
     name' <- upperName cn
-    returnsGObject <- isGObject (returnType c)
+    returnsGObject <- maybe (return False) isGObject (returnType c)
     line $ "-- method " <> name' <> "::" <> name mn
     line $ "-- method type : " <> tshow t
     let -- Mangle the name to namespace it to the class.

@@ -219,7 +219,7 @@ hToF' t a hType fType transfer
         return $ M "packZeroTerminatedUTF8CArray"
     | TCArray True _ _ (TBasicType TFileName) <- t =
         return $ M "packZeroTerminatedFileNameArray"
-    | TCArray True _ _ (TBasicType TVoid) <- t =
+    | TCArray True _ _ (TBasicType TPtr) <- t =
         return $ M "packZeroTerminatedPtrArray"
     | TCArray True _ _ (TBasicType TUInt8) <- t =
         return $ M "packZeroTerminatedByteString"
@@ -233,7 +233,7 @@ hToF' t a hType fType transfer
         return $ M "packUTF8CArray"
     | TCArray False _ _ (TBasicType TFileName) <- t =
         return $ M "packFileNameArray"
-    | TCArray False _ _ (TBasicType TVoid) <- t =
+    | TCArray False _ _ (TBasicType TPtr) <- t =
         return $ M "packPtrArray"
     | TCArray False _ _ (TBasicType TUInt8) <- t =
         return $ M "packByteString"
@@ -281,7 +281,7 @@ hToF_PackedType t packer transfer = do
 -- | Try to find the `hash` and `equal` functions appropriate for the
 -- given type, when used as a key in a GHashTable.
 hashTableKeyMappings :: Type -> ExcCodeGen (Text, Text)
-hashTableKeyMappings (TBasicType TVoid) = return ("gDirectHash", "gDirectEqual")
+hashTableKeyMappings (TBasicType TPtr) = return ("gDirectHash", "gDirectEqual")
 hashTableKeyMappings (TBasicType TUTF8) = return ("gStrHash", "gStrEqual")
 hashTableKeyMappings t =
     notImplementedError $ "GHashTable key of type " <> tshow t <> " unsupported."
@@ -290,7 +290,7 @@ hashTableKeyMappings t =
 -- following function tries to find the appropriate
 -- (destroy,packer,unpacker) for the given type.
 hashTablePtrPackers :: Type -> ExcCodeGen (Text, Text, Text)
-hashTablePtrPackers (TBasicType TVoid) =
+hashTablePtrPackers (TBasicType TPtr) =
     return ("Nothing", "ptrPackPtr", "ptrUnpackPtr")
 hashTablePtrPackers (TBasicType TUTF8) =
     return ("(Just ptr_to_g_free)", "cstringPackPtr", "cstringUnpackPtr")
@@ -432,7 +432,7 @@ fToH' t a hType fType transfer
         return $ M "unpackZeroTerminatedFileNameArray"
     | TCArray True _ _ (TBasicType TUInt8) <- t =
         return $ M "unpackZeroTerminatedByteString"
-    | TCArray True _ _ (TBasicType TVoid) <- t =
+    | TCArray True _ _ (TBasicType TPtr) <- t =
         return $ M "unpackZeroTerminatedPtrArray"
     | TCArray True _ _ (TBasicType TBoolean) <- t =
         return $ M "(unpackMapZeroTerminatedStorableArray (/= 0))"
@@ -524,7 +524,7 @@ unpackCArray length (TCArray False _ _ t) transfer =
                             "unpackFileNameArrayWithLength " <> length
     TBasicType TUInt8 -> return $ apply $ M $ parenthesize $
                          "unpackByteStringWithLength " <> length
-    TBasicType TVoid -> return $ apply $ M $ parenthesize $
+    TBasicType TPtr -> return $ apply $ M $ parenthesize $
                          "unpackPtrArrayWithLength " <> length
     TBasicType TBoolean -> return $ apply $ M $ parenthesize $
                          "unpackMapStorableArrayWithLength (/= 0) " <> length
@@ -586,7 +586,7 @@ argumentType letters@(l:ls) t   = do
         else return (letters, s, [])
     _ -> return (letters, s, [])
 
-haskellBasicType TVoid     = ptr $ typeOf ()
+haskellBasicType TPtr      = ptr $ typeOf ()
 haskellBasicType TBoolean  = typeOf True
 haskellBasicType TInt8     = typeOf (0 :: Int8)
 haskellBasicType TUInt8    = typeOf (0 :: Word8)
@@ -647,7 +647,6 @@ haskellType t@(TInterface ns n) = do
              Just (APIFlags _) -> "[]" `con` [tname]
              _ -> tname
 
-foreignBasicType TVoid     = ptr (typeOf ())
 foreignBasicType TBoolean  = "CInt" `con` []
 foreignBasicType TUTF8     = "CString" `con` []
 foreignBasicType TFileName = "CString" `con` []
@@ -742,7 +741,7 @@ isManaged t = do
 -- | Returns whether the given type is represented by a pointer on the
 -- C side.
 typeIsPtr :: Type -> CodeGen Bool
-typeIsPtr (TBasicType TVoid) = return True
+typeIsPtr (TBasicType TPtr) = return True
 typeIsPtr (TBasicType TUTF8) = return True
 typeIsPtr (TBasicType TFileName) = return True
 typeIsPtr t = do
@@ -757,7 +756,7 @@ typeIsPtr t = do
 -- introspection annotations can override this.
 typeIsNullable :: Type -> CodeGen Bool
 typeIsNullable t = case t of
-                     TBasicType TVoid -> return False
+                     TBasicType TPtr -> return False
                      TGList _ -> return False
                      TGSList _ -> return False
                      _ -> typeIsPtr t

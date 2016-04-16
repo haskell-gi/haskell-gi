@@ -53,7 +53,7 @@ genConstant (Name _ name) (Constant t value deprecated) =
 -- | Assign to the given name the given constant value, in a way that
 -- can be assigned to the corresponding Haskell type.
 assignValue :: Text -> Type -> Text -> ExcCodeGen ()
-assignValue name t@(TBasicType TVoid) value = do
+assignValue name t@(TBasicType TPtr) value = do
   ht <- tshow <$> haskellType t
   writePattern name (ExplicitSynonym "ptrToIntPtr" "intPtrToPtr" value ht)
 assignValue name t@(TBasicType b) value = do
@@ -100,4 +100,4 @@ showBasicType TGType   gtype   = return $ "GType " <> gtype
 showBasicType TIntPtr  ptr     = return ptr
 showBasicType TUIntPtr ptr     = return ptr
 -- We take care of this one separately above
-showBasicType TVoid    _       = notImplementedError $ "Cannot directly show a pointer"
+showBasicType TPtr    _        = notImplementedError $ "Cannot directly show a pointer"

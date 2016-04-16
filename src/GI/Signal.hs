@@ -67,8 +67,8 @@ genCCallbackPrototype subsec cb name' isSignal =
         line $ tshow ht' <> " ->"
       when isSignal $ line $ withComment "Ptr () ->" "user_data"
       ret <- io <$> case returnType cb of
-                      TBasicType TVoid -> return $ typeOf ()
-                      t -> foreignType t
+                      Nothing -> return $ typeOf ()
+                      Just t -> foreignType t
       line $ tshow ret
 
 -- Generator for wrappers callable from C
@@ -208,8 +208,8 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
         line $ tshow ht' <> " ->"
       when isSignal $ line "Ptr () ->"
       ret <- io <$> case returnType cb of
-                      TBasicType TVoid -> return $ typeOf ()
-                      t -> foreignType t
+                      Nothing -> return $ typeOf ()
+                      Just t -> foreignType t
       line $ tshow ret
 
     let allArgs = if isSignal
@@ -220,8 +220,8 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
       hInNames <- forM hInArgs (prepareArgForCall cb)
 
       let maybeReturn = case returnType cb of
-                          TBasicType TVoid -> []
-                          _                -> ["result"]
+                          Nothing -> []
+                          _       -> ["result"]
           returnVars = maybeReturn <> map (("out"<>) . escapedArgName) hOutArgs
           returnBind = case returnVars of
                          []  -> ""
@@ -233,7 +233,9 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
 
       unless isSignal $ line "maybeReleaseFunPtr funptrptr"
 
-      when (returnType cb /= TBasicType TVoid) $
+      case returnType cb of
+        Nothing -> return ()
+        Just r -> do
            if returnMayBeNull cb
            then do
              line "maybeM nullPtr result $ \\result' -> do"
@@ -241,7 +243,7 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
            else unwrapped "result"
            where
              unwrapped rname = do
-               result' <- convert rname $ hToF (returnType cb) (returnTransfer cb)
+               result' <- convert rname $ hToF r (returnTransfer cb)
                line $ "return " <> result'
 
 genCallback :: Name -> Callback -> CodeGen ()

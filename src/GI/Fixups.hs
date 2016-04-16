@@ -9,7 +9,6 @@ import Data.Monoid ((<>))
 import qualified Data.Text as T
 
 import GI.API
-import GI.Type
 
 -- | Remove functions and methods annotated with "moved-to".
 dropMovedItems :: API -> Maybe API
@@ -76,7 +75,7 @@ guessReadNullability methods p
                Just m ->
                    let c = methodCallable m
                    in if length (args c) == 0 &&
-                      returnType c == propType p &&
+                      returnType c == Just (propType p) &&
                       returnTransfer c == TransferNothing &&
                       skipReturn c == False &&
                       methodThrows m == False &&
@@ -102,7 +101,7 @@ guessWriteNullability methods p
                    let c = methodCallable m
                    in if length (args c) == 1 &&
                           (argType . head . args) c == propType p &&
-                          returnType c == TBasicType TVoid &&
+                          returnType c == Nothing &&
                           (transfer . head . args) c == TransferNothing &&
                           (direction . head . args) c == DirectionIn &&
                           methodMovedTo m == Nothing &&

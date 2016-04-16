@@ -2,6 +2,7 @@
 -- | Parsing type information from GIR files.
 module GI.GIR.Type
     ( parseType
+    , parseOptionalType
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -15,14 +16,13 @@ import Foreign.Storable (sizeOf)
 import Foreign.C (CShort, CUShort, CInt, CUInt, CLong, CULong, CSize)
 import System.Posix.Types (CSsize)
 
-import GI.Type (Type(..), BasicType(..))
+import GI.GIR.BasicTypes (Type(..), BasicType(..))
 import GI.GIR.Parser
 
--- | Map the given type name to a BasicType (in GI.Type), if possible.
+-- | Map the given type name to a `BasicType` (defined in
+-- GI.GIR.BasicTypes), if possible.
 nameToBasicType :: Text -> Maybe BasicType
-nameToBasicType "none"     = Just TVoid
--- XXX Should we try to distinguish TPtr from TVoid?
-nameToBasicType "gpointer" = Just TVoid
+nameToBasicType "gpointer" = Just TPtr
 nameToBasicType "gboolean" = Just TBoolean
 nameToBasicType "gchar"    = Just TInt8
 nameToBasicType "gint8"    = Just TInt8
@@ -104,7 +104,7 @@ parseCArrayType = do
 -- | A hash table.
 parseHashTable :: Parser Type
 parseHashTable = parseTypeElements >>= \case
-                 [key, value] -> return $ TGHash key value
+                 [Just key, Just value] -> return $ TGHash key value
                  other -> parseError $ "Unsupported hash type: "
                                        <> T.pack (show other)
 
@@ -114,7 +114,7 @@ parseHashTable = parseTypeElements >>= \case
 parseListType :: Parser Type
 parseListType = queryType >>= \case
                 Just t -> return t
-                Nothing -> return (TBasicType TVoid)
+                Nothing -> return (TBasicType TPtr)
 
 -- | A type which is not a BasicType or array.
 parseFundamentalType :: Text -> Text -> Parser Type
@@ -127,11 +127,15 @@ parseFundamentalType "GObject" "ParamSpec" = return TParamSpec
 -- A TInterface type (basically, everything that is not of a known type).
 parseFundamentalType ns n = resolveQualifiedTypeName ns n
 
--- | Parse information on a "type" element.
-parseTypeInfo :: Parser Type
+-- | Parse information on a "type" element. Returns either a `Type`,
+-- or `Nothing` indicating that the name of the type in the
+-- introspection data was "none" (associated with @void@ in C).
+parseTypeInfo :: Parser (Maybe Type)
 parseTypeInfo = do
   typeName <- getAttr "name"
-  case nameToBasicType typeName of
+  if typeName == "none"
+  then return Nothing
+  else Just <$> case nameToBasicType typeName of
     Just b -> return (TBasicType b)
     Nothing -> case T.split ('.' ==) typeName of
                  [ns, n] -> parseFundamentalType ns n
@@ -142,23 +146,35 @@ parseTypeInfo = do
                                    <> typeName <> "\""
 
 -- | Find the children giving the type of the given element.
-parseTypeElements :: Parser [Type]
-parseTypeElements = (++) <$> parseChildrenWithLocalName "type" parseTypeInfo <*>
-                    parseChildrenWithLocalName "array" parseArrayInfo
+parseTypeElements :: Parser [Maybe Type]
+parseTypeElements = do
+  types <- parseChildrenWithLocalName "type" parseTypeInfo
+  arrays <- parseChildrenWithLocalName "array" parseArrayInfo
+  return (types ++ map Just arrays)
 
 -- | Try to find a type node, but do not error out if it is not
 -- found. This _does_ give an error if more than one type node is
--- found.
+-- found, or if the type name is "none".
 queryType :: Parser (Maybe Type)
 queryType = parseTypeElements >>= \case
-            [e] -> return (Just e)
+            [Just e] -> return (Just e)
             [] -> return Nothing
+            [Nothing] -> parseError $ "Unexpected \"none\" type."
             _ -> parseError $ "Found more than one type for the element."
 
 -- | Parse the type of a node (which will be described by a child node
 -- named "type" or "array").
 parseType :: Parser Type
 parseType = parseTypeElements >>= \case
-            [e] -> return e
+            [Just e] -> return e
             [] -> parseError $ "Did not find a type for the element."
+            [Nothing] -> parseError $ "Unexpected \"none\" type."
             _ -> parseError $ "Found more than one type for the element."
+
+-- | Like `parseType`, but allow for @none@, returned as `Nothing`.
+parseOptionalType :: Parser (Maybe Type)
+parseOptionalType =
+    parseTypeElements >>= \case
+           [e] -> return e
+           [] -> parseError $ "Did not find a type for the element."
+           _ -> parseError $ "Found more than one type for the element."

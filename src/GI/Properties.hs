@@ -29,7 +29,7 @@ propTypeStr :: Type -> CodeGen Text
 propTypeStr t = case t of
    TBasicType TUTF8 -> return "String"
    TBasicType TFileName -> return "String"
-   TBasicType TVoid -> return "Ptr"
+   TBasicType TPtr -> return "Ptr"
    TByteArray -> return "ByteArray"
    TGHash _ _ -> return "Hash"
    TVariant -> return "Variant"
@@ -52,7 +52,7 @@ propTypeStr t = case t of
    TBasicType TGType -> return "GType"
    TCArray True _ _ (TBasicType TUTF8) -> return "StringArray"
    TCArray True _ _ (TBasicType TFileName) -> return "StringArray"
-   TGList (TBasicType TVoid) -> return "PtrGList"
+   TGList (TBasicType TPtr) -> return "PtrGList"
    t@(TInterface ns n) -> do
      api <- findAPIByName (Name ns n)
      case api of

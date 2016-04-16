@@ -38,15 +38,17 @@ import Text.Show.Pretty (ppShow)
 hOutType :: Callable -> [Arg] -> Bool -> ExcCodeGen TypeRep
 hOutType callable outArgs ignoreReturn = do
   hReturnType <- case returnType callable of
-                   TBasicType TVoid -> return $ typeOf ()
-                   _                -> if ignoreReturn
-                                       then return $ typeOf ()
-                                       else haskellType $ returnType callable
+                   Nothing -> return $ typeOf ()
+                   Just r -> if ignoreReturn
+                             then return $ typeOf ()
+                             else haskellType r
   hOutArgTypes <- forM outArgs $ \outarg ->
                   wrapMaybe outarg >>= bool
                                 (haskellType (argType outarg))
                                 (maybeT <$> haskellType (argType outarg))
+  nullableReturnType <- maybe (return False) typeIsNullable (returnType callable)
   let maybeHReturnType = if returnMayBeNull callable && not ignoreReturn
+                            && nullableReturnType
                          then maybeT hReturnType
                          else hReturnType
   return $ case (outArgs, tshow maybeHReturnType) of
@@ -78,31 +80,18 @@ mkForeignImport symbol callable throwsGError = do
         return $ padTo 40 start <> "-- " <> (argCName arg)
                    <> " : " <> tshow (argType arg)
     last = tshow <$> io <$> case returnType callable of
-                             TBasicType TVoid -> return $ typeOf ()
-                             _  -> foreignType (returnType callable)
+                             Nothing -> return $ typeOf ()
+                             Just r  -> foreignType r
 
--- Given an argument to a function, return whether it should be
+-- | Given an argument to a function, return whether it should be
 -- wrapped in a maybe type (useful for nullable types). We do some
 -- sanity checking to make sure that the argument is actually nullable
 -- (a relatively common annotation mistake is to mix up (optional)
 -- with (nullable)).
-wrapMaybe :: Arg -> ExcCodeGen Bool
-wrapMaybe arg =
-    if mayBeNull arg
-    then case argType arg of
-           -- NULL GLists and GSLists are semantically the same as an
-           -- empty list, so they don't need a Maybe wrapper on their
-           -- type.
-           TGList _ -> return False
-           TGSList _ -> return False
-           _ -> do
-             isPtr <- typeIsPtr (argType arg)
-             if isPtr
-             then return True
-             else badIntroError $ "argument \"" <> (argCName arg)
-                      <> "\" is not of nullable type (" <> tshow (argType arg)
-                      <> "), but it is marked as such."
-    else return False
+wrapMaybe :: Arg -> CodeGen Bool
+wrapMaybe arg = if mayBeNull arg
+                then typeIsNullable (argType arg)
+                else return False
 
 -- Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
@@ -141,7 +130,7 @@ arrayLengths callable = map snd (arrayLengthsMap callable) <>
                -- Often one of the arguments is just the length of
                -- the result.
                case returnType callable of
-                 TCArray False (-1) length _ ->
+                 Just (TCArray False (-1) length _) ->
                      if length > -1
                      then [(args callable)!!length]
                      else []
@@ -226,7 +215,7 @@ checkInArrayLength n array length previous = do
 skipRetVal :: Callable -> Bool -> Bool
 skipRetVal callable throwsGError =
     (skipReturn callable) ||
-         (throwsGError && returnType callable == TBasicType TBoolean)
+         (throwsGError && returnType callable == Just (TBasicType TBoolean))
 
 freeInArgs' :: (Arg -> Text -> Text -> ExcCodeGen [Text]) ->
                Callable -> Map.Map Text Text -> ExcCodeGen [Text]
@@ -567,10 +556,11 @@ callableHOutArgs callable =
 convertResult :: Callable -> Text -> Bool -> Map.Map Text Text ->
                  ExcCodeGen Text
 convertResult callable symbol ignoreReturn nameMap =
-    if ignoreReturn || returnType callable == TBasicType TVoid
+    if ignoreReturn || returnType callable == Nothing
     then return (error "convertResult: unreachable code reached, bug!")
     else do
-      if returnMayBeNull callable
+      nullableReturnType <- maybe (return False) typeIsNullable (returnType callable)
+      if returnMayBeNull callable && nullableReturnType
       then do
         line $ "maybeResult <- convertIfNonNull result $ \\result' -> do"
         indent $ do
@@ -578,8 +568,7 @@ convertResult callable symbol ignoreReturn nameMap =
              line $ "return " <> converted
              return "maybeResult"
       else do
-        isPtr <- typeIsPtr (returnType callable)
-        when isPtr $
+        when nullableReturnType $
              line $ "checkUnexpectedReturnNULL \"" <> symbol
                       <> "\" result"
         unwrappedConvertResult "result"
@@ -589,17 +578,17 @@ convertResult callable symbol ignoreReturn nameMap =
           case returnType callable of
             -- Arrays without length information are just passed
             -- along.
-            TCArray False (-1) (-1) _ -> return rname
+            Just (TCArray False (-1) (-1) _) -> return rname
             -- Not zero-terminated C arrays require knowledge of the
             -- length, so we deal with them directly.
-            t@(TCArray False _ _ _) ->
+            Just (t@(TCArray False _ _ _)) ->
                 convertOutCArray callable t rname nameMap
                                  (returnTransfer callable) prime
-            t -> do
-                result <- convert rname $ fToH (returnType callable)
-                                               (returnTransfer callable)
+            Just t -> do
+                result <- convert rname $ fToH t (returnTransfer callable)
                 freeContainerType (returnTransfer callable) t rname undefined
                 return result
+            Nothing -> return (error "unwrappedConvertResult: bug!")
 
 -- | Marshal a foreign out argument to Haskell, returning the name of
 -- the variable containing the converted Haskell value.
@@ -668,10 +657,10 @@ convertOutArgs callable nameMap hOutArgs =
 invokeCFunction :: Callable -> Text -> Bool -> Bool -> [Text] -> CodeGen ()
 invokeCFunction callable symbol throwsGError ignoreReturn argNames = do
   let returnBind = case returnType callable of
-                     TBasicType TVoid -> ""
-                     _                -> if ignoreReturn
-                                         then "_ <- "
-                                         else "result <- "
+                     Nothing -> ""
+                     _       -> if ignoreReturn
+                                then "_ <- "
+                                else "result <- "
       maybeCatchGErrors = if throwsGError
                           then "propagateGError $ "
                           else ""
@@ -681,7 +670,7 @@ invokeCFunction callable symbol throwsGError ignoreReturn argNames = do
 -- | Return the result of the call, possibly including out arguments.
 returnResult :: Callable -> Bool -> Text -> [Text] -> CodeGen ()
 returnResult callable ignoreReturn result pps =
-    if ignoreReturn || returnType callable == TBasicType TVoid
+    if ignoreReturn || returnType callable == Nothing
     then case pps of
         []      -> line "return ()"
         (pp:[]) -> line $ "return " <> pp
@@ -796,7 +785,7 @@ genCallable n symbol callable throwsGError = do
         line $ "-- returnType : " <> (tshow $ returnType callable)
         line $ "-- throws : " <> (tshow throwsGError)
         line $ "-- Skip return : " <> (tshow $ skipReturn callable)
-        when (skipReturn callable && returnType callable /= TBasicType TBoolean) $
+        when (skipReturn callable && returnType callable /= Just (TBasicType TBoolean)) $
              do line "-- XXX return value ignored, but it is not a boolean."
                 line "--     This may be a memory leak?"
 

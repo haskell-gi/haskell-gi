@@ -49,9 +49,7 @@ import qualified Text.XML as XML
 import Text.XML (Element(elementAttributes))
 import Text.Show.Pretty (ppShow)
 
-import GI.Type (Type(TInterface))
-
-import GI.GIR.BasicTypes (Name(..), Alias(..))
+import GI.GIR.BasicTypes (Name(..), Alias(..), Type(TInterface))
 import GI.GIR.Deprecation (DeprecationInfo, queryDeprecated)
 import GI.GIR.Documentation (Documentation, queryDocumentation)
 import GI.GIR.XMLUtils (localName, GIRXMLNamespace(..),
