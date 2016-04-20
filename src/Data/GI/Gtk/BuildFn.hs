@@ -39,6 +39,7 @@ module Data.GI.Gtk.BuildFn
 
 import           Control.Monad.Reader (ReaderT, runReaderT, ask, MonadIO, liftIO)
 import           Data.GI.Base (GObject, castTo)
+import           Data.GI.Base.BasicTypes (nullToNothing)
 import           Data.Maybe (fromJust)
 import qualified Data.Text as T
 import           Foreign.ForeignPtr (ForeignPtr)
@@ -53,5 +54,5 @@ buildWithBuilder fn builder = liftIO $ runReaderT fn builder
 getObject :: GObject a => (ForeignPtr a -> a) -> T.Text -> BuildFn a
 getObject ctor name = do
     builder <- ask
-    obj <- builderGetObject builder name
+    Just obj <- nullToNothing $ builderGetObject builder name
     liftIO $ fromJust <$> castTo ctor obj
