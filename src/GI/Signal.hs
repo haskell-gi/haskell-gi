@@ -236,7 +236,8 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
       case returnType cb of
         Nothing -> return ()
         Just r -> do
-           if returnMayBeNull cb
+           nullableReturnType <- typeIsNullable r
+           if returnMayBeNull cb && nullableReturnType
            then do
              line "maybeM nullPtr result $ \\result' -> do"
              indent $ unwrapped "result'"
