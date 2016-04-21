@@ -113,6 +113,8 @@ module Data.GI.Gtk.ModelView.TreeModel (
   treeModelGetIter
   ) where
 
+import Prelude ()
+import Prelude.Compat
 import Data.Int (Int32)
 import Data.Text (Text)
 import Data.GI.Base.GValue (fromGValue, get_object)

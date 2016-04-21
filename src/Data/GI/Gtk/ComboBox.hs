@@ -74,6 +74,8 @@ module Data.GI.Gtk.ComboBox (
 
   ) where
 
+import Prelude ()
+import Prelude.Compat
 import Control.Monad    (liftM)
 import Control.Monad.IO.Class (MonadIO(..))
 import Foreign.Ptr (FunPtr, Ptr, nullPtr)
@@ -214,7 +216,7 @@ comboBoxInsertText self position text = do
 -- you can only use this function with combo boxes constructed with
 -- 'comboBoxNewText'.
 --
-comboBoxPrependText :: (MonadIO m, ComboBoxK self) => self -> Text -> m ()
+comboBoxPrependText :: (Applicative m, MonadIO m, ComboBoxK self) => self -> Text -> m ()
 comboBoxPrependText self text = do
   store <- comboBoxGetModelText self
   seqStorePrepend store text
