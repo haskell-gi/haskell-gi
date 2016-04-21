@@ -30,10 +30,9 @@ module Data.GI.CodeGen.Conversions
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>), pure, Applicative)
 #endif
 import Control.Monad (when)
-import Control.Monad.Free (Free(..), liftF)
 import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import Data.Int
 import Data.Text (Text)
@@ -50,6 +49,29 @@ import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
+
+-- | The free monad.
+data Free f r = Free (f (Free f r)) | Pure r
+
+instance Functor f => Functor (Free f) where
+  fmap f = go where
+    go (Pure a)  = Pure (f a)
+    go (Free fa) = Free (go <$> fa)
+
+instance (Functor f) => Applicative (Free f) where
+    pure = Pure
+    Pure a <*> Pure b = Pure $ a b
+    Pure a <*> Free mb = Free $ fmap a <$> mb
+    Free ma <*> b = Free $ (<*> b) <$> ma
+
+instance (Functor f) => Monad (Free f) where
+    return = Pure
+    (Free x) >>= f = Free (fmap (>>= f) x)
+    (Pure r) >>= f = f r
+
+-- | Lift some command to the Free monad.
+liftF :: (Functor f) => f r -> Free f r
+liftF command = Free (fmap Pure command)
 
 -- String identifying a constructor in the generated code, which is
 -- either (by default) a pure function (indicated by the P

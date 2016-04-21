@@ -35,9 +35,7 @@ Library
                        bytestring,
                        xdg-basedir,
                        xml-conduit >= 1.3.0,
-                       haskell-gi-base == 0.13.*,
-                       text >= 1.0,
-                       free
+                       text >= 1.0
 
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
   ghc-options:         -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
@@ -108,6 +106,5 @@ executable haskell-gi
                        text >= 1.0,
                        containers,
                        directory,
-                       haskell-gi-base,
                        pretty-show,
                        haskell-gi
