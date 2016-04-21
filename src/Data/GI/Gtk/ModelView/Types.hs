@@ -65,6 +65,8 @@ module Data.GI.Gtk.ModelView.Types (
   equalManagedPtr
   ) where
 
+import Prelude ()
+import Prelude.Compat
 import GHC.Exts (unsafeCoerce#)
 
 import Data.Char ( isDigit )

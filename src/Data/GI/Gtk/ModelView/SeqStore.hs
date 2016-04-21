@@ -55,6 +55,8 @@ module Data.GI.Gtk.ModelView.SeqStore (
   seqStoreClear,
   ) where
 
+import Prelude ()
+import Prelude.Compat
 import Control.Monad (when)
 import Control.Monad.Trans ( liftIO )
 import Data.IORef
@@ -114,14 +116,14 @@ instance GObject (SeqStore a) where
 instance TypedTreeModelK SeqStore
 
 -- | Create a new 'TreeModel' that contains a list of elements.
-seqStoreNew :: MonadIO m => [a] -> m (SeqStore a)
+seqStoreNew :: (Applicative m, MonadIO m) => [a] -> m (SeqStore a)
 seqStoreNew xs = seqStoreNewDND xs (Just seqStoreDefaultDragSourceIface)
                                      (Just seqStoreDefaultDragDestIface)
 
 -- | Create a new 'TreeModel' that contains a list of elements. In addition, specify two
 --   interfaces for drag and drop.
 --
-seqStoreNewDND :: MonadIO m
+seqStoreNewDND :: (Applicative m, MonadIO m)
   => [a] -- ^ the initial content of the model
   -> Maybe (DragSourceIface SeqStore a) -- ^ an optional interface for drags
   -> Maybe (DragDestIface SeqStore a) -- ^ an optional interface to handle drops
@@ -167,7 +169,7 @@ seqStoreNewDND xs mDSource mDDest = do
 
 -- | Convert a 'TreeIterRaw' to an an index into the 'SeqStore'. Note that this
 --   function merely extracts the second element of the 'TreeIterRaw'.
-seqStoreIterToIndex :: MonadIO m => TreeIter -> m Int32
+seqStoreIterToIndex :: (Applicative m, MonadIO m) => TreeIter -> m Int32
 seqStoreIterToIndex i = unsafeCoerce <$> get i treeIterUserData
 
 -- | Default drag functions for 'Data.GI.Gtk.ModelView.SeqStore'. These
@@ -219,7 +221,7 @@ seqStoreDefaultDragDestIface = DragDestIface {
 
 -- | Extract the value at the given index.
 --
-seqStoreGetValue :: MonadIO m => SeqStore a -> Int32 -> m a
+seqStoreGetValue :: (Applicative m, MonadIO m) => SeqStore a -> Int32 -> m a
 seqStoreGetValue (SeqStore model) index =
   (`Seq.index` fromIntegral index) <$> liftIO (readIORef (customStoreGetPrivate (CustomStore model)))
 
@@ -245,12 +247,12 @@ seqStoreSetValue (SeqStore model) index value = do
 
 -- | Extract all data from the store.
 --
-seqStoreToList :: MonadIO m => SeqStore a -> m [a]
+seqStoreToList :: (Applicative m, MonadIO m) => SeqStore a -> m [a]
 seqStoreToList (SeqStore model) =
   F.toList <$> liftIO (readIORef (customStoreGetPrivate (CustomStore model)))
 
 -- | Query the number of elements in the store.
-seqStoreGetSize :: MonadIO m => SeqStore a -> m Int32
+seqStoreGetSize :: (Applicative m, MonadIO m) => SeqStore a -> m Int32
 seqStoreGetSize (SeqStore model) =
   fromIntegral . Seq.length <$> liftIO (readIORef (customStoreGetPrivate (CustomStore model)))
 
@@ -273,19 +275,19 @@ seqStoreInsert (SeqStore model) index value = liftIO $ do
           where (front, back) = Seq.splitAt i xs
 
 -- | Insert an element in front of the given element.
-seqStoreInsertBefore :: MonadIO m => SeqStore a -> TreeIter -> a -> m ()
+seqStoreInsertBefore :: (Applicative m, MonadIO m) => SeqStore a -> TreeIter -> a -> m ()
 seqStoreInsertBefore store iter value = do
     n <- seqStoreIterToIndex iter
     seqStoreInsert store n value
 
 -- | Insert an element after the given element.
-seqStoreInsertAfter :: MonadIO m => SeqStore a -> TreeIter -> a -> m ()
+seqStoreInsertAfter :: (Applicative m, MonadIO m) => SeqStore a -> TreeIter -> a -> m ()
 seqStoreInsertAfter store iter value = do
     n <- seqStoreIterToIndex iter
     seqStoreInsert store (n + 1) value
 
 -- | Prepend the element to the store.
-seqStorePrepend :: MonadIO m => SeqStore a -> a -> m ()
+seqStorePrepend :: (Applicative m, MonadIO m) => SeqStore a -> a -> m ()
 seqStorePrepend (SeqStore model) value = do
   liftIO $ modifyIORef (customStoreGetPrivate (CustomStore model))
               (\seq -> value Seq.<| seq)

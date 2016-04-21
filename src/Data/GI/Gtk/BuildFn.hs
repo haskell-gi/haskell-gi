@@ -37,6 +37,8 @@ module Data.GI.Gtk.BuildFn
     , getObject
     ) where
 
+import           Prelude ()
+import           Prelude.Compat
 import           Control.Monad.Reader (ReaderT, runReaderT, ask, MonadIO, liftIO)
 import           Data.GI.Base (GObject, castTo)
 import           Data.GI.Base.BasicTypes (nullToNothing)

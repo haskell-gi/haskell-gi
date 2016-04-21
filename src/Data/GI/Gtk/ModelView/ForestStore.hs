@@ -58,6 +58,8 @@ module Data.GI.Gtk.ModelView.ForestStore (
   forestStoreChangeM,
   ) where
 
+import Prelude ()
+import Prelude.Compat
 import Data.Bits
 import Data.Word (Word32)
 import Data.Int (Int32)
@@ -744,8 +746,8 @@ changeForest forest act (p:ps) = case splitAt (fromIntegral p) forest of
 -- | Extract one node from the current model. Fails if the given
 --   'TreePath' refers to a non-existent node.
 --
-forestStoreGetValue :: MonadIO m => ForestStore a -> TreePath -> m a
-forestStoreGetValue model path = fmap rootLabel (forestStoreGetTree model path)
+forestStoreGetValue :: (Applicative m, MonadIO m) => ForestStore a -> TreePath -> m a
+forestStoreGetValue model path = rootLabel <$> forestStoreGetTree model path
 
 -- | Extract a subtree from the current model. Fails if the given
 --   'TreePath' refers to a non-existent node.

@@ -50,6 +50,8 @@ module Data.GI.Gtk.ModelView.CustomStore (
   -- for backwards compatability, not documented
   ) where
 
+import Prelude ()
+import Prelude.Compat
 import Control.Monad ((>=>), liftM, void)
 import Control.Monad.IO.Class                   (MonadIO(..))
 import Data.IORef                               (IORef, newIORef, readIORef, writeIORef)
