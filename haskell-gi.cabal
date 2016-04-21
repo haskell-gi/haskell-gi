@@ -20,8 +20,7 @@ source-repository head
   type: git
   location: git://github.com/haskell-gi/haskell-gi.git
 
-executable haskell-gi
-  main-is:             haskell-gi.hs
+Library
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.42, gobject-2.0 >= 2.36
   build-depends:       base >= 4.7 && < 5,
                        containers,
@@ -40,58 +39,75 @@ executable haskell-gi
                        text >= 1.0,
                        free
 
-  build-tools:         hsc2hs
-  hs-source-dirs:      src
-  other-modules:       GI.GIR.Alias,
-                       GI.GIR.Arg,
-                       GI.GIR.BasicTypes,
-                       GI.GIR.Callable,
-                       GI.GIR.Callback,
-                       GI.GIR.Constant,
-                       GI.GIR.Deprecation,
-                       GI.GIR.Documentation,
-                       GI.GIR.Enum,
-                       GI.GIR.Field,
-                       GI.GIR.Flags,
-                       GI.GIR.Function,
-                       GI.GIR.Interface,
-                       GI.GIR.Method,
-                       GI.GIR.Object,
-                       GI.GIR.Parser,
-                       GI.GIR.Property,
-                       GI.GIR.Repository,
-                       GI.GIR.Signal,
-                       GI.GIR.Struct,
-                       GI.GIR.Type,
-                       GI.GIR.Union,
-                       GI.GIR.XMLUtils,
-                       GI.API,
-                       GI.Cabal,
-                       GI.Callable,
-                       GI.Code,
-                       GI.CodeGen,
-                       GI.Config,
-                       GI.Constant,
-                       GI.Conversions,
-                       GI.Fixups,
-                       GI.GObject,
-                       GI.GType,
-                       GI.Inheritance,
-                       GI.LibGIRepository,
-                       GI.OverloadedSignals,
-                       GI.OverloadedLabels,
-                       GI.OverloadedMethods,
-                       GI.Overrides,
-                       GI.PkgConfig,
-                       GI.ProjectInfo,
-                       GI.Properties,
-                       GI.Signal,
-                       GI.Struct,
-                       GI.SymbolNaming,
-                       GI.Transfer,
-                       GI.Type,
-                       GI.Util
-
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
   ghc-options:         -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
-  c-sources:           src/c/enumStorage.c
+  c-sources:           lib/c/enumStorage.c
+
+  build-tools:         hsc2hs
+  hs-source-dirs:      lib
+  exposed-modules:     Data.GI.GIR.Alias,
+                       Data.GI.GIR.Arg,
+                       Data.GI.GIR.BasicTypes,
+                       Data.GI.GIR.Callable,
+                       Data.GI.GIR.Callback,
+                       Data.GI.GIR.Constant,
+                       Data.GI.GIR.Deprecation,
+                       Data.GI.GIR.Documentation,
+                       Data.GI.GIR.Enum,
+                       Data.GI.GIR.Field,
+                       Data.GI.GIR.Flags,
+                       Data.GI.GIR.Function,
+                       Data.GI.GIR.Interface,
+                       Data.GI.GIR.Method,
+                       Data.GI.GIR.Object,
+                       Data.GI.GIR.Parser,
+                       Data.GI.GIR.Property,
+                       Data.GI.GIR.Repository,
+                       Data.GI.GIR.Signal,
+                       Data.GI.GIR.Struct,
+                       Data.GI.GIR.Type,
+                       Data.GI.GIR.Union,
+                       Data.GI.GIR.XMLUtils,
+                       Data.GI.CodeGen.API,
+                       Data.GI.CodeGen.Cabal,
+                       Data.GI.CodeGen.Callable,
+                       Data.GI.CodeGen.Code,
+                       Data.GI.CodeGen.CodeGen,
+                       Data.GI.CodeGen.Config,
+                       Data.GI.CodeGen.Constant,
+                       Data.GI.CodeGen.Conversions,
+                       Data.GI.CodeGen.Fixups,
+                       Data.GI.CodeGen.GObject,
+                       Data.GI.CodeGen.GType,
+                       Data.GI.CodeGen.Inheritance,
+                       Data.GI.CodeGen.LibGIRepository,
+                       Data.GI.CodeGen.OverloadedSignals,
+                       Data.GI.CodeGen.OverloadedLabels,
+                       Data.GI.CodeGen.OverloadedMethods,
+                       Data.GI.CodeGen.Overrides,
+                       Data.GI.CodeGen.PkgConfig,
+                       Data.GI.CodeGen.ProjectInfo,
+                       Data.GI.CodeGen.Properties,
+                       Data.GI.CodeGen.Signal,
+                       Data.GI.CodeGen.Struct,
+                       Data.GI.CodeGen.SymbolNaming,
+                       Data.GI.CodeGen.Transfer,
+                       Data.GI.CodeGen.Type,
+                       Data.GI.CodeGen.Util
+
+  other-modules:       Paths_haskell_gi
+
+executable haskell-gi
+  main-is:             haskell-gi.hs
+  hs-source-dirs:      cmdline
+
+  extensions:          CPP, OverloadedStrings
+  ghc-options:         -Wall -fno-warn-name-shadowing
+
+  build-depends:       base >= 4.7 && < 5,
+                       text >= 1.0,
+                       containers,
+                       directory,
+                       haskell-gi-base,
+                       pretty-show,
+                       haskell-gi
