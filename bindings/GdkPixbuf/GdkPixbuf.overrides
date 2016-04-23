@@ -1,0 +1,9 @@
+namespace GdkPixbuf
+
+# Not supported on Windows.
+if windows
+   ignore Pixbuf.new_from_file
+   ignore Pixbuf.new_from_file_at_scale
+   ignore Pixbuf.new_from_file_at_size
+   ignore Pixbuf.savev
+endif

@@ -29,3 +29,37 @@ ignore MarkupParseContext.get_position
 ignore base64_decode_step
 ignore base64_encode_step
 ignore base64_encode_close
+
+# Not supported on Windows.
+if windows
+   ignore file_get_contents
+   ignore file_open_tmp
+   ignore file_test
+   ignore filename_from_uri
+   ignore filename_from_utf8
+   ignore filename_to_uri
+   ignore filename_to_utf8
+   ignore get_current_dir
+   ignore getenv
+   ignore setenv
+   ignore unsetenv
+   ignore IOChannel.new_file
+   ignore Source.modify_unix_fd
+   ignore Source.query_unix_fd
+   ignore Source.remove_unix_fd
+   ignore spawn_async
+   ignore spawn_async_with_pipes
+   ignore spawn_command_line_async
+   ignore spawn_command_line_sync
+   ignore spawn_sync
+   ignore unix_error_quark
+   ignore unix_fd_add
+   ignore unix_fd_add_full
+   ignore unix_fd_source_new
+   ignore unix_open_pipe
+   ignore unix_set_fd_nonblocking
+   ignore unix_signal_add
+   ignore unix_signal_add_full
+   ignore unix_signal_source_new
+   ignore mkstemp
+endif
