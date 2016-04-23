@@ -7,6 +7,7 @@ module GI.Overrides
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
+import Data.Traversable (traverse)
 #endif
 
 import Control.Monad.Except
@@ -20,6 +21,7 @@ import qualified Data.Text as T
 import Data.Text (Text)
 
 import qualified System.Info as SI
+import qualified System.Environment as SE
 
 import GI.API
 import GI.GIR.XMLUtils (xmlLocalName)
@@ -96,27 +98,36 @@ getNS = currentNS <$> get
 withFlags :: Parser () -> Parser ()
 withFlags p = do
   fs <- flags <$> get
-  if all checkFlag fs
+  check <- and <$> liftIO (traverse checkFlag fs)
+  if check
   then p
   else return ()
 
 -- | Check whether the given flag holds.
-checkFlag :: ParserFlag -> Bool
-checkFlag FlagLinux = SI.os == "linux"
-checkFlag FlagOSX = SI.os == "darwin"
-checkFlag FlagWindows = SI.os == "mingw32"
+checkFlag :: ParserFlag -> IO Bool
+checkFlag FlagLinux = checkOS "linux"
+checkFlag FlagOSX = checkOS "darwin"
+checkFlag FlagWindows = checkOS "mingw32"
+
+-- | Check whether we are running under the given OS. We take the OS
+-- from `System.Info.os`, but it is possible to override this value by
+-- setting the environment variable @HASKELL_GI_OVERRIDE_OS@.
+checkOS :: String -> IO Bool
+checkOS os = SE.lookupEnv "HASKELL_GI_OVERRIDE_OS" >>= \case
+             Nothing -> return (SI.os == os)
+             Just ov -> return (ov == os)
 
 -- | We have a bit of context (the current namespace), and can fail,
 -- encode this in a monad.
-type Parser a = WriterT Overrides (StateT ParserState (Except Text)) a
+type Parser a = WriterT Overrides (StateT ParserState (ExceptT Text IO)) a
 
 -- | Parse the given config file (as a set of lines) for a given
 -- introspection namespace, filling in the configuration as needed. In
 -- case the parsing fails we return a description of the error
 -- instead.
-parseOverridesFile :: [Text] -> Either Text Overrides
+parseOverridesFile :: [Text] -> IO (Either Text Overrides)
 parseOverridesFile ls =
-    runExcept $ flip evalStateT emptyParserState $ execWriterT $
+    runExceptT $ flip evalStateT emptyParserState $ execWriterT $
               mapM (parseOneLine . T.strip) ls
 
 -- | Parse a single line of the config file, modifying the

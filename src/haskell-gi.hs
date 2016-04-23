@@ -183,7 +183,7 @@ process :: Options -> [Text] -> IO ()
 process options names = do
   let extraPaths = optSearchPaths options
   configs <- traverse TIO.readFile (optOverridesFiles options)
-  case parseOverridesFile (concatMap T.lines configs) of
+  parseOverridesFile (concatMap T.lines configs) >>= \case
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"
       hPutStr stderr (T.unpack errorMsg)
