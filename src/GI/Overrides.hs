@@ -5,6 +5,10 @@ module GI.Overrides
     , filterAPIsAndDeps
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer
@@ -14,6 +18,8 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Text (Text)
+
+import qualified System.Info as SI
 
 import GI.API
 import GI.GIR.XMLUtils (xmlLocalName)
@@ -63,17 +69,55 @@ instance Monoid Overrides where
       girFixups = girFixups a <> girFixups b
     }
 
+-- | The state of the overrides parser.
+data ParserState = ParserState {
+      currentNS :: Maybe Text   -- ^ The current namespace.
+    , flags     :: [ParserFlag] -- ^ Currently loaded flags.
+    } deriving (Show)
+
+-- | Default, empty, parser state.
+emptyParserState :: ParserState
+emptyParserState = ParserState {
+                     currentNS = Nothing
+                   , flags = []
+                   }
+
+-- | Conditional flags for the parser
+data ParserFlag = FlagLinux
+                | FlagOSX
+                | FlagWindows
+                  deriving (Show)
+
+-- | Get the current namespace.
+getNS :: Parser (Maybe Text)
+getNS = currentNS <$> get
+
+-- | Run the given parser only if the flags can be satisfied.
+withFlags :: Parser () -> Parser ()
+withFlags p = do
+  fs <- flags <$> get
+  if all checkFlag fs
+  then p
+  else return ()
+
+-- | Check whether the given flag holds.
+checkFlag :: ParserFlag -> Bool
+checkFlag FlagLinux = SI.os == "linux"
+checkFlag FlagOSX = SI.os == "darwin"
+checkFlag FlagWindows = SI.os == "mingw32"
+
 -- | We have a bit of context (the current namespace), and can fail,
 -- encode this in a monad.
-type Parser a = WriterT Overrides (StateT (Maybe Text) (Except Text)) a
+type Parser a = WriterT Overrides (StateT ParserState (Except Text)) a
 
 -- | Parse the given config file (as a set of lines) for a given
 -- introspection namespace, filling in the configuration as needed. In
 -- case the parsing fails we return a description of the error
 -- instead.
 parseOverridesFile :: [Text] -> Either Text Overrides
-parseOverridesFile ls = runExcept $ flip evalStateT Nothing $ execWriterT $
-                                    mapM (parseOneLine . T.strip) ls
+parseOverridesFile ls =
+    runExcept $ flip evalStateT emptyParserState $ execWriterT $
+              mapM (parseOneLine . T.strip) ls
 
 -- | Parse a single line of the config file, modifying the
 -- configuration as appropriate.
@@ -82,13 +126,23 @@ parseOneLine :: Text -> Parser ()
 parseOneLine line | T.null line = return ()
 -- Comments
 parseOneLine (T.stripPrefix "#" -> Just _) = return ()
-parseOneLine (T.stripPrefix "namespace " -> Just ns) = (put . Just . T.strip) ns
-parseOneLine (T.stripPrefix "ignore " -> Just ign) = get >>= parseIgnore ign
-parseOneLine (T.stripPrefix "seal " -> Just s) = get >>= parseSeal s
-parseOneLine (T.stripPrefix "pkg-config-name" -> Just s) = parsePkgConfigName s
-parseOneLine (T.stripPrefix "cabal-pkg-version" -> Just s) = parseCabalPkgVersion s
-parseOneLine (T.stripPrefix "namespace-version" -> Just s) = parseNsVersion s
-parseOneLine (T.stripPrefix "set-attr" -> Just s) = parseSetAttr s
+parseOneLine (T.stripPrefix "namespace " -> Just ns) =
+    withFlags $ modify' (\s -> s {currentNS = (Just . T.strip) ns})
+parseOneLine (T.stripPrefix "ignore " -> Just ign) =
+    withFlags $ getNS >>= parseIgnore ign
+parseOneLine (T.stripPrefix "seal " -> Just s) =
+    withFlags $ getNS >>= parseSeal s
+parseOneLine (T.stripPrefix "pkg-config-name " -> Just s) =
+    withFlags $ parsePkgConfigName s
+parseOneLine (T.stripPrefix "cabal-pkg-version " -> Just s) =
+    withFlags $ parseCabalPkgVersion s
+parseOneLine (T.stripPrefix "namespace-version " -> Just s) =
+    withFlags $ parseNsVersion s
+parseOneLine (T.stripPrefix "set-attr " -> Just s) =
+    withFlags $ parseSetAttr s
+parseOneLine (T.stripPrefix "if " -> Just s) =
+    withFlags $ parseIf s
+parseOneLine (T.stripPrefix "endif" -> Just s) = parseEndif s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 
 -- | Ignored elements.
@@ -166,6 +220,30 @@ parseNodeSpec spec = case T.splitOn "@" spec of
                        [n, t] -> return (GIRTypedName t n)
                        _ -> throwError ("Could not understand node spec \""
                                         <> spec <> "\".")
+
+-- | Parse a 'if' directive.
+parseIf :: Text -> Parser ()
+parseIf cond = case T.words cond of
+                 [] -> throwError ("Empty 'if' condition.")
+                 ["linux"] -> setFlag FlagLinux
+                 ["osx"] -> setFlag FlagOSX
+                 ["windows"] -> setFlag FlagWindows
+                 _ -> throwError ("Unknown condition \"" <> cond <> "\".")
+    where setFlag :: ParserFlag -> Parser ()
+          setFlag flag = modify' (\s -> s {flags = flag : flags s})
+
+-- | Parse an 'endif' directive.
+parseEndif :: Text -> Parser ()
+parseEndif rest = case T.words rest of
+                    [] -> unsetFlag
+                    _ -> throwError ("Unexpected argument to 'endif': \""
+                                     <> rest <> "\".")
+    where unsetFlag :: Parser ()
+          unsetFlag = do
+            s <- get
+            case flags s of
+              _:rest -> put (s {flags = rest})
+              [] -> throwError ("'endif' with no matching 'if'.")
 
 -- | Filter a set of named objects based on a lookup list of names to
 -- ignore.
