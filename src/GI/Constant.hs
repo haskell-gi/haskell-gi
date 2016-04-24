@@ -78,6 +78,10 @@ assignValue _ t _ = notImplementedError $ "Don't know how to treat constants of 
 -- | Show a basic type, in a way that can be assigned to the
 -- corresponding Haskell type.
 showBasicType                  :: BasicType -> Text -> ExcCodeGen Text
+showBasicType TInt     i       = return i
+showBasicType TUInt    i       = return i
+showBasicType TLong    i       = return i
+showBasicType TULong   i       = return i
 showBasicType TInt8    i       = return i
 showBasicType TUInt8   i       = return i
 showBasicType TInt16   i       = return i

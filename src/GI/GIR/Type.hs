@@ -6,14 +6,14 @@ module GI.GIR.Type
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>))
 #endif
 
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Foreign.Storable (sizeOf)
-import Foreign.C (CShort, CUShort, CInt, CUInt, CLong, CULong, CSize)
+import Foreign.C (CShort, CUShort, CSize)
 import System.Posix.Types (CSsize)
 
 import GI.GIR.BasicTypes (Type(..), BasicType(..))
@@ -25,6 +25,10 @@ nameToBasicType :: Text -> Maybe BasicType
 nameToBasicType "gpointer" = Just TPtr
 nameToBasicType "gboolean" = Just TBoolean
 nameToBasicType "gchar"    = Just TInt8
+nameToBasicType "gint"     = Just TInt
+nameToBasicType "guint"    = Just TUInt
+nameToBasicType "glong"    = Just TLong
+nameToBasicType "gulong"   = Just TULong
 nameToBasicType "gint8"    = Just TInt8
 nameToBasicType "guint8"   = Just TUInt8
 nameToBasicType "gint16"   = Just TInt16
@@ -51,22 +55,6 @@ nameToBasicType "gushort"  = case sizeOf (0 :: CUShort) of
                                4 -> Just TUInt32
                                8 -> Just TUInt64
                                n -> error $ "Unexpected ushort size: " ++ show n
-nameToBasicType "gint"     = case sizeOf (0 :: CInt) of
-                               4 -> Just TInt32
-                               8 -> Just TInt64
-                               n -> error $ "Unexpected int length: " ++ show n
-nameToBasicType "guint"    = case sizeOf (0 :: CUInt) of
-                               4 -> Just TUInt32
-                               8 -> Just TUInt64
-                               n -> error $ "Unexpected uint length: " ++ show n
-nameToBasicType "glong"    = case sizeOf (0 :: CLong) of
-                               4 -> Just TInt32
-                               8 -> Just TInt64
-                               n -> error $ "Unexpected long length: " ++ show n
-nameToBasicType "gulong"   = case sizeOf (0 :: CULong) of
-                               4 -> Just TUInt32
-                               8 -> Just TUInt64
-                               n -> error $ "Unexpected ulong length: " ++ show n
 nameToBasicType "gssize"   = case sizeOf (0 :: CSsize) of
                                4 -> Just TInt32
                                8 -> Just TInt64

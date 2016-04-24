@@ -41,6 +41,9 @@ import qualified Data.Text as T
 import Data.Word
 import GHC.Exts (IsString(..))
 
+import Foreign.C.Types (CInt, CUInt, CLong, CULong)
+import Foreign.Storable (sizeOf)
+
 import GI.API
 import GI.Code
 import GI.GObject
@@ -588,6 +591,19 @@ argumentType letters@(l:ls) t   = do
 
 haskellBasicType TPtr      = ptr $ typeOf ()
 haskellBasicType TBoolean  = typeOf True
+-- For all the platforms that we support (and those supported by glib)
+-- we have gint == gint32. Encoding this assumption in the types saves
+-- conversions.
+haskellBasicType TInt      = case sizeOf (0 :: CInt) of
+                               4 -> typeOf (0 :: Int32)
+                               n -> error ("Unsupported `gint' length: " ++
+                                           show n)
+haskellBasicType TUInt     = case sizeOf (0 :: CUInt) of
+                               4 -> typeOf (0 :: Word32)
+                               n -> error ("Unsupported `guint' length: " ++
+                                           show n)
+haskellBasicType TLong     = typeOf (0 :: CLong)
+haskellBasicType TULong    = typeOf (0 :: CULong)
 haskellBasicType TInt8     = typeOf (0 :: Int8)
 haskellBasicType TUInt8    = typeOf (0 :: Word8)
 haskellBasicType TInt16    = typeOf (0 :: Int16)

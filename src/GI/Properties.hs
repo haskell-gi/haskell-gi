@@ -12,8 +12,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Set as S
 
+import Foreign.C.Types (CInt, CUInt)
 import Foreign.Storable (sizeOf)
-import Foreign.C (CInt, CUInt)
 
 import GI.API
 import GI.Conversions
@@ -34,16 +34,18 @@ propTypeStr t = case t of
    TGHash _ _ -> return "Hash"
    TVariant -> return "Variant"
    TParamSpec -> return "ParamSpec"
-   TBasicType TInt32 -> do
-     -- This should work for all systems in common use, but rather
-     -- than leaving the assumption implicit better double checking.
-     when (sizeOf (0 :: CInt) /= 4) $
-          error "C Integers are not 4 bytes, unsupported platform."
-     return "CInt"
-   TBasicType TUInt32 -> do
-     when (sizeOf (0 :: CUInt) /= 4) $
-          error "C Integers are not 4 bytes, unsupported platform."
-     return "CUInt"
+   TBasicType TInt -> case sizeOf (0 :: CInt) of
+                        4 -> return "Int32"
+                        n -> error ("Unsupported `gint' type length: " ++
+                                    show n)
+   TBasicType TUInt -> case sizeOf (0 :: CUInt) of
+                        4 -> return "UInt32"
+                        n -> error ("Unsupported `guint' type length: " ++
+                                    show n)
+   TBasicType TLong -> return "Long"
+   TBasicType TULong -> return "ULong"
+   TBasicType TInt32 -> return "Int32"
+   TBasicType TUInt32 -> return "UInt32"
    TBasicType TInt64 -> return "Int64"
    TBasicType TUInt64 -> return "UInt64"
    TBasicType TBoolean -> return "Bool"

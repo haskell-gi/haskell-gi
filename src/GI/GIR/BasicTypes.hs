@@ -25,6 +25,10 @@ newtype Alias = Alias (Text, Text) deriving (Ord, Eq, Show)
 -- | Basic types. These are generally trivial to marshal, and the GIR
 -- assumes that they are defined.
 data BasicType = TBoolean         -- ^ gboolean
+               | TInt             -- ^ gint
+               | TUInt            -- ^ guint
+               | TLong            -- ^ glong
+               | TULong           -- ^ gulong
                | TInt8            -- ^ gint8
                | TUInt8           -- ^ guint8
                | TInt16           -- ^ gint16
