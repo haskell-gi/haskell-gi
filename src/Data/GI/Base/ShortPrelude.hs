@@ -69,7 +69,7 @@ import Data.Char (Char, ord, chr)
 import Data.Int (Int, Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 import Data.ByteString.Char8 (ByteString)
-import Foreign.C (CInt(..), CUInt(..), CFloat(..), CDouble(..), CString, CIntPtr(..), CUIntPtr(..))
+import Foreign.C (CInt(..), CUInt(..), CFloat(..), CDouble(..), CString, CIntPtr(..), CUIntPtr(..), CLong(..), CULong(..))
 import Foreign.Ptr (Ptr, plusPtr, FunPtr, nullPtr,
                     castFunPtrToPtr, castPtrToFunPtr)
 import Foreign.ForeignPtr (ForeignPtr, newForeignPtr_)

@@ -12,6 +12,14 @@ module Data.GI.Base.GValue
     , get_string
     , set_pointer
     , get_pointer
+    , set_int
+    , get_int
+    , set_uint
+    , get_uint
+    , set_long
+    , get_long
+    , set_ulong
+    , get_ulong
     , set_int32
     , get_int32
     , set_uint32
@@ -46,11 +54,13 @@ module Data.GI.Base.GValue
 import Control.Applicative ((<$>))
 #endif
 
+import Data.Coerce (coerce)
 import Data.Word
 import Data.Int
 import Data.Text (Text, pack, unpack)
 
-import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..))
+import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..),
+                        CLong(..), CULong(..))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr, nullPtr)
 import Foreign.ForeignPtr (ForeignPtr)
@@ -105,12 +115,28 @@ instance IsGValue (Ptr a) where
     fromGValue = get_pointer
 
 instance IsGValue Int32 where
-    toGValue = buildGValue gtypeInt32 set_int32
+    toGValue = buildGValue gtypeInt set_int32
     fromGValue = get_int32
 
 instance IsGValue Word32 where
-    toGValue = buildGValue gtypeUInt32 set_uint32
+    toGValue = buildGValue gtypeUInt set_uint32
     fromGValue = get_uint32
+
+instance IsGValue CInt where
+    toGValue = buildGValue gtypeInt set_int
+    fromGValue = get_int
+
+instance IsGValue CUInt where
+    toGValue = buildGValue gtypeUInt set_uint
+    fromGValue = get_uint
+
+instance IsGValue CLong where
+    toGValue = buildGValue gtypeLong set_long
+    fromGValue = get_long
+
+instance IsGValue CULong where
+    toGValue = buildGValue gtypeULong set_ulong
+    fromGValue = get_ulong
 
 instance IsGValue Int64 where
     toGValue = buildGValue gtypeInt64 set_int64
@@ -168,27 +194,61 @@ set_pointer gv ptr = withManagedPtr gv $ flip _set_pointer ptr
 get_pointer :: GValue -> IO (Ptr b)
 get_pointer gv = withManagedPtr gv _get_pointer
 
-foreign import ccall unsafe "g_value_set_int" _set_int32 ::
-    Ptr GValue -> Int32 -> IO ()
-foreign import ccall unsafe "g_value_get_int" _get_int32 ::
-    Ptr GValue -> IO Int32
+foreign import ccall unsafe "g_value_set_int" _set_int ::
+    Ptr GValue -> CInt -> IO ()
+foreign import ccall unsafe "g_value_get_int" _get_int ::
+    Ptr GValue -> IO CInt
 
 set_int32 :: GValue -> Int32 -> IO ()
-set_int32 gv n = withManagedPtr gv $ flip _set_int32 n
+set_int32 gv n = withManagedPtr gv $ flip _set_int (coerce n)
 
 get_int32 :: GValue -> IO Int32
-get_int32 gv = withManagedPtr gv _get_int32
+get_int32 gv = coerce <$> withManagedPtr gv _get_int
 
-foreign import ccall unsafe "g_value_set_uint" _set_uint32 ::
-    Ptr GValue -> Word32 -> IO ()
-foreign import ccall unsafe "g_value_get_uint" _get_uint32 ::
-    Ptr GValue -> IO Word32
+set_int :: GValue -> CInt -> IO ()
+set_int gv n = withManagedPtr gv $ flip _set_int n
+
+get_int :: GValue -> IO CInt
+get_int gv = withManagedPtr gv _get_int
+
+foreign import ccall unsafe "g_value_set_uint" _set_uint ::
+    Ptr GValue -> CUInt -> IO ()
+foreign import ccall unsafe "g_value_get_uint" _get_uint ::
+    Ptr GValue -> IO CUInt
 
 set_uint32 :: GValue -> Word32 -> IO ()
-set_uint32 gv n = withManagedPtr gv $ flip _set_uint32 n
+set_uint32 gv n = withManagedPtr gv $ flip _set_uint (coerce n)
 
 get_uint32 :: GValue -> IO Word32
-get_uint32 gv = withManagedPtr gv _get_uint32
+get_uint32 gv = coerce <$> withManagedPtr gv _get_uint
+
+set_uint :: GValue -> CUInt -> IO ()
+set_uint gv n = withManagedPtr gv $ flip _set_uint n
+
+get_uint :: GValue -> IO CUInt
+get_uint gv = withManagedPtr gv _get_uint
+
+foreign import ccall unsafe "g_value_set_long" _set_long ::
+    Ptr GValue -> CLong -> IO ()
+foreign import ccall unsafe "g_value_get_long" _get_long ::
+    Ptr GValue -> IO CLong
+
+set_long :: GValue -> CLong -> IO ()
+set_long gv n = withManagedPtr gv $ flip _set_long n
+
+get_long :: GValue -> IO CLong
+get_long gv = withManagedPtr gv _get_long
+
+foreign import ccall unsafe "g_value_set_ulong" _set_ulong ::
+    Ptr GValue -> CULong -> IO ()
+foreign import ccall unsafe "g_value_get_ulong" _get_ulong ::
+    Ptr GValue -> IO CULong
+
+set_ulong :: GValue -> CULong -> IO ()
+set_ulong gv n = withManagedPtr gv $ flip _set_ulong n
+
+get_ulong :: GValue -> IO CULong
+get_ulong gv = withManagedPtr gv _get_ulong
 
 foreign import ccall unsafe "g_value_set_int64" _set_int64 ::
     Ptr GValue -> Int64 -> IO ()

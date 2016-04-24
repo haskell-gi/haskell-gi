@@ -14,8 +14,10 @@ module Data.GI.Base.BasicTypes
 
     , gtypeString
     , gtypePointer
-    , gtypeInt32
-    , gtypeUInt32
+    , gtypeInt
+    , gtypeUInt
+    , gtypeLong
+    , gtypeULong
     , gtypeInt64
     , gtypeUInt64
     , gtypeFloat
@@ -112,13 +114,21 @@ gtypeString = GType #const G_TYPE_STRING
 gtypePointer :: GType
 gtypePointer = GType #const G_TYPE_POINTER
 
--- | `GType` for signed integers.
-gtypeInt32 :: GType
-gtypeInt32 = GType #const G_TYPE_INT
+-- | `GType` for signed integers (`gint` or `gint32`).
+gtypeInt :: GType
+gtypeInt = GType #const G_TYPE_INT
 
--- | `GType` for unsigned integers.
-gtypeUInt32 :: GType
-gtypeUInt32 = GType #const G_TYPE_UINT
+-- | `GType` for unsigned integers (`guint` or `guint32`).
+gtypeUInt :: GType
+gtypeUInt = GType #const G_TYPE_UINT
+
+-- | `GType` for `glong`.
+gtypeLong :: GType
+gtypeLong = GType #const G_TYPE_LONG
+
+-- | `GType` for `gulong`.
+gtypeULong :: GType
+gtypeULong = GType #const G_TYPE_ULONG
 
 -- | `GType` for signed 64 bit integers.
 gtypeInt64 :: GType

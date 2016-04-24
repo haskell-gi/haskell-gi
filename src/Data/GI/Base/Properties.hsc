@@ -4,8 +4,12 @@ module Data.GI.Base.Properties
     ( setObjectPropertyString
     , setObjectPropertyStringArray
     , setObjectPropertyPtr
-    , setObjectPropertyCInt
-    , setObjectPropertyCUInt
+    , setObjectPropertyInt
+    , setObjectPropertyUInt
+    , setObjectPropertyLong
+    , setObjectPropertyULong
+    , setObjectPropertyInt32
+    , setObjectPropertyUInt32
     , setObjectPropertyInt64
     , setObjectPropertyUInt64
     , setObjectPropertyFloat
@@ -24,8 +28,12 @@ module Data.GI.Base.Properties
     , getObjectPropertyString
     , getObjectPropertyStringArray
     , getObjectPropertyPtr
-    , getObjectPropertyCInt
-    , getObjectPropertyCUInt
+    , getObjectPropertyInt
+    , getObjectPropertyUInt
+    , getObjectPropertyLong
+    , getObjectPropertyULong
+    , getObjectPropertyInt32
+    , getObjectPropertyUInt32
     , getObjectPropertyInt64
     , getObjectPropertyUInt64
     , getObjectPropertyFloat
@@ -44,8 +52,12 @@ module Data.GI.Base.Properties
     , constructObjectPropertyString
     , constructObjectPropertyStringArray
     , constructObjectPropertyPtr
-    , constructObjectPropertyCInt
-    , constructObjectPropertyCUInt
+    , constructObjectPropertyInt
+    , constructObjectPropertyUInt
+    , constructObjectPropertyLong
+    , constructObjectPropertyULong
+    , constructObjectPropertyInt32
+    , constructObjectPropertyUInt32
     , constructObjectPropertyInt64
     , constructObjectPropertyUInt64
     , constructObjectPropertyFloat
@@ -80,6 +92,7 @@ import Data.GI.Base.Utils (freeMem, convertIfNonNull)
 
 import Foreign (Ptr, ForeignPtr, Int32, Word32, Int64, Word64, nullPtr)
 import Foreign.C (CString, withCString)
+import Foreign.C.Types (CInt, CUInt, CLong, CULong)
 
 #include <glib-object.h>
 
@@ -144,33 +157,89 @@ getObjectPropertyPtr :: GObject a =>
 getObjectPropertyPtr obj propName =
     getObjectProperty obj propName get_pointer gtypePointer
 
-setObjectPropertyCInt :: GObject a =>
-                         a -> String -> Int32 -> IO ()
-setObjectPropertyCInt obj propName int =
-    setObjectProperty obj propName int set_int32 gtypeInt32
+setObjectPropertyInt :: GObject a =>
+                         a -> String -> CInt -> IO ()
+setObjectPropertyInt obj propName int =
+    setObjectProperty obj propName int set_int gtypeInt
 
-constructObjectPropertyCInt :: String -> Int32 ->
+constructObjectPropertyInt :: String -> CInt ->
+                              IO (String, GValue)
+constructObjectPropertyInt propName int =
+    constructObjectProperty propName int set_int gtypeInt
+
+getObjectPropertyInt :: GObject a => a -> String -> IO CInt
+getObjectPropertyInt obj propName =
+    getObjectProperty obj propName get_int gtypeInt
+
+setObjectPropertyUInt :: GObject a =>
+                          a -> String -> CUInt -> IO ()
+setObjectPropertyUInt obj propName uint =
+    setObjectProperty obj propName uint set_uint gtypeUInt
+
+constructObjectPropertyUInt :: String -> CUInt ->
                                 IO (String, GValue)
-constructObjectPropertyCInt propName int =
-    constructObjectProperty propName int set_int32 gtypeInt32
+constructObjectPropertyUInt propName uint =
+    constructObjectProperty propName uint set_uint gtypeUInt
 
-getObjectPropertyCInt :: GObject a => a -> String -> IO Int32
-getObjectPropertyCInt obj propName =
-    getObjectProperty obj propName get_int32 gtypeInt32
+getObjectPropertyUInt :: GObject a => a -> String -> IO CUInt
+getObjectPropertyUInt obj propName =
+    getObjectProperty obj propName get_uint gtypeUInt
 
-setObjectPropertyCUInt :: GObject a =>
+setObjectPropertyLong :: GObject a =>
+                         a -> String -> CLong -> IO ()
+setObjectPropertyLong obj propName int =
+    setObjectProperty obj propName int set_long gtypeLong
+
+constructObjectPropertyLong :: String -> CLong ->
+                               IO (String, GValue)
+constructObjectPropertyLong propName int =
+    constructObjectProperty propName int set_long gtypeLong
+
+getObjectPropertyLong :: GObject a => a -> String -> IO CLong
+getObjectPropertyLong obj propName =
+    getObjectProperty obj propName get_long gtypeLong
+
+setObjectPropertyULong :: GObject a =>
+                          a -> String -> CULong -> IO ()
+setObjectPropertyULong obj propName uint =
+    setObjectProperty obj propName uint set_ulong gtypeULong
+
+constructObjectPropertyULong :: String -> CULong ->
+                                IO (String, GValue)
+constructObjectPropertyULong propName uint =
+    constructObjectProperty propName uint set_ulong gtypeULong
+
+getObjectPropertyULong :: GObject a => a -> String -> IO CULong
+getObjectPropertyULong obj propName =
+    getObjectProperty obj propName get_ulong gtypeULong
+
+setObjectPropertyInt32 :: GObject a =>
+                          a -> String -> Int32 -> IO ()
+setObjectPropertyInt32 obj propName int32 =
+    setObjectProperty obj propName int32 set_int32 gtypeInt
+
+constructObjectPropertyInt32 :: String -> Int32 ->
+                                IO (String, GValue)
+constructObjectPropertyInt32 propName int32 =
+    constructObjectProperty propName int32 set_int32 gtypeInt
+
+getObjectPropertyInt32 :: GObject a => a -> String -> IO Int32
+getObjectPropertyInt32 obj propName =
+    getObjectProperty obj propName get_int32 gtypeInt
+
+setObjectPropertyUInt32 :: GObject a =>
                           a -> String -> Word32 -> IO ()
-setObjectPropertyCUInt obj propName uint =
-    setObjectProperty obj propName uint set_uint32 gtypeUInt32
+setObjectPropertyUInt32 obj propName uint32 =
+    setObjectProperty obj propName uint32 set_uint32 gtypeUInt
 
-constructObjectPropertyCUInt :: String -> Word32 ->
-                                IO (String, GValue)
-constructObjectPropertyCUInt propName uint =
-    constructObjectProperty propName uint set_uint32 gtypeUInt32
+constructObjectPropertyUInt32 :: String -> Word32 ->
+                                 IO (String, GValue)
+constructObjectPropertyUInt32 propName uint32 =
+    constructObjectProperty propName uint32 set_uint32 gtypeUInt
 
-getObjectPropertyCUInt :: GObject a => a -> String -> IO Word32
-getObjectPropertyCUInt obj propName =
-    getObjectProperty obj propName get_uint32 gtypeUInt32
+getObjectPropertyUInt32 :: GObject a => a -> String -> IO Word32
+getObjectPropertyUInt32 obj propName =
+    getObjectProperty obj propName get_uint32 gtypeUInt
 
 setObjectPropertyInt64 :: GObject a =>
                           a -> String -> Int64 -> IO ()
