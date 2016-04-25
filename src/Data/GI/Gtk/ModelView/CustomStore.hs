@@ -65,7 +65,7 @@ import Foreign.StablePtr (deRefStablePtr, newStablePtr, StablePtr(..))
 import Foreign.Marshal (fromBool)
 import Foreign.Storable (peek, poke, peekByteOff)
 import System.IO.Unsafe (unsafePerformIO)
-import Data.GI.Base.BasicTypes (GObject(..), GType, CGType(..), gtypeToCGType, gtypeInt32, gtypeBoolean, gtypeString, gtypeInvalid)
+import Data.GI.Base.BasicTypes (GObject(..), GType, CGType(..), gtypeToCGType, gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
 import Data.GI.Base.Overloading (ParentTypes)
 import Data.GI.Base.ManagedPtr (newObject, withManagedPtr)
@@ -309,11 +309,11 @@ foreign export ccall "gtk2hs_store_get_n_columns_impl"
 
 -- Get the 'GType' for a given 'ColumnAccess'.
 caToGType :: ColumnAccess row -> GType
-caToGType (CAInt _) = gtypeInt32
+caToGType (CAInt _) = gtypeInt
 caToGType (CABool _) = gtypeBoolean
 caToGType (CAString _) = gtypeString
 caToGType (CAPixbuf _) = gtypePixbuf
-caToGType CAInvalid = gtypeInt32 -- to avoid warnings of functions that iterate through all columns
+caToGType CAInvalid = gtypeInt -- to avoid warnings of functions that iterate through all columns
 
 gtypePixbuf :: GType
 gtypePixbuf = unsafePerformIO $ gobjectType (undefined :: Pixbuf)
@@ -393,7 +393,7 @@ treeModelIfaceGetValue_static storePtr iterPtr column gVal = do
   case drop (fromIntegral column) cols of
     [] -> void $ g_value_init gVal (gtypeToCGType gtypeInvalid) -- column number out of range
     (acc:_) -> case acc of
-      (CAInt ca) -> g_value_init gVal (gtypeToCGType gtypeInt32) >> _set_int32 gVal (fromIntegral $ ca row)
+      (CAInt ca) -> g_value_init gVal (gtypeToCGType gtypeInt) >> _set_int32 gVal (fromIntegral $ ca row)
       (CABool ca) -> g_value_init gVal (gtypeToCGType gtypeBoolean) >> _set_boolean gVal (fromIntegral . fromEnum $ ca row)
       (CAString ca) -> g_value_init gVal (gtypeToCGType gtypeString) >> (withTextCString (ca row) $ _set_string gVal)
       (CAPixbuf ca) -> g_value_init gVal (gtypeToCGType gtypePixbuf) >> (withManagedPtr (ca row) $ _set_object gVal)
