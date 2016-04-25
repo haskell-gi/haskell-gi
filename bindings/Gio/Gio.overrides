@@ -15,4 +15,31 @@ if windows
    ignore DBusMessage.get_unix_fd_list
    ignore DBusMessage.set_unix_fd_list
    ignore DBusMethodInvocation.return_value_with_unix_fd_list
+   ignore unix_mounts_changed_since
+   ignore unix_mount_points_changed_since
+   ignore unix_mount_is_system_internal
+   ignore unix_mount_is_readonly
+   ignore unix_mount_guess_symbolic_icon
+   ignore unix_mount_guess_should_display
+   ignore unix_mount_guess_name
+   ignore unix_mount_guess_icon
+   ignore unix_mount_guess_can_eject
+   ignore unix_mount_get_mount_path
+   ignore unix_mount_get_fs_type
+   ignore unix_mount_get_device_path
+   ignore unix_mount_free
+   ignore unix_mount_compare
+   ignore unix_is_mount_path_system_internal
+   ignore unix_is_mount_path_system_internal
+   ignore DBusConnection.call_with_unix_fd_list_finish
+   ignore DBusConnection.call_with_unix_fd_list_sync
+   ignore DBusConnection.call_with_unix_fd_list
+   ignore UnixFDList.get_type
+   ignore UnixFDList.append
+   ignore UnixFDList.get
+   ignore UnixFDList.get_length
+   ignore UnixFDList.peek_fds
+   ignore UnixFDList.steal_fds
+   ignore UnixFDList.new
+   ignore UnixFDList.new_from_array
 endif
