@@ -44,10 +44,8 @@ import GHC.OverloadedLabels (IsLabel(..))
 import Data.GI.Base.Overloading (HasSignal)
 #endif
 
-#include <glib-object.h>
-
 -- | Type of a `GObject` signal handler id.
-type SignalHandlerId = #type gulong
+type SignalHandlerId = CULong
 
 -- | A class that provides a constraint satisfied by every type.
 class NoConstraint a
