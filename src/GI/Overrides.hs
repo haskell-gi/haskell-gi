@@ -24,7 +24,9 @@ import qualified System.Info as SI
 import qualified System.Environment as SE
 
 import GI.API
-import GI.GIR.XMLUtils (xmlLocalName)
+import qualified Text.XML as XML
+import GI.GIR.XMLUtils (xmlLocalName, xmlNSName,
+                        GIRXMLNamespace(CGIRNS, GLibGIRNS))
 
 data Overrides = Overrides {
       -- | Ignored elements of a given API.
@@ -210,8 +212,9 @@ parseCabalPkgVersion t =
 parseSetAttr :: Text -> Parser ()
 parseSetAttr (T.words -> [path, attr, newVal]) = do
   pathSpec <- parsePathSpec path
+  parsedAttr <- parseXMLName attr
   tell $ defaultOverrides {girFixups =
-                           [GIRSetAttr (pathSpec, xmlLocalName attr) newVal]}
+                           [GIRSetAttr (pathSpec, parsedAttr) newVal]}
 parseSetAttr t =
     throwError ("set-attr syntax is of the form\n" <>
                "\t\"set-attr nodePath attrName newValue\"\n" <>
@@ -231,6 +234,15 @@ parseNodeSpec spec = case T.splitOn "@" spec of
                        [n, t] -> return (GIRTypedName t n)
                        _ -> throwError ("Could not understand node spec \""
                                         <> spec <> "\".")
+
+-- | Parse an XML name, with an optional prefix.
+parseXMLName :: Text -> Parser XML.Name
+parseXMLName a = case T.splitOn ":" a of
+                   [n] -> return (xmlLocalName n)
+                   ["c", n] -> return (xmlNSName CGIRNS n)
+                   ["glib", n] -> return (xmlNSName GLibGIRNS n)
+                   _ -> throwError ("Could not understand xml name \""
+                                    <> a <> "\".")
 
 -- | Parse a 'if' directive.
 parseIf :: Text -> Parser ()
