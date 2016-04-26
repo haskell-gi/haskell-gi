@@ -30,28 +30,50 @@ ignore base64_decode_step
 ignore base64_encode_step
 ignore base64_encode_close
 
-# Not supported on Windows.
 if windows
-   ignore file_get_contents
-   ignore file_open_tmp
-   ignore file_test
-   ignore filename_from_uri
-   ignore filename_from_utf8
-   ignore filename_to_uri
-   ignore filename_to_utf8
-   ignore get_current_dir
-   ignore getenv
-   ignore setenv
-   ignore unsetenv
-   ignore IOChannel.new_file
+   # Windows only macros in glib/gfileutils.h
+   set-attr GLib/file_get_contents c:identifier g_file_get_contents_utf8
+   set-attr GLib/file_open_tmp c:identifier g_file_open_tmp_utf8
+   set-attr GLib/file_test c:identifier g_file_test_utf8
+   set-attr GLib/mkstemp c:identifier g_mkstemp_utf8
+   set-attr GLib/get_current_dir c:identifier g_get_current_dir_utf8
+
+   # Windows only macros in glib/gconvert.h
+   set-attr GLib/filename_from_uri c:identifier g_filename_from_uri_utf8
+   set-attr GLib/filename_from_utf8 c:identifier g_filename_from_utf8_utf8
+   set-attr GLib/filename_to_uri c:identifier g_filename_to_uri_utf8
+   set-attr GLib/filename_to_utf8 c:identifier g_filename_to_utf8_utf8
+
+   # Windows only macros in glib/genviron.h
+   set-attr GLib/getenv c:identifier g_getenv_utf8
+   set-attr GLib/setenv c:identifier g_setenv_utf8
+   set-attr GLib/unsetenv c:identifier g_unsetenv_utf8
+   
+   # Windows only macros in glib/gdir.h
+   set-attr GLib/Dir/open c:identifier g_dir_open_utf8
+   set-attr GLib/Dir/read_name c:identifier g_dir_read_name_utf8
+
+   # Windows only macros in glib/gmodule.h (not in GIR yet)
+   set-attr GLib/Module/open c:identifier g_module_name_utf8
+   set-attr GLib/Module/name c:identifier g_module_name_utf8
+
+   # Windows only macros in glib/giochannel.h
+   set-attr GLib/IOChannel/new_file c:identifier g_io_channel_new_file_utf8
+
+   # ifdef G_OS_UNIX in glib/gmain.h
+   ignore Source.add_unix_fd
    ignore Source.modify_unix_fd
    ignore Source.query_unix_fd
    ignore Source.remove_unix_fd
-   ignore spawn_async
-   ignore spawn_async_with_pipes
-   ignore spawn_command_line_async
-   ignore spawn_command_line_sync
-   ignore spawn_sync
+
+   # Windows only macros in glib/spawn.h
+   set-attr GLib/spawn_async c:identifier g_spawn_async_utf8
+   set-attr GLib/spawn_async_with_pipes c:identifier g_spawn_async_with_pipes_utf8
+   set-attr GLib/spawn_command_line_async c:identifier g_spawn_command_line_async_utf8
+   set-attr GLib/spawn_command_line_sync c:identifier g_spawn_command_line_sync_utf8
+   set-attr GLib/spawn_sync c:identifier g_spawn_sync_utf8
+
+   # In G_OS_UNIX only file glib/glib-unix.h
    ignore unix_error_quark
    ignore unix_fd_add
    ignore unix_fd_add_full
@@ -61,5 +83,4 @@ if windows
    ignore unix_signal_add
    ignore unix_signal_add_full
    ignore unix_signal_source_new
-   ignore mkstemp
 endif
