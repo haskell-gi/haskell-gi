@@ -134,8 +134,9 @@ seqStoreNewDND xs mDSource mDDest = do
   customStoreNew rows mkSeqStore TreeModelIface {
       treeModelIfaceGetFlags      = return [TreeModelFlagsListOnly],
       treeModelIfaceGetIter       = \path -> treePathGetIndices' path >>= \[n] -> readIORef rows >>= \rows ->
-                                     if Seq.null rows then return Nothing else
-                                             Just <$> seqStoreIterNew 0 (fromIntegral n),
+                                     if inRange (0, Seq.length rows - 1) (fromIntegral n)
+                                                 then Just <$> seqStoreIterNew 0 (fromIntegral n)
+                                                 else return Nothing,
       treeModelIfaceGetPath       = \i -> do
                             n <- seqStoreIterToIndex i
                             treePathNewFromIndices' [fromIntegral n],
@@ -152,7 +153,10 @@ seqStoreNewDND xs mDSource mDDest = do
                                  if inRange (0, Seq.length rows - 1) (fromIntegral (n+1))
                                    then Just <$> seqStoreIterNew 0 (n+1)
                                    else return Nothing,
-      treeModelIfaceIterChildren  = \_ -> return Nothing,
+      treeModelIfaceIterChildren  = \index -> readIORef rows >>= \rows ->
+                                           case index of
+                                             Nothing | not (Seq.null rows) -> Just <$> seqStoreIterNew 0 0
+                                             _    -> return Nothing,
       treeModelIfaceIterHasChild  = \_ -> return False,
       treeModelIfaceIterNChildren = \index -> readIORef rows >>= \rows ->
                                            case index of
