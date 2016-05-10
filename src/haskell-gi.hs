@@ -130,18 +130,19 @@ genGenericConnectors options ovs modules extraPaths = do
 processMod :: Options -> Overrides -> [FilePath] -> Text -> IO ()
 processMod options ovs extraPaths name = do
   let version = M.lookup name (nsChooseVersion ovs)
-  (gir, girDeps) <- loadGIRInfo (optVerbose options) name version extraPaths
-                    (girFixups ovs)
-  let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
-      allAPIs = M.union apis deps
-
-  let cfg = Config {modName = Just name,
+      cfg = Config {modName = Just name,
                     verbose = optVerbose options,
                     overrides = ovs}
       nm = ucFirst name
       mp = T.unpack . ("GI." <>)
 
   putStrLn $ "\t* Generating " ++ mp nm
+
+  (gir, girDeps) <- loadGIRInfo (optVerbose options) name version extraPaths
+                    (girFixups ovs)
+  let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
+      allAPIs = M.union apis deps
+
   m <- genCode cfg allAPIs ["GI", nm] (genModule apis)
   let modDeps = transitiveModuleDeps m
   moduleList <- writeModuleTree (optVerbose options) (optOutputDir options) m
