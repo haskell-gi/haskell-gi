@@ -59,13 +59,14 @@ splitOn x xs = go xs []
 -- the explicitly passed paths, or in the contents of
 -- @HASKELL_GI_GIR_SEARCH_PATH@.
 girFile :: Text -> Maybe Text -> [FilePath] -> IO (Maybe FilePath)
-girFile name version [] =
-    lookupEnv "HASKELL_GI_GIR_SEARCH_PATH" >>= \case
-      Nothing -> girFile name version []
-      Just s -> girFile name version (splitOn ':' s)
 girFile name version extraPaths = do
+  paths <- case extraPaths of
+             [] -> lookupEnv "HASKELL_GI_GIR_SEARCH_PATH" >>= \case
+                   Nothing -> return []
+                   Just s -> return (splitOn ':' s)
+             ps -> return ps
   dataDirs <- girDataDirs
-  firstJust <$> (mapM (girFile' name version) (extraPaths ++ dataDirs))
+  firstJust <$> (mapM (girFile' name version) (paths ++ dataDirs))
     where firstJust = listToMaybe . catMaybes
 
 -- | Try to load the `.gir` file corresponding to the given repository
