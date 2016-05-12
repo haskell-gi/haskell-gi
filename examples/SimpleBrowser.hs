@@ -8,7 +8,6 @@ import GI.WebKit2
 import GI.OverloadedLabels
 import GI.Signals
 
-import Foreign.Ptr (castPtr)
 import System.Mem (performGC)
 
 import Data.Text (pack)
@@ -20,7 +19,8 @@ main = do
   args <- getArgs
 
   -- We periodically perform a GC, in order to test that the
-  -- finalizers are not pointing to invalid regions.
+  -- finalizers are not pointing to invalid regions. This is only for
+  -- testing, and not needed in production code.
   _ <- GLib.timeoutAdd 0 5000 $ do
          putStrLn "** (T) Going into GC"
          performGC
@@ -62,7 +62,7 @@ main = do
     putStrLn $ "Load: " <> show event
 
   on view LoadFailed $ \_ uri error -> do
-    errMsg <- newBoxed GError (castPtr error) >>= gerrorMessage
+    errMsg <- gerrorMessage error
     putStrLn $ "Error when reading \"" <> uri <> "\": " <> errMsg
     -- Keep processing, so WebKit shows the error page
     return False
