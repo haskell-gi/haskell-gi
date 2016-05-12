@@ -67,9 +67,12 @@ optDescrs = [
   Option "d" ["dump"] (NoArg $ \opt -> opt { optMode = Dump })
     "\tdump internal representation",
   Option "l" ["labels"] (NoArg $ \opt -> opt {optMode = Labels})
-    "generate overloaded labels",
+    "\tgenerate overloaded labels",
   Option "n" ["no-cabal"] (NoArg $ \opt -> opt {optCabal = False})
-    "\tdo not generate .cabal file",
+    ("\tdo not generate cabal project structure\n" ++
+     "\t\t\t(note: if you do not generate a cabal project, make sure\n" ++
+     "\t\t\tto still activate the necessary GHC extensions when\n" ++
+     "\t\t\tcompiling the generated bindings.)"),
   Option "o" ["overrides"] (ReqArg
                            (\arg opt -> opt {optOverridesFiles =
                                                  arg : optOverridesFiles opt})
