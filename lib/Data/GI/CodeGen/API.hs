@@ -252,8 +252,8 @@ loadGIRFile :: Bool             -- ^ verbose
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
             -> [GIRRule]        -- ^ fixups
-            -> IO (Document,                    -- ^ loaded document
-                   M.Map (Text, Text) Document) -- ^ dependencies
+            -> IO (Document,
+                   M.Map (Text, Text) Document) -- ^ (loaded doc, dependencies)
 loadGIRFile verbose name version extraPaths rules = do
   doc <- fixupGIRDocument rules <$>
          readGiRepository verbose name version extraPaths
@@ -296,8 +296,8 @@ loadGIRInfo :: Bool             -- ^ verbose
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
             -> [GIRRule]        -- ^ fixups
-            -> IO (GIRInfo,     -- ^ parsed document
-                   [GIRInfo])   -- ^ parsed deps
+            -> IO (GIRInfo,
+                   [GIRInfo])   -- ^ (parsed doc, parsed deps)
 loadGIRInfo verbose name version extraPaths rules =  do
   (doc, deps) <- loadGIRFile verbose name version extraPaths rules
   let aliases = M.unions (map documentListAliases (doc : M.elems deps))
