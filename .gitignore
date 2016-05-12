@@ -12,6 +12,7 @@ bindings/*/LICENSE
 bindings/*/Setup.hs
 bindings/sdists
 bindings/dumps
+newstyle/*/GI/*
 examples/GI/*
 test/GI/*
 
