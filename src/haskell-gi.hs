@@ -8,14 +8,16 @@ import Control.Exception (handle)
 
 import Data.Char (toLower)
 import Data.Bool (bool)
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import System.Directory (doesFileExist)
 import System.Console.GetOpt
-import System.Exit
-import System.IO (hPutStr, hPutStrLn, stderr)
 import System.Environment (getArgs)
+import System.Exit
+import System.FilePath (joinPath)
+import System.IO (hPutStr, hPutStrLn, stderr)
 
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -157,23 +159,24 @@ processMod options ovs extraPaths name = do
                   (putStrLn (cabal ++ " exists, writing "
                              ++ cabal ++ ".new instead") >>
                    return (cabal ++ ".new"))
-    putStrLn $ "\t\t+ " ++ fname
     -- The module is not a dep of itself
     let usedDeps = S.delete name modDeps
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
         actualDeps = filter ((`S.member` usedDeps) . girNSName) girDeps
         baseVersion = minBaseVersion m
+        p = \n -> joinPath [fromMaybe "" (optOutputDir options), n]
     (err, m) <- evalCodeGen cfg allAPIs [] (genCabalProject gir actualDeps moduleList baseVersion)
     case err of
       Nothing -> do
-               TIO.writeFile fname (codeToText (moduleCode m))
+               putStrLn $ "\t\t+ " ++ fname
+               TIO.writeFile (p fname) (codeToText (moduleCode m))
                putStrLn "\t\t+ cabal.config"
-               TIO.writeFile "cabal.config" cabalConfig
+               TIO.writeFile (p "cabal.config") cabalConfig
                putStrLn "\t\t+ Setup.hs"
-               TIO.writeFile "Setup.hs" setupHs
+               TIO.writeFile (p "Setup.hs") setupHs
                putStrLn "\t\t+ LICENSE"
-               TIO.writeFile "LICENSE" licenseText
+               TIO.writeFile (p "LICENSE") licenseText
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ T.unpack msg
 
