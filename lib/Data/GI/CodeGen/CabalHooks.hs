@@ -40,10 +40,10 @@ confCodeGenHook name version verbosity overrides outputDir
   ovsData <- case overrides of
                Nothing -> return ""
                Just fname -> TIO.readFile fname
-  let ovs = case parseOverridesFile (T.lines ovsData) of
-              Left err -> error $ "Error when parsing overrides file: "
-                          ++ T.unpack err
-              Right ovs -> ovs
+  ovs <- parseOverridesFile (T.lines ovsData) >>= \case
+         Left err -> error $ "Error when parsing overrides file: "
+                     ++ T.unpack err
+         Right ovs -> return ovs
 
   (gir, girDeps) <- loadGIRInfo verbosity name (Just version) [] (girFixups ovs)
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps

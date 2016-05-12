@@ -23,6 +23,7 @@ source-repository head
 Library
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.42, gobject-2.0 >= 2.36
   build-depends:       base >= 4.7 && < 5,
+                       haskell-gi-base == 0.14,
                        Cabal >= 1.24,
                        containers,
                        directory,
@@ -101,12 +102,14 @@ executable haskell-gi
   main-is:             haskell-gi.hs
   hs-source-dirs:      cmdline
 
-  extensions:          CPP, OverloadedStrings
+  extensions:          CPP, OverloadedStrings, LambdaCase
   ghc-options:         -Wall -fno-warn-name-shadowing
 
   build-depends:       base >= 4.7 && < 5,
                        text >= 1.0,
+                       filepath,
                        containers,
                        directory,
                        pretty-show,
-                       haskell-gi
+                       haskell-gi,
+                       haskell-gi-base

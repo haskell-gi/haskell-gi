@@ -25,8 +25,8 @@ import qualified System.Environment as SE
 
 import Data.GI.CodeGen.API
 import qualified Text.XML as XML
-import GI.GIR.XMLUtils (xmlLocalName, xmlNSName,
-                        GIRXMLNamespace(CGIRNS, GLibGIRNS))
+import Data.GI.GIR.XMLUtils (xmlLocalName, xmlNSName,
+                             GIRXMLNamespace(CGIRNS, GLibGIRNS))
 
 data Overrides = Overrides {
       -- | Ignored elements of a given API.
