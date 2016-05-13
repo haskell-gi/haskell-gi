@@ -384,28 +384,23 @@ boxedForeignPtr constructor transfer = return $
      TransferEverything -> M $ parenthesize $ "wrapBoxed " <> constructor
      _ -> M $ parenthesize $ "newBoxed " <> constructor
 
-suForeignPtr :: Bool -> Int -> TypeRep -> Transfer -> CodeGen Constructor
-suForeignPtr isBoxed size hType transfer = do
+suForeignPtr :: Bool -> TypeRep -> Transfer -> CodeGen Constructor
+suForeignPtr isBoxed hType transfer = do
   let constructor = T.pack . tyConName . typeRepTyCon $ hType
   if isBoxed then
       boxedForeignPtr constructor transfer
-  else case size of
-         0 -> do
-           line "-- XXX Wrapping a foreign struct/union with no known destructor, leak?"
-           return $ M $ parenthesize $
-                      "\\x -> " <> constructor <> " <$> newForeignPtr_ x"
-         n -> return $ M $ parenthesize $
-              case transfer of
-                TransferEverything -> "wrapPtr " <> constructor
-                _ -> "newPtr " <> tshow n <> " " <> constructor
+  else return $ M $ parenthesize $
+       case transfer of
+         TransferEverything -> "wrapPtr " <> constructor
+         _ -> "newPtr " <> constructor
 
 structForeignPtr :: Struct -> TypeRep -> Transfer -> CodeGen Constructor
 structForeignPtr s =
-    suForeignPtr (structIsBoxed s) (structSize s)
+    suForeignPtr (structIsBoxed s)
 
 unionForeignPtr :: Union -> TypeRep -> Transfer -> CodeGen Constructor
 unionForeignPtr u =
-    suForeignPtr (unionIsBoxed u) (unionSize u)
+    suForeignPtr (unionIsBoxed u)
 
 fObjectToH :: Type -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fObjectToH t hType transfer = do

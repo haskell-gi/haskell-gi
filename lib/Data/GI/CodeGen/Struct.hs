@@ -274,7 +274,7 @@ genZeroSU n size isBoxed =
       line $ builder <> " = liftIO $ " <>
            if isBoxed
            then "callocBoxedBytes " <> tsize <> " >>= wrapBoxed " <> name
-           else "callocBytes " <> tsize <> " >>= wrapPtr " <> name
+           else "wrappedPtrCalloc >>= wrapPtr " <> name
       exportDecl builder
 
       blank
