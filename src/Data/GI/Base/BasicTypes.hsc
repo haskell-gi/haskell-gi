@@ -38,6 +38,7 @@ module Data.GI.Base.BasicTypes
     , BoxedEnum(..)
     , BoxedFlags(..)
     , GObject(..)
+    , WrappedPtr(..)
     , UnexpectedNullPointerReturn(..)
     , NullToNothing(..)
 
@@ -212,6 +213,17 @@ class BoxedEnum a where
 -- | Flags with an associated `GType`.
 class BoxedFlags a where
     boxedFlagsType :: Proxy a -> IO GType
+
+-- | Pointers to structs/unions without an associated `GType`.
+class ForeignPtrNewtype a => WrappedPtr a where
+    -- | Allocate a zero-initialized block of memory for the given type.
+    wrappedPtrCalloc :: IO (Ptr a)
+    -- | Make a copy of the given pointer.
+    wrappedPtrCopy   :: Ptr a -> IO (Ptr a)
+    -- | A pointer to a function for freeing the given pointer, or
+    -- `Nothing` is the memory associated to the pointer does not need
+    -- to be freed.
+    wrappedPtrFree   :: Maybe (FunPtr (Ptr a -> IO ()))
 
 -- | A wrapped `GObject`.
 class ForeignPtrNewtype a => GObject a where

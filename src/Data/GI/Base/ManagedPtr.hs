@@ -47,7 +47,8 @@ import Data.Coerce (coerce)
 import Foreign (poke)
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
-import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv, touchForeignPtr)
+import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv,
+                           touchForeignPtr, newForeignPtr_)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import Data.GI.Base.BasicTypes
@@ -244,15 +245,18 @@ freeBoxed boxed = do
   touchManagedPtr boxed
 
 -- | Wrap a pointer, taking ownership of it.
-wrapPtr :: (ForeignPtr a -> a) -> Ptr a -> IO a
+wrapPtr :: WrappedPtr a => (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapPtr constructor ptr = do
-  fPtr <- newForeignPtr ptr_to_g_free ptr
+  fPtr <- case wrappedPtrFree of
+            Nothing -> newForeignPtr_ ptr
+            Just finalizer -> newForeignPtr finalizer ptr
   return $! constructor fPtr
 
--- | Wrap a pointer to n bytes, making a copy of the data.
-newPtr :: Int -> (ForeignPtr a -> a) -> Ptr a -> IO a
-newPtr n constructor ptr = do
-  ptr' <- callocBytes n :: IO (Ptr a)
-  memcpy ptr' ptr n
-  fPtr <- newForeignPtr ptr_to_g_free ptr'
+-- | Wrap a pointer, making a copy of the data.
+newPtr :: WrappedPtr a => (ForeignPtr a -> a) -> Ptr a -> IO a
+newPtr constructor ptr = do
+  ptr' <- wrappedPtrCopy ptr
+  fPtr <- case wrappedPtrFree of
+            Nothing -> newForeignPtr_ ptr
+            Just finalizer -> newForeignPtr finalizer ptr'
   return $! constructor fPtr
