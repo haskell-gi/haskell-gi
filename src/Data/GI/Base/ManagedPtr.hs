@@ -35,6 +35,7 @@ module Data.GI.Base.ManagedPtr
     , freeBoxed
     , wrapPtr
     , newPtr
+    , copyPtr
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -260,3 +261,11 @@ newPtr constructor ptr = do
             Nothing -> newForeignPtr_ ptr
             Just finalizer -> newForeignPtr finalizer ptr'
   return $! constructor fPtr
+
+-- | Make a copy of a wrapped pointer using @memcpy@ into a freshly
+-- allocated memory region of the given size.
+copyPtr :: WrappedPtr a => Int -> Ptr a -> IO (Ptr a)
+copyPtr size ptr = do
+  ptr' <- wrappedPtrCalloc
+  memcpy ptr' ptr size
+  return ptr'
