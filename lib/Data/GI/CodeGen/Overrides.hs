@@ -35,6 +35,8 @@ data Overrides = Overrides {
       ignoredAPIs     :: S.Set Name,
       -- | Structs for which accessors should not be auto-generated.
       sealedStructs   :: S.Set Name,
+      -- | Explicit calloc/copy/free for structs/unions.
+      allocInfo       :: M.Map Name AllocationInfo,
       -- | Mapping from GObject Introspection namespaces to pkg-config
       pkgConfigMap    :: M.Map Text Text,
       -- | Version number for the generated .cabal package.
@@ -48,13 +50,15 @@ data Overrides = Overrides {
 -- | Construct the generic config for a module.
 defaultOverrides :: Overrides
 defaultOverrides = Overrides {
-              ignoredElems    = M.empty,
-              ignoredAPIs     = S.empty,
-              sealedStructs   = S.empty,
-              pkgConfigMap    = M.empty,
-              cabalPkgVersion = Nothing,
-              nsChooseVersion = M.empty,
-              girFixups       = [] }
+                     ignoredElems    = M.empty,
+                     ignoredAPIs     = S.empty,
+                     sealedStructs   = S.empty,
+                     allocInfo       = M.empty,
+                     pkgConfigMap    = M.empty,
+                     cabalPkgVersion = Nothing,
+                     nsChooseVersion = M.empty,
+                     girFixups       = []
+                   }
 
 -- | There is a sensible notion of zero and addition of Overridess,
 -- encode this so that we can view the parser as a writer monad of
@@ -64,6 +68,7 @@ instance Monoid Overrides where
     mappend a b = Overrides {
       ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
       sealedStructs = sealedStructs a <> sealedStructs b,
+      allocInfo = allocInfo a <> allocInfo b,
       ignoredElems = M.unionWith S.union (ignoredElems a) (ignoredElems b),
       pkgConfigMap = pkgConfigMap a <> pkgConfigMap b,
       cabalPkgVersion = if isJust (cabalPkgVersion b)
@@ -145,6 +150,8 @@ parseOneLine (T.stripPrefix "ignore " -> Just ign) =
     withFlags $ getNS >>= parseIgnore ign
 parseOneLine (T.stripPrefix "seal " -> Just s) =
     withFlags $ getNS >>= parseSeal s
+parseOneLine (T.stripPrefix "alloc-info " -> Just s) =
+    withFlags $ getNS >>= parseAllocInfo s
 parseOneLine (T.stripPrefix "pkg-config-name " -> Just s) =
     withFlags $ parsePkgConfigName s
 parseOneLine (T.stripPrefix "cabal-pkg-version " -> Just s) =
@@ -178,6 +185,31 @@ parseSeal (T.words -> [s]) (Just ns) = tell $
 parseSeal seal _ =
     throwError ("seal syntax is of the form \"seal name\".\nGot \"seal "
                 <> seal <> "\" instead.")
+
+-- | Explicit allocation info for wrapped pointers.
+parseAllocInfo :: Text -> Maybe Text -> Parser ()
+parseAllocInfo _ Nothing = throwError "'alloc-info' requires a namespace to be defined first."
+parseAllocInfo (T.words -> (n:ops)) (Just ns) = do
+  parsedOps <- traverse parseKeyValuePair ops
+  info <- foldM applyOp unknownAllocationInfo parsedOps
+  tell $ defaultOverrides {allocInfo = M.singleton (Name ns n) info}
+  where applyOp :: AllocationInfo -> (Text, Text) -> Parser AllocationInfo
+        applyOp a ("calloc", f) = return (a {allocCalloc = AllocationOp f})
+        applyOp a ("copy", f) = return (a {allocCopy = AllocationOp f})
+        applyOp a ("free", f) = return (a {allocFree = AllocationOp f})
+        applyOp _ (op, _) = throwError ("Unknown alloc op \"" <> op <> "\".")
+parseAllocInfo info _ =
+    throwError ("alloc-info syntax is of the form "
+                <> "\"alloc-info name calloc copy free\", with \"-\" meaning "
+                <> "a masked operation. Got \"alloc-info " <> info
+                <> "\" instead.")
+
+-- | Parse a explicit key=value pair into a (key, value) tuple.
+parseKeyValuePair :: Text -> Parser (Text, Text)
+parseKeyValuePair p =
+    case T.splitOn "=" p of
+      [k,v] -> return (k, v)
+      _ -> throwError ("Could not parse \"" <> p <> "\"as a \"key=value\" pair.")
 
 -- | Mapping from GObject Introspection namespaces to pkg-config.
 parsePkgConfigName :: Text -> Parser ()
@@ -274,15 +306,43 @@ filterMethods :: [Method] -> S.Set Text -> [Method]
 filterMethods set ignores =
     filter ((`S.notMember` ignores) . name . methodName) set
 
+-- | Given the previous allocation info, and a new allocation info,
+-- replace those entries in the old allocation info which are
+-- specified in the new info.
+filterAllocInfo :: AllocationInfo -> AllocationInfo -> AllocationInfo
+filterAllocInfo old new =
+    AllocationInfo { allocCalloc = replace (allocCalloc old) (allocCalloc new)
+                   , allocCopy = replace (allocCopy old) (allocCopy new)
+                   , allocFree = replace (allocFree old) (allocFree new) }
+    where replace :: AllocationOp -> AllocationOp -> AllocationOp
+          replace o AllocationOpUnknown = o
+          replace _ o = o
+
 -- | Filter one API according to the given config.
 filterOneAPI :: Overrides -> (Name, API, Maybe (S.Set Text)) -> (Name, API)
 filterOneAPI ovs (n, APIStruct s, maybeIgnores) =
-    (n, APIStruct s {structMethods = maybe (structMethods s)
-                                     (filterMethods (structMethods s))
-                                     maybeIgnores,
-                     structFields = if n `S.member` sealedStructs ovs
+    (n, APIStruct s { structMethods = maybe (structMethods s)
+                                      (filterMethods (structMethods s))
+                                      maybeIgnores
+                    , structFields = if n `S.member` sealedStructs ovs
                                     then []
-                                    else structFields s})
+                                    else structFields s
+                    , structAllocationInfo =
+                        let ai = structAllocationInfo s
+                        in case M.lookup n (allocInfo ovs) of
+                             Just info -> filterAllocInfo ai info
+                             Nothing -> ai
+                    })
+filterOneAPI ovs (n, APIUnion u, maybeIgnores) =
+    (n, APIUnion u {unionMethods = maybe (unionMethods u)
+                                   (filterMethods (unionMethods u))
+                                   maybeIgnores
+                   , unionAllocationInfo =
+                        let ai = unionAllocationInfo u
+                        in case M.lookup n (allocInfo ovs) of
+                             Just info -> filterAllocInfo ai info
+                             Nothing -> ai
+                   })
 -- The rest only apply if there are ignores.
 filterOneAPI _ (n, api, Nothing) = (n, api)
 filterOneAPI _ (n, APIObject o, Just ignores) =
@@ -295,8 +355,6 @@ filterOneAPI _ (n, APIInterface i, Just ignores) =
                         ifSignals = filter ((`S.notMember` ignores) . sigName)
                                     (ifSignals i)
                        })
-filterOneAPI _ (n, APIUnion u, Just ignores) =
-    (n, APIUnion u {unionMethods = filterMethods (unionMethods u) ignores})
 filterOneAPI _ (n, api, _) = (n, api)
 
 -- | Given a list of APIs modify them according to the given config.

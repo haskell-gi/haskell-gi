@@ -34,7 +34,8 @@ import Data.GI.CodeGen.OverloadedMethods (genMethodList, genMethodInfo,
                              genUnsupportedMethodInfo)
 import Data.GI.CodeGen.Signal (genSignal, genCallback)
 import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
-                  fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion)
+                  fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
+                  genWrappedPtr)
 import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
@@ -190,31 +191,6 @@ genErrorDomain name' domain = do
   exportToplevel ("catch" <> name')
   exportToplevel ("handle" <> name')
 
--- | Information for how to allocate/deallocate unboxed structs and
--- unions.
-genWrappedPtr :: Name -> Int -> CodeGen ()
-genWrappedPtr n size = group $ do
-  name' <- upperName n
-
-  line $ "instance WrappedPtr " <> name' <> " where"
-  indent $ do
-    if size > 0
-    then do
-      line $ "wrappedPtrCalloc = callocBytes " <> tshow size
-      line $ "wrappedPtrCopy ptr = do"
-      indent $ do
-             line $ "ptr' <- wrappedPtrCalloc"
-             line $ "memcpy ptr' ptr " <> tshow size
-             line $ "return ptr'"
-      line $ "wrappedPtrFree = Just ptr_to_g_free"
-    else do
-      line $ "-- XXX Wrapping a foreign struct/union with no known destructor or size, leak?"
-      line $ "wrappedPtrCalloc = return nullPtr"
-      line $ "wrappedPtrCopy = return"
-      line $ "wrappedPtrFree = Nothing"
-
-  hsBoot $ line $ "instance WrappedPtr " <> name' <> " where"
-
 -- | Generate wrapper for structures.
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
@@ -229,7 +205,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
 
       if structIsBoxed s
       then genBoxedObject n (fromJust $ structTypeInit s)
-      else genWrappedPtr n (structSize s)
+      else genWrappedPtr n (structAllocationInfo s) (structSize s)
 
       exportDecl (name' <> ("(..)"))
 
@@ -269,7 +245,7 @@ genUnion n u = do
 
      if unionIsBoxed u
      then genBoxedObject n (fromJust $ unionTypeInit u)
-     else genWrappedPtr n (unionSize u)
+     else genWrappedPtr n (unionAllocationInfo u) (unionSize u)
 
      exportDecl (name' <> "(..)")
 

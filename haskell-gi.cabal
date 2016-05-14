@@ -46,6 +46,7 @@ Library
   build-tools:         hsc2hs
   hs-source-dirs:      lib
   exposed-modules:     Data.GI.GIR.Alias,
+                       Data.GI.GIR.Allocation,
                        Data.GI.GIR.Arg,
                        Data.GI.GIR.BasicTypes,
                        Data.GI.GIR.Callable,

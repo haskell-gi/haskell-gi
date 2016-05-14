@@ -6,12 +6,14 @@ module Data.GI.GIR.Struct
 
 import Data.Text (Text)
 
+import Data.GI.GIR.Allocation (AllocationInfo(..), unknownAllocationInfo)
 import Data.GI.GIR.Field (Field, parseFields)
 import Data.GI.GIR.Method (Method, MethodType(..), parseMethod)
 import Data.GI.GIR.Parser
 
 data Struct = Struct {
     structIsBoxed :: Bool,
+    structAllocationInfo :: AllocationInfo,
     structTypeInit :: Maybe Text,
     structSize :: Int,
     gtypeStructFor :: Maybe Name,
@@ -40,6 +42,7 @@ parseStruct = do
   return (name,
           Struct {
             structIsBoxed = error ("[boxed] unfixed struct " ++ show name)
+          , structAllocationInfo = unknownAllocationInfo
           , structTypeInit = typeInit
           , structSize = error ("[size] unfixed struct " ++ show name)
           , gtypeStructFor = structFor

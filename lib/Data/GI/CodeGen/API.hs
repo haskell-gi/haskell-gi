@@ -14,6 +14,11 @@ module Data.GI.CodeGen.API
     , Name(..)
     , Transfer(..)
 
+    -- Reexported from Data.GI.GIR.Allocation
+    , AllocationInfo(..)
+    , AllocationOp(..)
+    , unknownAllocationInfo
+
     -- Reexported from Data.GI.GIR.Arg
     , Direction(..)
     , Scope(..)
@@ -67,6 +72,7 @@ import Text.XML hiding (Name)
 import qualified Text.XML as XML
 
 import Data.GI.GIR.Alias (documentListAliases)
+import Data.GI.GIR.Allocation (AllocationInfo(..), AllocationOp(..), unknownAllocationInfo)
 import Data.GI.GIR.Arg (Arg(..), Direction(..), Scope(..))
 import Data.GI.GIR.BasicTypes (Alias, Name(..), Transfer(..))
 import Data.GI.GIR.Callable (Callable(..))

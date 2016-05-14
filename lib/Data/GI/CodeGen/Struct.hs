@@ -1,10 +1,12 @@
+-- | Marshalling of structs and unions.
 module Data.GI.CodeGen.Struct ( genStructOrUnionFields
-                 , genZeroStruct
-                 , genZeroUnion
-                 , extractCallbacksInStruct
-                 , fixAPIStructs
-                 , ignoreStruct)
-    where
+                              , genZeroStruct
+                              , genZeroUnion
+                              , extractCallbacksInStruct
+                              , fixAPIStructs
+                              , ignoreStruct
+                              , genWrappedPtr
+                              ) where
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
@@ -264,8 +266,7 @@ genStructOrUnionFields n fields = do
 -- | Generate a constructor for a zero-filled struct/union of the given
 -- type, using the boxed (or GLib, for unboxed types) allocator.
 genZeroSU :: Name -> Int -> Bool -> CodeGen ()
-genZeroSU n size isBoxed =
-    when (size /= 0) $ group $ do
+genZeroSU n size isBoxed = group $ do
       name <- upperName n
       let builder = "newZero" <> name
           tsize = tshow size
@@ -291,8 +292,74 @@ genZeroSU n size isBoxed =
 
 -- | Specialization for structs of `genZeroSU`.
 genZeroStruct :: Name -> Struct -> CodeGen ()
-genZeroStruct n s = genZeroSU n (structSize s) (structIsBoxed s)
+genZeroStruct n s =
+    when (allocCalloc (structAllocationInfo s) /= AllocationOp "none" &&
+          structSize s /= 0) $
+    genZeroSU n (structSize s) (structIsBoxed s)
 
 -- | Specialization for unions of `genZeroSU`.
 genZeroUnion :: Name -> Union -> CodeGen ()
-genZeroUnion n u = genZeroSU n (unionSize u) (unionIsBoxed u)
+genZeroUnion n u =
+    when (allocCalloc (unionAllocationInfo u ) /= AllocationOp "none" &&
+          unionSize u /= 0) $
+    genZeroSU n (unionSize u) (unionIsBoxed u)
+
+-- | Construct a import with the given prefix.
+prefixedForeignImport :: Text -> Text -> Text -> CodeGen Text
+prefixedForeignImport prefix symbol prototype = group $ do
+  line $ "foreign import ccall \"" <> symbol <> "\" " <> prefix <> symbol
+           <> " :: " <> prototype
+  return (prefix <> symbol)
+
+-- | Same as `prefixedForeignImport`, but import a `FunPtr` to the symbol.
+prefixedFunPtrImport :: Text -> Text -> Text -> CodeGen Text
+prefixedFunPtrImport prefix symbol prototype = group $ do
+  line $ "foreign import ccall \"&" <> symbol <> "\" " <> prefix <> symbol
+           <> " :: FunPtr (" <> prototype <> ")"
+  return (prefix <> symbol)
+
+-- | Generate the typeclass with information for how to
+-- allocate/deallocate unboxed structs and unions.
+genWrappedPtr :: Name -> AllocationInfo -> Int -> CodeGen ()
+genWrappedPtr n info size = group $ do
+  name' <- upperName n
+
+  let prefix = \op -> "_" <> name' <> "_" <> op <> "_"
+
+  when (size == 0) $
+       line $ "-- XXX Wrapping a foreign struct/union with no known destructor or size, leak?"
+
+  calloc <- case allocCalloc info of
+              AllocationOp "none" ->
+                  return ("error \"calloc not permitted for " <> name' <> "\"")
+              AllocationOp op ->
+                  prefixedForeignImport (prefix "calloc") op "IO (Ptr a)"
+              AllocationOpUnknown ->
+                  if size > 0
+                  then return ("callocBytes " <> tshow size)
+                  else return "return nullPtr"
+
+  copy <- case allocCopy info of
+            AllocationOp op ->
+                prefixedForeignImport (prefix "copy") op "Ptr a -> IO (Ptr a)"
+            AllocationOpUnknown ->
+                if size > 0
+                then return ("copyPtr " <> tshow size)
+                else return "return"
+
+  free <- case allocFree info of
+            AllocationOp op -> ("Just " <>) <$>
+                prefixedFunPtrImport (prefix "free") op "Ptr a -> IO ()"
+            AllocationOpUnknown ->
+                if size > 0
+                then return "Just ptr_to_g_free"
+                else return "Nothing"
+
+  line $ "instance WrappedPtr " <> name' <> " where"
+  indent $ do
+      line $ "wrappedPtrCalloc = " <> calloc
+      line $ "wrappedPtrCopy = " <> copy
+      line $ "wrappedPtrFree = " <> free
+
+  hsBoot $ line $ "instance WrappedPtr " <> name' <> " where"
+
