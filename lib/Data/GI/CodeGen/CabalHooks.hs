@@ -1,12 +1,13 @@
 -- | Convenience hooks for writing custom @Setup.hs@ files for
 -- bindings.
 module Data.GI.CodeGen.CabalHooks
-    ( confCodeGenHook
+    ( simpleHaskellGIHooks
     ) where
 
 import qualified Distribution.ModuleName as MN
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.Setup
+import Distribution.Simple (UserHooks(..), simpleUserHooks)
 import Distribution.PackageDescription
 
 import Data.GI.CodeGen.API (loadGIRInfo)
@@ -61,3 +62,16 @@ confCodeGenHook name version verbosity overrides outputDir
       gpd' = gpd {condLibrary = Just cL'}
 
   defaultConfHook (gpd', hbi) flags
+
+-- | A version of `simpleUserHooks` which generates the bindings as needed.
+simpleHaskellGIHooks :: Text -- ^ name
+                     -> Text -- ^ version
+                     -> Bool -- ^ verbose
+                     -> Maybe FilePath -- ^ overrides file
+                     -> Maybe FilePath -- ^ output dir
+                     -> UserHooks
+simpleHaskellGIHooks name version verbose overridesFile outputDir =
+    simpleUserHooks { confHook = confCodeGenHook name version verbose
+                                                 overridesFile outputDir
+                                                 (confHook simpleUserHooks)
+                    }
