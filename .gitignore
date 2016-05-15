@@ -13,6 +13,8 @@ bindings/*/Setup.hs
 bindings/sdists
 bindings/dumps
 newstyle/*/GI/*
+newstyle/*/cabal.project.local
+newstyle/*/dist-newstyle/*
 examples/GI/*
 test/GI/*
 
