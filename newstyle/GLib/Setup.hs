@@ -1,12 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Distribution.Simple
-import Data.GI.CodeGen.CabalHooks (confCodeGenHook)
+import Distribution.Simple (defaultMainWithHooks)
+import Data.GI.CodeGen.CabalHooks (simpleHaskellGIHooks)
 
-main = defaultMainWithHooks simpleUserHooks
-  { confHook = confCodeGenHook name version verbose overridesFile outputDir
-               (confHook simpleUserHooks)
-  }
+main = defaultMainWithHooks (simpleHaskellGIHooks name version verbose
+                             overridesFile outputDir)
     where name = "GLib"
           version = "2.0"
           verbose = False
