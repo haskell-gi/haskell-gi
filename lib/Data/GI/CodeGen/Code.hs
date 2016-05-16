@@ -10,6 +10,7 @@ module Data.GI.CodeGen.Code
     , evalCodeGen
 
     , writeModuleTree
+    , listModuleTree
     , writeModuleCode
     , codeToText
     , transitiveModuleDeps
@@ -736,6 +737,13 @@ writeModuleCode verbose dirPrefix minfo = do
   writeModuleInfo verbose dirPrefix minfo
   return $ (dotModuleName (moduleName minfo) : submoduleNames)
 
+-- | Return the list of modules `writeModuleCode` would write, without
+-- actually writing anything to disk.
+listModules :: ModuleInfo -> [Text]
+listModules minfo =
+    let submoduleNames = concatMap listModules (M.elems (submodules minfo))
+    in dotModuleName (moduleName minfo) : submoduleNames
+
 -- | List of reexports from the ".Types" module.
 typeReexports :: ModuleName -> [Text] -> Text
 typeReexports typesModule bootFiles =
@@ -787,3 +795,11 @@ writeTypes dirPrefix minfo = do
 writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO [Text]
 writeModuleTree verbose dirPrefix minfo =
   (:) <$> writeTypes dirPrefix minfo <*> writeModuleCode verbose dirPrefix minfo
+
+-- | Return the list of modules that would be written by
+-- `writeModuleTree`, without actually writing anything to disk.
+listModuleTree :: ModuleInfo -> [Text]
+listModuleTree minfo =
+    let pkgRoot = take 2 (moduleName minfo)
+        typesModule = pkgRoot ++ ["Types"]
+    in dotModuleName typesModule : listModules minfo
