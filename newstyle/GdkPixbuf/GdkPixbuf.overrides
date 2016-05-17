@@ -1,0 +1,11 @@
+namespace GdkPixbuf
+
+# Not supported on Windows.
+if windows
+   set-attr GdkPixbuf/Pixbuf/new_from_file c:identifier gdk_pixbuf_new_from_file_utf8
+   set-attr GdkPixbuf/Pixbuf/new_from_file_at_scale c:identifier gdk_pixbuf_new_from_file_at_scale_utf8
+   set-attr GdkPixbuf/Pixbuf/new_from_file_at_size c:identifier gdk_pixbuf_new_from_file_at_size_utf8
+   set-attr GdkPixbuf/Pixbuf/save c:identifier gdk_pixbuf_save_utf8
+   set-attr GdkPixbuf/Pixbuf/savev c:identifier gdk_pixbuf_savev_utf8
+   set-attr GdkPixbuf/PixbufAnimation/new_from_file c:identifier gdk_pixbuf_animation_new_from_file_utf8
+endif

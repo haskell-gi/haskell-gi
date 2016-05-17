@@ -1,0 +1,4 @@
+namespace Atk
+
+# Not marked properly as a GType struct (which we hide)
+ignore _RegistryClass

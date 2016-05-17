@@ -1,0 +1,29 @@
+namespace Pango
+
+# https://bugzilla.gnome.org/show_bug.cgi?id=766452
+alloc-info Attribute calloc=none copy=pango_attribute_copy free=pango_attribute_destroy
+
+set-attr Pango/AttrFontDesc/new introspectable 1
+set-attr Pango/AttrFontFeatures/new introspectable 1
+set-attr Pango/AttrLanguage/new introspectable 1
+set-attr Pango/AttrShape/new introspectable 1
+set-attr Pango/AttrSize/new introspectable 1
+set-attr Pango/attr_background_alpha_new introspectable 1
+set-attr Pango/attr_background_new introspectable 1
+set-attr Pango/attr_fallback_new introspectable 1
+set-attr Pango/attr_family_new introspectable 1
+set-attr Pango/attr_foreground_alpha_new introspectable 1
+set-attr Pango/attr_foreground_new introspectable 1
+set-attr Pango/attr_gravity_hint_new introspectable 1
+set-attr Pango/attr_gravity_new introspectable 1
+set-attr Pango/attr_letter_spacing_new introspectable 1
+set-attr Pango/attr_rise_new introspectable 1
+set-attr Pango/attr_scale_new introspectable 1
+set-attr Pango/attr_stretch_new introspectable 1
+set-attr Pango/attr_strikethrough_color_new introspectable 1
+set-attr Pango/attr_strikethrough_new introspectable 1
+set-attr Pango/attr_style_new introspectable 1
+set-attr Pango/attr_underline_color_new introspectable 1
+set-attr Pango/attr_underline_new introspectable 1
+set-attr Pango/attr_variant_new introspectable 1
+set-attr Pango/attr_weight_new introspectable 1
