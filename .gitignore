@@ -15,6 +15,7 @@ bindings/dumps
 newstyle/*/GI/*
 newstyle/*/cabal.project.local
 newstyle/*/dist-newstyle/*
+newstyle/sdists
 examples/GI/*
 test/GI/*
 
