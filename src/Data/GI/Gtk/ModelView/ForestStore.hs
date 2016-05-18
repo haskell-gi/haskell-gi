@@ -43,6 +43,7 @@ module Data.GI.Gtk.ModelView.ForestStore (
 -- * Methods
   forestStoreGetValue,
   forestStoreGetTree,
+  forestStoreGetForest,
   forestStoreLookup,
 
   forestStoreSetValue,
@@ -765,6 +766,14 @@ forestStoreGetTree (ForestStore model) path = liftIO $ do
         ((_,node:_):_) | res -> return node
         _ -> fail ("forestStoreGetTree: path does not exist " ++ show ipath)
     _ -> fail ("forestStoreGetTree: path does not exist " ++ show ipath)
+
+-- | Extract the forest from the current model.
+--
+forestStoreGetForest :: MonadIO m => ForestStore a -> m (Forest a)
+forestStoreGetForest (ForestStore model) = liftIO $ do
+  store@Store { depth = d, content = cache } <-
+      readIORef (customStoreGetPrivate (CustomStore model))
+  return $ cacheToStore cache
 
 -- | Extract a subtree from the current model. Like 'forestStoreGetTree'
 --   but returns @Nothing@ if the path refers to a non-existant node.
