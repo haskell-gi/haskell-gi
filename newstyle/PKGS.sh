@@ -4,9 +4,8 @@ unamestr=$(uname)
 
 # Packages compatible with base >= 4.7
 base47PKGS="GLib GObject Atk Gio Soup cairo Pango PangoCairo GdkPixbuf Gdk Gtk GtkSource GIRepository Poppler JavaScriptCore-3.0 WebKit Vte Notify"
-# Packages compatible with base >= 4.8 (not fully ported yet)
-#base48PKGS="Gst GstBase GstAudio GstVideo"
-base48PKGS="Gst"
+# Packages compatible with base >= 4.8
+base48PKGS="Gst GstBase GstAudio GstVideo"
 
 if [[ "$unamestr" == 'Darwin' ]]; then
     # Only present on OS X
