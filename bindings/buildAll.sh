@@ -7,9 +7,10 @@ build()
     for mod in $@; do
         pushd $mod > /dev/null
         cabal clean
+        rm -rf GI
         cabal configure
 	cabal build
-        cabal install
+        cabal install --force-reinstalls
         cabal sdist
         cp dist/*.tar.gz ../sdists
         popd > /dev/null
