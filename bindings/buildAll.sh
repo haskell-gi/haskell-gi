@@ -6,8 +6,8 @@ build()
 {
     for mod in $@; do
         pushd $mod > /dev/null
-        cabal clean
         rm -rf GI
+        rm -rf dist
         cabal configure
 	cabal build
         cabal install --force-reinstalls
