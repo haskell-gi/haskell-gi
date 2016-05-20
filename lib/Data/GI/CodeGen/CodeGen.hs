@@ -93,8 +93,9 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain _maybeTypeInit stora
           line $ "| Another" <> name' <> " Int"
           line "deriving (Show, Eq)"
         _ -> return ()
+
   group $ do
-    line $ "instance Enum " <> name' <> " where"
+    line $ "instance P.Enum " <> name' <> " where"
     indent $ do
             forM_ fields' $ \(n, v) ->
                 line $ "fromEnum " <> n <> " = " <> tshow v
@@ -105,6 +106,11 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain _maybeTypeInit stora
             forM_ valueNames $ \(v, n) ->
                 line $ "toEnum " <> tshow v <> " = " <> n
             line $ "toEnum k = Another" <> name' <> " k"
+
+  group $ do
+    line $ "instance P.Ord " <> name' <> " where"
+    indent $ line "compare a b = P.compare (P.fromEnum a) (P.fromEnum b)"
+
   maybe (return ()) (genErrorDomain name') eDomain
 
 genBoxedEnum :: Name -> Text -> CodeGen ()
