@@ -33,4 +33,4 @@ library
         bytestring >= 0.10,
         containers >= 0.5,
         text >= 1.0,
-        transformers >= 0.5
+        transformers >= 0.4
