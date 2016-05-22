@@ -10,6 +10,7 @@ clean()
 	rm -rf dist
         rm -f *.cabal
         rm -f Setup.hs
+        rm -f stack.yaml
         rm -f LICENSE
 	popd > /dev/null
     done

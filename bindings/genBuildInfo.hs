@@ -12,6 +12,7 @@ import Control.Monad (forM_)
 import GHC.Generics
 
 import qualified Data.Aeson as A
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import qualified Data.Text.IO as TIO
 import qualified Data.Text as T
@@ -45,9 +46,11 @@ writeCabal fname info =
        , "category:             " <> PI.category
        , "build-type:           Custom"
        , "cabal-version:        >= 1.22"
-       , case girOverrides info of
-           Nothing -> ""
-           Just f -> "\n" <> "extra-source-files: " <> f <> "\n"
+       , ""
+       , "extra-source-files: " <> T.intercalate " "
+                                    [ "stack.yaml",
+                                      fromMaybe "" (girOverrides info)]
+       , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
        , "      default-extensions: " <> T.intercalate ", " PI.defaultExtensions
@@ -86,6 +89,18 @@ writeSetup fname info =
 writeLicense :: FilePath -> IO ()
 writeLicense fname = TIO.writeFile fname PI.licenseText
 
+writeStackYaml :: FilePath -> IO ()
+writeStackYaml fname =
+    TIO.writeFile fname $ T.unlines
+           ["packages:"
+           , "- '.'"
+           , "extra-deps:"
+           , "- 'haskell-gi-0.17.3'"
+           , "explicit-setup-deps:"
+           , "  ! '*': true"
+           , "resolver: nightly-2016-05-21"
+           ]
+
 main :: IO ()
 main = do
   dirs <- getArgs
@@ -94,3 +109,4 @@ main = do
          writeCabal (dir </> T.unpack (name info) <.> "cabal") info
          writeSetup (dir </> "Setup.hs") info
          writeLicense (dir </> "LICENSE")
+         writeStackYaml (dir </> "stack.yaml")
