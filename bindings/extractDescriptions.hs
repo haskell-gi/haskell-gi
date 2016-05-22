@@ -15,7 +15,7 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
 
-import ProjectInfo (ProjectInfo(..), emptyProjectInfo)
+import ProjectInfo (ProjectInfo(..), emptyProjectInfo, prettyConfig)
 
 cabalProcessLine :: Text -> ProjectInfo -> ProjectInfo
 cabalProcessLine (T.stripPrefix "name:" -> Just n) info =
@@ -62,13 +62,7 @@ extractSetupInfo fname info = do
 
 writeGIInfo :: FilePath -> ProjectInfo -> IO ()
 writeGIInfo fname cabalInfo =
-    B.writeFile fname (AP.encodePretty' config cabalInfo)
-     where config = AP.Config { AP.confIndent = 4
-                              , AP.confCompare = AP.keyOrder
-                                ["name", "version", "description", "synopsis",
-                                 "girName", "girVersion",
-                                 "girOverrides", "pkgConfig", "depends",
-                                 "baseVersion"]}
+    B.writeFile fname (AP.encodePretty' prettyConfig cabalInfo)
 
 main :: IO ()
 main = do

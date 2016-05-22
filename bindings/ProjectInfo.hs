@@ -1,12 +1,14 @@
-{-# LANGUAGE DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings, DeriveGeneric, DeriveAnyClass #-}
 
 module ProjectInfo
     ( ProjectInfo(..)
     , emptyProjectInfo
+    , prettyConfig
     ) where
 
 import GHC.Generics
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Encode.Pretty as AP
 
 import Data.Text (Text)
 
@@ -38,3 +40,11 @@ emptyProjectInfo = ProjectInfo {
                    , girVersion = error "girVersion missing"
                    , girOverrides = error "girOverrides missing"
                    }
+
+prettyConfig :: AP.Config
+prettyConfig = AP.Config { AP.confIndent = 4
+                         , AP.confCompare = AP.keyOrder
+                           ["name", "version", "description", "synopsis",
+                            "girName", "girVersion",
+                            "girOverrides", "pkgConfig", "depends",
+                            "baseVersion"]}
