@@ -6,7 +6,13 @@ module Data.GI.CodeGen.ProjectInfo
     , authors
     , license
     , licenseText
+    , category
     , maintainers
+    , defaultExtensions
+    , otherExtensions
+    , ghcOptions
+    , defaultLanguage
+    , standardDeps
     ) where
 
 import Data.FileEmbed (embedStringFile)
@@ -26,3 +32,40 @@ license = "LGPL-2.1"
 
 licenseText :: Text
 licenseText = $(embedStringFile "LICENSE")
+
+-- | Default list of extensions to turn on when compiling the
+-- generated code.
+defaultExtensions :: [Text]
+defaultExtensions = ["NoImplicitPrelude", "ScopedTypeVariables", "CPP",
+                     "OverloadedStrings", "NegativeLiterals", "ConstraintKinds",
+                     "TypeFamilies", "MultiParamTypeClasses", "KindSignatures",
+                     "FlexibleInstances", "UndecidableInstances", "DataKinds",
+                     "FlexibleContexts"]
+
+-- | Extensions that will be used in some modules, but we do not wish
+-- to turn on by default.
+otherExtensions :: [Text]
+otherExtensions = ["PatternSynonyms", "ViewPatterns"]
+
+-- | Default options for GHC when compiling generated code.
+ghcOptions :: [Text]
+ghcOptions = ["-fno-warn-unused-imports", "-fno-warn-warnings-deprecations"]
+
+-- | Default version of the report to use.
+defaultLanguage :: Text
+defaultLanguage = "Haskell2010"
+
+-- | List of dependencies for all bindings. Notice that base is not
+-- included here, since not all bindings use the same base
+-- version. haskell-gi and haskell-gi-base are not included either,
+-- since the versions to use may change depending on whether we are
+-- using old style or new style bindings.
+standardDeps :: [Text]
+standardDeps = ["bytestring >= 0.10 && < 1",
+                "containers >= 0.5 && < 1",
+                "text >= 1.0 && < 2",
+                "transformers >= 0.4 && < 1"]
+
+-- | Under which category in hackage should the generated bindings be listed.
+category :: Text
+category = "Bindings"
