@@ -13,6 +13,10 @@ oldstyle/*/Setup.hs
 oldstyle/sdists
 oldstyle/dumps
 bindings/*/GI/*
+bindings/*/*.cabal
+bindings/*/Setup.hs
+bindings/*/LICENSE
+bindings/*/stack.yaml
 bindings/sdists
 examples/GI/*
 test/GI/*
