@@ -1,13 +1,14 @@
 -- | Convenience hooks for writing custom @Setup.hs@ files for
 -- bindings.
 module Data.GI.CodeGen.CabalHooks
-    ( simpleHaskellGIHooks
+    ( setupHaskellGIBinding
     ) where
 
 import qualified Distribution.ModuleName as MN
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.Setup
-import Distribution.Simple (UserHooks(..), simpleUserHooks)
+import Distribution.Simple (UserHooks(..), simpleUserHooks,
+                            defaultMainWithHooks)
 import Distribution.PackageDescription
 
 import Data.GI.CodeGen.API (loadGIRInfo)
@@ -70,15 +71,17 @@ confCodeGenHook name version verbosity overrides outputDir
 
   defaultConfHook (gpd', hbi) flags
 
--- | A version of `simpleUserHooks` which generates the bindings as needed.
-simpleHaskellGIHooks :: Text -- ^ name
-                     -> Text -- ^ version
-                     -> Bool -- ^ verbose
-                     -> Maybe FilePath -- ^ overrides file
-                     -> Maybe FilePath -- ^ output dir
-                     -> UserHooks
-simpleHaskellGIHooks name version verbose overridesFile outputDir =
-    simpleUserHooks { confHook = confCodeGenHook name version verbose
-                                                 overridesFile outputDir
-                                                 (confHook simpleUserHooks)
-                    }
+
+-- | The entry point for @Setup.hs@ files in bindings.
+setupHaskellGIBinding :: Text -- ^ name
+                      -> Text -- ^ version
+                      -> Bool -- ^ verbose
+                      -> Maybe FilePath -- ^ overrides file
+                      -> Maybe FilePath -- ^ output dir
+                      -> IO ()
+setupHaskellGIBinding name version verbose overridesFile outputDir =
+    defaultMainWithHooks (simpleUserHooks {
+                            confHook = confCodeGenHook name version verbose
+                                       overridesFile outputDir
+                                       (confHook simpleUserHooks)
+                          })
