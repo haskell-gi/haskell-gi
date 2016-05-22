@@ -13,11 +13,14 @@ oldstyle/*/Setup.hs
 oldstyle/sdists
 oldstyle/dumps
 bindings/*/GI/*
-bindings/*/cabal.project.local
-bindings/*/dist-newstyle/*
-binding/sdists
+bindings/sdists
 examples/GI/*
 test/GI/*
+
+# Build stuff
+bindings/*/cabal.project.local
+bindings/*/.stack-work
+bindings/*/dist-newstyle/*
 
 # For Emacs
 TAGS
