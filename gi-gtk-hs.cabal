@@ -1,5 +1,5 @@
 name:                gi-gtk-hs
-version:             0.2.0.0
+version:             0.2.0.1
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 homepage:            https://github.com/haskell-gi/gi-gtk-hs
@@ -13,6 +13,7 @@ maintainer:          mail@jonasplatte.de
 category:            Graphics
 build-type:          Simple
 cabal-version:       >=1.10
+extra-source-files:  cbits/Gtk2HsStore.h
 
 library
   exposed-modules:     Data.GI.Gtk,
