@@ -25,18 +25,18 @@ library
                        Data.GI.Gtk.ModelView.TreeModel
                        Data.GI.Gtk.ComboBox
 
-  build-depends:       base >=4.7 && <4.9,
+  build-depends:       base >=4.7 && <4.10,
                        base-compat >=0.9.0 && <0.10,
                        mtl >=2.1 && <2.3,
                        transformers >=0.3.0.0 && <0.6,
                        containers >=0.5.5.1 && <0.6,
                        text >=1.2 && <1.3,
-                       haskell-gi-base >=0.15 && <0.16,
-                       gi-glib >=0.2.44 && <0.2.49,
-                       gi-gobject >=0.2.44 && <0.2.49,
-                       gi-gdk >=0.3.16 && <0.3.21,
-                       gi-gtk >=0.3.16 && <0.3.21,
-                       gi-gdkpixbuf >=0.2.31 && <0.2.35
+                       haskell-gi-base >=0.17 && <0.18,
+                       gi-glib >=2.0.2 && <2.1,
+                       gi-gobject >=2.0.2 && <2.1,
+                       gi-gdk >=3.0.2 && <3.1,
+                       gi-gtk >=3.0.2 && <3.1,
+                       gi-gdkpixbuf >=2.0.2 && <2.1
 
   hs-source-dirs:      src
   default-language:    Haskell2010
