@@ -11,13 +11,10 @@ build()
         cabal configure
 	cabal build
         cabal install --force-reinstalls
-        cabal sdist
-        cp dist/*.tar.gz ../sdists
         popd > /dev/null
     done
 }
 
-mkdir -p sdists
-rm -f sdists/*
+rm -rf sdists
 
 build $(./PKGS.sh)

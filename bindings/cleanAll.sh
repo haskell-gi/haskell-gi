@@ -18,4 +18,4 @@ clean()
     done
 }
 
-clean $(./PKGS.sh)
+clean $(./AllPKGS.sh)
