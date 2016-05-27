@@ -8,6 +8,8 @@ clean()
         pushd $mod > /dev/null
         rm -rf GI
 	rm -rf dist
+        rm -rf dist-newstyle
+        rm -rf .stack-work
         rm -f *.cabal
         rm -f Setup.hs
         rm -f stack.yaml
