@@ -21,7 +21,7 @@ source-repository head
   location: git://github.com/haskell-gi/haskell-gi.git
 
 Library
-  pkgconfig-depends:   gobject-introspection-1.0 >= 1.42, gobject-2.0 >= 2.36
+  pkgconfig-depends:   gobject-introspection-1.0 >= 1.32, gobject-2.0 >= 2.32
   build-depends:       base >= 4.7 && < 5,
                        haskell-gi-base == 0.17.*,
                        Cabal >= 1.20,
