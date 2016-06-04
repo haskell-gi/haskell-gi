@@ -1,0 +1,26 @@
+namespace GstAudio
+
+# Generated with xsltproc Nullable.xslt GstAudio-1.0.gir
+set-attr GstAudio/AudioBaseSink/set_custom_slaving_callback/@parameters/user_data nullable 1
+set-attr GstAudio/AudioBaseSinkCustomSlavingCallback/@parameters/user_data nullable 1
+set-attr GstAudio/AudioChannelMixer/samples/@parameters/in nullable 1
+set-attr GstAudio/AudioChannelMixer/samples/@parameters/out nullable 1
+set-attr GstAudio/AudioClock/new/@parameters/user_data nullable 1
+set-attr GstAudio/AudioClockGetTimeFunc/@parameters/user_data nullable 1
+set-attr GstAudio/AudioConverter/samples/@parameters/in nullable 1
+set-attr GstAudio/AudioConverter/samples/@parameters/out nullable 1
+set-attr GstAudio/AudioConverter/update_config/@parameters/config nullable 1
+set-attr GstAudio/AudioDecoder/merge_tags/@parameters/tags nullable 1
+set-attr GstAudio/AudioDecoder/proxy_getcaps/@parameters/caps nullable 1
+set-attr GstAudio/AudioDecoder/proxy_getcaps/@parameters/filter nullable 1
+set-attr GstAudio/AudioEncoder/merge_tags/@parameters/tags nullable 1
+set-attr GstAudio/AudioEncoder/proxy_getcaps/@parameters/caps nullable 1
+set-attr GstAudio/AudioEncoder/proxy_getcaps/@parameters/filter nullable 1
+set-attr GstAudio/AudioQuantize/samples/@parameters/in nullable 1
+set-attr GstAudio/AudioQuantize/samples/@parameters/out nullable 1
+set-attr GstAudio/AudioRingBuffer/set_callback/@parameters/user_data nullable 1
+set-attr GstAudio/AudioRingBufferCallback/@parameters/user_data nullable 1
+set-attr GstAudio/AudioSink/write/@parameters/data nullable 1
+set-attr GstAudio/AudioSinkClass/write/write/@parameters/data nullable 1
+set-attr GstAudio/AudioSrc/read/@parameters/data nullable 1
+set-attr GstAudio/AudioSrcClass/read/read/@parameters/data nullable 1

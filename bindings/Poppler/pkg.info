@@ -5,7 +5,7 @@
     "synopsis": "Poppler bindings",
     "girName": "Poppler",
     "girVersion": "0.18",
-    "girOverrides": null,
+    "girOverrides": "Poppler.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-cairo == 1.0.*",

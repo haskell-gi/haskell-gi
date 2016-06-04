@@ -1,0 +1,33 @@
+namespace GIRepository
+
+# Generated with xsltproc Nullable.xslt GIRepository-2.0.gir
+set-attr GIRepository/ObjectInfoGetValueFunction/@return-value nullable 1
+set-attr GIRepository/ObjectInfoRefFunction/@return-value nullable 1
+set-attr GIRepository/ObjectInfoRefFunction/@parameters/object nullable 1
+set-attr GIRepository/ObjectInfoSetValueFunction/@parameters/object nullable 1
+set-attr GIRepository/ObjectInfoUnrefFunction/@parameters/object nullable 1
+set-attr GIRepository/Repository/enumerate_versions/@parameters/repository nullable 1
+set-attr GIRepository/Repository/find_by_error_domain/@parameters/repository nullable 1
+set-attr GIRepository/Repository/find_by_gtype/@parameters/repository nullable 1
+set-attr GIRepository/Repository/find_by_name/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_c_prefix/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_dependencies/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_immediate_dependencies/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_info/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_loaded_namespaces/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_n_infos/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_shared_library/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_typelib_path/@parameters/repository nullable 1
+set-attr GIRepository/Repository/get_version/@parameters/repository nullable 1
+set-attr GIRepository/Repository/is_registered/@parameters/repository nullable 1
+set-attr GIRepository/Repository/is_registered/@parameters/version nullable 1
+set-attr GIRepository/Repository/load_typelib/@parameters/repository nullable 1
+set-attr GIRepository/Repository/require/@parameters/repository nullable 1
+set-attr GIRepository/Repository/require/@parameters/version nullable 1
+set-attr GIRepository/Repository/require_private/@parameters/repository nullable 1
+set-attr GIRepository/Repository/require_private/@parameters/version nullable 1
+set-attr GIRepository/Typelib/symbol/@parameters/symbol nullable 1
+set-attr GIRepository/callable_info_invoke/@parameters/function nullable 1
+set-attr GIRepository/field_info_get_field/@parameters/mem nullable 1
+set-attr GIRepository/field_info_set_field/@parameters/mem nullable 1
+set-attr GIRepository/vfunc_info_get_address/@return-value nullable 1

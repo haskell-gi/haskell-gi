@@ -9,3 +9,41 @@ if windows
    set-attr GdkPixbuf/Pixbuf/savev c:identifier gdk_pixbuf_savev_utf8
    set-attr GdkPixbuf/PixbufAnimation/new_from_file c:identifier gdk_pixbuf_animation_new_from_file_utf8
 endif
+
+# Generated with xsltproc Nullable.xslt GdkPixbuf-2.0.gir
+set-attr GdkPixbuf/Pixbuf/new_from_data/@parameters/destroy_fn nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_data/@parameters/destroy_fn_data nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream_at_scale/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/Pixbuf/get_file_info/@return-value nullable 1
+set-attr GdkPixbuf/Pixbuf/get_file_info_async/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/Pixbuf/get_file_info_async/@parameters/callback nullable 1
+set-attr GdkPixbuf/Pixbuf/get_file_info_async/@parameters/user_data nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream_async/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream_async/@parameters/callback nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream_async/@parameters/user_data nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream_at_scale_async/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream_at_scale_async/@parameters/callback nullable 1
+set-attr GdkPixbuf/Pixbuf/new_from_stream_at_scale_async/@parameters/user_data nullable 1
+set-attr GdkPixbuf/Pixbuf/flip/@return-value nullable 1
+set-attr GdkPixbuf/Pixbuf/rotate_simple/@return-value nullable 1
+set-attr GdkPixbuf/Pixbuf/save/@parameters/error nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_buffer/@parameters/error nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_callback/@parameters/user_data nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_callback/@parameters/error nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_callbackv/@parameters/user_data nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_stream/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_stream/@parameters/error nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_stream_async/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_stream_async/@parameters/callback nullable 1
+set-attr GdkPixbuf/Pixbuf/save_to_stream_async/@parameters/user_data nullable 1
+set-attr GdkPixbuf/PixbufAnimation/new_from_stream/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/PixbufAnimation/new_from_stream_async/@parameters/cancellable nullable 1
+set-attr GdkPixbuf/PixbufAnimation/new_from_stream_async/@parameters/callback nullable 1
+set-attr GdkPixbuf/PixbufAnimation/new_from_stream_async/@parameters/user_data nullable 1
+set-attr GdkPixbuf/PixbufAnimation/get_iter/@parameters/start_time nullable 1
+set-attr GdkPixbuf/PixbufAnimationIter/advance/@parameters/current_time nullable 1
+set-attr GdkPixbuf/PixbufDestroyNotify/@parameters/data nullable 1
+set-attr GdkPixbuf/PixbufLoader/get_format/@return-value nullable 1
+set-attr GdkPixbuf/PixbufSaveFunc/@parameters/data nullable 1
+set-attr GdkPixbuf/Pixdata/from_pixbuf/@return-value nullable 1
