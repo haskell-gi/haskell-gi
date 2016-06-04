@@ -51,7 +51,9 @@ script:
    else
      cabal install aeson aeson-pretty
      for a in `./PKGS.sh`; do ./genBuildInfo.hs $a; done
-     cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk ./Gtk ./GtkSource ./WebKit
+     cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
+     cabal install -j1 ./Gtk
+     cabal install -j3 ./GtkSource ./WebKit
    fi
 
 notifications:
