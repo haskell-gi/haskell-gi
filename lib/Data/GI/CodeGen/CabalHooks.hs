@@ -8,7 +8,7 @@ import qualified Distribution.ModuleName as MN
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.Setup
 import Distribution.Simple (UserHooks(..), simpleUserHooks,
-                            defaultMainWithHooks)
+                            defaultMainWithHooks, OptimisationLevel(..))
 import Distribution.PackageDescription
 
 import Data.GI.CodeGen.API (loadGIRInfo)
@@ -69,8 +69,9 @@ confCodeGenHook name version verbosity overrides outputDir
       cL' = ((fromJust . condLibrary) gpd) {condTreeData = ctd'}
       gpd' = gpd {condLibrary = Just cL'}
 
-  defaultConfHook (gpd', hbi) flags
+  lbi <- defaultConfHook (gpd', hbi) flags
 
+  return (lbi {withOptimization = NoOptimisation})
 
 -- | The entry point for @Setup.hs@ files in bindings.
 setupHaskellGIBinding :: Text -- ^ name
