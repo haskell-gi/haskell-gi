@@ -3,7 +3,7 @@ namespace Soup
 # The "len" parameter is not marked as (out)
 ignore Address.get_sockaddr
 
-# Generated with xsltproc Nullable.xslt Soup-2.4.gir
+# Generated from libsoup 2.54.0.1 with xsltproc Nullable.xslt Soup-2.4.gir
 set-attr Soup/Address/new_any/@return-value nullable 1
 set-attr Soup/Address/new_from_sockaddr/@return-value nullable 1
 set-attr Soup/Address/new_from_sockaddr/@parameters/sa nullable 1

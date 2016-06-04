@@ -1,6 +1,6 @@
 namespace Poppler
 
-# Generated with xsltproc Nullable.xslt Poppler-0.18.gir
+# Generated from poppler-glib 0.42.0 with xsltproc Nullable.xslt Poppler-0.18.gir
 set-attr Poppler/Annot/set_color/@parameters/poppler_color nullable 1
 set-attr Poppler/AnnotCircle/set_interior_color/@parameters/poppler_color nullable 1
 set-attr Poppler/AnnotMarkup/set_label/@parameters/label nullable 1

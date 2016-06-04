@@ -1,6 +1,6 @@
 namespace PangoCairo
 
-# Generated with xsltproc Nullable.xslt PangoCairo-1.0.gir
+# Generated from pangocairo 1.40.1 with xsltproc Nullable.xslt PangoCairo-1.0.gir
 set-attr PangoCairo/Font/get_scaled_font/@return-value nullable 1
 set-attr PangoCairo/FontMap/new_for_font_type/@return-value nullable 1
 set-attr PangoCairo/FontMap/set_default/@parameters/fontmap nullable 1

@@ -30,7 +30,7 @@ ignore base64_decode_step
 ignore base64_encode_step
 ignore base64_encode_close
 
-# Generated with xsltproc Nullable.xslt GLib-2.0.gir
+# Generated from glib 2.48.0 with xsltproc Nullable.xslt GLib-2.0.gir
 set-attr GLib/Array/sort_with_data/@parameters/user_data nullable 1
 set-attr GLib/AsyncQueue/pop/@return-value nullable 1
 set-attr GLib/AsyncQueue/pop_unlocked/@return-value nullable 1

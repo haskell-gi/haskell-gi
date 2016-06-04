@@ -3,7 +3,7 @@ namespace Atk
 # Not marked properly as a GType struct (which we hide)
 ignore _RegistryClass
 
-# Generated with xsltproc Nullable.xslt Atk-1.0.gir
+# Generated from atk 2.20.0 with xsltproc Nullable.xslt Atk-1.0.gir
 set-attr Atk/Action/get_description/@return-value nullable 1
 set-attr Atk/Action/get_keybinding/@return-value nullable 1
 set-attr Atk/Action/get_localized_name/@return-value nullable 1

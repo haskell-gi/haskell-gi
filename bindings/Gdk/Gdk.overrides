@@ -1,6 +1,6 @@
 namespace Gdk
 
-# Generated with xsltproc Nullable.xslt Gdk-3.0.gir
+# Generated from gdk 3.20.3 with xsltproc Nullable.xslt Gdk-3.0.gir
 set-attr Gdk/AppLaunchContext/set_icon/@parameters/icon nullable 1
 set-attr Gdk/AppLaunchContext/set_icon_name/@parameters/icon_name nullable 1
 set-attr Gdk/Cursor/new_from_name/@return-value nullable 1
