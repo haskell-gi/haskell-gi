@@ -5,7 +5,7 @@
     "synopsis": "GtkSource bindings",
     "girName": "GtkSource",
     "girVersion": "3.0",
-    "girOverrides": null,
+    "girOverrides": "GtkSource.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-cairo == 1.0.*",

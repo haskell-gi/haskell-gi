@@ -1,0 +1,14 @@
+namespace PangoCairo
+
+# Generated with xsltproc Nullable.xslt PangoCairo-1.0.gir
+set-attr PangoCairo/Font/get_scaled_font/@return-value nullable 1
+set-attr PangoCairo/FontMap/new_for_font_type/@return-value nullable 1
+set-attr PangoCairo/FontMap/set_default/@parameters/fontmap nullable 1
+set-attr PangoCairo/ShapeRendererFunc/@parameters/data nullable 1
+set-attr PangoCairo/context_get_font_options/@return-value nullable 1
+set-attr PangoCairo/context_get_shape_renderer/@return-value nullable 1
+set-attr PangoCairo/context_get_shape_renderer/@parameters/data nullable 1
+set-attr PangoCairo/context_set_font_options/@parameters/options nullable 1
+set-attr PangoCairo/context_set_shape_renderer/@parameters/func nullable 1
+set-attr PangoCairo/context_set_shape_renderer/@parameters/data nullable 1
+set-attr PangoCairo/font_map_new_for_font_type/@return-value nullable 1

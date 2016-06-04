@@ -1,4 +1,5 @@
 sudo: required
+dist: trusty
 
 env:
  - CABALVER=1.18 GHCVER=7.8.3
@@ -9,18 +10,24 @@ env:
  - CABALVER=1.24 GHCVER=8.0.1
  - CABALVER=head GHCVER=head
 
+matrix:
+  allow_failures:
+    - env: CABALVER=head GHCVER=head
+
 before_install:
  - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
  - travis_retry sudo apt-get update
  - travis_retry sudo apt-get install -y cabal-install-$CABALVER ghc-$GHCVER happy-1.19.5 alex-3.1.7
- - travis_retry sudo apt-get install -y libgirepository1.0-dev
- - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:/opt/alex/3.1.7/bin:/opt/happy/1.19.5/bin:$PATH
+ - travis_retry sudo apt-get install -y libgirepository1.0-dev libwebkitgtk-3.0-dev libwebkit2gtk-3.0-dev libpoppler-glib-dev libvte-2.90-dev libgtksourceview-3.0-dev libgstreamer1.0-dev
+ - export PATH=$HOME/.cabal/bin:/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:/opt/alex/3.1.7/bin:/opt/happy/1.19.5/bin:$PATH
 
 install:
  - cabal --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
  - travis_retry cabal update
  - cabal install Cabal cabal-install
+ - hash -r
+ - cabal --version
  - cabal install --only-dependencies
 
 # Here starts the actual work to be performed for the package under test; any command which exits with a non-zero exit code causes the build to fail.
@@ -36,6 +43,18 @@ script:
 # `cabal install --force-reinstalls dist/*-*.tar.gz`
  - SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz &&
    (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
+
+ - cd bindings
+ - |
+   if [ ${GHCVER%.*} = "7.8" ]; then
+     echo Warning: No packages checked genBuildInfo.hs does not work on GHC 7.8
+   else
+     cabal install aeson aeson-pretty
+     for a in `./PKGS.sh`; do ./genBuildInfo.hs $a; done
+     cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
+     cabal install -j1 ./Gtk
+     cabal install -j3 ./GtkSource ./WebKit
+   fi
 
 notifications:
   irc:

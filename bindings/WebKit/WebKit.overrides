@@ -9,3 +9,47 @@ ignore check_version
 
 # https://bugs.webkit.org/show_bug.cgi?id=152826
 set-attr WebKit/WebView/get_uri/@return-value nullable 1
+
+# Generated with xsltproc Nullable.xslt WebKit-3.0.gir
+set-attr WebKit/DOMBarInfo/get_visible/@parameters/self nullable 1
+set-attr WebKit/DOMConsole/get_memory/@return-value nullable 1
+set-attr WebKit/DOMDOMImplementation/create_document/@parameters/namespaceURI nullable 1
+set-attr WebKit/DOMDOMImplementation/create_document/@parameters/doctype nullable 1
+set-attr WebKit/DOMDOMWindow/get_computed_style/@parameters/pseudoElement nullable 1
+set-attr WebKit/DOMDocument/create_attribute_ns/@parameters/namespaceURI nullable 1
+set-attr WebKit/DOMDocument/create_element_ns/@parameters/namespaceURI nullable 1
+set-attr WebKit/DOMDocument/create_entity_reference/@parameters/name nullable 1
+set-attr WebKit/DOMDocument/evaluate/@parameters/resolver nullable 1
+set-attr WebKit/DOMDocument/evaluate/@parameters/inResult nullable 1
+set-attr WebKit/DOMDocument/get_override_style/@parameters/pseudoElement nullable 1
+set-attr WebKit/DOMElement/set_attribute_ns/@parameters/namespaceURI nullable 1
+set-attr WebKit/DOMEventTarget/add_event_listener/@parameters/user_data nullable 1
+set-attr WebKit/DOMHTMLElement/get_item_type/@return-value nullable 1
+set-attr WebKit/DOMHTMLPropertiesCollection/get_length/@parameters/self nullable 1
+set-attr WebKit/DOMHTMLPropertiesCollection/get_names/@parameters/self nullable 1
+set-attr WebKit/DOMHTMLPropertiesCollection/item/@parameters/self nullable 1
+set-attr WebKit/DOMHTMLPropertiesCollection/named_item/@return-value nullable 1
+set-attr WebKit/DOMHTMLPropertiesCollection/named_item/@parameters/self nullable 1
+set-attr WebKit/DOMMemoryInfo/get_js_heap_size_limit/@parameters/self nullable 1
+set-attr WebKit/DOMMemoryInfo/get_total_js_heap_size/@parameters/self nullable 1
+set-attr WebKit/DOMMemoryInfo/get_used_js_heap_size/@parameters/self nullable 1
+set-attr WebKit/DOMNode/insert_before/@parameters/refChild nullable 1
+set-attr WebKit/DOMPerformance/get_memory/@return-value nullable 1
+set-attr WebKit/DOMPropertyNodeList/get_length/@parameters/self nullable 1
+set-attr WebKit/DOMPropertyNodeList/item/@parameters/self nullable 1
+set-attr WebKit/FaviconDatabase/get_favicon_pixbuf/@parameters/cancellable nullable 1
+set-attr WebKit/FaviconDatabase/get_favicon_pixbuf/@parameters/callback nullable 1
+set-attr WebKit/FaviconDatabase/get_favicon_pixbuf/@parameters/user_data nullable 1
+set-attr WebKit/FaviconDatabase/set_path/@parameters/path nullable 1
+set-attr WebKit/SpellChecker/get_guesses_for_word/@parameters/context nullable 1
+set-attr WebKit/SpellChecker/update_spell_checking_languages/@parameters/languages nullable 1
+set-attr WebKit/SpellChecker/get_guesses_for_word/@parameters/context nullable 1
+set-attr WebKit/SpellChecker/update_spell_checking_languages/@parameters/languages nullable 1
+set-attr WebKit/SpellCheckerInterface/get_guesses_for_word/get_guesses_for_word/@parameters/context nullable 1
+set-attr WebKit/SpellCheckerInterface/update_spell_checking_languages/update_spell_checking_languages/@parameters/languages nullable 1
+set-attr WebKit/WebFrame/resource-load-failed/@parameters/error nullable 1
+set-attr WebKit/WebResource/load-failed/@parameters/error nullable 1
+set-attr WebKit/WebView/script-confirm/@parameters/confirmed nullable 1
+set-attr WebKit/WebView/script-prompt/@parameters/text nullable 1
+set-attr WebKit/WebView/window-object-cleared/@parameters/context nullable 1
+set-attr WebKit/WebView/window-object-cleared/@parameters/window_object nullable 1

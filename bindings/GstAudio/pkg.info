@@ -5,7 +5,7 @@
     "synopsis": "GStreamerAudio bindings",
     "girName": "GstAudio",
     "girVersion": "1.0",
-    "girOverrides": null,
+    "girOverrides": "GstAudio.overrides",
     "baseVersion": "base >= 4.8 && <5",
     "giDepends": [
         "gi-gstbase == 1.0.*",

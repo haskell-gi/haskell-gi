@@ -5,7 +5,7 @@
     "synopsis": "GIRepository (gobject-introspection) bindings",
     "girName": "GIRepository",
     "girVersion": "2.0",
-    "girOverrides": null,
+    "girOverrides": "GIRepository.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-gobject == 2.0.*"

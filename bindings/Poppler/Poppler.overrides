@@ -1,0 +1,17 @@
+namespace Poppler
+
+# Generated with xsltproc Nullable.xslt Poppler-0.18.gir
+set-attr Poppler/Annot/set_color/@parameters/poppler_color nullable 1
+set-attr Poppler/AnnotCircle/set_interior_color/@parameters/poppler_color nullable 1
+set-attr Poppler/AnnotMarkup/set_label/@parameters/label nullable 1
+set-attr Poppler/AnnotSquare/set_interior_color/@parameters/poppler_color nullable 1
+set-attr Poppler/Attachment/save_to_callback/@parameters/user_data nullable 1
+set-attr Poppler/AttachmentSaveFunc/@parameters/data nullable 1
+set-attr Poppler/Document/new_from_data/@parameters/password nullable 1
+set-attr Poppler/Document/new_from_file/@parameters/password nullable 1
+set-attr Poppler/Document/new_from_gfile/@parameters/password nullable 1
+set-attr Poppler/Document/new_from_gfile/@parameters/cancellable nullable 1
+set-attr Poppler/Document/new_from_stream/@parameters/password nullable 1
+set-attr Poppler/Document/new_from_stream/@parameters/cancellable nullable 1
+set-attr Poppler/Media/save_to_callback/@parameters/user_data nullable 1
+set-attr Poppler/MediaSaveFunc/@parameters/data nullable 1

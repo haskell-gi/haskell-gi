@@ -5,7 +5,7 @@
     "synopsis": "PangoCairo bindings",
     "girName": "PangoCairo",
     "girVersion": "1.0",
-    "girOverrides": null,
+    "girOverrides": "PangoCairo.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-cairo == 1.0.*",

@@ -5,7 +5,7 @@
     "synopsis": "GStreamerBase bindings",
     "girName": "GstBase",
     "girVersion": "1.0",
-    "girOverrides": null,
+    "girOverrides": "GstBase.overrides",
     "baseVersion": "base >= 4.8 && <5",
     "giDepends": [
         "gi-gst == 1.0.*",

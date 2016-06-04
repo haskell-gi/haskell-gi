@@ -1,0 +1,35 @@
+namespace GstVideo
+
+# Generated with xsltproc Nullable.xslt GstVideo-1.0.gir
+set-attr GstVideo/VideoChromaResample/@method/@parameters/lines nullable 1
+set-attr GstVideo/VideoCodecFrame/get_user_data/@return-value nullable 1
+set-attr GstVideo/VideoCodecFrame/set_user_data/@parameters/user_data nullable 1
+set-attr GstVideo/VideoConvertSampleCallback/@parameters/user_data nullable 1
+set-attr GstVideo/VideoDecoder/merge_tags/@parameters/tags nullable 1
+set-attr GstVideo/VideoDecoder/proxy_getcaps/@parameters/caps nullable 1
+set-attr GstVideo/VideoDecoder/proxy_getcaps/@parameters/filter nullable 1
+set-attr GstVideo/VideoDecoder/set_output_state/@parameters/reference nullable 1
+set-attr GstVideo/VideoDither/line/@parameters/line nullable 1
+set-attr GstVideo/VideoEncoder/merge_tags/@parameters/tags nullable 1
+set-attr GstVideo/VideoEncoder/proxy_getcaps/@parameters/caps nullable 1
+set-attr GstVideo/VideoEncoder/proxy_getcaps/@parameters/filter nullable 1
+set-attr GstVideo/VideoEncoder/set_output_state/@parameters/reference nullable 1
+set-attr GstVideo/VideoFormat/get_palette/@return-value nullable 1
+set-attr GstVideo/VideoFormatPack/@parameters/src nullable 1
+set-attr GstVideo/VideoFormatPack/@parameters/data nullable 1
+set-attr GstVideo/VideoFormatUnpack/@parameters/dest nullable 1
+set-attr GstVideo/VideoFormatUnpack/@parameters/data nullable 1
+set-attr GstVideo/VideoMeta/map/@parameters/data nullable 1
+set-attr GstVideo/VideoScaler/2d/@parameters/src nullable 1
+set-attr GstVideo/VideoScaler/2d/@parameters/dest nullable 1
+set-attr GstVideo/VideoScaler/horizontal/@parameters/src nullable 1
+set-attr GstVideo/VideoScaler/horizontal/@parameters/dest nullable 1
+set-attr GstVideo/VideoScaler/vertical/@parameters/src_lines nullable 1
+set-attr GstVideo/VideoScaler/vertical/@parameters/dest nullable 1
+set-attr GstVideo/VideoScaler/new/@parameters/options nullable 1
+set-attr GstVideo/buffer_add_video_gl_texture_upload_meta/@parameters/user_data nullable 1
+set-attr GstVideo/buffer_add_video_overlay_composition_meta/@parameters/comp nullable 1
+set-attr GstVideo/video_chroma_resample/@parameters/lines nullable 1
+set-attr GstVideo/video_convert_sample_async/@parameters/user_data nullable 1
+set-attr GstVideo/video_format_get_palette/@return-value nullable 1
+set-attr GstVideo/video_scaler_new/@parameters/options nullable 1

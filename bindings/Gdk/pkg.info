@@ -5,7 +5,7 @@
     "synopsis": "Gdk bindings",
     "girName": "Gdk",
     "girVersion": "3.0",
-    "girOverrides": null,
+    "girOverrides": "Gdk.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-cairo == 1.0.*",

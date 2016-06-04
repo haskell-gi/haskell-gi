@@ -5,7 +5,7 @@
     "synopsis": "Libnotify bindings",
     "girName": "Notify",
     "girVersion": "0.7",
-    "girOverrides": null,
+    "girOverrides": "Notify.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-gdkpixbuf == 2.0.*",
