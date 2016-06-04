@@ -10,7 +10,7 @@ ignore check_version
 # https://bugs.webkit.org/show_bug.cgi?id=152826
 set-attr WebKit/WebView/get_uri/@return-value nullable 1
 
-# Generated with xsltproc Nullable.xslt WebKit-3.0.gir
+# Generated from webkitgtk 2.4.11 with xsltproc Nullable.xslt WebKit-3.0.gir
 set-attr WebKit/DOMBarInfo/get_visible/@parameters/self nullable 1
 set-attr WebKit/DOMConsole/get_memory/@return-value nullable 1
 set-attr WebKit/DOMDOMImplementation/create_document/@parameters/namespaceURI nullable 1

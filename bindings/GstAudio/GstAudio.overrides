@@ -1,6 +1,6 @@
 namespace GstAudio
 
-# Generated with xsltproc Nullable.xslt GstAudio-1.0.gir
+# Generated from gstreamer-audio 1.8.0 with xsltproc Nullable.xslt GstAudio-1.0.gir
 set-attr GstAudio/AudioBaseSink/set_custom_slaving_callback/@parameters/user_data nullable 1
 set-attr GstAudio/AudioBaseSinkCustomSlavingCallback/@parameters/user_data nullable 1
 set-attr GstAudio/AudioChannelMixer/samples/@parameters/in nullable 1

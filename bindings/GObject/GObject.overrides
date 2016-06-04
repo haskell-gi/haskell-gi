@@ -6,7 +6,7 @@ ignore signal_set_va_marshaller
 # The semantics for the DirectionIn pointer here are somewhat ambiguous.
 ignore ClosureMarshal
 
-# Generated with xsltproc Nullable.xslt GObject-2.0.gir
+# Generated from gobject 2.48.0 with xsltproc Nullable.xslt GObject-2.0.gir
 set-attr GObject/BindingTransformFunc/@parameters/user_data nullable 1
 set-attr GObject/CClosure/marshal_BOOLEAN__BOXED_BOXED/@parameters/invocation_hint nullable 1
 set-attr GObject/CClosure/marshal_BOOLEAN__BOXED_BOXED/@parameters/marshal_data nullable 1

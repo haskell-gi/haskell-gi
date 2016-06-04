@@ -1,6 +1,6 @@
 namespace Gst
 
-# Generated with xsltproc Nullable.xslt Gst-1.0.gir
+# Generated from gst 1.8.0 with xsltproc Nullable.xslt Gst-1.0.gir
 set-attr Gst/Allocator/find/@return-value nullable 1
 set-attr Gst/Allocator/find/@parameters/name nullable 1
 set-attr Gst/Allocator/alloc/@parameters/allocator nullable 1

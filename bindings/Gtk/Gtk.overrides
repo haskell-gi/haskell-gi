@@ -17,7 +17,7 @@ if osx
     ignore drag_get_icon_gicon
 endif
 
-# Generated with xsltproc Nullable.xslt Gtk-3.0.gir
+# Generated from gtk+ 3.20.3 with xsltproc Nullable.xslt Gtk-3.0.gir
 set-attr Gtk/AboutDialog/set_comments/@parameters/comments nullable 1
 set-attr Gtk/AboutDialog/set_copyright/@parameters/copyright nullable 1
 set-attr Gtk/AboutDialog/set_license/@parameters/license nullable 1

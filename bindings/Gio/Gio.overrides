@@ -44,7 +44,7 @@ if windows
    ignore UnixFDList.new_from_array
 endif
 
-# Generated with xsltproc Nullable.xslt Gio-2.0.gir
+# Generated from gio 2.48.0 with xsltproc Nullable.xslt Gio-2.0.gir
 set-attr Gio/Action/print_detailed_name/@parameters/target_value nullable 1
 set-attr Gio/Action/activate/@parameters/parameter nullable 1
 set-attr Gio/Action/get_parameter_type/@return-value nullable 1

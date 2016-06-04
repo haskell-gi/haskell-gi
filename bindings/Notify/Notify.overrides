@@ -1,6 +1,6 @@
 namespace Notify
 
-# Generated with xsltproc Nullable.xslt Notify-0.7.gir
+# Generated from libnotify 0.7.6 with xsltproc Nullable.xslt Notify-0.7.gir
 set-attr Notify/Notification/new/@parameters/body nullable 1
 set-attr Notify/Notification/new/@parameters/icon nullable 1
 set-attr Notify/Notification/set_hint/@parameters/value nullable 1
