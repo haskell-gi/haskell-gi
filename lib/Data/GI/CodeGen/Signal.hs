@@ -9,6 +9,7 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM, forM_, when, unless)
 
+import Data.Monoid ((<>))
 import Data.Typeable (typeOf)
 import Data.Bool (bool)
 import qualified Data.Text as T
@@ -51,8 +52,7 @@ genHaskellCallbackPrototype subsec cb name' hInArgs hOutArgs = do
 
 -- Prototype of the callback on the C side
 genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen ()
-genCCallbackPrototype subsec cb name' isSignal =
-  group $ do
+genCCallbackPrototype subsec cb name' isSignal = group $ do
     let ctypeName = name' <> "C"
     exportSignal subsec ctypeName
 
@@ -248,8 +248,8 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
                line $ "return " <> result'
 
 genCallback :: Name -> Callback -> CodeGen ()
-genCallback n (Callback cb) = submodule "Callbacks" $ do
-  name' <- upperName n
+genCallback n (Callback cb) = do
+  let name' = upperName n
   line $ "-- callback " <> name'
 
   let -- user_data pointers, which we generically omit
@@ -286,7 +286,7 @@ signalHaskellName sn = let (w:ws) = T.split (== '-') sn
 
 genSignal :: Signal -> Name -> ExcCodeGen ()
 genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
-  on' <- upperName on
+  let on' = upperName on
 
   line $ "-- signal " <> on' <> "::" <> sn
 

@@ -12,6 +12,7 @@ import Control.Monad (forM, forM_, when, unless, filterM)
 import Data.List (nub)
 import Data.Tuple (swap)
 import Data.Maybe (fromJust, fromMaybe, catMaybes, mapMaybe)
+import Data.Monoid ((<>))
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -36,7 +37,8 @@ import Data.GI.CodeGen.Signal (genSignal, genCallback)
 import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
                   genWrappedPtr)
-import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName)
+import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName,
+                                     submoduleLocation, qualifiedAPI)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -44,7 +46,7 @@ genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol throws fnMovedTo callable) =
     -- Only generate the function if it has not been moved.
     when (Nothing == fnMovedTo) $
-      submodule "Functions" $ group $ do
+      group $ do
         line $ "-- function " <> symbol
         handleCGExc (\e -> line ("-- XXX Could not generate function "
                            <> symbol
@@ -53,7 +55,7 @@ genFunction n (Function symbol throws fnMovedTo callable) =
 
 genBoxedObject :: Name -> Text -> CodeGen ()
 genBoxedObject n typeInit = do
-  name' <- upperName n
+  let name' = upperName n
 
   group $ do
     line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
@@ -75,15 +77,16 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain _maybeTypeInit stora
   when (storageBytes /= 4) $
        notImplementedError $ "Storage of size /= 4 not supported : " <> tshow storageBytes
 
-  name' <- upperName n
+  let name' = upperName n
   fields' <- forM fields $ \(fieldName, value) -> do
-      n <- upperName $ Name ns (name <> "_" <> fieldName)
+      let n = upperName $ Name ns (name <> "_" <> fieldName)
       return (n, value)
 
   line $ deprecatedPragma name' isDeprecated
 
   group $ do
     exportDecl (name' <> "(..)")
+    hsBoot . line $ "data " <> name'
     line $ "data " <> name' <> " = "
     indent $
       case fields' of
@@ -115,7 +118,7 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain _maybeTypeInit stora
 
 genBoxedEnum :: Name -> Text -> CodeGen ()
 genBoxedEnum n typeInit = do
-  name' <- upperName n
+  let name' = upperName n
 
   group $ do
     line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
@@ -126,11 +129,8 @@ genBoxedEnum n typeInit = do
        indent $ line $ "boxedEnumType _ = c_" <> typeInit
 
 genEnum :: Name -> Enumeration -> CodeGen ()
-genEnum n@(Name _ name) enum = submodule "Enums" $ do
+genEnum n@(Name _ name) enum = do
   line $ "-- Enum " <> name
-
-  -- Reexported as-is by GI.Pkg.Types
-  setModuleFlags [Reexport, NoTypesImport, NoCallbacksImport]
 
   handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
               (do genEnumOrFlags n enum
@@ -140,7 +140,7 @@ genEnum n@(Name _ name) enum = submodule "Enums" $ do
 
 genBoxedFlags :: Name -> Text -> CodeGen ()
 genBoxedFlags n typeInit = do
-  name' <- upperName n
+  let name' = upperName n
 
   group $ do
     line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
@@ -153,11 +153,8 @@ genBoxedFlags n typeInit = do
 -- Very similar to enums, but we also declare ourselves as members of
 -- the IsGFlag typeclass.
 genFlags :: Name -> Flags -> CodeGen ()
-genFlags n@(Name _ name) (Flags enum) = submodule "Flags" $ do
+genFlags n@(Name _ name) (Flags enum) = do
   line $ "-- Flags " <> name
-
-  -- Reexported as-is by Data.GI.CodeGen.Pkg.Types
-  setModuleFlags [Reexport, NoTypesImport, NoCallbacksImport]
 
   handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
               (do
@@ -167,7 +164,7 @@ genFlags n@(Name _ name) (Flags enum) = submodule "Flags" $ do
                   Nothing -> return ()
                   Just ti -> genBoxedFlags n ti
 
-                name' <- upperName n
+                let name' = upperName n
                 group $ line $ "instance IsGFlag " <> name')
 
 genErrorDomain :: Text -> Text -> CodeGen ()
@@ -200,84 +197,82 @@ genErrorDomain name' domain = do
 -- | Generate wrapper for structures.
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
-   name' <- upperName n
+   let name' = upperName n
 
-   submodule "Structs" $ submodule name' $ do
-      let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
-      hsBoot decl
-      decl
+   let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+   hsBoot decl
+   decl
 
-      addModuleDocumentation (structDocumentation s)
+   addModuleDocumentation (structDocumentation s)
 
-      if structIsBoxed s
-      then genBoxedObject n (fromJust $ structTypeInit s)
-      else genWrappedPtr n (structAllocationInfo s) (structSize s)
+   if structIsBoxed s
+   then genBoxedObject n (fromJust $ structTypeInit s)
+   else genWrappedPtr n (structAllocationInfo s) (structSize s)
 
-      exportDecl (name' <> ("(..)"))
+   exportDecl (name' <> ("(..)"))
 
-      -- Generate a builder for a structure filled with zeroes.
-      genZeroStruct n s
+   -- Generate a builder for a structure filled with zeroes.
+   genZeroStruct n s
 
-      noName name'
+   noName name'
 
-      -- Generate code for fields.
-      genStructOrUnionFields n (structFields s)
+   -- Generate code for fields.
+   genStructOrUnionFields n (structFields s)
 
-      -- Methods
-      methods <- forM (structMethods s) $ \f -> do
-          let mn = methodName f
-          isFunction <- symbolFromFunction (methodSymbol f)
-          if not isFunction
-          then handleCGExc
-                  (\e -> line ("-- XXX Could not generate method "
-                               <> name' <> "::" <> name mn <> "\n"
-                               <> "-- Error was : " <> describeCGError e) >>
-                   return Nothing)
-                  (genMethod n f >> return (Just (n, f)))
-          else return Nothing
+   -- Methods
+   methods <- forM (structMethods s) $ \f -> do
+       let mn = methodName f
+       isFunction <- symbolFromFunction (methodSymbol f)
+       if not isFunction
+       then handleCGExc
+               (\e -> line ("-- XXX Could not generate method "
+                            <> name' <> "::" <> name mn <> "\n"
+                            <> "-- Error was : " <> describeCGError e) >>
+                return Nothing)
+               (genMethod n f >> return (Just (n, f)))
+       else return Nothing
 
-      -- Overloaded methods
-      genMethodList n (catMaybes methods)
+   -- Overloaded methods
+   genMethodList n (catMaybes methods)
 
 -- | Generated wrapper for unions.
 genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
-  name' <- upperName n
+  let name' = upperName n
 
-  submodule "Unions" $ submodule name' $ do
-     let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
-     hsBoot decl
-     decl
+  let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+  hsBoot decl
+  decl
 
-     if unionIsBoxed u
-     then genBoxedObject n (fromJust $ unionTypeInit u)
-     else genWrappedPtr n (unionAllocationInfo u) (unionSize u)
+  if unionIsBoxed u
+  then genBoxedObject n (fromJust $ unionTypeInit u)
+  else genWrappedPtr n (unionAllocationInfo u) (unionSize u)
 
-     exportDecl (name' <> "(..)")
+  exportDecl (name' <> "(..)")
 
-     -- Generate a builder for a structure filled with zeroes.
-     genZeroUnion n u
+  -- Generate a builder for a structure filled with zeroes.
+  genZeroUnion n u
 
-     noName name'
+  noName name'
 
-     -- Generate code for fields.
-     genStructOrUnionFields n (unionFields u)
+  -- Generate code for fields.
+  genStructOrUnionFields n (unionFields u)
 
-     -- Methods
-     methods <- forM (unionMethods u) $ \f -> do
-         let mn = methodName f
-         isFunction <- symbolFromFunction (methodSymbol f)
-         if not isFunction
-         then handleCGExc
-                   (\e -> line ("-- XXX Could not generate method "
-                                <> name' <> "::" <> name mn <> "\n"
-                                <> "-- Error was : " <> describeCGError e)
-                   >> return Nothing)
-                   (genMethod n f >> return (Just (n, f)))
-         else return Nothing
+  -- Methods
+  methods <- forM (unionMethods u) $ \f -> do
+      let mn = methodName f
+      isFunction <- symbolFromFunction (methodSymbol f)
+      if not isFunction
+      then handleCGExc
+                (\e -> line ("-- XXX Could not generate method "
+                             <> name' <> "::" <> name mn <> "\n"
+                             <> "-- Error was : " <> describeCGError e)
+                >> return Nothing)
+                (genMethod n f >> return (Just (n, f)))
+      else return Nothing
 
-     -- Overloaded methods
-     genMethodList n (catMaybes methods)
+  -- Overloaded methods
+  genMethodList n (catMaybes methods)
 
 -- Add the implicit object argument to methods of an object.  Since we
 -- are prepending an argument we need to adjust the offset of the
@@ -340,7 +335,7 @@ genMethod cn m@(Method {
                   methodType = t,
                   methodThrows = throws
                 }) = do
-    name' <- upperName cn
+    let name' = upperName cn
     returnsGObject <- maybe (return False) isGObject (returnType c)
     line $ "-- method " <> name' <> "::" <> name mn
     line $ "-- method type : " <> tshow t
@@ -359,8 +354,8 @@ genMethod cn m@(Method {
 -- Type casting with type checking
 genGObjectCasts :: Bool -> Name -> Text -> [Name] -> CodeGen ()
 genGObjectCasts isIU n cn_ parents = do
-  name' <- upperName n
-  qualifiedParents <- traverse upperName parents
+  let name' = upperName n
+  qualifiedParents <- mapM qualifiedAPI parents
 
   group $ do
     line $ "foreign import ccall \"" <> cn_ <> "\""
@@ -397,101 +392,99 @@ genGObjectCasts isIU n cn_ parents = do
 -- of objects, we deal with these separately.
 genObject :: Name -> Object -> CodeGen ()
 genObject n o = do
-  name' <- upperName n
+  let name' = upperName n
   let t = (\(Name ns' n') -> TInterface ns' n') n
   isGO <- isGObject t
 
   if not isGO
   then line $ "-- APIObject \"" <> name' <>
                 "\" does not descend from GObject, it will be ignored."
-  else submodule "Objects" $ submodule name' $
-       do
-         bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
-         exportDecl (name' <> "(..)")
+  else do
+    bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+    exportDecl (name' <> "(..)")
 
-         -- Type safe casting to parent objects, and implemented interfaces.
-         isIU <- isInitiallyUnowned t
-         parents <- instanceTree n
-         genGObjectCasts isIU n (objTypeInit o) (parents <> objInterfaces o)
+    -- Type safe casting to parent objects, and implemented interfaces.
+    isIU <- isInitiallyUnowned t
+    parents <- instanceTree n
+    genGObjectCasts isIU n (objTypeInit o) (parents <> objInterfaces o)
 
-         noName name'
+    noName name'
 
-         fullObjectMethodList n o >>= genMethodList n
+    fullObjectMethodList n o >>= genMethodList n
 
-         forM_ (objSignals o) $ \s ->
-          handleCGExc
-          (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
-                          , sigName s
-                          , "\n", "-- Error was : "] <>) . describeCGError)
-          (genSignal s n)
+    forM_ (objSignals o) $ \s ->
+     handleCGExc
+     (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
+                     , sigName s
+                     , "\n", "-- Error was : "] <>) . describeCGError)
+     (genSignal s n)
 
-         genObjectProperties n o
-         genNamespacedPropLabels n (objProperties o) (objMethods o)
-         genObjectSignals n o
+    genObjectProperties n o
+    genNamespacedPropLabels n (objProperties o) (objMethods o)
+    genObjectSignals n o
 
-         -- Methods
-         forM_ (objMethods o) $ \f -> do
-           let mn = methodName f
-           handleCGExc (\e -> line ("-- XXX Could not generate method "
-                                   <> name' <> "::" <> name mn <> "\n"
-                                   <> "-- Error was : " <> describeCGError e)
-                       >> genUnsupportedMethodInfo n f)
-                       (genMethod n f)
+    -- Methods
+    forM_ (objMethods o) $ \f -> do
+      let mn = methodName f
+      handleCGExc (\e -> line ("-- XXX Could not generate method "
+                              <> name' <> "::" <> name mn <> "\n"
+                              <> "-- Error was : " <> describeCGError e)
+                  >> genUnsupportedMethodInfo n f)
+                  (genMethod n f)
 
 genInterface :: Name -> Interface -> CodeGen ()
 genInterface n iface = do
-  name' <- upperName n
+  let name' = upperName n
 
-  submodule "Interfaces" $ submodule name' $ do
-     line $ "-- interface " <> name' <> " "
-     line $ deprecatedPragma name' $ ifDeprecated iface
-     bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
-     exportDecl (name' <> "(..)")
+  line $ "-- interface " <> name' <> " "
+  line $ deprecatedPragma name' $ ifDeprecated iface
+  bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+  exportDecl (name' <> "(..)")
 
-     noName name'
+  noName name'
 
-     fullInterfaceMethodList n iface >>= genMethodList n
+  fullInterfaceMethodList n iface >>= genMethodList n
 
-     forM_ (ifSignals iface) $ \s -> handleCGExc
-          (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
-                          , sigName s
-                          , "\n", "-- Error was : "] <>) . describeCGError)
-          (genSignal s n)
+  forM_ (ifSignals iface) $ \s -> handleCGExc
+       (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
+                       , sigName s
+                       , "\n", "-- Error was : "] <>) . describeCGError)
+       (genSignal s n)
 
-     genInterfaceProperties n iface
-     genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
-     genInterfaceSignals n iface
+  genInterfaceProperties n iface
+  genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
+  genInterfaceSignals n iface
 
-     isGO <- apiIsGObject n (APIInterface iface)
-     if isGO
-     then do
-       let cn_ = fromMaybe (error "GObject derived interface without a type!") (ifTypeInit iface)
-       isIU <- apiIsInitiallyUnowned n (APIInterface iface)
-       gobjectPrereqs <- filterM nameIsGObject (ifPrerequisites iface)
-       allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
-       let uniqueParents = nub (concat allParents)
-       genGObjectCasts isIU n cn_ uniqueParents
+  isGO <- apiIsGObject n (APIInterface iface)
+  if isGO
+  then do
+    let cn_ = fromMaybe (error "GObject derived interface without a type!") (ifTypeInit iface)
+    isIU <- apiIsInitiallyUnowned n (APIInterface iface)
+    gobjectPrereqs <- filterM nameIsGObject (ifPrerequisites iface)
+    allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
+    let uniqueParents = nub (concat allParents)
+    genGObjectCasts isIU n cn_ uniqueParents
 
-     else group $ do
-       let cls = classConstraint name'
-       exportDecl cls
-       bline $ "class ForeignPtrNewtype a => " <> cls <> " a"
-       bline $ "instance (ForeignPtrNewtype o, IsDescendantOf " <> name' <> " o) => " <> cls <> " o"
-       let parentObjectsType = name' <> "ParentTypes"
-       line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
-       line $ "type " <> parentObjectsType <> " = '[]"
+  else group $ do
+    let cls = classConstraint name'
+    exportDecl cls
+    bline $ "class ForeignPtrNewtype a => " <> cls <> " a"
+    bline $ "instance (ForeignPtrNewtype o, IsDescendantOf " <> name' <> " o) => " <> cls <> " o"
+    let parentObjectsType = name' <> "ParentTypes"
+    line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
+    line $ "type " <> parentObjectsType <> " = '[]"
 
-     -- Methods
-     forM_ (ifMethods iface) $ \f -> do
-         let mn = methodName f
-         isFunction <- symbolFromFunction (methodSymbol f)
-         unless isFunction $
-                handleCGExc
-                (\e -> line ("-- XXX Could not generate method "
-                             <> name' <> "::" <> name mn <> "\n"
-                             <> "-- Error was : " <> describeCGError e)
-                >> genUnsupportedMethodInfo n f)
-                (genMethod n f)
+  -- Methods
+  forM_ (ifMethods iface) $ \f -> do
+      let mn = methodName f
+      isFunction <- symbolFromFunction (methodSymbol f)
+      unless isFunction $
+             handleCGExc
+             (\e -> line ("-- XXX Could not generate method "
+                          <> name' <> "::" <> name mn <> "\n"
+                          <> "-- Error was : " <> describeCGError e)
+             >> genUnsupportedMethodInfo n f)
+             (genMethod n f)
 
 -- Some type libraries include spurious interface/struct methods,
 -- where a method Mod.Foo::func also appears as an ordinary function
@@ -520,9 +513,13 @@ genAPI n (APIUnion u) = genUnion n u
 genAPI n (APIObject o) = genObject n o
 genAPI n (APIInterface i) = genInterface n i
 
+-- | Generate the code for a given API in the corresponding module.
+genAPIModule :: Name -> API -> CodeGen ()
+genAPIModule n api = submodule (submoduleLocation n api) $ genAPI n api
+
 genModule' :: M.Map Name API -> CodeGen ()
 genModule' apis = do
-  mapM_ (uncurry genAPI)
+  mapM_ (uncurry genAPIModule)
             -- We provide these ourselves
           $ filter ((`notElem` [ Name "GLib" "Array"
                                , Name "GLib" "Error"
@@ -542,8 +539,9 @@ genModule' apis = do
           $ apis
 
   -- Make sure we generate a "Callbacks" module, since it is imported
-  -- by other modules. It is fine if it ends up empty.
-  submodule "Callbacks" $ return ()
+  -- by other modules. It is fine if it ends up empty. We also
+  -- generate an empty .hs-boot file.
+  submodule ["Callbacks"] (hsBoot . line $ "")
 
 genModule :: M.Map Name API -> CodeGen ()
 genModule apis = do

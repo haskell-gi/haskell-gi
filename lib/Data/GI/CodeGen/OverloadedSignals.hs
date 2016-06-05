@@ -8,9 +8,10 @@ module Data.GI.CodeGen.OverloadedSignals
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when)
+
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
-
 import qualified Data.Set as S
 
 import Data.GI.CodeGen.API
@@ -18,7 +19,8 @@ import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Inheritance (fullObjectSignalList, fullInterfaceSignalList)
 import Data.GI.CodeGen.GObject (apiIsGObject)
 import Data.GI.CodeGen.Signal (signalHaskellName)
-import Data.GI.CodeGen.SymbolNaming (upperName, hyphensToCamelCase)
+import Data.GI.CodeGen.SymbolNaming (upperName, hyphensToCamelCase,
+                                     qualifiedSymbol)
 import Data.GI.CodeGen.Util (lcFirst, ucFirst)
 
 -- A list of distinct signal names for all GObjects appearing in the
@@ -45,7 +47,7 @@ genOverloadedSignalConnectors allAPIs = do
   setLanguagePragmas ["DataKinds", "PatternSynonyms", "CPP",
                       -- For ghc 7.8 support
                       "RankNTypes", "ScopedTypeVariables", "TypeFamilies"]
-  setModuleFlags [ImplicitPrelude, NoTypesImport, NoCallbacksImport]
+  setModuleFlags [ImplicitPrelude]
 
   line "import Data.GI.Base.Signals (SignalProxy(..))"
   line "import Data.GI.Base.Overloading (ResolveSignal)"
@@ -68,14 +70,14 @@ genOverloadedSignalConnectors allAPIs = do
 -- | Qualified name for the "(sigName, info)" tag for a given signal.
 signalInfoName :: Name -> Signal -> CodeGen Text
 signalInfoName n signal = do
-  n' <- upperName n
-  return $ n' <> (ucFirst . signalHaskellName . sigName) signal
-             <> "SignalInfo"
+  let infoName = upperName n <> (ucFirst . signalHaskellName . sigName) signal
+                 <> "SignalInfo"
+  qualifiedSymbol infoName n
 
 -- | Generate the given signal instance for the given API object.
 genInstance :: Name -> Signal -> CodeGen ()
 genInstance owner signal = group $ do
-  name <- upperName owner
+  let name = upperName owner
   let sn = (ucFirst . signalHaskellName . sigName) signal
   si <- signalInfoName owner signal
   bline $ "data " <> si
@@ -90,7 +92,7 @@ genInstance owner signal = group $ do
 -- | Signal instances for (GObject-derived) objects.
 genObjectSignals :: Name -> Object -> CodeGen ()
 genObjectSignals n o = do
-  name <- upperName n
+  let name = upperName n
   isGO <- apiIsGObject n (APIObject o)
   when isGO $ do
        mapM_ (genInstance n) (objSignals o)
@@ -108,7 +110,7 @@ genObjectSignals n o = do
 -- | Signal instances for interfaces.
 genInterfaceSignals :: Name -> Interface -> CodeGen ()
 genInterfaceSignals n iface = do
-  name <- upperName n
+  let name = upperName n
   mapM_ (genInstance n) (ifSignals iface)
   infos <- fullInterfaceSignalList n iface >>=
            mapM (\(owner, signal) -> do

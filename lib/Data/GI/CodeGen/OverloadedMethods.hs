@@ -5,21 +5,22 @@ module Data.GI.CodeGen.OverloadedMethods
     ) where
 
 import Control.Monad (forM, forM_, when)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Callable (callableSignature, fixupCallerAllocates)
 import Data.GI.CodeGen.Code
-import Data.GI.CodeGen.SymbolNaming (lowerName, upperName)
+import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, qualifiedSymbol)
 import Data.GI.CodeGen.Util (ucFirst)
 
 -- | Qualified name for the info for a given method.
 methodInfoName :: Name -> Method -> CodeGen Text
-methodInfoName n method = do
-  n' <- upperName n
-  let mn' = (ucFirst . lowerName . methodName) method
-  return $ n' <> mn' <> "MethodInfo"
+methodInfoName n method =
+    let infoName = upperName n <> (ucFirst . lowerName . methodName) method
+                   <> "MethodInfo"
+    in qualifiedSymbol infoName n
 
 -- | Appropriate instances so overloaded labels are properly resolved.
 genMethodResolver :: Text -> CodeGen ()
@@ -41,7 +42,7 @@ genMethodResolver n = do
 -- the given named type.
 genMethodList :: Name -> [(Name, Method)] -> CodeGen ()
 genMethodList n methods = do
-  name <- upperName n
+  let name = upperName n
   let filteredMethods = filter isOrdinaryMethod methods
       gets = filter isGet filteredMethods
       sets = filter isSet filteredMethods

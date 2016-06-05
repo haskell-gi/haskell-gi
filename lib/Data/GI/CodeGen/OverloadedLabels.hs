@@ -6,6 +6,7 @@ module Data.GI.CodeGen.OverloadedLabels
 import Control.Applicative ((<$>))
 #endif
 import Data.Maybe (isNothing)
+import Data.Monoid ((<>))
 import Control.Monad (forM_)
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -82,7 +83,7 @@ genOverloadedLabel l = group $ do
 genOverloadedLabels :: [(Name, API)] -> CodeGen ()
 genOverloadedLabels allAPIs = do
   setLanguagePragmas ["DataKinds", "FlexibleContexts"]
-  setModuleFlags [ImplicitPrelude, NoTypesImport, NoCallbacksImport]
+  setModuleFlags [ImplicitPrelude]
 
   line $ "import Data.Proxy (Proxy(..))"
   line $ "import Data.GI.Base.Overloading (IsLabelProxy(..))"

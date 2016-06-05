@@ -1,21 +1,26 @@
 {-# LANGUAGE ViewPatterns #-}
 module Data.GI.CodeGen.SymbolNaming
-    ( qualify
-    , lowerName
+    ( lowerName
     , upperName
     , noName
     , escapedArgName
     , classConstraint
     , hyphensToCamelCase
     , underscoresToCamelCase
+
+    , submoduleLocation
+    , qualifiedAPI
+    , qualifiedSymbol
     ) where
 
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Code
-import Data.GI.CodeGen.Config (Config(modName))
+import Data.GI.CodeGen.Code (CodeGen, ModuleName, group, line, exportDecl,
+                             qualified, getAPI)
+import Data.GI.CodeGen.Type (Type(TInterface))
 import Data.GI.CodeGen.Util (lcFirst, ucFirst)
 
 classConstraint :: Text -> Text
@@ -33,33 +38,36 @@ lowerName (Name _ s) =
       "" -> error "empty name!!"
       n -> lcFirst n
 
-upperNameWithSuffix :: Text -> Name -> CodeGen Text
-upperNameWithSuffix suffix (Name ns s) = do
-          prefix <- qualifyWithSuffix suffix ns
-          return $ prefix <> uppered
-    where uppered = underscoresToCamelCase (sanitize s)
+upperName :: Name -> Text
+upperName (Name _ s) = underscoresToCamelCase (sanitize s)
 
-upperName :: Name -> CodeGen Text
-upperName = upperNameWithSuffix "."
+-- | Return an identifier for the given interface type valid in the current
+-- module.
+qualifiedAPI :: Name -> CodeGen Text
+qualifiedAPI n@(Name ns s) = do
+  api <- getAPI (TInterface ns s)
+  qualified ("GI" : ucFirst ns : submoduleLocation n api) n
 
--- | Return a qualified prefix for the given namespace. In case the
--- namespace corresponds to the current module the empty string is
--- returned, otherwise the namespace ++ suffix is returned. Suffix is
--- typically just ".", see `qualify` below.
-qualifyWithSuffix :: Text -> Text -> CodeGen Text
-qualifyWithSuffix suffix ns = do
-     cfg <- config
-     if modName cfg == Just ns then
-         return ""
-     else do
-       loadDependency ns -- Make sure that the given namespace is
-                         -- listed as a dependency of this module.
-       return $ ucFirst ns <> suffix
+-- | Construct an identifier for the given symbol in the given API.
+qualifiedSymbol :: Text -> Name -> CodeGen Text
+qualifiedSymbol s n@(Name ns nn) = do
+  api <- getAPI (TInterface ns nn)
+  qualified ("GI" : ucFirst ns : submoduleLocation n api) (Name ns s)
 
--- | Return the qualified namespace (ns ++ "." or "", depending on
--- whether ns is the current namespace).
-qualify :: Text -> CodeGen Text
-qualify = qualifyWithSuffix "."
+-- | Construct the submodule name (as a list, to be joined by
+-- intercalating ".") where the given API element will live. This is
+-- the path relative to the root for the corresponding
+-- namespace. I.e. the "GI.Gtk" part is not prepended.
+submoduleLocation :: Name -> API -> ModuleName
+submoduleLocation _ (APIConst _) = ["Constants"]
+submoduleLocation _ (APIFunction _) = ["Functions"]
+submoduleLocation _ (APICallback _) = ["Callbacks"]
+submoduleLocation _ (APIEnum _) = ["Enums"]
+submoduleLocation _ (APIFlags _) = ["Flags"]
+submoduleLocation n (APIInterface _) = ["Interfaces", upperName n]
+submoduleLocation n (APIObject _) = ["Objects", upperName n]
+submoduleLocation n (APIStruct _) = ["Structs", upperName n]
+submoduleLocation n (APIUnion _) = ["Unions", upperName n]
 
 -- | Save a bit of typing for optional arguments in the case that we
 -- want to pass Nothing.

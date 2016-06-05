@@ -33,10 +33,11 @@ module Data.GI.CodeGen.Conversions
 import Control.Applicative ((<$>), (<*>), pure, Applicative)
 #endif
 import Control.Monad (when)
-import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
+import Data.Monoid ((<>))
 import Data.Int
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Typeable (TypeRep, tyConName, typeRepTyCon, typeOf)
 import Data.Word
 import GHC.Exts (IsString(..))
 
@@ -673,12 +674,11 @@ haskellType TParamSpec = return $ "GParamSpec" `con` []
 haskellType (TInterface "GObject" "Value") = return $ "GValue" `con` []
 haskellType (TInterface "GObject" "Closure") = return $ "Closure" `con` []
 haskellType t@(TInterface ns n) = do
-  prefix <- qualify ns
-  api <- findAPI t
-  let tname = (prefix <> n) `con` []
+  api <- getAPI t
+  tname <- qualifiedAPI (Name ns n)
   return $ case api of
-             Just (APIFlags _) -> "[]" `con` [tname]
-             _ -> tname
+             (APIFlags _) -> "[]" `con` [tname `con` []]
+             _ -> tname `con` []
 
 foreignBasicType TBoolean  = "CInt" `con` []
 foreignBasicType TUTF8     = "CString" `con` []
@@ -731,12 +731,14 @@ foreignType t@(TInterface ns n) = do
   if isScalar
   then return $ "CUInt" `con` []
   else do
-    api <- findAPI t
-    prefix <- qualify ns
-    return $ case api of
-               Just (APICallback _) ->
-                   funptr $ (prefix <> n <> "C") `con` []
-               _ -> ptr $ (prefix <> n) `con` []
+    api <- getAPI t
+    case api of
+      APICallback _ -> do
+         tname <- qualifiedSymbol (n <> "C") (Name ns n)
+         return (funptr $ tname `con` [])
+      _ -> do
+         tname <- qualifiedAPI (Name ns n)
+         return (ptr $ tname `con` [])
 
 getIsScalar :: Type -> CodeGen Bool
 getIsScalar t = do

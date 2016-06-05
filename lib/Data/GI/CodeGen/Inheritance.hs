@@ -14,10 +14,11 @@ import Control.Applicative ((<$>), (<*>))
 #endif
 import Control.Monad (foldM, when)
 import qualified Data.Map as M
+import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Code (findAPIByName, CodeGen, line, (<>))
+import Data.GI.CodeGen.Code (findAPIByName, CodeGen, line)
 import Data.GI.CodeGen.Util (tshow)
 
 -- | Find the parent of a given object when building the

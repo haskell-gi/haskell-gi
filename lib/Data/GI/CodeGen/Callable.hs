@@ -19,6 +19,7 @@ import Control.Monad (forM, forM_, when)
 import Data.Bool (bool)
 import Data.List (nub, (\\))
 import Data.Maybe (isJust)
+import Data.Monoid ((<>))
 import Data.Tuple (swap)
 import Data.Typeable (TypeRep, typeOf)
 import qualified Data.Map as Map
@@ -283,18 +284,19 @@ prepareInArg arg = do
                 return maybeName)
 
 -- Callbacks are a fairly special case, we treat them separately.
-prepareInCallback :: Arg -> ExcCodeGen Text
+prepareInCallback :: Arg -> CodeGen Text
 prepareInCallback arg = do
   let name = escapedArgName arg
       ptrName = "ptr" <> name
       scope = argScope arg
 
   (maker, wrapper) <- case argType arg of
-                        (TInterface ns n) ->
+                        TInterface ns n ->
                             do
-                              prefix <- qualify ns
-                              return $ (prefix <> "mk" <> n,
-                                        prefix <> lcFirst n <> "Wrapper")
+                              let tn = Name ns n
+                              maker <- qualifiedSymbol ("mk" <> n) tn
+                              wrapper <- qualifiedSymbol (lcFirst n <> "Wrapper") tn
+                              return $ (maker, wrapper)
                         _ -> terror $ "prepareInCallback : Not an interface! " <> T.pack (ppShow arg)
 
   when (scope == ScopeTypeAsync) $ do

@@ -29,7 +29,7 @@ import Text.Show.Pretty (ppShow)
 
 import Data.GI.CodeGen.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import Data.GI.CodeGen.Cabal (cabalConfig, setupHs, genCabalProject)
-import Data.GI.CodeGen.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, writeModuleCode, moduleCode, codeToText, minBaseVersion)
+import Data.GI.CodeGen.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText, minBaseVersion)
 import Data.GI.CodeGen.Config (Config(..))
 import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
@@ -118,7 +118,7 @@ genLabels options ovs modules extraPaths = do
   putStrLn $ "\t* Generating GI.OverloadedLabels"
   m <- genCode cfg allAPIs ["GI", "OverloadedLabels"]
        (genOverloadedLabels (M.toList allAPIs))
-  _ <- writeModuleCode (optVerbose options) (optOutputDir options) m
+  _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
   return ()
 
 -- Generate generic signal connectors ("Clicked", "Activate", ...)
@@ -131,7 +131,7 @@ genGenericConnectors options ovs modules extraPaths = do
                     overrides = ovs}
   putStrLn $ "\t* Generating GI.Signals"
   m <- genCode cfg allAPIs ["GI", "Signals"] (genOverloadedSignalConnectors (M.toList allAPIs))
-  _ <- writeModuleCode (optVerbose options) (optOutputDir options) m
+  _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
   return ()
 
 -- Generate the code for the given module, and return the dependencies

@@ -10,6 +10,7 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromMaybe)
+import Data.Monoid ((<>))
 import Data.Version (Version(..))
 import qualified Data.Map as M
 import qualified Data.Text as T

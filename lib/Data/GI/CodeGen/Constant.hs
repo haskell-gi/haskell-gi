@@ -6,6 +6,7 @@ module Data.GI.CodeGen.Constant
 import Control.Applicative ((<$>))
 #endif
 
+import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import Data.GI.CodeGen.API
@@ -41,7 +42,7 @@ writePattern name (ExplicitSynonym view expression value t) = do
 
 genConstant :: Name -> Constant -> CodeGen ()
 genConstant (Name _ name) (Constant t value deprecated) =
-    submodule "Constants" $ group $ do
+    group $ do
       setLanguagePragmas ["PatternSynonyms", "ScopedTypeVariables",
                           "ViewPatterns"]
       line $ deprecatedPragma name deprecated

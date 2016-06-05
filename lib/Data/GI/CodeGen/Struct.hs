@@ -14,6 +14,7 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM, when)
 
 import Data.Maybe (mapMaybe, isJust, catMaybes)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -76,14 +77,14 @@ extractCallbacksInStruct _ = []
 -- struct/union.
 infoType :: Name -> Field -> CodeGen Text
 infoType owner field = do
-  name <- upperName owner
+  let name = upperName owner
   let fName = (underscoresToCamelCase . fieldName) field
   return $ name <> fName <> "FieldInfo"
 
 -- | Extract a field from a struct.
 buildFieldReader :: Name -> Field -> ExcCodeGen ()
 buildFieldReader n field = group $ do
-  name' <- upperName n
+  let name' = upperName n
   let getter = fieldGetter n field
 
   isMaybe <- typeIsNullable (fieldType field)
@@ -120,7 +121,7 @@ buildFieldReader n field = group $ do
 -- the C representation.
 buildFieldWriter :: Name -> Field -> ExcCodeGen ()
 buildFieldWriter n field = group $ do
-  name' <- upperName n
+  let name' = upperName n
   let setter = fieldSetter n field
 
   isPtr <- typeIsPtr (fieldType field)
@@ -143,7 +144,7 @@ buildFieldWriter n field = group $ do
 -- | Write a @NULL@ into a field of a struct of type `Ptr`.
 buildFieldClear :: Name -> Field -> ExcCodeGen ()
 buildFieldClear n field = group $ do
-  name' <- upperName n
+  let name' = upperName n
   let clear = fieldClear n field
 
   fType <- tshow <$> foreignType (fieldType field)
@@ -176,7 +177,7 @@ fName = underscoresToCamelCase . fieldName
 genAttrInfo :: Name -> Field -> CodeGen Text
 genAttrInfo owner field = do
   it <- infoType owner field
-  on <- upperName owner
+  let on = upperName owner
 
   isPtr <- typeIsPtr (fieldType field)
 
@@ -246,7 +247,7 @@ buildFieldAttributes n field
 
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do
-  name' <- upperName n
+  let name' = upperName n
 
   attrs <- forM fields $ \field ->
       handleCGExc (\e -> line ("-- XXX Skipped attribute for \"" <> name' <>
@@ -267,7 +268,7 @@ genStructOrUnionFields n fields = do
 -- type, using the boxed (or GLib, for unboxed types) allocator.
 genZeroSU :: Name -> Int -> Bool -> CodeGen ()
 genZeroSU n size isBoxed = group $ do
-      name <- upperName n
+      let name = upperName n
       let builder = "newZero" <> name
           tsize = tshow size
       line $ "-- | Construct a `" <> name <> "` struct initialized to zero."
@@ -322,7 +323,7 @@ prefixedFunPtrImport prefix symbol prototype = group $ do
 -- allocate/deallocate unboxed structs and unions.
 genWrappedPtr :: Name -> AllocationInfo -> Int -> CodeGen ()
 genWrappedPtr n info size = group $ do
-  name' <- upperName n
+  let name' = upperName n
 
   let prefix = \op -> "_" <> name' <> "_" <> op <> "_"
 

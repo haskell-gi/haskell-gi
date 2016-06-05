@@ -8,6 +8,7 @@ module Data.GI.CodeGen.Properties
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when, unless)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Set as S
@@ -20,8 +21,8 @@ import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
-import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, qualify,
-                        hyphensToCamelCase, lowerName)
+import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, classConstraint,
+                                     hyphensToCamelCase, qualifiedSymbol)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
 
@@ -88,7 +89,7 @@ attrType prop = do
 
 genPropertySetter :: Name -> Text -> Property -> CodeGen ()
 genPropertySetter n pName prop = group $ do
-  oName <- upperName n
+  let oName = upperName n
   (constraints, t) <- attrType prop
   isNullable <- typeIsNullable (propType prop)
   let constraints' = "MonadIO m":(classConstraint oName <> " o"):constraints
@@ -103,7 +104,7 @@ genPropertySetter n pName prop = group $ do
 
 genPropertyGetter :: Name -> Text -> Property -> CodeGen ()
 genPropertyGetter n pName prop = group $ do
-  oName <- upperName n
+  let oName = upperName n
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
   constructorType <- haskellType (propType prop)
@@ -143,7 +144,7 @@ genPropertyConstructor pName prop = group $ do
 
 genPropertyClear :: Name -> Text -> Property -> CodeGen ()
 genPropertyClear n pName prop = group $ do
-  oName <- upperName n
+  let oName = upperName n
   nothingType <- tshow . maybeT <$> haskellType (propType prop)
   let constraints = ["MonadIO m", classConstraint oName <> " o"]
   tStr <- propTypeStr $ propType prop
@@ -185,25 +186,23 @@ genInterfaceProperties n iface = do
 -- generate a fully qualified accesor name, otherwise just return
 -- "undefined". accessor is "get", "set" or "construct"
 accessorOrUndefined :: Bool -> Text -> Name -> Text -> CodeGen Text
-accessorOrUndefined available accessor (Name ons on) cName =
+accessorOrUndefined available accessor owner@(Name _ on) cName =
     if not available
     then return "undefined"
-    else do
-      prefix <- qualify ons
-      return $ prefix <> accessor <> on <> cName
+    else qualifiedSymbol (accessor <> on <> cName) owner
 
 -- | The name of the type encoding the information for the property of
 -- the object.
 infoType :: Name -> Property -> CodeGen Text
-infoType owner prop = do
-  name <- upperName owner
-  let cName = (hyphensToCamelCase . propName) prop
-  return $ name <> cName <> "PropertyInfo"
+infoType owner prop =
+    let infoType = upperName owner <> (hyphensToCamelCase . propName) prop
+                   <> "PropertyInfo"
+    in qualifiedSymbol infoType owner
 
 genOneProperty :: Name -> Property -> ExcCodeGen ()
 genOneProperty owner prop = do
-  name <- upperName owner
-  let cName = (hyphensToCamelCase . propName) prop
+  let name = upperName owner
+      cName = (hyphensToCamelCase . propName) prop
       pName = name <> cName
       flags = propFlags prop
       writable = PropertyWritable `elem` flags &&
@@ -325,7 +324,7 @@ genPlaceholderProperty owner prop = do
 
 genProperties :: Name -> [Property] -> [Text] -> CodeGen ()
 genProperties n ownedProps allProps = do
-  name <- upperName n
+  let name = upperName n
 
   forM_ ownedProps $ \prop -> do
       handleCGExc (\err -> do
@@ -354,7 +353,7 @@ genNamespacedPropLabels owner props methods =
 
 genNamespacedAttrLabels :: Name -> [Text] -> [Method] -> CodeGen ()
 genNamespacedAttrLabels owner attrNames methods = do
-  name <- upperName owner
+  let name = upperName owner
 
   let methodNames = S.fromList (map (lowerName . methodName) methods)
       filteredAttrs = filter (`S.notMember` methodNames) attrNames

@@ -12,6 +12,7 @@ import Control.Applicative ((<$>), (<*>))
 
 import Control.Monad (when)
 import Data.Maybe (isJust)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import Data.GI.CodeGen.API
