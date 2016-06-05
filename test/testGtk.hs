@@ -13,7 +13,6 @@ import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
-import qualified GI.GObject as GObject
 import qualified GI.GLib as GLib
 
 import GI.OverloadedLabels
@@ -419,19 +418,6 @@ testArrayOfArrays = do
   performGC
   putStrLn "+++ Array of array test done"
 
-testUnexpectedNullHandling :: IO ()
-testUnexpectedNullHandling = do
-  performGC
-  putStrLn "*** Unexpected NULL handling test"
-  builder <- builderNewFromString "<interface></interface>" (-1)
-  result <- catch (Just <$> builderGetObject builder "zzz")
-            (\(_ :: UnexpectedNullPointerReturn) -> return Nothing)
-  case (result :: Maybe GObject.Object) of
-    Nothing -> return ()
-    Just _ -> error "Unexpected success in builderGetObject!"
-  performGC
-  putStrLn "+++ Unexpected NULL handling test done"
-
 testConstantPatternMatching :: IO ()
 testConstantPatternMatching = do
   performGC
@@ -556,7 +542,6 @@ main = do
         testGVariant
         testCast
         testArrayOfArrays
-        testUnexpectedNullHandling
         testConstantPatternMatching
 #if MIN_VERSION_base(4,9,0)
         testOverloadedLabels
