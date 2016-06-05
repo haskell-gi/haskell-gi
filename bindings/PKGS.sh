@@ -3,7 +3,7 @@ basever=$(ghc-pkg list base)
 unamestr=$(uname)
 
 # Packages compatible with base >= 4.7
-base47PKGS="GLib GObject Atk Gio Soup cairo Pango PangoCairo GdkPixbuf Gdk Gtk GtkSource GIRepository Poppler JavaScriptCore-3.0 WebKit Vte Notify"
+base47PKGS="GLib GObject Atk Gio cairo Pango PangoCairo GdkPixbuf Gdk Gtk GtkSource Soup GIRepository Poppler JavaScriptCore-3.0 WebKit Vte Notify"
 # Packages compatible with base >= 4.8
 base48PKGS="Gst GstBase GstAudio GstVideo"
 
