@@ -98,7 +98,7 @@ genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain _maybeTypeInit stora
         _ -> return ()
 
   group $ do
-    line $ "instance P.Enum " <> name' <> " where"
+    bline $ "instance P.Enum " <> name' <> " where"
     indent $ do
             forM_ fields' $ \(n, v) ->
                 line $ "fromEnum " <> n <> " = " <> tshow v
@@ -125,7 +125,7 @@ genBoxedEnum n typeInit = do
             typeInit <> " :: "
     indent $ line "IO GType"
   group $ do
-       line $ "instance BoxedEnum " <> name' <> " where"
+       bline $ "instance BoxedEnum " <> name' <> " where"
        indent $ line $ "boxedEnumType _ = c_" <> typeInit
 
 genEnum :: Name -> Enumeration -> CodeGen ()
@@ -147,7 +147,7 @@ genBoxedFlags n typeInit = do
             typeInit <> " :: "
     indent $ line "IO GType"
   group $ do
-       line $ "instance BoxedFlags " <> name' <> " where"
+       bline $ "instance BoxedFlags " <> name' <> " where"
        indent $ line $ "boxedFlagsType _ = c_" <> typeInit
 
 -- Very similar to enums, but we also declare ourselves as members of
@@ -165,7 +165,7 @@ genFlags n@(Name _ name) (Flags enum) = do
                   Just ti -> genBoxedFlags n ti
 
                 let name' = upperName n
-                group $ line $ "instance IsGFlag " <> name')
+                group $ bline $ "instance IsGFlag " <> name')
 
 genErrorDomain :: Text -> Text -> CodeGen ()
 genErrorDomain name' domain = do
@@ -539,9 +539,8 @@ genModule' apis = do
           $ apis
 
   -- Make sure we generate a "Callbacks" module, since it is imported
-  -- by other modules. It is fine if it ends up empty. We also
-  -- generate an empty .hs-boot file.
-  submodule ["Callbacks"] (hsBoot . line $ "")
+  -- by other modules. It is fine if it ends up empty.
+  submodule ["Callbacks"] (return ())
 
 genModule :: M.Map Name API -> CodeGen ()
 genModule apis = do

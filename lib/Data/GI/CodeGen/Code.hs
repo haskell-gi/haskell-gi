@@ -713,6 +713,7 @@ importDeps prefix deps = T.unlines . map toImport $ deps
                          in impSt <> dotModuleName dep <>
                                 " as " <> qualifiedModuleName dep
           importSource :: ModuleName -> Bool
+          importSource ["GI", _, "Callbacks"] = False
           importSource mn = take (length prefix) mn == prefix
 
 -- | Standard imports.
