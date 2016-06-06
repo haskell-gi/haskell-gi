@@ -125,6 +125,11 @@ module Data.GI.Base.Attributes (
 
   AttrOp(..),
 
+  AttrGetC,
+  AttrSetC,
+  AttrConstructC,
+  AttrClearC,
+
   get,
   set,
   clear,
@@ -229,6 +234,22 @@ type family AttrOpText (tag :: AttrOpTag) :: Symbol where
     AttrOpText 'AttrClear = "nullable"
 #endif
 
+-- | Constraint on a @obj@\/@attr@ pair so that `set` works on values
+-- of type @value@.
+type AttrSetC info obj attr value = (info ~ ResolveAttribute attr obj,
+                                     AttrInfo info,
+                                     AttrBaseTypeConstraint info obj,
+                                     AttrOpAllowed 'AttrSet info,
+                                     (AttrSetTypeConstraint info) value)
+
+-- | Constraint on a @obj@\/@value@ pair so that `new` works on values
+-- of type @@value@.
+type AttrConstructC info obj attr value = (info ~ ResolveAttribute attr obj,
+                                           AttrInfo info,
+                                           AttrBaseTypeConstraint info obj,
+                                           AttrOpAllowed 'AttrConstruct info,
+                                           (AttrSetTypeConstraint info) value)
+
 -- | Constructors for the different operations allowed on an attribute.
 data AttrOp obj (tag :: AttrOpTag) where
     -- Assign a value to an attribute
@@ -303,18 +324,28 @@ set obj = liftIO . mapM_ app
    app (attr ::~ f) = attrGet (resolve attr) obj >>=
                       \v -> attrSet (resolve attr) obj (f obj v)
 
+-- | Constraints on a @obj@\/@attr@ pair so `get` is possible,
+-- producing a value of type @result@.
+type AttrGetC info obj attr result = (info ~ ResolveAttribute attr obj,
+                                      AttrInfo info,
+                                      (AttrBaseTypeConstraint info) obj,
+                                      AttrOpAllowed 'AttrGet info,
+                                      result ~ AttrGetType info)
+
 -- | Get the value of an attribute for an object.
-get :: forall info attr obj m.
-       (info ~ ResolveAttribute attr obj, AttrInfo info,
-        (AttrBaseTypeConstraint info) obj,
-        AttrOpAllowed 'AttrGet info, MonadIO m) =>
-        obj -> AttrLabelProxy (attr :: Symbol) -> m (AttrGetType info)
+get :: forall info attr obj result m.
+       (AttrGetC info obj attr result, MonadIO m) =>
+        obj -> AttrLabelProxy (attr :: Symbol) -> m result
 get o _ = liftIO $ attrGet (Proxy :: Proxy info) o
+
+-- | Constraint on a @obj@\/@attr@ pair so that `clear` is allowed.
+type AttrClearC info obj attr = (info ~ ResolveAttribute attr obj,
+                                 AttrInfo info,
+                                 (AttrBaseTypeConstraint info) obj,
+                                 AttrOpAllowed 'AttrClear info)
 
 -- | Set a nullable attribute to @NULL@.
 clear :: forall info attr obj m.
-         (info ~ ResolveAttribute attr obj, AttrInfo info,
-          (AttrBaseTypeConstraint info) obj,
-         AttrOpAllowed 'AttrClear info, MonadIO m) =>
+         (AttrClearC info obj attr, MonadIO m) =>
          obj -> AttrLabelProxy (attr :: Symbol) -> m ()
 clear o _ = liftIO $ attrClear (Proxy :: Proxy info) o
