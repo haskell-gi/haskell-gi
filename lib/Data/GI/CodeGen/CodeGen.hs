@@ -369,12 +369,6 @@ genGObjectCasts isIU n cn_ parents = do
     indent $ line $ "c_" <> cn_ <> " :: IO GType"
 
   group $ do
-    let parentObjectsType = name' <> "ParentTypes"
-    line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
-    line $ "type " <> parentObjectsType <> " = '[" <>
-         T.intercalate ", " qualifiedParents <> "]"
-
-  group $ do
     bline $ "instance GObject " <> name' <> " where"
     indent $ group $ do
             line $ "gobjectIsInitiallyUnowned _ = " <> tshow isIU
@@ -382,10 +376,11 @@ genGObjectCasts isIU n cn_ parents = do
 
   let className = classConstraint name'
   group $ do
-    exportDecl className
+    exportDecl (className <> "(..)")
     bline $ "class GObject o => " <> className <> " o"
-    bline $ "instance (GObject o, IsDescendantOf " <> name' <> " o) => "
-             <> className <> " o"
+    line $ "instance " <> className <> " " <> name'
+    forM_ (filter (/="Object") qualifiedParents) $ \parent ->
+      line $ "instance " <> classConstraint parent <> " " <> name'
 
   -- Safe downcasting.
   group $ do
@@ -485,10 +480,7 @@ genInterface n iface = do
     let cls = classConstraint name'
     exportDecl cls
     bline $ "class ForeignPtrNewtype a => " <> cls <> " a"
-    bline $ "instance (ForeignPtrNewtype o, IsDescendantOf " <> name' <> " o) => " <> cls <> " o"
-    let parentObjectsType = name' <> "ParentTypes"
-    line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
-    line $ "type " <> parentObjectsType <> " = '[]"
+    line $ "instance " <> cls <> " " <> name'
 
   -- Methods
   forM_ (ifMethods iface) $ \f -> do
