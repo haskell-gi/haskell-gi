@@ -5,7 +5,7 @@
     "synopsis": "WebKit bindings",
     "girName": "WebKit",
     "girVersion": "3.0",
-    "girOverrides": null,
+    "girOverrides": "WebKit.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-cairo == 1.0.*",
