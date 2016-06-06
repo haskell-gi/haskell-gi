@@ -59,7 +59,7 @@ module Data.GI.CodeGen.Code
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>))
 import Data.Monoid (Monoid(..))
 #endif
 import Control.Monad.Reader
