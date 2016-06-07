@@ -1,12 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Data.GI.Base.GValue
     ( GValue(..)
-
     , IsGValue(..)
 
     , newGValue         -- Build a new, empty, GValue of the given type
     , buildGValue       -- Build a new GValue and initialize to the given value
     , noGValue
+
+    , GValueConstruct(..)
 
     , set_string
     , get_string
@@ -83,6 +84,11 @@ instance BoxedObject GValue where
 
 foreign import ccall "g_value_init" g_value_init ::
     Ptr GValue -> CGType -> IO (Ptr GValue)
+
+-- | A type holding a `GValue` with an associated label. It is
+-- parameterized by a phantom type encoding the target type for the
+-- `GValue` (useful when constructing properties).
+data GValueConstruct o = GValueConstruct String GValue
 
 newGValue :: GType -> IO GValue
 newGValue (GType gtype) = do

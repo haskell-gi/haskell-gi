@@ -141,7 +141,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.Proxy (Proxy(..))
 
-import Data.GI.Base.GValue (GValue(..))
+import Data.GI.Base.GValue (GValueConstruct)
 import Data.GI.Base.Overloading (ResolveAttribute, IsLabelProxy(..))
 
 import GHC.TypeLits
@@ -191,8 +191,9 @@ class AttrInfo (info :: *) where
     attrClear :: AttrBaseTypeConstraint info o =>
                  Proxy info -> o -> IO ()
     -- | Build a `GValue` representing the attribute.
-    attrConstruct :: AttrSetTypeConstraint info b =>
-                     Proxy info -> b -> IO (String, GValue)
+    attrConstruct :: (AttrBaseTypeConstraint info o,
+                      AttrSetTypeConstraint info b) =>
+                     Proxy info -> b -> IO (GValueConstruct o)
 
 -- | Result of checking whether an op is allowed on an attribute.
 data OpAllowed tag attrName =

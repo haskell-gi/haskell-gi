@@ -122,10 +122,10 @@ getObjectProperty obj propName getter gtype = do
   getter gvalue
 
 constructObjectProperty :: String -> b -> (GValue -> b -> IO ()) ->
-                           GType -> IO (String, GValue)
+                           GType -> IO (GValueConstruct o)
 constructObjectProperty propName propValue setter gtype = do
   gvalue <- buildGValue gtype setter propValue
-  return (propName, gvalue)
+  return (GValueConstruct propName gvalue)
 
 setObjectPropertyString :: GObject a =>
                            a -> String -> Maybe Text -> IO ()
@@ -133,7 +133,7 @@ setObjectPropertyString obj propName str =
     setObjectProperty obj propName str set_string gtypeString
 
 constructObjectPropertyString :: String -> Maybe Text ->
-                                 IO (String, GValue)
+                                 IO (GValueConstruct o)
 constructObjectPropertyString propName str =
     constructObjectProperty propName str set_string gtypeString
 
@@ -148,7 +148,7 @@ setObjectPropertyPtr obj propName ptr =
     setObjectProperty obj propName ptr set_pointer gtypePointer
 
 constructObjectPropertyPtr :: String -> Ptr b ->
-                              IO (String, GValue)
+                              IO (GValueConstruct o)
 constructObjectPropertyPtr propName ptr =
     constructObjectProperty propName ptr set_pointer gtypePointer
 
@@ -163,7 +163,7 @@ setObjectPropertyInt obj propName int =
     setObjectProperty obj propName int set_int gtypeInt
 
 constructObjectPropertyInt :: String -> CInt ->
-                              IO (String, GValue)
+                              IO (GValueConstruct o)
 constructObjectPropertyInt propName int =
     constructObjectProperty propName int set_int gtypeInt
 
@@ -177,7 +177,7 @@ setObjectPropertyUInt obj propName uint =
     setObjectProperty obj propName uint set_uint gtypeUInt
 
 constructObjectPropertyUInt :: String -> CUInt ->
-                                IO (String, GValue)
+                                IO (GValueConstruct o)
 constructObjectPropertyUInt propName uint =
     constructObjectProperty propName uint set_uint gtypeUInt
 
@@ -191,7 +191,7 @@ setObjectPropertyLong obj propName int =
     setObjectProperty obj propName int set_long gtypeLong
 
 constructObjectPropertyLong :: String -> CLong ->
-                               IO (String, GValue)
+                               IO (GValueConstruct o)
 constructObjectPropertyLong propName int =
     constructObjectProperty propName int set_long gtypeLong
 
@@ -205,7 +205,7 @@ setObjectPropertyULong obj propName uint =
     setObjectProperty obj propName uint set_ulong gtypeULong
 
 constructObjectPropertyULong :: String -> CULong ->
-                                IO (String, GValue)
+                                IO (GValueConstruct o)
 constructObjectPropertyULong propName uint =
     constructObjectProperty propName uint set_ulong gtypeULong
 
@@ -219,7 +219,7 @@ setObjectPropertyInt32 obj propName int32 =
     setObjectProperty obj propName int32 set_int32 gtypeInt
 
 constructObjectPropertyInt32 :: String -> Int32 ->
-                                IO (String, GValue)
+                                IO (GValueConstruct o)
 constructObjectPropertyInt32 propName int32 =
     constructObjectProperty propName int32 set_int32 gtypeInt
 
@@ -233,7 +233,7 @@ setObjectPropertyUInt32 obj propName uint32 =
     setObjectProperty obj propName uint32 set_uint32 gtypeUInt
 
 constructObjectPropertyUInt32 :: String -> Word32 ->
-                                 IO (String, GValue)
+                                 IO (GValueConstruct o)
 constructObjectPropertyUInt32 propName uint32 =
     constructObjectProperty propName uint32 set_uint32 gtypeUInt
 
@@ -247,7 +247,7 @@ setObjectPropertyInt64 obj propName int64 =
     setObjectProperty obj propName int64 set_int64 gtypeInt64
 
 constructObjectPropertyInt64 :: String -> Int64 ->
-                                IO (String, GValue)
+                                IO (GValueConstruct o)
 constructObjectPropertyInt64 propName int64 =
     constructObjectProperty propName int64 set_int64 gtypeInt64
 
@@ -261,7 +261,7 @@ setObjectPropertyUInt64 obj propName uint64 =
     setObjectProperty obj propName uint64 set_uint64 gtypeUInt64
 
 constructObjectPropertyUInt64 :: String -> Word64 ->
-                                 IO (String, GValue)
+                                 IO (GValueConstruct o)
 constructObjectPropertyUInt64 propName uint64 =
     constructObjectProperty propName uint64 set_uint64 gtypeUInt64
 
@@ -275,7 +275,7 @@ setObjectPropertyFloat obj propName float =
     setObjectProperty obj propName float set_float gtypeFloat
 
 constructObjectPropertyFloat :: String -> Float ->
-                                 IO (String, GValue)
+                                 IO (GValueConstruct o)
 constructObjectPropertyFloat propName float =
     constructObjectProperty propName float set_float gtypeFloat
 
@@ -290,7 +290,7 @@ setObjectPropertyDouble obj propName double =
     setObjectProperty obj propName double set_double gtypeDouble
 
 constructObjectPropertyDouble :: String -> Double ->
-                                  IO (String, GValue)
+                                  IO (GValueConstruct o)
 constructObjectPropertyDouble propName double =
     constructObjectProperty propName double set_double gtypeDouble
 
@@ -304,7 +304,7 @@ setObjectPropertyBool :: GObject a =>
 setObjectPropertyBool obj propName bool =
     setObjectProperty obj propName bool set_boolean gtypeBoolean
 
-constructObjectPropertyBool :: String -> Bool -> IO (String, GValue)
+constructObjectPropertyBool :: String -> Bool -> IO (GValueConstruct o)
 constructObjectPropertyBool propName bool =
     constructObjectProperty propName bool set_boolean gtypeBoolean
 
@@ -317,7 +317,7 @@ setObjectPropertyGType :: GObject a =>
 setObjectPropertyGType obj propName gtype =
     setObjectProperty obj propName gtype set_gtype gtypeGType
 
-constructObjectPropertyGType :: String -> GType -> IO (String, GValue)
+constructObjectPropertyGType :: String -> GType -> IO (GValueConstruct o)
 constructObjectPropertyGType propName bool =
     constructObjectProperty propName bool set_gtype gtypeGType
 
@@ -332,8 +332,8 @@ setObjectPropertyObject obj propName maybeObject = do
   maybeWithManagedPtr maybeObject $ \objectPtr ->
       setObjectProperty obj propName objectPtr set_object gtype
 
-constructObjectPropertyObject :: forall a. GObject a =>
-                                 String -> Maybe a -> IO (String, GValue)
+constructObjectPropertyObject :: forall a o. GObject a =>
+                                 String -> Maybe a -> IO (GValueConstruct o)
 constructObjectPropertyObject propName maybeObject = do
   gtype <- gobjectType (undefined :: a)
   maybeWithManagedPtr maybeObject $ \objectPtr ->
@@ -355,8 +355,8 @@ setObjectPropertyBoxed obj propName maybeBoxed = do
   maybeWithManagedPtr maybeBoxed $ \boxedPtr ->
         setObjectProperty obj propName boxedPtr set_boxed gtype
 
-constructObjectPropertyBoxed :: forall a. (BoxedObject a) =>
-                                String -> Maybe a -> IO (String, GValue)
+constructObjectPropertyBoxed :: forall a o. (BoxedObject a) =>
+                                String -> Maybe a -> IO (GValueConstruct o)
 constructObjectPropertyBoxed propName maybeBoxed = do
   gtype <- boxedType (undefined :: a)
   maybeWithManagedPtr maybeBoxed $ \boxedPtr ->
@@ -381,7 +381,7 @@ setObjectPropertyStringArray obj propName (Just strv) = do
   freeMem cStrv
 
 constructObjectPropertyStringArray :: String -> Maybe [Text] ->
-                                      IO (String, GValue)
+                                      IO (GValueConstruct o)
 constructObjectPropertyStringArray propName Nothing =
   constructObjectProperty propName nullPtr set_boxed gtypeStrv
 constructObjectPropertyStringArray propName (Just strv) = do
@@ -406,7 +406,7 @@ setObjectPropertyEnum obj propName enum = do
   setObjectProperty obj propName cEnum set_enum gtype
 
 constructObjectPropertyEnum :: (Enum a, BoxedEnum a) =>
-                               String -> a -> IO (String, GValue)
+                               String -> a -> IO (GValueConstruct o)
 constructObjectPropertyEnum propName enum = do
   gtype <- boxedEnumType enum
   let cEnum = (fromIntegral . fromEnum) enum
@@ -428,8 +428,8 @@ setObjectPropertyFlags obj propName flags = do
   gtype <- boxedFlagsType (Proxy :: Proxy b)
   setObjectProperty obj propName cFlags set_flags gtype
 
-constructObjectPropertyFlags :: forall a. (IsGFlag a, BoxedFlags a)
-                                => String -> [a] -> IO (String, GValue)
+constructObjectPropertyFlags :: forall a o. (IsGFlag a, BoxedFlags a)
+                                => String -> [a] -> IO (GValueConstruct o)
 constructObjectPropertyFlags propName flags = do
   let cFlags = gflagsToWord flags
   gtype <- boxedFlagsType (Proxy :: Proxy a)
@@ -450,7 +450,7 @@ setObjectPropertyVariant obj propName maybeVariant =
         setObjectProperty obj propName variantPtr set_variant gtypeVariant
 
 constructObjectPropertyVariant :: String -> Maybe GVariant
-                               -> IO (String, GValue)
+                               -> IO (GValueConstruct o)
 constructObjectPropertyVariant propName maybeVariant =
     maybeWithManagedPtr maybeVariant $ \objPtr ->
         constructObjectProperty propName objPtr set_variant gtypeVariant
@@ -472,7 +472,7 @@ setObjectPropertyByteArray obj propName (Just bytes) = do
   unrefGByteArray packed
 
 constructObjectPropertyByteArray :: String -> Maybe B.ByteString ->
-                                    IO (String, GValue)
+                                    IO (GValueConstruct o)
 constructObjectPropertyByteArray propName Nothing =
     constructObjectProperty propName nullPtr set_boxed gtypeByteArray
 constructObjectPropertyByteArray propName (Just bytes) = do
@@ -496,7 +496,7 @@ setObjectPropertyPtrGList obj propName ptrs = do
   g_list_free packed
 
 constructObjectPropertyPtrGList :: String -> [Ptr a] ->
-                                    IO (String, GValue)
+                                    IO (GValueConstruct o)
 constructObjectPropertyPtrGList propName ptrs = do
   packed <- packGList ptrs
   result <- constructObjectProperty propName packed set_boxed gtypePointer
@@ -512,7 +512,7 @@ setObjectPropertyHash :: GObject a => a -> String -> b -> IO ()
 setObjectPropertyHash =
     error $ "Setting GHashTable properties not supported yet."
 
-constructObjectPropertyHash :: String -> b -> IO (String, GValue)
+constructObjectPropertyHash :: String -> b -> IO (GValueConstruct o)
 constructObjectPropertyHash =
     error $ "Constructing GHashTable properties not supported yet."
 
