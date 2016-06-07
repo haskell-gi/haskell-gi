@@ -125,17 +125,16 @@ genPropertyGetter n pName prop = group $ do
            then " " <> tshow constructorType -- These require the constructor.
            else ""
 
-genPropertyConstructor :: Text -> Property -> CodeGen ()
-genPropertyConstructor pName prop = group $ do
+genPropertyConstructor :: Name -> Text -> Property -> CodeGen ()
+genPropertyConstructor n pName prop = group $ do
+  let oName = upperName n
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
   isNullable <- typeIsNullable (propType prop)
-  let constraints' =
-          case constraints of
-            [] -> ""
-            _ -> parenthesize (T.intercalate ", " constraints) <> " => "
-  line $ "construct" <> pName <> " :: " <> constraints'
-           <> t <> " -> IO ([Char], GValue)"
+  let constraints' = (classConstraint oName <> " o") : constraints
+      pconstraints = parenthesize (T.intercalate ", " constraints') <> " => "
+  line $ "construct" <> pName <> " :: " <> pconstraints
+           <> t <> " -> IO (GValueConstruct o)"
   line $ "construct" <> pName <> " val = constructObjectProperty" <> tStr
            <> " \"" <> propName prop
            <> if isNullable
@@ -242,7 +241,7 @@ genOneProperty owner prop = do
 
   when readable $ genPropertyGetter owner pName prop
   when writable $ genPropertySetter owner pName prop
-  when (writable || constructOnly) $ genPropertyConstructor pName prop
+  when (writable || constructOnly) $ genPropertyConstructor owner pName prop
   when (isNullable && writable && propWriteNullable prop /= Just False) $
        genPropertyClear owner pName prop
 
