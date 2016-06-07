@@ -73,7 +73,7 @@ import Data.GI.Base.GValue (GValue(..))
 import GI.GObject (Object)
 import GI.GdkPixbuf.Objects (Pixbuf(..))
 import GI.Gtk.Flags (TreeModelFlags(..))
-import GI.Gtk.Interfaces.TreeModel (TreeModel(..), TreeModelK)
+import GI.Gtk.Interfaces.TreeModel (TreeModel(..), TreeModelK(..))
 import GI.Gtk.Structs (SelectionData(..), TreePath(..), TreeIter, treePathCopy, selectionDataCopy)
 import Data.GI.Gtk.ModelView.Types
 import GI.Gtk.Structs.TreeIter
@@ -109,6 +109,7 @@ newtype CustomStore private row = CustomStore (ForeignPtr (CustomStore private r
 
 type instance ParentTypes (CustomStore private row) = CustomStoreParentTypes
 type CustomStoreParentTypes = '[TreeModel, Object]
+instance TreeModelK (CustomStore private row)
 
 instance GObject (CustomStore private row) where
     gobjectIsInitiallyUnowned _ = False

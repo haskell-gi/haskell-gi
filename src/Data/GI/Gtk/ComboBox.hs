@@ -92,7 +92,7 @@ import Data.GI.Gtk.ModelView.SeqStore ( SeqStore(..), seqStoreNew,
   seqStoreInsert, seqStorePrepend, seqStoreAppend, seqStoreRemove,
   seqStoreSafeGetValue )
 import GI.Gtk.Objects.ComboBox
-import Data.GI.Gtk.ModelView.CellLayout (CellLayout(..), cellLayoutClear, cellLayoutPackStart, cellLayoutSetAttributeFunc, cellLayoutGetCells)
+import Data.GI.Gtk.ModelView.CellLayout (CellLayout(..), cellLayoutClear, cellLayoutPackStart, cellLayoutSetDataFunction, cellLayoutGetCells)
 import GI.Gtk.Objects.CellRendererText (CellRendererText(..), cellRendererTextNew, setCellRendererTextText)
 import GI.GObject.Objects.Object (Object, ObjectK, toObject)
 
@@ -178,8 +178,7 @@ comboBoxSetModelText combo = liftIO $ do
   comboBoxSetEntryTextColumn combo 0
   ren <- cellRendererTextNew
   cellLayoutPackStart layout ren True
-  cellLayoutSetAttributeFunc layout ren store (\iter -> do
-    customStoreGetRow store iter >>= setCellRendererTextText ren)
+  cellLayoutSetDataFunction layout ren store (setCellRendererTextText ren)
   objectSetAttribute combo comboQuark (Just store)
   return store
 

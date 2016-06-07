@@ -79,7 +79,7 @@ import Data.GI.Base.Overloading (ParentTypes)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import GI.Gtk.Interfaces.TreeModel
        (treeModelRowDeleted, treeModelRowInserted,
-        treeModelRowChanged, toTreeModel, TreeModel(..))
+        treeModelRowChanged, toTreeModel, TreeModel(..), TreeModelK(..))
 import GI.GObject.Objects.Object (Object(..))
 import GI.Gtk.Functions (treeGetRowDragData, treeSetRowDragData)
 import GI.Gtk.Flags (TreeModelFlags(..))
@@ -108,6 +108,7 @@ mkSeqStore (CustomStore ptr) = SeqStore ptr
 
 type instance ParentTypes (SeqStore a) = SeqStoreParentTypes
 type SeqStoreParentTypes = '[TreeModel, Object]
+instance TreeModelK (SeqStore a)
 
 instance GObject (SeqStore a) where
     gobjectIsInitiallyUnowned _ = False

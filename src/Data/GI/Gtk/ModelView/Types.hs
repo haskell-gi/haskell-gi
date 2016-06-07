@@ -91,16 +91,15 @@ import Data.GI.Base.ManagedPtr (withManagedPtr)
 import Data.GI.Base.GValue (GValue)
 import Data.GI.Base.Overloading (ParentTypes)
 import GI.GObject.Objects.Object (Object(..))
-import GI.Gtk.Interfaces.TreeModel (TreeModel)
-import GI.Gtk.Objects.TreeModelSort (TreeModelSort)
+import GI.Gtk.Interfaces.TreeModel (TreeModel, TreeModelK(..))
+import GI.Gtk.Objects.TreeModelSort (TreeModelSort, TreeModelSortK(..))
 import GI.Gtk.Objects.TreeSelection (TreeSelectionK, treeSelectionCountSelectedRows, treeSelectionGetSelectedRows)
 import GI.Gtk.Objects.TreeModelFilter (TreeModelFilter)
-import GI.Gtk.Interfaces.TreeSortable (TreeSortable)
+import GI.Gtk.Interfaces.TreeSortable (TreeSortable, TreeSortableK(..))
 import GI.GLib.Functions (quarkFromString)
 import GI.GdkPixbuf.Objects.Pixbuf (Pixbuf(..))
 import GI.Gtk.Structs.TreeIter
-       (treeIterUserData3, treeIterUserData2, treeIterUserData,
-        treeIterStamp, TreeIter(..), treeIterCopy)
+       (TreeIter(..), treeIterCopy)
 import GI.Gtk.Structs.TreePath (TreePath(..), treePathGetIndices, treePathNewFromIndices, treePathNew, treePathGetDepth)
 import Data.GI.Base.Constructible (Constructible(..))
 import Data.GI.Base.Attributes (AttrOp(..))
@@ -134,6 +133,9 @@ newtype TypedTreeModelSort row = TypedTreeModelSort (ForeignPtr (TypedTreeModelS
 
 type instance ParentTypes (TypedTreeModelSort row) = TypedTreeModelSortParentTypes
 type TypedTreeModelSortParentTypes = '[TreeModelSort, TreeSortable, TreeModel, Object]
+instance TreeModelSortK (TypedTreeModelSort row)
+instance TreeSortableK (TypedTreeModelSort row)
+instance TreeModelK (TypedTreeModelSort row)
 
 instance GObject (TypedTreeModelSort row) where
     gobjectIsInitiallyUnowned _ = False

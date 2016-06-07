@@ -49,7 +49,8 @@ module Data.GI.Gtk.ModelView.CellLayout (
     module GI.Gtk.Interfaces.CellLayout
 --  , cellLayoutAddColumnAttribute
   , cellLayoutSetAttributes
-  , cellLayoutSetAttributeFunc
+  , cellLayoutSetDataFunction
+  , cellLayoutSetDataFunc'
   , convertIterFromParentToChildModel
   ) where
 
@@ -115,14 +116,30 @@ cellLayoutSetAttributes :: (MonadIO m,
  -> (row -> [AttrOp cell 'AttrSet]) -- ^ Function to set attributes on the cell renderer.
  -> m ()
 cellLayoutSetAttributes self cell model attributes =
-  cellLayoutSetAttributeFunc self cell model $ \iter -> do
+  cellLayoutSetDataFunc' self cell model $ \iter -> do
     row <- customStoreGetRow model iter
     set cell (attributes row)
+
+-- | Like 'cellLayoutSetAttributes', but allows any IO action to be used
+cellLayoutSetDataFunction :: (MonadIO m,
+                            CellLayoutK self,
+                            CellRendererK cell,
+                            TreeModelK (model row),
+                            TypedTreeModelK model)
+ => self
+ -> cell   -- ^ @cell@ - A 'CellRenderer'.
+ -> model row -- ^ @model@ - A model containing rows of type @row@.
+ -> (row -> IO ()) -- ^ Function to set data on the cell renderer.
+ -> m ()
+cellLayoutSetDataFunction self cell model callback =
+  cellLayoutSetDataFunc' self cell model $ \iter -> do
+    row <- customStoreGetRow model iter
+    callback row
 
 -- | Install a function that looks up a row in the model and sets the
 -- attributes of the 'CellRenderer' @cell@ using the row's content.
 --
-cellLayoutSetAttributeFunc :: (MonadIO m,
+cellLayoutSetDataFunc' :: (MonadIO m,
                                CellLayoutK self,
                                CellRendererK cell,
                                TreeModelK model)
@@ -131,7 +148,7 @@ cellLayoutSetAttributeFunc :: (MonadIO m,
  -> model  -- ^ @model@ - A model from which to draw data.
  -> (TreeIter -> IO ()) -- ^ Function to set attributes on the cell renderer.
  -> m ()
-cellLayoutSetAttributeFunc self cell model func = liftIO $ do
+cellLayoutSetDataFunc' self cell model func = liftIO $
   cellLayoutSetCellDataFunc self cell . Just $ \_ (CellRenderer cellPtr') model' iter -> do
     iter <- convertIterFromParentToChildModel iter model' =<< toTreeModel model
     CellRenderer cellPtr <- toCellRenderer cell
