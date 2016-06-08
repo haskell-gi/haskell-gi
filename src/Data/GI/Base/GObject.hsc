@@ -7,7 +7,6 @@ module Data.GI.Base.GObject
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Proxy (Proxy(..))
-import Data.Traversable (sequence)
 
 import Foreign.C (CUInt(..), CString, newCString)
 import Foreign
