@@ -100,7 +100,7 @@ import GI.GLib.Functions (quarkFromString)
 import GI.GdkPixbuf.Objects.Pixbuf (Pixbuf(..))
 import GI.Gtk.Structs.TreeIter
        (TreeIter(..), treeIterCopy)
-import GI.Gtk.Structs.TreePath (TreePath(..), treePathGetIndices, treePathNewFromIndices, treePathNew, treePathGetDepth)
+import GI.Gtk.Structs.TreePath (TreePath(..), treePathGetIndices, treePathAppendIndex, treePathNew, treePathGetDepth)
 import Data.GI.Base.Constructible (Constructible(..))
 import Data.GI.Base.Attributes (AttrOp(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -165,7 +165,11 @@ instance TypedTreeModelK TypedTreeModelFilter
 --
 treePathNewFromIndices' :: MonadIO m => [Int32] -> m TreePath
 treePathNewFromIndices' [] = treePathNew
-treePathNewFromIndices' x = treePathNewFromIndices x
+treePathNewFromIndices' x = do
+    path <- treePathNew
+    mapM_ (treePathAppendIndex path) x
+    return path
+    -- TODO (once every one has Gtk+ 3.12) use treePathNewFromIndices x
 
 treePathGetIndices' :: MonadIO m => TreePath -> m [Int32]
 treePathGetIndices' path = treePathGetDepth path >>= \case
