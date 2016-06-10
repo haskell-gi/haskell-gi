@@ -282,7 +282,9 @@ addSubmodule :: Text -> ModuleInfo -> ModuleInfo -> ModuleInfo
 addSubmodule modName submodule current = current { submodules = M.insertWith mergeInfo modName submodule (submodules current)}
 
 -- | Run the given CodeGen in order to generate a single submodule of the
--- current module.
+-- current module. Note that we do not generate the submodule if the
+-- code generator generated no code and the module does not have
+-- submodules.
 submodule' :: Text -> BaseCodeGen e () -> BaseCodeGen e ()
 submodule' modName cg = do
   cfg <- ask
@@ -290,7 +292,10 @@ submodule' modName cg = do
   let info = emptyModule (moduleName oldInfo ++ [modName])
   liftIO (runCodeGen cg cfg info) >>= \case
          Left e -> throwError e
-         Right (_, smInfo) -> modify' (addSubmodule modName smInfo)
+         Right (_, smInfo) -> if moduleCode smInfo == NoCode &&
+                                 M.null (submodules smInfo)
+                              then return ()
+                              else modify' (addSubmodule modName smInfo)
 
 -- | Run the given CodeGen in order to generate a submodule (specified
 -- an an ordered list) of the current module.
