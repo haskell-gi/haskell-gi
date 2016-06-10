@@ -1,5 +1,6 @@
 module Data.GI.CodeGen.PkgConfig
     ( pkgConfigGetVersion
+    , tryPkgConfig
     ) where
 
 import Control.Monad (when)
@@ -13,7 +14,8 @@ import Data.Text (Text)
 import System.Exit (ExitCode(..))
 import System.Process (readProcessWithExitCode)
 
--- | Try asking pkg-config for the version of a given module.
+-- | Try asking pkg-config for the version of a given module, and
+-- return the package name together with its version.
 tryPkgConfig :: Text -> IO (Maybe (Text, Text))
 tryPkgConfig pkgName = do
   (exitcode, stdout, _) <-

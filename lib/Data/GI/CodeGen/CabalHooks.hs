@@ -8,7 +8,8 @@ import qualified Distribution.ModuleName as MN
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.Setup
 import Distribution.Simple (UserHooks(..), simpleUserHooks,
-                            defaultMainWithHooks, OptimisationLevel(..))
+                            defaultMainWithHooks, OptimisationLevel(..),
+                            Dependency(..), PackageName(..))
 import Distribution.PackageDescription
 
 import Data.GI.CodeGen.API (loadGIRInfo)
@@ -17,10 +18,14 @@ import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.Config (Config(..))
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
                                   filterAPIsAndDeps)
-import Data.GI.CodeGen.Util (ucFirst)
+import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
+import Data.GI.CodeGen.Util (ucFirst, tshow)
+
+import Control.Monad (when)
 
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -30,6 +35,26 @@ import System.FilePath ((</>), (<.>))
 
 type ConfHook = (GenericPackageDescription, HookedBuildInfo) -> ConfigFlags
               -> IO LocalBuildInfo
+
+-- | Generate the @PkgInfo@ module, listing the build information for
+-- the module. We include in particular the versions for the
+-- `pkg-config` dependencies of the module.
+genPkgInfo :: [Dependency] -> FilePath -> Text -> IO ()
+genPkgInfo deps fName modName = do
+  versions <- mapM findVersion deps
+  TIO.writeFile fName $ T.unlines
+         [ "module " <> modName <> " (pkgConfigVersions) where"
+         , ""
+         , "import Prelude (String)"
+         , ""
+         , "pkgConfigVersions :: [(String, String)]"
+         , "pkgConfigVersions = " <> tshow versions
+         ]
+    where findVersion :: Dependency -> IO (Text, Text)
+          findVersion (Dependency (PackageName n) _) =
+              tryPkgConfig (T.pack n) >>= \case
+                  Just v -> return v
+                  Nothing -> error ("Could not determine version for required pkg-config module \"" <> n <> "\".")
 
 -- | A convenience helper for `confHook`, such that bindings for the
 -- given module are generated in the @configure@ step of @cabal@.
@@ -64,10 +89,18 @@ confCodeGenHook name version verbosity overrides outputDir
                 then writeModuleTree verbosity outputDir m
                 else return (listModuleTree m)
 
-  let em' = map (MN.fromString . T.unpack) moduleList
+  let pkgInfoMod = "GI." <> ucFirst name <> ".PkgInfo"
+      em' = map (MN.fromString . T.unpack) (pkgInfoMod : moduleList)
       ctd' = ((condTreeData . fromJust . condLibrary) gpd) {exposedModules = em'}
       cL' = ((fromJust . condLibrary) gpd) {condTreeData = ctd'}
       gpd' = gpd {condLibrary = Just cL'}
+
+  when (not alreadyDone) $
+       genPkgInfo ((pkgconfigDepends . libBuildInfo . condTreeData .
+                    fromJust . condLibrary) gpd)
+                  (fromMaybe "" outputDir
+                   </> "GI" </> T.unpack (ucFirst name) </> "PkgInfo.hs")
+                  pkgInfoMod
 
   lbi <- defaultConfHook (gpd', hbi) flags
 
