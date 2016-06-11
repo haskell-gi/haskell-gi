@@ -51,6 +51,7 @@ writeCabal fname info =
            Just ov -> "\nextra-source-files: " <> ov <> "\n"
        , "custom-setup"
        , "      setup-depends: base >= 4.7 && < 5,"
+       , "                     Cabal >= 1.24,"
        , "                     haskell-gi >= 0.17.3 && < 1"
        , ""
        , "library"
