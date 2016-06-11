@@ -224,13 +224,8 @@ genAttrInfo owner field = do
 buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe Text)
 buildFieldAttributes n field
     | not (fieldVisible field) = return Nothing
+    | privateType (fieldType field) = return Nothing
     | otherwise = group $ do
-
-  hType <- tshow <$> haskellType (fieldType field)
-  if ("Private" `T.isSuffixOf` hType ||
-     not (fieldVisible field))
-  then return Nothing
-  else do
      isPtr <- typeIsPtr (fieldType field)
 
      buildFieldReader n field
@@ -244,6 +239,9 @@ buildFieldAttributes n field
           exportProperty (fName field) (fieldClear n field)
 
      Just <$> genAttrInfo n field
+    where privateType :: Type -> Bool
+          privateType (TInterface _ n) = "Private" `T.isSuffixOf` n
+          privateType _ = False
 
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do
