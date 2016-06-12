@@ -91,12 +91,11 @@ import GI.Gtk.Functions (treeSetRowDragData, treeGetRowDragData)
 import GI.Gtk.Structs.TreePath
        (TreePath)
 import GI.Gtk.Structs.TreeIter
-       (treeIterUserData3, treeIterUserData2, treeIterUserData,
-        treeIterStamp, TreeIter(..))
-import Data.GI.Base (get)
+       (getTreeIterUserData3, getTreeIterUserData2, getTreeIterUserData,
+        getTreeIterStamp, setTreeIterUserData3, setTreeIterUserData2,
+        setTreeIterUserData, setTreeIterStamp, TreeIter(..))
+import Data.GI.Base (get, new)
 import Unsafe.Coerce (unsafeCoerce)
-import Data.GI.Base.Constructible (Constructible(..))
-import Data.GI.Base.Attributes (AttrOp(..))
 
 --------------------------------------------
 -- internal model data types
@@ -105,18 +104,20 @@ import Data.GI.Base.Attributes (AttrOp(..))
 data ForestStoreIter = ForestStoreIter Int32 Word32 Word32 Word32
 
 fromForestStoreIter :: MonadIO m => ForestStoreIter -> m TreeIter
-fromForestStoreIter (ForestStoreIter s u1 u2 u3) = new TreeIter [
-    treeIterStamp     := s,
-    treeIterUserData  := unsafeCoerce u1,
-    treeIterUserData2 := unsafeCoerce u2,
-    treeIterUserData3 := unsafeCoerce u3]
+fromForestStoreIter (ForestStoreIter s u1 u2 u3) = do
+    i <- new TreeIter []
+    setTreeIterStamp     i s
+    setTreeIterUserData  i $ unsafeCoerce u1
+    setTreeIterUserData2 i $ unsafeCoerce u2
+    setTreeIterUserData3 i $ unsafeCoerce u3
+    return i
 
 toForestStoreIter :: MonadIO m => TreeIter -> m ForestStoreIter
 toForestStoreIter iter = do
-    stamp <- get iter treeIterStamp
-    u1   <- get iter treeIterUserData
-    u2   <- get iter treeIterUserData2
-    u3   <- get iter treeIterUserData3
+    stamp <- getTreeIterStamp iter
+    u1    <- getTreeIterUserData iter
+    u2    <- getTreeIterUserData2 iter
+    u3    <- getTreeIterUserData3 iter
     return $ ForestStoreIter stamp (unsafeCoerce u1) (unsafeCoerce u2) (unsafeCoerce u3)
 
 forestStoreIterSetStamp :: ForestStoreIter -> Int32 -> ForestStoreIter

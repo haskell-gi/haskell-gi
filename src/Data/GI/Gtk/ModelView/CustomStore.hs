@@ -77,8 +77,9 @@ import GI.Gtk.Interfaces.TreeModel (TreeModel(..), TreeModelK(..))
 import GI.Gtk.Structs (SelectionData(..), TreePath(..), TreeIter, treePathCopy, selectionDataCopy)
 import Data.GI.Gtk.ModelView.Types
 import GI.Gtk.Structs.TreeIter
-       (treeIterUserData3, treeIterUserData2, treeIterUserData,
-        treeIterStamp, TreeIter(..))
+       (getTreeIterStamp, getTreeIterUserData, getTreeIterUserData2, getTreeIterUserData3,
+        setTreeIterStamp, setTreeIterUserData, setTreeIterUserData2, setTreeIterUserData3,
+        TreeIter(..))
 import Data.GI.Base (newBoxed, set, get)
 import Data.GI.Base.Attributes (AttrOp(..))
 import Data.GI.Base.Utils (maybeFromPtr)
@@ -86,15 +87,14 @@ import Data.GI.Base.Utils (maybeFromPtr)
 
 treeIterOverwrite :: MonadIO m => TreeIter -> TreeIter -> m ()
 treeIterOverwrite iterOut iterIn = do
-    stamp <- get iterIn treeIterStamp
-    ud1   <- get iterIn treeIterUserData
-    ud2   <- get iterIn treeIterUserData2
-    ud3   <- get iterIn treeIterUserData3
-    set iterOut [
-        treeIterStamp     := stamp,
-        treeIterUserData  := ud1,
-        treeIterUserData2 := ud2,
-        treeIterUserData3 := ud3]
+    stamp <- getTreeIterStamp iterIn
+    ud1   <- getTreeIterUserData iterIn
+    ud2   <- getTreeIterUserData2 iterIn
+    ud3   <- getTreeIterUserData3 iterIn
+    setTreeIterStamp iterOut stamp
+    setTreeIterUserData iterOut ud1
+    setTreeIterUserData2 iterOut ud2
+    setTreeIterUserData3 iterOut ud3
 
 -- A 'CustomStore' is backed by a Gtk2HsStore
 -- which is an instance of the GtkTreeModel GInterface

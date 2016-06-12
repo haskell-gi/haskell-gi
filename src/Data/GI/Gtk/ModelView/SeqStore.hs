@@ -85,21 +85,21 @@ import GI.Gtk.Functions (treeGetRowDragData, treeSetRowDragData)
 import GI.Gtk.Flags (TreeModelFlags(..))
 import Control.Monad.IO.Class (MonadIO)
 import GI.Gtk.Structs.TreeIter
-       (treeIterUserData3, treeIterUserData2, treeIterStamp,
-        treeIterUserData, TreeIter(..))
-import Data.GI.Base (get)
+       (setTreeIterUserData3, setTreeIterUserData2, setTreeIterStamp,
+        setTreeIterUserData, getTreeIterUserData, TreeIter(..))
+import Data.GI.Base (get, new)
 import Data.Word (Word32)
 import Unsafe.Coerce (unsafeCoerce)
-import Data.GI.Base.Constructible (Constructible(..))
-import Data.GI.Base.Attributes (AttrOp(..))
 import Foreign.Ptr (nullPtr)
 
 seqStoreIterNew :: MonadIO m => Int32 -> Int32 -> m TreeIter
-seqStoreIterNew s u1 = new TreeIter [
-    treeIterStamp     := s,
-    treeIterUserData  := unsafeCoerce u1,
-    treeIterUserData2 := nullPtr,
-    treeIterUserData3 := nullPtr]
+seqStoreIterNew s u1 = do
+    i <- new TreeIter []
+    setTreeIterStamp     i s
+    setTreeIterUserData  i $ unsafeCoerce u1
+    setTreeIterUserData2 i nullPtr
+    setTreeIterUserData3 i nullPtr
+    return i
 
 newtype SeqStore a = SeqStore (ForeignPtr (CustomStore (IORef (Seq a)) a))
 
@@ -175,7 +175,7 @@ seqStoreNewDND xs mDSource mDDest = do
 -- | Convert a 'TreeIterRaw' to an an index into the 'SeqStore'. Note that this
 --   function merely extracts the second element of the 'TreeIterRaw'.
 seqStoreIterToIndex :: (Applicative m, MonadIO m) => TreeIter -> m Int32
-seqStoreIterToIndex i = unsafeCoerce <$> get i treeIterUserData
+seqStoreIterToIndex i = unsafeCoerce <$> getTreeIterUserData i
 
 -- | Default drag functions for 'Data.GI.Gtk.ModelView.SeqStore'. These
 -- functions allow the rows of the model to serve as drag source. Any row is

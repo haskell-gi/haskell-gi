@@ -63,8 +63,8 @@ import GI.Gtk.Interfaces.CellLayout
 import GI.Gtk.Objects.TreeModelFilter (TreeModelFilter(..), getTreeModelFilterChildModel, treeModelFilterConvertIterToChildIter)
 import GI.Gtk.Objects.TreeModelSort (TreeModelSort(..), getTreeModelSortModel, treeModelSortConvertIterToChildIter)
 import GI.Gtk.Structs.TreeIter
-       (treeIterStamp, treeIterUserData3, treeIterUserData2,
-        treeIterUserData, TreeIter(..))
+       (getTreeIterStamp, getTreeIterUserData3, getTreeIterUserData2,
+        getTreeIterUserData, TreeIter(..))
 import GI.Gtk.Objects.CellRenderer (CellRendererK, CellRenderer(..), toCellRenderer)
 import Data.GI.Gtk.ModelView.Types
 import Data.GI.Gtk.ModelView.TreeModel
@@ -193,10 +193,10 @@ convertIterFromParentToChildModel iter parentModel@(TreeModel parentModelPtr) ch
                             then return childIter
                             else convertIterFromParentToChildModel childIter child childModel
                     Nothing -> do
-                        stamp <- get iter treeIterStamp
-                        ud1 <- get iter treeIterUserData
-                        ud2 <- get iter treeIterUserData2
-                        ud3 <- get iter treeIterUserData3
+                        stamp <- getTreeIterStamp iter
+                        ud1 <- getTreeIterUserData iter
+                        ud2 <- getTreeIterUserData2 iter
+                        ud3 <- getTreeIterUserData3 iter
                         error ("CellLayout: don't know how to convert iter "++show (stamp, ud1, ud2, ud3)++
                                " from model "++show parentModelPtr++" to model "++
                                show modelPtr++". Is it possible that you are setting the "++
