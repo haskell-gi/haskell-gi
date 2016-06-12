@@ -157,15 +157,15 @@ buildFieldClear n field = group $ do
 
 -- | Name for the getter function
 fieldGetter :: Name -> Field -> Text
-fieldGetter name' field = lowerName name' <> "Read" <> fName field
+fieldGetter name' field = "get" <> upperName name' <> fName field
 
 -- | Name for the setter function
 fieldSetter :: Name -> Field -> Text
-fieldSetter name' field = lowerName name' <> "Write" <> fName field
+fieldSetter name' field = "set" <> upperName name' <> fName field
 
 -- | Name for the clear function
 fieldClear :: Name -> Field -> Text
-fieldClear name' field = lowerName name' <> "Clear" <> fName field
+fieldClear name' field = "clear" <> upperName name' <> fName field
 
 -- | Haskell name for the field
 fName :: Field -> Text
