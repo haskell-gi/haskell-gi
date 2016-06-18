@@ -30,7 +30,7 @@ import Text.Show.Pretty (ppShow)
 import Data.GI.CodeGen.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
 import Data.GI.CodeGen.Cabal (cabalConfig, setupHs, genCabalProject)
 import Data.GI.CodeGen.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText, minBaseVersion)
-import Data.GI.CodeGen.Config (Config(..))
+import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
 import Data.GI.CodeGen.OverloadedSignals (genOverloadedSignalConnectors)
@@ -46,7 +46,11 @@ data Options = Options {
   optOverridesFiles :: [String],
   optSearchPaths :: [String],
   optVerbose :: Bool,
-  optCabal :: Bool}
+  optCabal :: Bool,
+  optOvMethods :: Bool,
+  optOvProperties :: Bool,
+  optOvSignals :: Bool
+}
 
 defaultOptions :: Options
 defaultOptions = Options {
@@ -55,7 +59,11 @@ defaultOptions = Options {
   optOverridesFiles = [],
   optSearchPaths = [],
   optVerbose = False,
-  optCabal = True}
+  optCabal = True,
+  optOvMethods = True,
+  optOvProperties = True,
+  optOvSignals = True
+}
 
 parseKeyValue :: String -> (String, String)
 parseKeyValue s =
@@ -88,6 +96,12 @@ optDescrs = [
   Option "s" ["search"] (ReqArg
     (\arg opt -> opt { optSearchPaths = arg : optSearchPaths opt }) "PATH")
     "\tprepend a directory to the typelib search path",
+  Option "M" ["noMethodOverloading"] (NoArg $ \opt -> opt {optOvMethods = False})
+    "\tdo not generate method overloading support",
+  Option "P" ["noPropertyOverloading"] (NoArg $ \opt -> opt {optOvProperties = False})
+    "\tdo not generate property overloading support",
+  Option "S" ["noSignalOverloading"] (NoArg $ \opt -> opt {optOvSignals = False})
+    "\tdo not generate signal overloading support",
   Option "v" ["verbose"] (NoArg $ \opt -> opt { optVerbose = True })
     "\tprint extra info while processing"]
 
@@ -107,6 +121,14 @@ loadRawAPIs verbose ovs extraPaths name = do
   gir <- loadRawGIRInfo verbose name version extraPaths
   return (girAPIs gir)
 
+-- | Set up the flags for the code generator.
+genFlags :: Options -> CodeGenFlags
+genFlags opts = CodeGenFlags {
+                  cgOverloadedProperties = optOvProperties opts
+                , cgOverloadedSignals = optOvSignals opts
+                , cgOverloadedMethods = optOvMethods opts
+                }
+
 -- | Generate overloaded labels ("_label", for example).
 genLabels :: Options -> Overrides -> [Text] -> [FilePath] -> IO ()
 genLabels options ovs modules extraPaths = do
@@ -114,7 +136,9 @@ genLabels options ovs modules extraPaths = do
   let allAPIs = M.unions (map M.fromList apis)
       cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
-                    overrides = ovs}
+                    overrides = ovs,
+                    cgFlags = genFlags options
+                   }
   putStrLn $ "\t* Generating GI.OverloadedLabels"
   m <- genCode cfg allAPIs ["GI", "OverloadedLabels"]
        (genOverloadedLabels (M.toList allAPIs))
@@ -128,7 +152,9 @@ genGenericConnectors options ovs modules extraPaths = do
   let allAPIs = M.unions (map M.fromList apis)
       cfg = Config {modName = Nothing,
                     verbose = optVerbose options,
-                    overrides = ovs}
+                    overrides = ovs,
+                    cgFlags = genFlags options
+                   }
   putStrLn $ "\t* Generating GI.Signals"
   m <- genCode cfg allAPIs ["GI", "Signals"] (genOverloadedSignalConnectors (M.toList allAPIs))
   _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
@@ -141,7 +167,9 @@ processMod options ovs extraPaths name = do
   let version = M.lookup name (nsChooseVersion ovs)
       cfg = Config {modName = Just name,
                     verbose = optVerbose options,
-                    overrides = ovs}
+                    overrides = ovs,
+                    cgFlags = genFlags options
+                   }
       nm = ucFirst name
       mp = T.unpack . ("GI." <>)
 

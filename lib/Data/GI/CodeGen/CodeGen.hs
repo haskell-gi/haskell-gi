@@ -22,6 +22,7 @@ import Foreign.C (CUInt)
 
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Callable (genCallable)
+import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.Constant (genConstant)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability)
@@ -233,7 +234,9 @@ genStruct n s = unless (ignoreStruct n s) $ do
        else return Nothing
 
    -- Overloaded methods
-   genMethodList n (catMaybes methods)
+   cfg <- config
+   when (cgOverloadedMethods (cgFlags cfg)) $
+        genMethodList n (catMaybes methods)
 
 -- | Generated wrapper for unions.
 genUnion :: Name -> Union -> CodeGen ()
@@ -272,7 +275,9 @@ genUnion n u = do
       else return Nothing
 
   -- Overloaded methods
-  genMethodList n (catMaybes methods)
+  cfg <- config
+  when (cgOverloadedMethods (cgFlags cfg)) $
+       genMethodList n (catMaybes methods)
 
 -- Add the implicit object argument to methods of an object.  Since we
 -- are prepending an argument we need to adjust the offset of the
@@ -349,7 +354,9 @@ genMethod cn m@(Method {
               else c'
     genCallable mn' sym c'' throws
 
-    genMethodInfo cn (m {methodCallable = c''})
+    cfg <- config
+    when (cgOverloadedMethods (cgFlags cfg)) $
+         genMethodInfo cn (m {methodCallable = c''})
 
 -- Type casting with type checking
 genGObjectCasts :: Bool -> Name -> Text -> [Name] -> CodeGen ()
@@ -410,7 +417,9 @@ genObject n o = do
 
     noName name'
 
-    fullObjectMethodList n o >>= genMethodList n
+    cfg <- config
+    when (cgOverloadedMethods (cgFlags cfg)) $
+         fullObjectMethodList n o >>= genMethodList n
 
     forM_ (objSignals o) $ \s ->
      handleCGExc
@@ -420,8 +429,10 @@ genObject n o = do
      (genSignal s n)
 
     genObjectProperties n o
-    genNamespacedPropLabels n (objProperties o) (objMethods o)
-    genObjectSignals n o
+    when (cgOverloadedProperties (cgFlags cfg)) $
+         genNamespacedPropLabels n (objProperties o) (objMethods o)
+    when (cgOverloadedSignals (cgFlags cfg)) $
+         genObjectSignals n o
 
     -- Methods
     forM_ (objMethods o) $ \f -> do
@@ -429,7 +440,8 @@ genObject n o = do
       handleCGExc (\e -> line ("-- XXX Could not generate method "
                               <> name' <> "::" <> name mn <> "\n"
                               <> "-- Error was : " <> describeCGError e)
-                  >> genUnsupportedMethodInfo n f)
+                  >> (when (cgOverloadedMethods (cgFlags cfg)) $
+                           genUnsupportedMethodInfo n f))
                   (genMethod n f)
 
 genInterface :: Name -> Interface -> CodeGen ()
@@ -443,7 +455,9 @@ genInterface n iface = do
 
   noName name'
 
-  fullInterfaceMethodList n iface >>= genMethodList n
+  cfg <- config
+  when (cgOverloadedMethods (cgFlags cfg)) $
+       fullInterfaceMethodList n iface >>= genMethodList n
 
   forM_ (ifSignals iface) $ \s -> handleCGExc
        (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
@@ -452,8 +466,10 @@ genInterface n iface = do
        (genSignal s n)
 
   genInterfaceProperties n iface
-  genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
-  genInterfaceSignals n iface
+  when (cgOverloadedProperties (cgFlags cfg)) $
+       genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
+  when (cgOverloadedSignals (cgFlags cfg)) $
+       genInterfaceSignals n iface
 
   isGO <- apiIsGObject n (APIInterface iface)
   if isGO
@@ -483,7 +499,8 @@ genInterface n iface = do
              (\e -> line ("-- XXX Could not generate method "
                           <> name' <> "::" <> name mn <> "\n"
                           <> "-- Error was : " <> describeCGError e)
-             >> genUnsupportedMethodInfo n f)
+             >> (when (cgOverloadedMethods (cgFlags cfg)) $
+                      genUnsupportedMethodInfo n f))
              (genMethod n f)
 
 -- Some type libraries include spurious interface/struct methods,

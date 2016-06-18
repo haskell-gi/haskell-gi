@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
+import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
@@ -238,7 +239,11 @@ buildFieldAttributes n field
      when isPtr $
           exportProperty (fName field) (fieldClear n field)
 
-     Just <$> genAttrInfo n field
+     cfg <- config
+     if cgOverloadedProperties (cgFlags cfg)
+     then Just <$> genAttrInfo n field
+     else return Nothing
+
     where privateType :: Type -> Bool
           privateType (TInterface _ n) = "Private" `T.isSuffixOf` n
           privateType _ = False
@@ -256,7 +261,8 @@ genStructOrUnionFields n fields = do
 
   blank
 
-  group $ do
+  cfg <- config
+  when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
     let attrListName = name' <> "AttributeList"
     line $ "type instance AttributeList " <> name' <> " = " <> attrListName
     line $ "type " <> attrListName <> " = ('[ " <>

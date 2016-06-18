@@ -17,6 +17,8 @@ import Foreign.C.Types (CInt, CUInt)
 import Foreign.Storable (sizeOf)
 
 import Data.GI.CodeGen.API
+import Data.GI.CodeGen.Config (Config(cgFlags),
+                               CodeGenFlags(cgOverloadedProperties))
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.GObject
@@ -87,23 +89,24 @@ attrType prop = do
   (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
   return (constraints, t)
 
-genPropertySetter :: Name -> Text -> Property -> CodeGen ()
-genPropertySetter n pName prop = group $ do
+genPropertySetter :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertySetter setter n cName prop = group $ do
   let oName = upperName n
   (constraints, t) <- attrType prop
   isNullable <- typeIsNullable (propType prop)
   let constraints' = "MonadIO m":(classConstraint oName <> " o"):constraints
   tStr <- propTypeStr $ propType prop
-  line $ "set" <> pName <> " :: (" <> T.intercalate ", " constraints'
+  line $ setter <> " :: (" <> T.intercalate ", " constraints'
            <> ") => o -> " <> t <> " -> m ()"
-  line $ "set" <> pName <> " obj val = liftIO $ setObjectProperty" <> tStr
+  line $ setter <> " obj val = liftIO $ setObjectProperty" <> tStr
            <> " obj \"" <> propName prop
            <> if isNullable
               then "\" (Just val)"
               else "\" val"
+  exportProperty cName setter
 
-genPropertyGetter :: Name -> Text -> Property -> CodeGen ()
-genPropertyGetter n pName prop = group $ do
+genPropertyGetter :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertyGetter getter n cName prop = group $ do
   let oName = upperName n
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
@@ -113,45 +116,48 @@ genPropertyGetter n pName prop = group $ do
       outType = if isMaybe
                 then maybeT constructorType
                 else constructorType
-      getter = if isNullable && not isMaybe
-               then "checkUnexpectedNothing \"get" <> pName
-                        <> "\" $ getObjectProperty" <> tStr
-               else "getObjectProperty" <> tStr
-  line $ "get" <> pName <> " :: " <> constraints <>
+      getProp = if isNullable && not isMaybe
+                then "checkUnexpectedNothing \"" <> getter
+                         <> "\" $ getObjectProperty" <> tStr
+                else "getObjectProperty" <> tStr
+  line $ getter <> " :: " <> constraints <>
                 " => o -> " <> tshow ("m" `con` [outType])
-  line $ "get" <> pName <> " obj = liftIO $ " <> getter
+  line $ getter <> " obj = liftIO $ " <> getProp
            <> " obj \"" <> propName prop <> "\"" <>
            if tStr `elem` ["Object", "Boxed"]
            then " " <> tshow constructorType -- These require the constructor.
            else ""
+  exportProperty cName getter
 
-genPropertyConstructor :: Name -> Text -> Property -> CodeGen ()
-genPropertyConstructor n pName prop = group $ do
+genPropertyConstructor :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertyConstructor constructor n cName prop = group $ do
   let oName = upperName n
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
   isNullable <- typeIsNullable (propType prop)
   let constraints' = (classConstraint oName <> " o") : constraints
       pconstraints = parenthesize (T.intercalate ", " constraints') <> " => "
-  line $ "construct" <> pName <> " :: " <> pconstraints
+  line $ constructor <> " :: " <> pconstraints
            <> t <> " -> IO (GValueConstruct o)"
-  line $ "construct" <> pName <> " val = constructObjectProperty" <> tStr
+  line $ constructor <> " val = constructObjectProperty" <> tStr
            <> " \"" <> propName prop
            <> if isNullable
               then "\" (Just val)"
               else "\" val"
+  exportProperty cName constructor
 
-genPropertyClear :: Name -> Text -> Property -> CodeGen ()
-genPropertyClear n pName prop = group $ do
+genPropertyClear :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertyClear clear n cName prop = group $ do
   let oName = upperName n
   nothingType <- tshow . maybeT <$> haskellType (propType prop)
   let constraints = ["MonadIO m", classConstraint oName <> " o"]
   tStr <- propTypeStr $ propType prop
-  line $ "clear" <> pName <> " :: (" <> T.intercalate ", " constraints
+  line $ clear <> " :: (" <> T.intercalate ", " constraints
            <> ") => o -> m ()"
-  line $ "clear" <> pName <> " obj = liftIO $ setObjectProperty" <> tStr
+  line $ clear <> " obj = liftIO $ setObjectProperty" <> tStr
            <> " obj \"" <> propName prop <> "\" (Nothing :: "
            <> nothingType <> ")"
+  exportProperty cName clear
 
 -- | The property name as a lexically valid Haskell identifier. Note
 -- that this is not escaped, since it is assumed that it will be used
@@ -220,14 +226,6 @@ genOneProperty owner prop = do
 
   isNullable <- typeIsNullable (propType prop)
 
-  getter <- accessorOrUndefined readable "get" owner cName
-  setter <- accessorOrUndefined writable "set" owner cName
-  constructor <- accessorOrUndefined (writable || constructOnly)
-                 "construct" owner cName
-  clear <- accessorOrUndefined (isNullable && writable &&
-                                propWriteNullable prop /= Just False)
-           "clear" owner cName
-
   unless (readable || writable || constructOnly) $
        notImplementedError $ "Property is not readable, writable, or constructible: "
                                <> tshow pName
@@ -239,11 +237,19 @@ genOneProperty owner prop = do
     line $ "   -- Nullable: " <> tshow (propReadNullable prop,
                                         propWriteNullable prop)
 
-  when readable $ genPropertyGetter owner pName prop
-  when writable $ genPropertySetter owner pName prop
-  when (writable || constructOnly) $ genPropertyConstructor owner pName prop
-  when (isNullable && writable && propWriteNullable prop /= Just False) $
-       genPropertyClear owner pName prop
+  getter <- accessorOrUndefined readable "get" owner cName
+  setter <- accessorOrUndefined writable "set" owner cName
+  constructor <- accessorOrUndefined (writable || constructOnly)
+                 "construct" owner cName
+  clear <- accessorOrUndefined (isNullable && writable &&
+                                propWriteNullable prop /= Just False)
+           "clear" owner cName
+
+  when (getter /= "undefined") $ genPropertyGetter getter owner cName prop
+  when (setter /= "undefined") $ genPropertySetter setter owner cName prop
+  when (constructor /= "undefined") $
+       genPropertyConstructor constructor owner cName prop
+  when (clear /= "undefined") $ genPropertyClear clear owner cName prop
 
   outType <- if not readable
              then return "()"
@@ -256,7 +262,8 @@ genOneProperty owner prop = do
                         else sOutType
 
   -- Polymorphic _label style lens
-  group $ do
+  cfg <- config
+  when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
     inIsGO <- isGObject (propType prop)
     hInType <- tshow <$> haskellType (propType prop)
     let inConstraint = if writable || constructOnly
@@ -280,10 +287,6 @@ genOneProperty owner prop = do
                          else [])
     it <- infoType owner prop
     exportProperty cName it
-    when (getter /= "undefined") (exportProperty cName getter)
-    when (setter /= "undefined") (exportProperty cName setter)
-    when (constructor /= "undefined") (exportProperty cName constructor)
-    when (clear /= "undefined") (exportProperty cName clear)
     bline $ "data " <> it
     line $ "instance AttrInfo " <> it <> " where"
     indent $ do
@@ -325,15 +328,19 @@ genProperties :: Name -> [Property] -> [Text] -> CodeGen ()
 genProperties n ownedProps allProps = do
   let name = upperName n
 
+  cfg <- config
   forM_ ownedProps $ \prop -> do
       handleCGExc (\err -> do
                      line $ "-- XXX Generation of property \""
                               <> propName prop <> "\" of object \""
                               <> name <> "\" failed: " <> describeCGError err
-                     genPlaceholderProperty n prop)
+                     (when (cgOverloadedProperties (cgFlags cfg)) $
+                           genPlaceholderProperty n prop))
                   (genOneProperty n prop)
 
-  group $ do
+  cfg <- config
+
+  when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
     let propListType = name <> "AttributeList"
     line $ "type instance AttributeList " <> name <> " = " <> propListType
     line $ "type " <> propListType <> " = ('[ "

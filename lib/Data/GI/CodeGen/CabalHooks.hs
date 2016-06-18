@@ -15,7 +15,7 @@ import Distribution.PackageDescription
 import Data.GI.CodeGen.API (loadGIRInfo)
 import Data.GI.CodeGen.Code (genCode, writeModuleTree, listModuleTree)
 import Data.GI.CodeGen.CodeGen (genModule)
-import Data.GI.CodeGen.Config (Config(..))
+import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
                                   filterAPIsAndDeps)
 import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
@@ -39,22 +39,45 @@ type ConfHook = (GenericPackageDescription, HookedBuildInfo) -> ConfigFlags
 -- | Generate the @PkgInfo@ module, listing the build information for
 -- the module. We include in particular the versions for the
 -- `pkg-config` dependencies of the module.
-genPkgInfo :: [Dependency] -> FilePath -> Text -> IO ()
-genPkgInfo deps fName modName = do
+genPkgInfo :: [Dependency] -> [(FlagName, Bool)] -> FilePath -> Text -> IO ()
+genPkgInfo deps flags fName modName = do
   versions <- mapM findVersion deps
   TIO.writeFile fName $ T.unlines
-         [ "module " <> modName <> " (pkgConfigVersions) where"
+         [ "module " <> modName <> " (pkgConfigVersions, flags) where"
          , ""
-         , "import Prelude (String)"
+         , "import Prelude (String, Bool(..))"
          , ""
          , "pkgConfigVersions :: [(String, String)]"
          , "pkgConfigVersions = " <> tshow versions
+         , ""
+         , "flags :: [(String, Bool)]"
+         , "flags = " <> tshow flags'
          ]
     where findVersion :: Dependency -> IO (Text, Text)
           findVersion (Dependency (PackageName n) _) =
               tryPkgConfig (T.pack n) >>= \case
                   Just v -> return v
                   Nothing -> error ("Could not determine version for required pkg-config module \"" <> n <> "\".")
+
+          flags' :: [(String, Bool)]
+          flags' = map (\(FlagName fn, v) -> (fn, v)) flags
+
+-- | Parse the set of flags given to configure into flags for the code
+-- generator.
+parseFlags :: [(FlagName, Bool)] -> CodeGenFlags
+parseFlags fs = parsed
+    where parsed :: CodeGenFlags
+          parsed = CodeGenFlags {
+                    cgOverloadedProperties = check "overloaded-properties"
+                  , cgOverloadedSignals = check "overloaded-signals"
+                  , cgOverloadedMethods = check "overloaded-methods"
+                  }
+
+          check :: String -> Bool
+          check s = fromMaybe True (M.lookup s flags)
+
+          flags :: M.Map String Bool
+          flags = M.fromList (map (\(FlagName fn, v) -> (fn, v)) fs)
 
 -- | A convenience helper for `confHook`, such that bindings for the
 -- given module are generated in the @configure@ step of @cabal@.
@@ -80,7 +103,8 @@ confCodeGenHook name version verbosity overrides outputDir
       allAPIs = M.union apis deps
       cfg = Config {modName = Just name,
                     verbose = verbosity,
-                    overrides = ovs}
+                    overrides = ovs,
+                    cgFlags = parseFlags (configConfigurationsFlags flags)}
 
   m <- genCode cfg allAPIs ["GI", ucFirst name] (genModule apis)
   alreadyDone <- doesFileExist (fromMaybe "" outputDir
@@ -98,6 +122,7 @@ confCodeGenHook name version verbosity overrides outputDir
   when (not alreadyDone) $
        genPkgInfo ((pkgconfigDepends . libBuildInfo . condTreeData .
                     fromJust . condLibrary) gpd)
+                  (configConfigurationsFlags flags)
                   (fromMaybe "" outputDir
                    </> "GI" </> T.unpack (ucFirst name) </> "PkgInfo.hs")
                   pkgInfoMod
