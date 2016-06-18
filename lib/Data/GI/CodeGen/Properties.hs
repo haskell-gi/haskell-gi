@@ -342,6 +342,7 @@ genProperties n ownedProps allProps = do
 
   when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
     let propListType = name <> "AttributeList"
+    line $ "instance HasAttributeList " <> name
     line $ "type instance AttributeList " <> name <> " = " <> propListType
     line $ "type " <> propListType <> " = ('[ "
              <> T.intercalate ", " allProps <> "] :: [(Symbol, *)])"
