@@ -11,6 +11,7 @@ module Data.GI.Base.Overloading
 
     -- * Looking up attributes in parent types
     , AttributeList
+    , HasAttributeList
     , ResolveAttribute
     , HasAttribute
     , HasAttr
@@ -103,6 +104,20 @@ type family ParentTypes a :: [*]
 -- of the attribute, and the second the type encoding the information
 -- of the attribute. This type will be an instance of `AttrInfo`.
 type family AttributeList a :: [(Symbol, *)]
+
+-- | A constraint on a type, to be fulfilled whenever it has a type
+-- instance for `AttributeList`. This is here for nicer error
+-- reporting.
+class HasAttributeList a
+
+#if MIN_VERSION_base(4,9,0)
+-- Default instance, which will give rise to an error for types
+-- without an associated `AttributeList`.
+instance {-# OVERLAPPABLE #-}
+    TypeError ('Text "Type ‘" ':<>: 'ShowType a ':<>:
+               'Text "’ does not have any known attributes.")
+    => HasAttributeList a
+#endif
 
 #if !MIN_VERSION_base(4,9,0)
 -- | Datatype returned when the attribute is not found, hopefully making

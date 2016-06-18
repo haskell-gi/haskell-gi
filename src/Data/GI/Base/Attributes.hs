@@ -142,7 +142,8 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Proxy (Proxy(..))
 
 import Data.GI.Base.GValue (GValueConstruct)
-import Data.GI.Base.Overloading (ResolveAttribute, IsLabelProxy(..))
+import Data.GI.Base.Overloading (HasAttributeList,
+                                 ResolveAttribute, IsLabelProxy(..))
 
 import GHC.TypeLits
 import GHC.Exts (Constraint)
@@ -237,7 +238,8 @@ type family AttrOpText (tag :: AttrOpTag) :: Symbol where
 
 -- | Constraint on a @obj@\/@attr@ pair so that `set` works on values
 -- of type @value@.
-type AttrSetC info obj attr value = (info ~ ResolveAttribute attr obj,
+type AttrSetC info obj attr value = (HasAttributeList obj,
+                                     info ~ ResolveAttribute attr obj,
                                      AttrInfo info,
                                      AttrBaseTypeConstraint info obj,
                                      AttrOpAllowed 'AttrSet info,
@@ -245,7 +247,8 @@ type AttrSetC info obj attr value = (info ~ ResolveAttribute attr obj,
 
 -- | Constraint on a @obj@\/@value@ pair so that `new` works on values
 -- of type @@value@.
-type AttrConstructC info obj attr value = (info ~ ResolveAttribute attr obj,
+type AttrConstructC info obj attr value = (HasAttributeList obj,
+                                           info ~ ResolveAttribute attr obj,
                                            AttrInfo info,
                                            AttrBaseTypeConstraint info obj,
                                            AttrOpAllowed 'AttrConstruct info,
@@ -254,21 +257,24 @@ type AttrConstructC info obj attr value = (info ~ ResolveAttribute attr obj,
 -- | Constructors for the different operations allowed on an attribute.
 data AttrOp obj (tag :: AttrOpTag) where
     -- Assign a value to an attribute
-    (:=)  :: (info ~ ResolveAttribute attr obj,
+    (:=)  :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               AttrOpAllowed tag info,
               (AttrSetTypeConstraint info) b) =>
              AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
     -- Assign the result of an IO action to an attribute
-    (:=>) :: (info ~ ResolveAttribute attr obj,
+    (:=>) :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               AttrOpAllowed tag info,
               (AttrSetTypeConstraint info) b) =>
              AttrLabelProxy (attr :: Symbol) -> IO b -> AttrOp obj tag
     -- Apply an update function to an attribute
-    (:~)  :: (info ~ ResolveAttribute attr obj,
+    (:~)  :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
@@ -278,7 +284,8 @@ data AttrOp obj (tag :: AttrOpTag) where
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (a -> b) -> AttrOp obj tag
     -- Apply an IO update function to an attribute
-    (:~>) :: (info ~ ResolveAttribute attr obj,
+    (:~>) :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
@@ -288,7 +295,8 @@ data AttrOp obj (tag :: AttrOpTag) where
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (a -> IO b) -> AttrOp obj tag
     -- Assign a value to an attribute with the object as an argument
-    (::=) :: (info ~ ResolveAttribute attr obj,
+    (::=) :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
@@ -297,7 +305,8 @@ data AttrOp obj (tag :: AttrOpTag) where
              AttrLabelProxy (attr :: Symbol) -> (obj -> b) -> AttrOp obj tag
     -- Apply an update function to an attribute with the object as an
     -- argument
-    (::~) :: (info ~ ResolveAttribute attr obj,
+    (::~) :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
@@ -327,7 +336,8 @@ set obj = liftIO . mapM_ app
 
 -- | Constraints on a @obj@\/@attr@ pair so `get` is possible,
 -- producing a value of type @result@.
-type AttrGetC info obj attr result = (info ~ ResolveAttribute attr obj,
+type AttrGetC info obj attr result = (HasAttributeList obj,
+                                      info ~ ResolveAttribute attr obj,
                                       AttrInfo info,
                                       (AttrBaseTypeConstraint info) obj,
                                       AttrOpAllowed 'AttrGet info,
@@ -340,7 +350,8 @@ get :: forall info attr obj result m.
 get o _ = liftIO $ attrGet (Proxy :: Proxy info) o
 
 -- | Constraint on a @obj@\/@attr@ pair so that `clear` is allowed.
-type AttrClearC info obj attr = (info ~ ResolveAttribute attr obj,
+type AttrClearC info obj attr = (HasAttributeList obj,
+                                 info ~ ResolveAttribute attr obj,
                                  AttrInfo info,
                                  (AttrBaseTypeConstraint info) obj,
                                  AttrOpAllowed 'AttrClear info)
