@@ -378,10 +378,8 @@ genGObjectCasts isIU n cn_ parents = do
     exportDecl className
     bline $ "class GObject o => " <> className <> " o"
     line $ "#if MIN_VERSION_base(4,9,0)"
-    line $ "instance {-# OVERLAPPABLE #-} (GObject a,"
-    line $ "     TL.TypeError ('TL.Text \"Type ‘\" 'TL.:<>: 'TL.ShowType a 'TL.:<>:"
-    line $ "                   'TL.Text \"’ does not descend from " <> name'
-             <> "\")) =>"
+    line $ "instance {-# OVERLAPPABLE #-} (GObject a, O.UnknownAncestorError "
+             <> name' <> " a) =>"
     line $ "    " <> className <> " a"
     line $ "#endif"
     line $ "instance " <> className <> " " <> name'

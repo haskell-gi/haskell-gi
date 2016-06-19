@@ -36,7 +36,7 @@ defaultExtensions = ["NoImplicitPrelude", "ScopedTypeVariables", "CPP",
                      "OverloadedStrings", "NegativeLiterals", "ConstraintKinds",
                      "TypeFamilies", "MultiParamTypeClasses", "KindSignatures",
                      "FlexibleInstances", "UndecidableInstances", "DataKinds",
-                     "FlexibleContexts", "TypeOperators"]
+                     "FlexibleContexts"]
 
 -- | Extensions that will be used in some modules, but we do not wish
 -- to turn on by default.
