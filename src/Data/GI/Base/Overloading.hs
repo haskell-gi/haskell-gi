@@ -8,6 +8,9 @@ module Data.GI.Base.Overloading
     ( -- * Type level inheritance
       ParentTypes
     , IsDescendantOf
+#if MIN_VERSION_base(4,9,0)
+    , UnknownAncestorError
+#endif
 
     -- * Looking up attributes in parent types
     , AttributeList
@@ -81,6 +84,15 @@ data AncestorCheck t a = HasAncestor a t
                        | DoesNotHaveRequiredAncestor Symbol t Symbol a
 #endif
 
+#if MIN_VERSION_base(4,9,0)
+-- | Type error to be generated when an ancestor check fails.
+type family UnknownAncestorError (a :: *) (t :: *) where
+    UnknownAncestorError a t =
+        TypeError ('Text "Required ancestor ‘" ':<>: 'ShowType a
+                   ':<>: 'Text "’ not found for type ‘"
+                   ':<>: 'ShowType t ':<>: 'Text "’.")
+#endif
+
 -- | Check whether a type appears in a list. We specialize the
 -- names/types a bit so the error messages are more informative.
 type family CheckForAncestorType t (a :: *) (as :: [*]) :: AncestorCheck * * where
@@ -88,9 +100,7 @@ type family CheckForAncestorType t (a :: *) (as :: [*]) :: AncestorCheck * * whe
 #if !MIN_VERSION_base(4,9,0)
         'DoesNotHaveRequiredAncestor "Error: Required ancestor" a "not found for type" t
 #else
-        TypeError ('Text "Required ancestor ‘" ':<>: 'ShowType a
-                  ':<>: 'Text "’ not found for type ‘" ':<>: 'ShowType t
-                  ':<>: 'Text "’.")
+        UnknownAncestorError a t
 #endif
     CheckForAncestorType t a (a ': as) = 'HasAncestor a t
     CheckForAncestorType t a (b ': as) = CheckForAncestorType t a as
