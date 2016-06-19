@@ -6,6 +6,7 @@
 .cabal-sandbox
 cabal.sandbox.config
 dist/
+dist-newstyle
 
 # For Emacs
 TAGS
