@@ -28,11 +28,19 @@ module Data.GI.Base.Overloading
 
     -- * Overloaded labels
     , IsLabelProxy(..)
+
+#if MIN_VERSION_base(4,9,0)
+    , module GHC.OverloadedLabels       -- Reexported for convenience
+#endif
     ) where
 
 import GHC.Exts (Constraint)
 import GHC.TypeLits
 import Data.Proxy (Proxy)
+
+#if MIN_VERSION_base(4,9,0)
+import GHC.OverloadedLabels (IsLabel(..))
+#endif
 
 -- | Support for overloaded labels in ghc < 8.0. This is like the
 -- `IsLabel` class introduced in ghc 8.0 (for use with the

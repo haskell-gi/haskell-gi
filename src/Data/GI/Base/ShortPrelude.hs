@@ -29,16 +29,11 @@ module Data.GI.Base.ShortPrelude
     , module Data.GI.Base.GVariant
     , module Data.GI.Base.GValue
     , module Data.GI.Base.ManagedPtr
-    , module Data.GI.Base.Overloading
     , module Data.GI.Base.Properties
     , module Data.GI.Base.Signals
     , module Data.GI.Base.Utils
 
     , module GHC.TypeLits
-
-#if MIN_VERSION_base(4,9,0)
-    , module GHC.OverloadedLabels
-#endif
 
     , Enum(fromEnum, toEnum)
     , Show(..)
@@ -91,12 +86,8 @@ import Data.GI.Base.GParamSpec
 import Data.GI.Base.GVariant
 import Data.GI.Base.GValue
 import Data.GI.Base.ManagedPtr
-import Data.GI.Base.Overloading
 import Data.GI.Base.Properties
 import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId, SignalInfo(..), GObjectNotifySignalInfo)
 import Data.GI.Base.Utils
 
 import GHC.TypeLits (Symbol)
-#if MIN_VERSION_base(4,9,0)
-import GHC.OverloadedLabels (IsLabel(..))
-#endif
