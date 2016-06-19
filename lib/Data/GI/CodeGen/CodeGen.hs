@@ -39,7 +39,7 @@ import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
                   genWrappedPtr)
 import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName,
-                                     submoduleLocation, qualifiedAPI)
+                                     submoduleLocation, qualifiedSymbol)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -362,17 +362,10 @@ genMethod cn m@(Method {
 genGObjectCasts :: Bool -> Name -> Text -> [Name] -> CodeGen ()
 genGObjectCasts isIU n cn_ parents = do
   let name' = upperName n
-  qualifiedParents <- mapM qualifiedAPI parents
 
   group $ do
     line $ "foreign import ccall \"" <> cn_ <> "\""
     indent $ line $ "c_" <> cn_ <> " :: IO GType"
-
-  group $ do
-    let parentObjectsType = name' <> "ParentTypes"
-    line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
-    line $ "type " <> parentObjectsType <> " = '[" <>
-         T.intercalate ", " qualifiedParents <> "]"
 
   group $ do
     bline $ "instance GObject " <> name' <> " where"
@@ -384,8 +377,17 @@ genGObjectCasts isIU n cn_ parents = do
   group $ do
     exportDecl className
     bline $ "class GObject o => " <> className <> " o"
-    bline $ "instance (GObject o, IsDescendantOf " <> name' <> " o) => "
-             <> className <> " o"
+    line $ "#if MIN_VERSION_base(4,9,0)"
+    line $ "instance {-# OVERLAPPABLE #-} (GObject a,"
+    line $ "     TL.TypeError ('TL.Text \"Type ‘\" 'TL.:<>: 'TL.ShowType a 'TL.:<>:"
+    line $ "                   'TL.Text \"’ does not descend from " <> name'
+             <> "\")) =>"
+    line $ "    " <> className <> " a"
+    line $ "#endif"
+    line $ "instance " <> className <> " " <> name'
+    forM_ parents $ \parent@(Name _ p) -> do
+        qualifiedConstraint <- qualifiedSymbol (classConstraint p) parent
+        line $ "instance " <> qualifiedConstraint <> " " <> name'
 
   -- Safe downcasting.
   group $ do
@@ -485,10 +487,7 @@ genInterface n iface = do
     let cls = classConstraint name'
     exportDecl cls
     bline $ "class ForeignPtrNewtype a => " <> cls <> " a"
-    bline $ "instance (ForeignPtrNewtype o, IsDescendantOf " <> name' <> " o) => " <> cls <> " o"
-    let parentObjectsType = name' <> "ParentTypes"
-    line $ "type instance ParentTypes " <> name' <> " = " <> parentObjectsType
-    line $ "type " <> parentObjectsType <> " = '[]"
+    line $ "instance " <> cls <> " " <> name'
 
   -- Methods
   forM_ (ifMethods iface) $ \f -> do

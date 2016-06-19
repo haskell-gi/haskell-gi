@@ -725,6 +725,7 @@ importDeps prefix deps = T.unlines . map toImport $ deps
 moduleImports :: Text
 moduleImports = T.unlines [ "import Data.GI.Base.ShortPrelude"
                           , "import qualified Prelude as P"
+                          , "import qualified GHC.TypeLits as TL"
                           , ""
                           , "import qualified Data.GI.Base.Attributes as GI.Attributes"
                           , "import qualified Data.Text as T"
