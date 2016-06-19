@@ -590,21 +590,22 @@ argumentType letters (TGList a) = do
 argumentType letters (TGSList a) = do
   (ls, name, constraints) <- argumentType letters a
   return (ls, "[" <> name <> "]", constraints)
-argumentType letters@(l:ls) t   = do
+argumentType letters@(l:ls) t = do
   api <- findAPI t
   s <- tshow <$> haskellType t
   case api of
-    Just (APIInterface _) -> do
-             let constraints = [classConstraint s <> " " <> T.singleton l]
-             return (ls, T.singleton l, constraints)
     -- Instead of restricting to the actual class,
     -- we allow for any object descending from it.
+    Just (APIInterface _) -> do
+             cls <- typeConstraint t
+             return (ls, T.singleton l, [cls <> " " <> T.singleton l])
     Just (APIObject _) -> do
-        isGO <- isGObject t
-        if isGO
-        then return (ls, T.singleton l,
-                     [classConstraint s <> " " <> T.singleton l])
-        else return (letters, s, [])
+             isGO <- isGObject t
+             if isGO
+             then do
+               cls <- typeConstraint t
+               return (ls, T.singleton l, [cls <> " " <> T.singleton l])
+             else return (letters, s, [])
     _ -> return (letters, s, [])
 
 haskellBasicType TPtr      = ptr $ typeOf ()

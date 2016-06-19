@@ -103,7 +103,7 @@ genObjectSignals n o = do
                                  <> "\", " <> si <> ")")
        group $ do
          let signalListType = name <> "SignalList"
-         line $ "type instance SignalList " <> name <> " = " <> signalListType
+         line $ "type instance O.SignalList " <> name <> " = " <> signalListType
          line $ "type " <> signalListType <> " = ('[ "
                   <> T.intercalate ", " infos <> "] :: [(Symbol, *)])"
 
@@ -119,6 +119,6 @@ genInterfaceSignals n iface = do
                               <> "\", " <> si <> ")")
   group $ do
     let signalListType = name <> "SignalList"
-    line $ "type instance SignalList " <> name <> " = " <> signalListType
+    line $ "type instance O.SignalList " <> name <> " = " <> signalListType
     line $ "type " <> signalListType <> " = ('[ "
              <> T.intercalate ", " infos <> "] :: [(Symbol, *)])"

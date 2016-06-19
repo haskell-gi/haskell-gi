@@ -329,7 +329,7 @@ testMenuPopup menu = do
                   return (posx, posy, False)
 
 -- ScopeTypeCall callback test
-testForeach :: ContainerK a => a -> IO ()
+testForeach :: IsContainer a => a -> IO ()
 testForeach container = do
   performGC
   putStrLn "*** ScopeTypeCall test"

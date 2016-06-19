@@ -264,8 +264,8 @@ genStructOrUnionFields n fields = do
   cfg <- config
   when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
     let attrListName = name' <> "AttributeList"
-    line $ "instance HasAttributeList " <> name'
-    line $ "type instance AttributeList " <> name' <> " = " <> attrListName
+    line $ "instance O.HasAttributeList " <> name'
+    line $ "type instance O.AttributeList " <> name' <> " = " <> attrListName
     line $ "type " <> attrListName <> " = ('[ " <>
          T.intercalate ", " (catMaybes attrs) <> "] :: [(Symbol, *)])"
 

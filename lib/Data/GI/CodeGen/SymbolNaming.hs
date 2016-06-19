@@ -4,7 +4,10 @@ module Data.GI.CodeGen.SymbolNaming
     , upperName
     , noName
     , escapedArgName
+
     , classConstraint
+    , typeConstraint
+
     , hyphensToCamelCase
     , underscoresToCamelCase
 
@@ -23,8 +26,16 @@ import Data.GI.CodeGen.Code (CodeGen, ModuleName, group, line, exportDecl,
 import Data.GI.CodeGen.Type (Type(TInterface))
 import Data.GI.CodeGen.Util (lcFirst, ucFirst)
 
-classConstraint :: Text -> Text
-classConstraint n = n <> "K"
+-- | Return a qualified form of the constraint for the given name
+-- (which should correspond to a valid `TInterface`).
+classConstraint :: Name -> CodeGen Text
+classConstraint n@(Name _ s) = qualifiedSymbol ("Is" <> s) n
+
+-- | Same as `classConstraint`, but applicable directly to a type. The
+-- type should be a `TInterface`, otherwise an error will be raised.
+typeConstraint :: Type -> CodeGen Text
+typeConstraint (TInterface ns s) = classConstraint (Name ns s)
+typeConstraint t = error $ "Class constraint for non-interface type: " <> show t
 
 -- | Move leading underscores to the end (for example in
 -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)

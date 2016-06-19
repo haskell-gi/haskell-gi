@@ -39,7 +39,7 @@ import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
                   genWrappedPtr)
 import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName,
-                                     submoduleLocation, qualifiedSymbol)
+                                     submoduleLocation)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -373,7 +373,7 @@ genGObjectCasts isIU n cn_ parents = do
             line $ "gobjectIsInitiallyUnowned _ = " <> tshow isIU
             line $ "gobjectType _ = c_" <> cn_
 
-  let className = classConstraint name'
+  className <- classConstraint n
   group $ do
     exportDecl className
     bline $ "class GObject o => " <> className <> " o"
@@ -385,9 +385,9 @@ genGObjectCasts isIU n cn_ parents = do
     line $ "    " <> className <> " a"
     line $ "#endif"
     line $ "instance " <> className <> " " <> name'
-    forM_ parents $ \parent@(Name _ p) -> do
-        qualifiedConstraint <- qualifiedSymbol (classConstraint p) parent
-        line $ "instance " <> qualifiedConstraint <> " " <> name'
+    forM_ parents $ \parent -> do
+        pcls <- classConstraint parent
+        line $ "instance " <> pcls <> " " <> name'
 
   -- Safe downcasting.
   group $ do
@@ -484,7 +484,7 @@ genInterface n iface = do
     genGObjectCasts isIU n cn_ uniqueParents
 
   else group $ do
-    let cls = classConstraint name'
+    cls <- classConstraint n
     exportDecl cls
     bline $ "class ForeignPtrNewtype a => " <> cls <> " a"
     line $ "instance " <> cls <> " " <> name'

@@ -27,15 +27,15 @@ genMethodResolver :: Text -> CodeGen ()
 genMethodResolver n = do
   group $ do
     line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
-          <> "MethodInfo info " <> n <> " p) => IsLabelProxy t ("
+          <> "O.MethodInfo info " <> n <> " p) => O.IsLabelProxy t ("
           <> n <> " -> p) where"
-    indent $ line $ "fromLabelProxy _ = overloadedMethod (MethodProxy :: MethodProxy info)"
+    indent $ line $ "fromLabelProxy _ = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
   group $ do
     line $ "#if MIN_VERSION_base(4,9,0)"
     line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
-          <> "MethodInfo info " <> n <> " p) => IsLabel t ("
+          <> "O.MethodInfo info " <> n <> " p) => O.IsLabel t ("
           <> n <> " -> p) where"
-    indent $ line $ "fromLabel _ = overloadedMethod (MethodProxy :: MethodProxy info)"
+    indent $ line $ "fromLabel _ = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
     line $ "#endif"
 
 -- | Generate the `MethodList` instance given the list of methods for
@@ -56,7 +56,7 @@ genMethodList n methods = do
     line $ "type family " <> resolver <> " (t :: Symbol) (o :: *) :: * where"
     indent $ forM_ infos $ \(label, info) -> do
         line $ resolver <> " \"" <> label <> "\" o = " <> info
-    indent $ line $ resolver <> " l o = MethodResolutionFailed l o"
+    indent $ line $ resolver <> " l o = O.MethodResolutionFailed l o"
 
   genMethodResolver name
 
@@ -86,7 +86,7 @@ genMethodInfo n m =
             sigConstraint = "signature ~ (" <> T.intercalate " -> " otherTypes
                             <> ")"
         line $ "instance (" <> T.intercalate ", " (sigConstraint : constraints)
-                 <> ") => MethodInfo " <> infoName <> " " <> obj <> " signature where"
+                 <> ") => O.MethodInfo " <> infoName <> " " <> obj <> " signature where"
         let mn = methodName m
             mangled = lowerName (mn {name = name n <> "_" <> name mn})
         indent $ line $ "overloadedMethod _ = " <> mangled
@@ -100,8 +100,8 @@ genUnsupportedMethodInfo n m = do
   line $ "-- XXX: Dummy instance, since code generation failed.\n"
            <> "-- Please file a bug at http://github.com/haskell-gi/haskell-gi."
   bline $ "data " <> infoName
-  line $ "instance (p ~ (), o ~ MethodResolutionFailed \""
+  line $ "instance (p ~ (), o ~ O.MethodResolutionFailed \""
            <> lowerName (methodName m) <> "\" " <> name n
-           <> ") => MethodInfo " <> infoName <> " o p where"
+           <> ") => O.MethodInfo " <> infoName <> " o p where"
   indent $ line $ "overloadedMethod _ = undefined"
   exportMethod "Unsupported methods" infoName

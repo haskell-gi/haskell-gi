@@ -23,7 +23,8 @@ import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
-import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, classConstraint,
+import Data.GI.CodeGen.SymbolNaming (lowerName, upperName,
+                                     classConstraint, typeConstraint,
                                      hyphensToCamelCase, qualifiedSymbol)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
@@ -91,10 +92,10 @@ attrType prop = do
 
 genPropertySetter :: Text -> Name -> Text -> Property -> CodeGen ()
 genPropertySetter setter n cName prop = group $ do
-  let oName = upperName n
   (constraints, t) <- attrType prop
   isNullable <- typeIsNullable (propType prop)
-  let constraints' = "MonadIO m":(classConstraint oName <> " o"):constraints
+  cls <- classConstraint n
+  let constraints' = "MonadIO m":(cls <> " o"):constraints
   tStr <- propTypeStr $ propType prop
   line $ setter <> " :: (" <> T.intercalate ", " constraints'
            <> ") => o -> " <> t <> " -> m ()"
@@ -107,12 +108,12 @@ genPropertySetter setter n cName prop = group $ do
 
 genPropertyGetter :: Text -> Name -> Text -> Property -> CodeGen ()
 genPropertyGetter getter n cName prop = group $ do
-  let oName = upperName n
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
   constructorType <- haskellType (propType prop)
   tStr <- propTypeStr $ propType prop
-  let constraints = "(MonadIO m, " <> classConstraint oName <> " o)"
+  cls <- classConstraint n
+  let constraints = "(MonadIO m, " <> cls <> " o)"
       outType = if isMaybe
                 then maybeT constructorType
                 else constructorType
@@ -131,11 +132,11 @@ genPropertyGetter getter n cName prop = group $ do
 
 genPropertyConstructor :: Text -> Name -> Text -> Property -> CodeGen ()
 genPropertyConstructor constructor n cName prop = group $ do
-  let oName = upperName n
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
   isNullable <- typeIsNullable (propType prop)
-  let constraints' = (classConstraint oName <> " o") : constraints
+  cls <- classConstraint n
+  let constraints' = (cls <> " o") : constraints
       pconstraints = parenthesize (T.intercalate ", " constraints') <> " => "
   line $ constructor <> " :: " <> pconstraints
            <> t <> " -> IO (GValueConstruct o)"
@@ -148,9 +149,9 @@ genPropertyConstructor constructor n cName prop = group $ do
 
 genPropertyClear :: Text -> Name -> Text -> Property -> CodeGen ()
 genPropertyClear clear n cName prop = group $ do
-  let oName = upperName n
   nothingType <- tshow . maybeT <$> haskellType (propType prop)
-  let constraints = ["MonadIO m", classConstraint oName <> " o"]
+  cls <- classConstraint n
+  let constraints = ["MonadIO m", cls <> " o"]
   tStr <- propTypeStr $ propType prop
   line $ clear <> " :: (" <> T.intercalate ", " constraints
            <> ") => o -> m ()"
@@ -264,16 +265,18 @@ genOneProperty owner prop = do
   -- Polymorphic _label style lens
   cfg <- config
   when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
-    inIsGO <- isGObject (propType prop)
-    hInType <- tshow <$> haskellType (propType prop)
-    let inConstraint = if writable || constructOnly
-                       then if inIsGO
-                            then classConstraint hInType
-                            else "(~) " <> if T.any (== ' ') hInType
-                                           then parenthesize hInType
-                                           else hInType
-                       else "(~) ()"
-        allowedOps = (if writable
+    cls <- classConstraint owner
+    inConstraint <- if writable || constructOnly
+                    then do
+                      inIsGO <- isGObject (propType prop)
+                      hInType <- tshow <$> haskellType (propType prop)
+                      if inIsGO
+                         then typeConstraint (propType prop)
+                         else return $ "(~) " <> if T.any (== ' ') hInType
+                                                 then parenthesize hInType
+                                                 else hInType
+                    else return "(~) ()"
+    let allowedOps = (if writable
                       then ["'AttrSet", "'AttrConstruct"]
                       else [])
                      <> (if constructOnly
@@ -294,8 +297,7 @@ genOneProperty owner prop = do
                      <> " = '[ " <> T.intercalate ", " allowedOps <> "]"
             line $ "type AttrSetTypeConstraint " <> it
                      <> " = " <> inConstraint
-            line $ "type AttrBaseTypeConstraint " <> it
-                     <> " = " <> classConstraint name
+            line $ "type AttrBaseTypeConstraint " <> it <> " = " <> cls
             line $ "type AttrGetType " <> it <> " = " <> outType
             line $ "type AttrLabel " <> it <> " = \"" <> propName prop <> "\""
             line $ "attrGet _ = " <> getter
@@ -342,8 +344,8 @@ genProperties n ownedProps allProps = do
 
   when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
     let propListType = name <> "AttributeList"
-    line $ "instance HasAttributeList " <> name
-    line $ "type instance AttributeList " <> name <> " = " <> propListType
+    line $ "instance O.HasAttributeList " <> name
+    line $ "type instance O.AttributeList " <> name <> " = " <> propListType
     line $ "type " <> propListType <> " = ('[ "
              <> T.intercalate ", " allProps <> "] :: [(Symbol, *)])"
 
