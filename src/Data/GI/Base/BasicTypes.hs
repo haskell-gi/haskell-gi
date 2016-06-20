@@ -107,7 +107,7 @@ class ForeignPtrNewtype a => GObject a where
 -- Raise a more understandable type error whenever the `GObject a`
 -- constraint is imposed on a type which has no such instance. This
 -- helps in the common case where one passes a wrong type (such as
--- `Maybe Widget`) into a function with a `WidgetK a`
+-- `Maybe Widget`) into a function with a `IsWidget a`
 -- constraint. Without this type error, the resulting type error is
 -- much less understandable, since GHC complains (at length) about a
 -- missing type family instance for `ParentTypes`.
