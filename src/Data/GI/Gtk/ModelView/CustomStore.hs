@@ -67,7 +67,6 @@ import Foreign.Storable (peek, poke, peekByteOff)
 import System.IO.Unsafe (unsafePerformIO)
 import Data.GI.Base.BasicTypes (GObject(..), GType, CGType(..), gtypeToCGType, gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
-import Data.GI.Base.Overloading (ParentTypes)
 import Data.GI.Base.ManagedPtr (newObject, withManagedPtr)
 import Data.GI.Base.GValue (GValue(..))
 import GI.GObject (Object)
@@ -106,9 +105,6 @@ treeIterOverwrite iterOut iterIn = do
 --   models 'Data.GI.Gtk.ModelView.ListStore.ListStore' or
 --   'Data.GI.Gtk.ModelView.TreeStore.TreeStore'.
 newtype CustomStore private row = CustomStore (ForeignPtr (CustomStore private row))
-
-type instance ParentTypes (CustomStore private row) = CustomStoreParentTypes
-type CustomStoreParentTypes = '[TreeModel, Object]
 instance IsTreeModel (CustomStore private row)
 
 instance GObject (CustomStore private row) where

@@ -89,7 +89,6 @@ import Foreign.Marshal.Utils (with)
 import Data.GI.Base.BasicTypes (ForeignPtrNewtype, UnexpectedNullPointerReturn, GObject(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import Data.GI.Base.GValue (GValue)
-import Data.GI.Base.Overloading (ParentTypes)
 import GI.GObject.Objects.Object (Object(..))
 import GI.Gtk.Interfaces.TreeModel (TreeModel, IsTreeModel(..))
 import GI.Gtk.Objects.TreeModelSort (TreeModelSort, IsTreeModelSort(..))
@@ -131,8 +130,6 @@ instance IsTypedTreeModel TypedTreeModel
 
 newtype TypedTreeModelSort row = TypedTreeModelSort (ForeignPtr (TypedTreeModelSort row))
 
-type instance ParentTypes (TypedTreeModelSort row) = TypedTreeModelSortParentTypes
-type TypedTreeModelSortParentTypes = '[TreeModelSort, TreeSortable, TreeModel, Object]
 instance IsTreeModelSort (TypedTreeModelSort row)
 instance IsTreeSortable (TypedTreeModelSort row)
 instance IsTreeModel (TypedTreeModelSort row)

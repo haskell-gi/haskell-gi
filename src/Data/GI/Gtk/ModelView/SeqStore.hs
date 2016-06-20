@@ -75,7 +75,6 @@ import Data.GI.Gtk.ModelView.CustomStore
         TreeModelIface(..), customStoreNew, DragDestIface(..),
         DragSourceIface(..), CustomStore(..))
 import Data.GI.Base.BasicTypes (GObject(..), GObject)
-import Data.GI.Base.Overloading (ParentTypes)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import GI.Gtk.Interfaces.TreeModel
        (treeModelRowDeleted, treeModelRowInserted,
@@ -106,8 +105,6 @@ newtype SeqStore a = SeqStore (ForeignPtr (CustomStore (IORef (Seq a)) a))
 mkSeqStore :: CustomStore (IORef (Seq a)) a -> SeqStore a
 mkSeqStore (CustomStore ptr) = SeqStore ptr
 
-type instance ParentTypes (SeqStore a) = SeqStoreParentTypes
-type SeqStoreParentTypes = '[TreeModel, Object]
 instance IsTreeModel (SeqStore a)
 
 instance GObject (SeqStore a) where

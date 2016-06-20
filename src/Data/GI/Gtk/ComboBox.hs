@@ -94,7 +94,7 @@ import Data.GI.Gtk.ModelView.SeqStore ( SeqStore(..), seqStoreNew,
 import GI.Gtk.Objects.ComboBox
 import Data.GI.Gtk.ModelView.CellLayout (CellLayout(..), cellLayoutClear, cellLayoutPackStart, cellLayoutSetDataFunction, cellLayoutGetCells)
 import GI.Gtk.Objects.CellRendererText (CellRendererText(..), cellRendererTextNew, setCellRendererTextText)
-import GI.GObject.Objects.Object (Object, IsObject, toObject)
+import GI.GObject.Objects.Object (Object, toObject)
 
 type GQuark = Word32
 
