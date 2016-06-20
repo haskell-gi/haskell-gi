@@ -85,7 +85,7 @@ import Data.GI.Gtk.ModelView.CustomStore
 import GI.GObject.Objects.Object (Object(..))
 import GI.Gtk.Interfaces.TreeModel
        (treeModelRowDeleted, treeModelRowInserted,
-        treeModelRowChanged, toTreeModel, TreeModel(..), TreeModelK(..),
+        treeModelRowChanged, toTreeModel, TreeModel(..), IsTreeModel(..),
         treeModelRowHasChildToggled)
 import GI.Gtk.Functions (treeSetRowDragData, treeGetRowDragData)
 import GI.Gtk.Structs.TreePath
@@ -133,13 +133,13 @@ mkForestStore (CustomStore ptr) = ForestStore ptr
 
 type instance ParentTypes (ForestStore a) = ForestStoreParentTypes
 type ForestStoreParentTypes = '[TreeModel, Object]
-instance TreeModelK (ForestStore a)
+instance IsTreeModel (ForestStore a)
 
 instance GObject (ForestStore a) where
     gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModel)
 
-instance TypedTreeModelK ForestStore
+instance IsTypedTreeModel ForestStore
 
 -- | Maximum number of nodes on each level.
 --

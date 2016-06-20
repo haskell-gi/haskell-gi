@@ -73,7 +73,7 @@ import Data.GI.Base.GValue (GValue(..))
 import GI.GObject (Object)
 import GI.GdkPixbuf.Objects (Pixbuf(..))
 import GI.Gtk.Flags (TreeModelFlags(..))
-import GI.Gtk.Interfaces.TreeModel (TreeModel(..), TreeModelK(..))
+import GI.Gtk.Interfaces.TreeModel (TreeModel(..), IsTreeModel(..))
 import GI.Gtk.Structs (SelectionData(..), TreePath(..), TreeIter, treePathCopy, selectionDataCopy)
 import Data.GI.Gtk.ModelView.Types
 import GI.Gtk.Structs.TreeIter
@@ -109,7 +109,7 @@ newtype CustomStore private row = CustomStore (ForeignPtr (CustomStore private r
 
 type instance ParentTypes (CustomStore private row) = CustomStoreParentTypes
 type CustomStoreParentTypes = '[TreeModel, Object]
-instance TreeModelK (CustomStore private row)
+instance IsTreeModel (CustomStore private row)
 
 instance GObject (CustomStore private row) where
     gobjectIsInitiallyUnowned _ = False
@@ -125,7 +125,7 @@ columnMapNew = liftIO $ newIORef []
 -- | Set or update a column mapping. This function should be used before
 --   the model is installed into a widget since the number of defined
 --   columns are only checked once by widgets.
-customStoreSetColumn :: (MonadIO m, TypedTreeModelK model)
+customStoreSetColumn :: (MonadIO m, IsTypedTreeModel model)
         => model row -- ^ the store in which to allocate a new column
         -> (ColumnId row ty) -- ^ the column that should be set
         -> (row -> ty) -- ^ the function that sets the property
@@ -222,7 +222,7 @@ data DragDestIface model row = DragDestIface {
 -- optionally the 'DragSourceIface' and the 'DragDestIface'. If the latter two
 -- are set to @Nothing@ a dummy interface is substituted that rejects every
 -- drag and drop.
-customStoreNew :: (MonadIO m, TreeModelK (model row), TypedTreeModelK model) =>
+customStoreNew :: (MonadIO m, IsTreeModel (model row), IsTypedTreeModel model) =>
      private   -- ^ Any private data the store needs to store. Usually an 'IORef'.
   -> (CustomStore private row -> model row)
   -> TreeModelIface row         -- ^ Functions necessary to implement the 'TreeModel' interface.
@@ -255,7 +255,7 @@ foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_new"
 
 -- | Extract a row of the given model at the given 'TreeIter'.
 --
-customStoreGetRow :: (MonadIO m, TypedTreeModelK model) => model row -> TreeIter -> m row
+customStoreGetRow :: (MonadIO m, IsTypedTreeModel model) => model row -> TreeIter -> m row
 customStoreGetRow model iter = liftIO $
   case toTypedTreeModel model of
     TypedTreeModel model -> do

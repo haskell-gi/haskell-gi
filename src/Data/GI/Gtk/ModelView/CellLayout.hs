@@ -65,7 +65,7 @@ import GI.Gtk.Objects.TreeModelSort (TreeModelSort(..), getTreeModelSortModel, t
 import GI.Gtk.Structs.TreeIter
        (getTreeIterStamp, getTreeIterUserData3, getTreeIterUserData2,
         getTreeIterUserData, TreeIter(..))
-import GI.Gtk.Objects.CellRenderer (CellRendererK, CellRenderer(..), toCellRenderer)
+import GI.Gtk.Objects.CellRenderer (IsCellRenderer, CellRenderer(..), toCellRenderer)
 import Data.GI.Gtk.ModelView.Types
 import Data.GI.Gtk.ModelView.TreeModel
 import Data.GI.Gtk.ModelView.CustomStore (customStoreGetRow)
@@ -80,7 +80,7 @@ import Data.GI.Base (get)
 -- the model contains strings, you could have the \"text\" attribute of a
 -- 'CellRendererText' get its values from column 2.
 --
--- cellLayoutAddColumnAttribute :: (MonadIO m, CellLayoutK self, CellRendererK cell) => self
+-- cellLayoutAddColumnAttribute :: (MonadIO m, IsCellLayout self, IsCellRenderer cell) => self
 --  -> cell   -- ^ @cell@ - A 'CellRenderer'.
 --  -> ReadWriteAttr cell a v  -- ^ @attribute@ - An attribute of a renderer.
 --  -> ColumnId row v    -- ^ @column@ - The virtual column of the model from which to
@@ -106,10 +106,10 @@ import Data.GI.Base (get)
 -- pass the child model to this function.
 --
 cellLayoutSetAttributes :: (MonadIO m,
-                            CellLayoutK self,
-                            CellRendererK cell,
-                            TreeModelK (model row),
-                            TypedTreeModelK model)
+                            IsCellLayout self,
+                            IsCellRenderer cell,
+                            IsTreeModel (model row),
+                            IsTypedTreeModel model)
  => self
  -> cell   -- ^ @cell@ - A 'CellRenderer'.
  -> model row -- ^ @model@ - A model containing rows of type @row@.
@@ -122,10 +122,10 @@ cellLayoutSetAttributes self cell model attributes =
 
 -- | Like 'cellLayoutSetAttributes', but allows any IO action to be used
 cellLayoutSetDataFunction :: (MonadIO m,
-                            CellLayoutK self,
-                            CellRendererK cell,
-                            TreeModelK (model row),
-                            TypedTreeModelK model)
+                            IsCellLayout self,
+                            IsCellRenderer cell,
+                            IsTreeModel (model row),
+                            IsTypedTreeModel model)
  => self
  -> cell   -- ^ @cell@ - A 'CellRenderer'.
  -> model row -- ^ @model@ - A model containing rows of type @row@.
@@ -140,9 +140,9 @@ cellLayoutSetDataFunction self cell model callback =
 -- attributes of the 'CellRenderer' @cell@ using the row's content.
 --
 cellLayoutSetDataFunc' :: (MonadIO m,
-                               CellLayoutK self,
-                               CellRendererK cell,
-                               TreeModelK model)
+                               IsCellLayout self,
+                               IsCellRenderer cell,
+                               IsTreeModel model)
  => self
  -> cell   -- ^ @cell@ - A 'CellRenderer'.
  -> model  -- ^ @model@ - A model from which to draw data.

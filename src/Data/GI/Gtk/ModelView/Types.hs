@@ -37,7 +37,7 @@
 --
 module Data.GI.Gtk.ModelView.Types (
   TypedTreeModel(..),
-  TypedTreeModelK,
+  IsTypedTreeModel,
   toTypedTreeModel,
   unsafeTreeModelToGeneric,
 
@@ -91,11 +91,11 @@ import Data.GI.Base.ManagedPtr (withManagedPtr)
 import Data.GI.Base.GValue (GValue)
 import Data.GI.Base.Overloading (ParentTypes)
 import GI.GObject.Objects.Object (Object(..))
-import GI.Gtk.Interfaces.TreeModel (TreeModel, TreeModelK(..))
-import GI.Gtk.Objects.TreeModelSort (TreeModelSort, TreeModelSortK(..))
-import GI.Gtk.Objects.TreeSelection (TreeSelectionK, treeSelectionCountSelectedRows, treeSelectionGetSelectedRows)
+import GI.Gtk.Interfaces.TreeModel (TreeModel, IsTreeModel(..))
+import GI.Gtk.Objects.TreeModelSort (TreeModelSort, IsTreeModelSort(..))
+import GI.Gtk.Objects.TreeSelection (IsTreeSelection, treeSelectionCountSelectedRows, treeSelectionGetSelectedRows)
 import GI.Gtk.Objects.TreeModelFilter (TreeModelFilter)
-import GI.Gtk.Interfaces.TreeSortable (TreeSortable, TreeSortableK(..))
+import GI.Gtk.Interfaces.TreeSortable (TreeSortable, IsTreeSortable(..))
 import GI.GLib.Functions (quarkFromString)
 import GI.GdkPixbuf.Objects.Pixbuf (Pixbuf(..))
 import GI.Gtk.Structs.TreeIter
@@ -115,27 +115,27 @@ equalManagedPtr a b =
 
 newtype TypedTreeModel row = TypedTreeModel (ForeignPtr (TypedTreeModel row))
 
-class TypedTreeModelK model where
+class IsTypedTreeModel model where
   dummy :: model a -> a
   dummy _ = error "not used"
   -- this is to get the right kind for model :: * -> *
   -- TODO: when haddock is fixed we can use an explicit kind annotation
 
-toTypedTreeModel :: TypedTreeModelK model => model row -> TypedTreeModel row
+toTypedTreeModel :: IsTypedTreeModel model => model row -> TypedTreeModel row
 toTypedTreeModel = unsafeCoerce#
 
 unsafeTreeModelToGeneric :: TreeModel -> model row
 unsafeTreeModelToGeneric = unsafeCoerce#
 
-instance TypedTreeModelK TypedTreeModel
+instance IsTypedTreeModel TypedTreeModel
 
 newtype TypedTreeModelSort row = TypedTreeModelSort (ForeignPtr (TypedTreeModelSort row))
 
 type instance ParentTypes (TypedTreeModelSort row) = TypedTreeModelSortParentTypes
 type TypedTreeModelSortParentTypes = '[TreeModelSort, TreeSortable, TreeModel, Object]
-instance TreeModelSortK (TypedTreeModelSort row)
-instance TreeSortableK (TypedTreeModelSort row)
-instance TreeModelK (TypedTreeModelSort row)
+instance IsTreeModelSort (TypedTreeModelSort row)
+instance IsTreeSortable (TypedTreeModelSort row)
+instance IsTreeModel (TypedTreeModelSort row)
 
 instance GObject (TypedTreeModelSort row) where
     gobjectIsInitiallyUnowned _ = False
@@ -144,14 +144,14 @@ instance GObject (TypedTreeModelSort row) where
 unsafeTreeModelSortToGeneric :: TreeModelSort -> TypedTreeModelSort row
 unsafeTreeModelSortToGeneric = unsafeCoerce#
 
-instance TypedTreeModelK TypedTreeModelSort
+instance IsTypedTreeModel TypedTreeModelSort
 
 newtype TypedTreeModelFilter row = TypedTreeModelFilter (ForeignPtr (TypedTreeModelFilter row))
 
 unsafeTreeModelFilterToGeneric :: TreeModelFilter -> TypedTreeModelFilter row
 unsafeTreeModelFilterToGeneric = unsafeCoerce#
 
-instance TypedTreeModelK TypedTreeModelFilter
+instance IsTypedTreeModel TypedTreeModelFilter
 
 -- | TreePath is a list of indices to specify a subtree or node in a
 -- 'Graphics.UI.Gtk.ModelView.TreeModel.TreeModel'. The node that correspond
@@ -182,7 +182,7 @@ withTreePath tp act = treePathNewFromIndices' tp >>= act
 maybeWithTreePath :: MonadIO m => Maybe [Int32] -> (TreePath -> m a) -> m a
 maybeWithTreePath mbTp act = maybe (act (TreePath nullForeignPtr)) (`withTreePath` act) mbTp
 
-treeSelectionGetSelectedRows' :: (MonadIO m, TreeSelectionK sel) => sel -> m [TreePath]
+treeSelectionGetSelectedRows' :: (MonadIO m, IsTreeSelection sel) => sel -> m [TreePath]
 treeSelectionGetSelectedRows' sel = treeSelectionCountSelectedRows sel >>= \case
     0 -> return []
     _ -> liftIO $ (fst <$> treeSelectionGetSelectedRows sel) `catch` (\(_::UnexpectedNullPointerReturn) -> return [])
