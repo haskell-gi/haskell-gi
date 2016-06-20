@@ -173,7 +173,7 @@ instance Show (ColumnId row ty) where
 
 -- | Read the value of at a specific column and 'TreeIter'.
 --
-treeModelGetValue :: TreeModelK self => self
+treeModelGetValue :: IsTreeModel self => self
  -> TreeIter
  -> ColumnId row ty         -- ^ @column@ - The column to lookup the value at.
  -> IO ty
@@ -181,7 +181,7 @@ treeModelGetValue self iter (ColumnId getter _ colId) =
   GI.treeModelGetValue self iter colId >>= getter
 
 -- | Gets the a `TreeIter` or Nothing if the path is invalid or empty
-treeModelGetIter :: (MonadIO m, TreeModelK model) => model -> TreePath -> m (Maybe TreeIter)
+treeModelGetIter :: (MonadIO m, IsTreeModel model) => model -> TreePath -> m (Maybe TreeIter)
 treeModelGetIter model path =
     treePathGetDepth path >>= \case
         0 -> return Nothing

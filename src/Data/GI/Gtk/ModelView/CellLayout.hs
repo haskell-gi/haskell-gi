@@ -49,7 +49,8 @@ module Data.GI.Gtk.ModelView.CellLayout (
     module GI.Gtk.Interfaces.CellLayout
 --  , cellLayoutAddColumnAttribute
   , cellLayoutSetAttributes
-  , cellLayoutSetAttributeFunc
+  , cellLayoutSetDataFunction
+  , cellLayoutSetDataFunc'
   , convertIterFromParentToChildModel
   ) where
 
@@ -62,9 +63,9 @@ import GI.Gtk.Interfaces.CellLayout
 import GI.Gtk.Objects.TreeModelFilter (TreeModelFilter(..), getTreeModelFilterChildModel, treeModelFilterConvertIterToChildIter)
 import GI.Gtk.Objects.TreeModelSort (TreeModelSort(..), getTreeModelSortModel, treeModelSortConvertIterToChildIter)
 import GI.Gtk.Structs.TreeIter
-       (treeIterStamp, treeIterUserData3, treeIterUserData2,
-        treeIterUserData, TreeIter(..))
-import GI.Gtk.Objects.CellRenderer (CellRendererK, CellRenderer(..), toCellRenderer)
+       (getTreeIterStamp, getTreeIterUserData3, getTreeIterUserData2,
+        getTreeIterUserData, TreeIter(..))
+import GI.Gtk.Objects.CellRenderer (IsCellRenderer, CellRenderer(..), toCellRenderer)
 import Data.GI.Gtk.ModelView.Types
 import Data.GI.Gtk.ModelView.TreeModel
 import Data.GI.Gtk.ModelView.CustomStore (customStoreGetRow)
@@ -79,7 +80,7 @@ import Data.GI.Base (get)
 -- the model contains strings, you could have the \"text\" attribute of a
 -- 'CellRendererText' get its values from column 2.
 --
--- cellLayoutAddColumnAttribute :: (MonadIO m, CellLayoutK self, CellRendererK cell) => self
+-- cellLayoutAddColumnAttribute :: (MonadIO m, IsCellLayout self, IsCellRenderer cell) => self
 --  -> cell   -- ^ @cell@ - A 'CellRenderer'.
 --  -> ReadWriteAttr cell a v  -- ^ @attribute@ - An attribute of a renderer.
 --  -> ColumnId row v    -- ^ @column@ - The virtual column of the model from which to
@@ -105,33 +106,49 @@ import Data.GI.Base (get)
 -- pass the child model to this function.
 --
 cellLayoutSetAttributes :: (MonadIO m,
-                            CellLayoutK self,
-                            CellRendererK cell,
-                            TreeModelK (model row),
-                            TypedTreeModelK model)
+                            IsCellLayout self,
+                            IsCellRenderer cell,
+                            IsTreeModel (model row),
+                            IsTypedTreeModel model)
  => self
  -> cell   -- ^ @cell@ - A 'CellRenderer'.
  -> model row -- ^ @model@ - A model containing rows of type @row@.
  -> (row -> [AttrOp cell 'AttrSet]) -- ^ Function to set attributes on the cell renderer.
  -> m ()
 cellLayoutSetAttributes self cell model attributes =
-  cellLayoutSetAttributeFunc self cell model $ \iter -> do
+  cellLayoutSetDataFunc' self cell model $ \iter -> do
     row <- customStoreGetRow model iter
     set cell (attributes row)
+
+-- | Like 'cellLayoutSetAttributes', but allows any IO action to be used
+cellLayoutSetDataFunction :: (MonadIO m,
+                            IsCellLayout self,
+                            IsCellRenderer cell,
+                            IsTreeModel (model row),
+                            IsTypedTreeModel model)
+ => self
+ -> cell   -- ^ @cell@ - A 'CellRenderer'.
+ -> model row -- ^ @model@ - A model containing rows of type @row@.
+ -> (row -> IO ()) -- ^ Function to set data on the cell renderer.
+ -> m ()
+cellLayoutSetDataFunction self cell model callback =
+  cellLayoutSetDataFunc' self cell model $ \iter -> do
+    row <- customStoreGetRow model iter
+    callback row
 
 -- | Install a function that looks up a row in the model and sets the
 -- attributes of the 'CellRenderer' @cell@ using the row's content.
 --
-cellLayoutSetAttributeFunc :: (MonadIO m,
-                               CellLayoutK self,
-                               CellRendererK cell,
-                               TreeModelK model)
+cellLayoutSetDataFunc' :: (MonadIO m,
+                               IsCellLayout self,
+                               IsCellRenderer cell,
+                               IsTreeModel model)
  => self
  -> cell   -- ^ @cell@ - A 'CellRenderer'.
  -> model  -- ^ @model@ - A model from which to draw data.
  -> (TreeIter -> IO ()) -- ^ Function to set attributes on the cell renderer.
  -> m ()
-cellLayoutSetAttributeFunc self cell model func = liftIO $ do
+cellLayoutSetDataFunc' self cell model func = liftIO $
   cellLayoutSetCellDataFunc self cell . Just $ \_ (CellRenderer cellPtr') model' iter -> do
     iter <- convertIterFromParentToChildModel iter model' =<< toTreeModel model
     CellRenderer cellPtr <- toCellRenderer cell
@@ -176,10 +193,10 @@ convertIterFromParentToChildModel iter parentModel@(TreeModel parentModelPtr) ch
                             then return childIter
                             else convertIterFromParentToChildModel childIter child childModel
                     Nothing -> do
-                        stamp <- get iter treeIterStamp
-                        ud1 <- get iter treeIterUserData
-                        ud2 <- get iter treeIterUserData2
-                        ud3 <- get iter treeIterUserData3
+                        stamp <- getTreeIterStamp iter
+                        ud1 <- getTreeIterUserData iter
+                        ud2 <- getTreeIterUserData2 iter
+                        ud3 <- getTreeIterUserData3 iter
                         error ("CellLayout: don't know how to convert iter "++show (stamp, ud1, ud2, ud3)++
                                " from model "++show parentModelPtr++" to model "++
                                show modelPtr++". Is it possible that you are setting the "++

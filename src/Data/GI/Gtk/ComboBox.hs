@@ -92,9 +92,9 @@ import Data.GI.Gtk.ModelView.SeqStore ( SeqStore(..), seqStoreNew,
   seqStoreInsert, seqStorePrepend, seqStoreAppend, seqStoreRemove,
   seqStoreSafeGetValue )
 import GI.Gtk.Objects.ComboBox
-import Data.GI.Gtk.ModelView.CellLayout (CellLayout(..), cellLayoutClear, cellLayoutPackStart, cellLayoutSetAttributeFunc, cellLayoutGetCells)
+import Data.GI.Gtk.ModelView.CellLayout (CellLayout(..), cellLayoutClear, cellLayoutPackStart, cellLayoutSetDataFunction, cellLayoutGetCells)
 import GI.Gtk.Objects.CellRendererText (CellRendererText(..), cellRendererTextNew, setCellRendererTextText)
-import GI.GObject.Objects.Object (Object, ObjectK, toObject)
+import GI.GObject.Objects.Object (Object, toObject)
 
 type GQuark = Word32
 
@@ -167,7 +167,7 @@ comboBoxNewText = do
 -- 'comboBoxPrependText', 'comboBoxRemoveText' and 'comboBoxGetActiveText'
 -- can be called on a combo box only once 'comboBoxSetModelText' is called.
 --
-comboBoxSetModelText :: (MonadIO m, ComboBoxK self) => self -> m (SeqStore Text)
+comboBoxSetModelText :: (MonadIO m, IsComboBox self) => self -> m (SeqStore Text)
 comboBoxSetModelText combo = liftIO $ do
   layout <- unsafeCastTo CellLayout combo
   cellLayoutClear layout
@@ -178,14 +178,13 @@ comboBoxSetModelText combo = liftIO $ do
   comboBoxSetEntryTextColumn combo 0
   ren <- cellRendererTextNew
   cellLayoutPackStart layout ren True
-  cellLayoutSetAttributeFunc layout ren store (\iter -> do
-    customStoreGetRow store iter >>= setCellRendererTextText ren)
+  cellLayoutSetDataFunction layout ren store (setCellRendererTextText ren)
   objectSetAttribute combo comboQuark (Just store)
   return store
 
 -- | Retrieve the model that was created with 'comboBoxSetModelText'.
 --
-comboBoxGetModelText :: (MonadIO m, ComboBoxK self) => self -> m (SeqStore Text)
+comboBoxGetModelText :: (MonadIO m, IsComboBox self) => self -> m (SeqStore Text)
 comboBoxGetModelText self = do
   (Just store) <- objectGetAttributeUnsafe self comboQuark
   return store
@@ -194,7 +193,7 @@ comboBoxGetModelText self = do
 -- you can only use this function with combo boxes constructed with
 -- 'comboBoxNewText'. Returns the index of the appended text.
 --
-comboBoxAppendText :: (MonadIO m, ComboBoxK self) => self -> Text -> m Int32
+comboBoxAppendText :: (MonadIO m, IsComboBox self) => self -> Text -> m Int32
 comboBoxAppendText self text = do
   store <- comboBoxGetModelText self
   seqStoreAppend store text
@@ -204,7 +203,7 @@ comboBoxAppendText self text = do
 -- @comboBox@. Note that you can only use this function with combo boxes
 -- constructed with 'comboBoxNewText'.
 --
-comboBoxInsertText :: (MonadIO m, ComboBoxK self) => self
+comboBoxInsertText :: (MonadIO m, IsComboBox self) => self
  -> Int32  -- ^ @position@ - An index to insert @text@.
  -> Text   -- ^ @text@ - A string.
  -> m ()
@@ -216,7 +215,7 @@ comboBoxInsertText self position text = do
 -- you can only use this function with combo boxes constructed with
 -- 'comboBoxNewText'.
 --
-comboBoxPrependText :: (Applicative m, MonadIO m, ComboBoxK self) => self -> Text -> m ()
+comboBoxPrependText :: (Applicative m, MonadIO m, IsComboBox self) => self -> Text -> m ()
 comboBoxPrependText self text = do
   store <- comboBoxGetModelText self
   seqStorePrepend store text
@@ -224,7 +223,7 @@ comboBoxPrependText self text = do
 -- | Removes the string at @position@ from @comboBox@. Note that you can only
 -- use this function with combo boxes constructed with 'comboBoxNewText'.
 --
-comboBoxRemoveText :: (MonadIO m, ComboBoxK self) => self
+comboBoxRemoveText :: (MonadIO m, IsComboBox self) => self
  -> Int32 -- ^ @position@ - Index of the item to remove.
  -> m ()
 comboBoxRemoveText self position = do
@@ -235,7 +234,7 @@ comboBoxRemoveText self position = do
 -- selected. Note that you can only use this function with combo boxes
 -- constructed with 'comboBoxNewText'.
 --
-comboBoxGetActiveText :: (MonadIO m, ComboBoxK self) => self -> m (Maybe Text)
+comboBoxGetActiveText :: (MonadIO m, IsComboBox self) => self -> m (Maybe Text)
 comboBoxGetActiveText self = do
   activeId <- comboBoxGetActive self
   if activeId < 0

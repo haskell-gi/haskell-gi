@@ -67,18 +67,18 @@ import Foreign.Storable (peek, poke, peekByteOff)
 import System.IO.Unsafe (unsafePerformIO)
 import Data.GI.Base.BasicTypes (GObject(..), GType, CGType(..), gtypeToCGType, gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
-import Data.GI.Base.Overloading (ParentTypes)
 import Data.GI.Base.ManagedPtr (newObject, withManagedPtr)
 import Data.GI.Base.GValue (GValue(..))
 import GI.GObject (Object)
 import GI.GdkPixbuf.Objects (Pixbuf(..))
 import GI.Gtk.Flags (TreeModelFlags(..))
-import GI.Gtk.Interfaces.TreeModel (TreeModel(..), TreeModelK)
+import GI.Gtk.Interfaces.TreeModel (TreeModel(..), IsTreeModel(..))
 import GI.Gtk.Structs (SelectionData(..), TreePath(..), TreeIter, treePathCopy, selectionDataCopy)
 import Data.GI.Gtk.ModelView.Types
 import GI.Gtk.Structs.TreeIter
-       (treeIterUserData3, treeIterUserData2, treeIterUserData,
-        treeIterStamp, TreeIter(..))
+       (getTreeIterStamp, getTreeIterUserData, getTreeIterUserData2, getTreeIterUserData3,
+        setTreeIterStamp, setTreeIterUserData, setTreeIterUserData2, setTreeIterUserData3,
+        TreeIter(..))
 import Data.GI.Base (newBoxed, set, get)
 import Data.GI.Base.Attributes (AttrOp(..))
 import Data.GI.Base.Utils (maybeFromPtr)
@@ -86,15 +86,14 @@ import Data.GI.Base.Utils (maybeFromPtr)
 
 treeIterOverwrite :: MonadIO m => TreeIter -> TreeIter -> m ()
 treeIterOverwrite iterOut iterIn = do
-    stamp <- get iterIn treeIterStamp
-    ud1   <- get iterIn treeIterUserData
-    ud2   <- get iterIn treeIterUserData2
-    ud3   <- get iterIn treeIterUserData3
-    set iterOut [
-        treeIterStamp     := stamp,
-        treeIterUserData  := ud1,
-        treeIterUserData2 := ud2,
-        treeIterUserData3 := ud3]
+    stamp <- getTreeIterStamp iterIn
+    ud1   <- getTreeIterUserData iterIn
+    ud2   <- getTreeIterUserData2 iterIn
+    ud3   <- getTreeIterUserData3 iterIn
+    setTreeIterStamp iterOut stamp
+    setTreeIterUserData iterOut ud1
+    setTreeIterUserData2 iterOut ud2
+    setTreeIterUserData3 iterOut ud3
 
 -- A 'CustomStore' is backed by a Gtk2HsStore
 -- which is an instance of the GtkTreeModel GInterface
@@ -106,9 +105,7 @@ treeIterOverwrite iterOut iterIn = do
 --   models 'Data.GI.Gtk.ModelView.ListStore.ListStore' or
 --   'Data.GI.Gtk.ModelView.TreeStore.TreeStore'.
 newtype CustomStore private row = CustomStore (ForeignPtr (CustomStore private row))
-
-type instance ParentTypes (CustomStore private row) = CustomStoreParentTypes
-type CustomStoreParentTypes = '[TreeModel, Object]
+instance IsTreeModel (CustomStore private row)
 
 instance GObject (CustomStore private row) where
     gobjectIsInitiallyUnowned _ = False
@@ -124,7 +121,7 @@ columnMapNew = liftIO $ newIORef []
 -- | Set or update a column mapping. This function should be used before
 --   the model is installed into a widget since the number of defined
 --   columns are only checked once by widgets.
-customStoreSetColumn :: (MonadIO m, TypedTreeModelK model)
+customStoreSetColumn :: (MonadIO m, IsTypedTreeModel model)
         => model row -- ^ the store in which to allocate a new column
         -> (ColumnId row ty) -- ^ the column that should be set
         -> (row -> ty) -- ^ the function that sets the property
@@ -221,7 +218,7 @@ data DragDestIface model row = DragDestIface {
 -- optionally the 'DragSourceIface' and the 'DragDestIface'. If the latter two
 -- are set to @Nothing@ a dummy interface is substituted that rejects every
 -- drag and drop.
-customStoreNew :: (MonadIO m, TreeModelK (model row), TypedTreeModelK model) =>
+customStoreNew :: (MonadIO m, IsTreeModel (model row), IsTypedTreeModel model) =>
      private   -- ^ Any private data the store needs to store. Usually an 'IORef'.
   -> (CustomStore private row -> model row)
   -> TreeModelIface row         -- ^ Functions necessary to implement the 'TreeModel' interface.
@@ -254,7 +251,7 @@ foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_new"
 
 -- | Extract a row of the given model at the given 'TreeIter'.
 --
-customStoreGetRow :: (MonadIO m, TypedTreeModelK model) => model row -> TreeIter -> m row
+customStoreGetRow :: (MonadIO m, IsTypedTreeModel model) => model row -> TreeIter -> m row
 customStoreGetRow model iter = liftIO $
   case toTypedTreeModel model of
     TypedTreeModel model -> do
