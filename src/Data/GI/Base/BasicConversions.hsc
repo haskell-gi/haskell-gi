@@ -82,7 +82,7 @@ import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable (Storable, peek, poke, sizeOf)
 import Foreign.C.Types (CInt(..), CUInt(..), CSize(..), CChar(..))
 import Foreign.C.String (CString, withCString, peekCString)
-import Data.Word (Word8, Word64)
+import Data.Word
 import Data.Int (Int32)
 import Data.Bits (Bits, (.|.), (.&.), shift)
 
