@@ -124,6 +124,7 @@ module Data.GI.Base.Attributes (
   AttrOpTag(..),
 
   AttrOp(..),
+  AttrOpAllowed,
 
   AttrGetC,
   AttrSetC,
