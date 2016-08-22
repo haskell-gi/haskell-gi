@@ -25,7 +25,7 @@ module Data.GI.Base.GType
     , gtypeInvalid
     ) where
 
-import Data.Word (Word64)
+import Data.Word
 import Foreign.C.String (CString, peekCString)
 
 #include <glib-object.h>
