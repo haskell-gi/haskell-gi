@@ -5,7 +5,7 @@
     "synopsis": "Vte bindings",
     "girName": "Vte",
     "girVersion": "2.91",
-    "girOverrides": null,
+    "girOverrides": "Vte.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-pango == 1.0.*",

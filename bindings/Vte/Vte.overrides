@@ -1,0 +1,5 @@
+namespace Vte
+
+# This function is deprecated, does nothing, and the introspection
+# data is wrong.
+ignore Terminal.event_check_gregex_simple
