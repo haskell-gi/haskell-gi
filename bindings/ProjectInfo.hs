@@ -42,9 +42,8 @@ emptyProjectInfo = ProjectInfo {
                    }
 
 prettyConfig :: AP.Config
-prettyConfig = AP.Config { AP.confIndent = 4
-                         , AP.confCompare = AP.keyOrder
-                           ["name", "version", "description", "synopsis",
-                            "girName", "girVersion",
-                            "girOverrides", "pkgConfig", "depends",
-                            "baseVersion"]}
+prettyConfig = AP.defConfig { AP.confCompare = AP.keyOrder
+                              ["name", "version", "description", "synopsis",
+                               "girName", "girVersion",
+                               "girOverrides", "pkgConfig", "depends",
+                               "baseVersion"]}
