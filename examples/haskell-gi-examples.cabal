@@ -29,3 +29,17 @@ executable SimpleBrowser
   ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:       GI.OverloadedLabels,
                        GI.Signals
+
+executable Cairo
+  main-is:              Cairo.hs
+  build-depends:        base >= 4.7 && < 5,
+                        haskell-gi-base >= 0.18 && < 1,
+                        gi-glib == 2.0.*,
+                        gi-cairo == 1.0.*,
+                        gi-gdk == 3.0.*,
+                        gi-gdkpixbuf == 2.0.*,
+                        gi-gtk == 3.0.*,
+                        cairo == 0.13.*,
+                        old-time == 1.1.*,
+                        transformers == 0.5.*
+  other-extensions:     OverloadedStrings, OverloadedLabels
