@@ -338,8 +338,8 @@ main = do
       1 -> do
         #beginMoveDrag window 1 (round x) (round y) time
         return True
-      2 -> do
-        #beginResizeDrag window Gdk.WindowEdgeSouthEast 2
+      3 -> do
+        #beginResizeDrag window Gdk.WindowEdgeSouthEast 3
                          (round x) (round y) time
         return True
       _ -> return False
