@@ -1,4 +1,7 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
+-- For HasCallStack compatibility
+{-# LANGUAGE ImplicitParams, KindSignatures, ConstraintKinds #-}
+
 -- | We wrap most objects in a "managed pointer", which is simply a
 -- newtype for a 'ForeignPtr' of the appropriate type:
 --
@@ -54,6 +57,17 @@ import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.Utils
+
+#if MIN_VERSION_base(4,9,0)
+import GHC.Stack (HasCallStack)
+#elif MIN_VERSION_base(4,8,0)
+import GHC.Stack (CallStack)
+import GHC.Exts (Constraint)
+type HasCallStack = ((?callStack :: CallStack) :: Constraint)
+#else
+import GHC.Exts (Constraint)
+type HasCallStack = (() :: Constraint)
+#endif
 
 -- | Perform an IO action on the 'Ptr' inside a managed pointer.
 withManagedPtr :: ForeignPtrNewtype a => a -> (Ptr a -> IO c) -> IO c
@@ -123,7 +137,7 @@ castTo constructor obj =
 
 -- | Cast to the given type, assuming that the cast will succeed. This
 -- function will call `error` if the cast is illegal.
-unsafeCastTo :: forall o o'. (GObject o, GObject o') =>
+unsafeCastTo :: forall o o'. (HasCallStack, GObject o, GObject o') =>
                 (ForeignPtr o' -> o') -> o -> IO o'
 unsafeCastTo constructor obj =
   withManagedPtr obj $ \objPtr -> do
