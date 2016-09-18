@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
 {-# LANGUAGE CPP #-}
 #if MIN_VERSION_base(4,9,0)
 {-# LANGUAGE OverloadedLabels #-}
@@ -7,8 +7,9 @@
 {-# LANGUAGE PatternSynonyms #-}
 #endif
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
-import BasicPrelude hiding (on, error)
-import qualified BasicPrelude as BP
+import Prelude hiding (error, (++), putStrLn, show)
+import qualified Prelude as P
+
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
@@ -22,8 +23,12 @@ import Foreign.C
 
 import System.Mem (performGC)
 
+import Control.Monad (when, replicateM_, forM_)
 import qualified Data.ByteString.Char8 as B
-import Data.Text (pack, unpack)
+import Data.ByteString (ByteString)
+import Data.Monoid ((<>))
+import Data.Text (pack, unpack, Text)
+import Data.Text.IO (putStrLn)
 import Data.Word
 import Data.Int
 import qualified Data.Map as M
@@ -31,8 +36,15 @@ import qualified Data.Map as M
 import System.Environment (getProgName)
 import System.Random (randomRIO)
 
+-- Some nicer definitions
 error :: Text -> a
-error = BP.error . unpack
+error = P.error . unpack
+
+(++) :: Monoid a => a -> a -> a
+(++) = (<>)
+
+show :: Show a => a -> Text
+show = pack . P.show
 
 -- Make sure we use the right allocator/deallocator for zero-filled
 -- structs.

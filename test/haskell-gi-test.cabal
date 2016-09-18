@@ -20,7 +20,6 @@ source-repository head
 executable testGtk
   main-is:             testGtk.hs
   build-depends:       base >= 4.7 && < 5,
-                       basic-prelude >= 0.5 && <0.6,
                        bytestring >= 0.10,
                        containers >= 0.5 && < 0.6,
                        random >= 1.1 && < 1.2,
