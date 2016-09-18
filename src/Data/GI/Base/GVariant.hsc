@@ -151,11 +151,12 @@ import qualified Data.Map as M
 import System.IO.Unsafe (unsafePerformIO)
 import Foreign.C
 import Foreign.Ptr
-import Foreign.ForeignPtr
+import Foreign.ForeignPtr (withForeignPtr)
 
 import Data.GI.Base.BasicTypes (GVariant(..))
 import Data.GI.Base.BasicConversions
-import Data.GI.Base.ManagedPtr (withManagedPtr, withManagedPtrList)
+import Data.GI.Base.ManagedPtr (withManagedPtr, withManagedPtrList,
+                                newManagedPtr)
 import Data.GI.Base.Utils (freeMem)
 
 -- | An alias for @Nothing :: Maybe GVariant@ to save some typing.
@@ -262,14 +263,14 @@ wrapGVariantPtr :: Ptr GVariant -> IO GVariant
 wrapGVariantPtr ptr = do
   floating <- g_variant_is_floating ptr
   when (floating /= 0) $ void $ g_variant_ref_sink ptr
-  fPtr <- newForeignPtr ptr_to_g_variant_unref ptr
+  fPtr <- newManagedPtr ptr_to_g_variant_unref ptr
   return $! GVariant fPtr
 
 -- | Construct a Haskell wrapper for the given 'GVariant', without
 -- assuming ownership.
 newGVariantFromPtr :: Ptr GVariant -> IO GVariant
 newGVariantFromPtr ptr = do
-  fPtr <- g_variant_ref ptr >>= newForeignPtr ptr_to_g_variant_unref
+  fPtr <- g_variant_ref ptr >>= newManagedPtr ptr_to_g_variant_unref
   return $! GVariant fPtr
 
 -- | Add a reference to the given 'GVariant'.

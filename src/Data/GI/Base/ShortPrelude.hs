@@ -67,7 +67,7 @@ import Data.ByteString.Char8 (ByteString)
 import Foreign.C (CInt(..), CUInt(..), CFloat(..), CDouble(..), CString, CIntPtr(..), CUIntPtr(..), CLong(..), CULong(..))
 import Foreign.Ptr (Ptr, plusPtr, FunPtr, nullPtr,
                     castFunPtrToPtr, castPtrToFunPtr)
-import Foreign.ForeignPtr (ForeignPtr, newForeignPtr_)
+import Foreign.ForeignPtr (ForeignPtr)
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 import Foreign.Storable (peek, poke, sizeOf)
 import Control.Applicative ((<$>))

@@ -15,7 +15,8 @@
 module Data.GI.Base.ManagedPtr
     (
     -- * Managed pointers
-      withManagedPtr
+      newManagedPtr
+    , withManagedPtr
     , maybeWithManagedPtr
     , withManagedPtrList
     , unsafeManagedPtrGetPtr
@@ -48,11 +49,11 @@ import Control.Monad (when, void)
 
 import Data.Coerce (coerce)
 
-import Foreign (poke)
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
-import Foreign.ForeignPtr (ForeignPtr, newForeignPtr, newForeignPtrEnv,
+import Foreign.ForeignPtr (ForeignPtr, FinalizerPtr,
                            touchForeignPtr, newForeignPtr_)
+import qualified Foreign.Concurrent as FC
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import Data.GI.Base.BasicTypes
@@ -68,6 +69,14 @@ type HasCallStack = ((?callStack :: CallStack) :: Constraint)
 import GHC.Exts (Constraint)
 type HasCallStack = (() :: Constraint)
 #endif
+
+foreign import ccall "dynamic"
+   mkFinalizer :: FinalizerPtr a -> Ptr a -> IO ()
+
+-- | A thin wrapper over `Foreign.Concurrent.newForeignPtr`.
+newManagedPtr :: FinalizerPtr a -> Ptr a -> IO (ForeignPtr a)
+newManagedPtr finalizer ptr = do
+  FC.newForeignPtr ptr (mkFinalizer finalizer ptr)
 
 -- | Perform an IO action on the 'Ptr' inside a managed pointer.
 withManagedPtr :: ForeignPtrNewtype a => a -> (Ptr a -> IO c) -> IO c
@@ -162,7 +171,7 @@ foreign import ccall "g_object_ref" g_object_ref ::
 newObject :: (GObject a, GObject b) => (ForeignPtr a -> a) -> Ptr b -> IO a
 newObject constructor ptr = do
   void $ g_object_ref ptr
-  fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
+  fPtr <- newManagedPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
@@ -194,7 +203,7 @@ wrapObject :: forall a b. (GObject a, GObject b) =>
 wrapObject constructor ptr = do
   when (gobjectIsInitiallyUnowned (undefined :: a)) $
        void $ g_object_ref_sink ptr
-  fPtr <- newForeignPtr ptr_to_g_object_unref $ castPtr ptr
+  fPtr <- newManagedPtr ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 -- | Increase the reference count of the given 'GObject'.
@@ -210,8 +219,8 @@ foreign import ccall "g_object_unref" g_object_unref ::
 unrefObject :: GObject a => a -> IO ()
 unrefObject obj = withManagedPtr obj g_object_unref
 
-foreign import ccall "& boxed_free_helper" boxed_free_helper ::
-    FunPtr (Ptr env -> Ptr a -> IO ())
+foreign import ccall "boxed_free_helper" boxed_free_helper ::
+    CGType -> Ptr a -> IO ()
 
 foreign import ccall "g_boxed_copy" g_boxed_copy ::
     CGType -> Ptr a -> IO (Ptr a)
@@ -221,10 +230,8 @@ foreign import ccall "g_boxed_copy" g_boxed_copy ::
 newBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 newBoxed constructor ptr = do
   GType gtype <- boxedType (undefined :: a)
-  env <- allocMem :: IO (Ptr CGType)   -- Will be freed by boxed_free_helper
-  poke env gtype
   ptr' <- g_boxed_copy gtype ptr
-  fPtr <- newForeignPtrEnv boxed_free_helper env ptr'
+  fPtr <- FC.newForeignPtr ptr' (boxed_free_helper gtype ptr')
   return $! constructor fPtr
 
 -- | Like 'newBoxed', but we do not make a copy (we "steal" the passed
@@ -232,9 +239,7 @@ newBoxed constructor ptr = do
 wrapBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapBoxed constructor ptr = do
   GType gtype <- boxedType (undefined :: a)
-  env <- allocMem :: IO (Ptr CGType)   -- Will be freed by boxed_free_helper
-  poke env gtype
-  fPtr <- newForeignPtrEnv boxed_free_helper env ptr
+  fPtr <- FC.newForeignPtr ptr (boxed_free_helper gtype ptr)
   return $! constructor fPtr
 
 -- | Make a copy of the given boxed object.
@@ -264,7 +269,7 @@ wrapPtr :: WrappedPtr a => (ForeignPtr a -> a) -> Ptr a -> IO a
 wrapPtr constructor ptr = do
   fPtr <- case wrappedPtrFree of
             Nothing -> newForeignPtr_ ptr
-            Just finalizer -> newForeignPtr finalizer ptr
+            Just finalizer -> newManagedPtr finalizer ptr
   return $! constructor fPtr
 
 -- | Wrap a pointer, making a copy of the data.
@@ -273,7 +278,7 @@ newPtr constructor ptr = do
   ptr' <- wrappedPtrCopy ptr
   fPtr <- case wrappedPtrFree of
             Nothing -> newForeignPtr_ ptr
-            Just finalizer -> newForeignPtr finalizer ptr'
+            Just finalizer -> newManagedPtr finalizer ptr'
   return $! constructor fPtr
 
 -- | Make a copy of a wrapped pointer using @memcpy@ into a freshly

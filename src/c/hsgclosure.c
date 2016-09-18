@@ -33,15 +33,14 @@ static int print_debug_info ()
 }
 
 /* Auxiliary function for freeing boxed types */
-void boxed_free_helper (GType *gtype, void *boxed)
+void boxed_free_helper (GType gtype, void *boxed)
 {
   if (print_debug_info()) {
     fprintf(stderr, "Freeing a boxed object at %p\n", boxed);
-    fprintf(stderr, "\tIt is of type %s\n", g_type_name(*gtype));
+    fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
   }
 
-  g_boxed_free (*gtype, boxed);
-  g_free (gtype);
+  g_boxed_free (gtype, boxed);
 
   if (print_debug_info()) {
     fprintf(stderr, "\tdone\n");
