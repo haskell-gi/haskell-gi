@@ -9,6 +9,7 @@ module Data.GI.Base.Utils
     , mapSecond
     , mapSecondA
     , convertIfNonNull
+    , convertFunPtrIfNonNull
     , callocBytes
     , callocBoxedBytes
     , callocMem
@@ -38,7 +39,7 @@ import Data.Word
 
 import Foreign (peek)
 import Foreign.C.Types (CSize(..))
-import Foreign.Ptr (Ptr, nullPtr, FunPtr, freeHaskellFunPtr)
+import Foreign.Ptr (Ptr, nullPtr, FunPtr, nullFunPtr, freeHaskellFunPtr)
 import Foreign.Storable (Storable(..))
 
 import Data.GI.Base.BasicTypes (GType(..), CGType, BoxedObject(..),
@@ -90,6 +91,13 @@ convertIfNonNull :: Ptr a -> (Ptr a -> IO b) -> IO (Maybe b)
 convertIfNonNull ptr convert = if ptr == nullPtr
                                then return Nothing
                                else Just <$> convert ptr
+
+-- | Apply the given conversion action to the given function pointer
+-- if it is non-NULL, otherwise return `Nothing`.
+convertFunPtrIfNonNull :: FunPtr a -> (FunPtr a -> IO b) -> IO (Maybe b)
+convertFunPtrIfNonNull ptr convert = if ptr == nullFunPtr
+                                     then return Nothing
+                                     else Just <$> convert ptr
 
 foreign import ccall "g_malloc0" g_malloc0 ::
     #{type gsize} -> IO (Ptr a)
