@@ -1,5 +1,5 @@
 name:                haskell-gi
-version:             0.18
+version:             0.19
 synopsis:            Generate Haskell bindings for GObject Introspection capable libraries
 description:         Generate Haskell bindings for GObject Introspection capable libraries. This includes most notably
                      Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
@@ -23,7 +23,7 @@ source-repository head
 Library
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.32, gobject-2.0 >= 2.32
   build-depends:       base >= 4.7 && < 5,
-                       haskell-gi-base == 0.18.*,
+                       haskell-gi-base == 0.19.*,
                        Cabal >= 1.20,
                        containers,
                        directory,

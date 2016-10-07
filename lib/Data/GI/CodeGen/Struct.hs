@@ -88,10 +88,10 @@ buildFieldReader n field = group $ do
   let name' = upperName n
   let getter = fieldGetter n field
 
-  isMaybe <- typeIsNullable (fieldType field)
-  hType <- tshow <$> if isMaybe
-                     then maybeT <$> haskellType (fieldType field)
-                     else haskellType (fieldType field)
+  nullConvert <- maybeNullConvert (fieldType field)
+  hType <- tshow <$> if isJust nullConvert
+                     then maybeT <$> isoHaskellType (fieldType field)
+                     else isoHaskellType (fieldType field)
   fType <- tshow <$> foreignType (fieldType field)
 
   line $ getter <> " :: MonadIO m => " <> name' <> " -> m " <>
@@ -104,10 +104,10 @@ buildFieldReader n field = group $ do
          <> ") :: IO " <> if T.any (== ' ') fType
                          then parenthesize fType
                          else fType
-    result <- if not isMaybe
-              then convert "val" $ fToH (fieldType field) TransferNothing
-              else do
-                line $ "result <- convertIfNonNull val $ \\val' -> do"
+    result <- case nullConvert of
+              Nothing -> convert "val" $ fToH (fieldType field) TransferNothing
+              Just nullConverter -> do
+                line $ "result <- " <> nullConverter <> " val $ \\val' -> do"
                 indent $ do
                   val' <- convert "val'" $ fToH (fieldType field) TransferNothing
                   line $ "return " <> val'
@@ -143,8 +143,8 @@ buildFieldWriter n field = group $ do
          <> ") (" <> converted <> " :: " <> fType <> ")"
 
 -- | Write a @NULL@ into a field of a struct of type `Ptr`.
-buildFieldClear :: Name -> Field -> ExcCodeGen ()
-buildFieldClear n field = group $ do
+buildFieldClear :: Name -> Field -> Text -> ExcCodeGen ()
+buildFieldClear n field nullPtr = group $ do
   let name' = upperName n
   let clear = fieldClear n field
 
@@ -152,9 +152,9 @@ buildFieldClear n field = group $ do
 
   line $ clear <> " :: MonadIO m => " <> name' <> " -> m ()"
   line $ clear <> " s = liftIO $ withManagedPtr s $ \\ptr -> do"
-  indent $ do
+  indent $
     line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
-         <> ") (nullPtr :: " <> fType <> ")"
+         <> ") ("  <> nullPtr <> " :: " <> fType <> ")"
 
 -- | Name for the getter function
 fieldGetter :: Name -> Field -> Text
@@ -184,8 +184,8 @@ genAttrInfo owner field = do
 
   isNullable <- typeIsNullable (fieldType field)
   outType <- tshow <$> if isNullable
-                       then maybeT <$> haskellType (fieldType field)
-                       else haskellType (fieldType field)
+                       then maybeT <$> isoHaskellType (fieldType field)
+                       else isoHaskellType (fieldType field)
   inType <- if isPtr
             then tshow <$> foreignType (fieldType field)
             else tshow <$> haskellType (fieldType field)
@@ -214,7 +214,7 @@ genAttrInfo owner field = do
   blank
 
   group $ do
-    let labelProxy = lcFirst on <> fName field
+    let labelProxy = lcFirst on <> "_" <> lcFirst (fName field)
     line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst (fName field) <> "\""
     line $ labelProxy <> " = AttrLabelProxy"
 
@@ -227,17 +227,16 @@ buildFieldAttributes n field
     | not (fieldVisible field) = return Nothing
     | privateType (fieldType field) = return Nothing
     | otherwise = group $ do
-     isPtr <- typeIsPtr (fieldType field)
+     nullPtr <- nullPtrForType (fieldType field)
 
      buildFieldReader n field
      buildFieldWriter n field
-     when isPtr $
-          buildFieldClear n field
+     maybe (return ()) (buildFieldClear n field) nullPtr
 
      exportProperty (fName field) (fieldGetter n field)
      exportProperty (fName field) (fieldSetter n field)
-     when isPtr $
-          exportProperty (fName field) (fieldClear n field)
+     when (isJust nullPtr) $
+           exportProperty (fName field) (fieldClear n field)
 
      cfg <- config
      if cgOverloadedProperties (cgFlags cfg)

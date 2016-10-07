@@ -724,13 +724,15 @@ importDeps prefix deps = T.unlines . map toImport $ deps
 -- | Standard imports.
 moduleImports :: Text
 moduleImports = T.unlines [ "import Data.GI.Base.ShortPrelude"
+                          , "import qualified Data.GI.Base.ShortPrelude as SP"
                           , "import qualified Data.GI.Base.Overloading as O"
                           , "import qualified Prelude as P"
                           , ""
                           , "import qualified Data.GI.Base.Attributes as GI.Attributes"
                           , "import qualified Data.Text as T"
                           , "import qualified Data.ByteString.Char8 as B"
-                          , "import qualified Data.Map as Map" ]
+                          , "import qualified Data.Map as Map"
+                          , "import qualified Foreign.Ptr as FP" ]
 
 -- | Write to disk the code for a module, under the given base
 -- directory. Does not write submodules recursively, for that use

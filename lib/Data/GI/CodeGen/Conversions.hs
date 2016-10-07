@@ -6,9 +6,12 @@ module Data.GI.CodeGen.Conversions
     , unpackCArray
     , computeArrayLength
 
+    , callableHasClosures
+
     , hToF
     , fToH
     , haskellType
+    , isoHaskellType
     , foreignType
 
     , argumentType
@@ -19,9 +22,12 @@ module Data.GI.CodeGen.Conversions
     , isManaged
     , typeIsNullable
     , typeIsPtr
+    , maybeNullConvert
+    , nullPtrForType
 
     , getIsScalar
-    , requiresAlloc
+    , typeAllocInfo
+    , TypeAllocInfo(..)
 
     , apply
     , mapC
@@ -33,6 +39,7 @@ module Data.GI.CodeGen.Conversions
 import Control.Applicative ((<$>), (<*>), pure, Applicative)
 #endif
 import Control.Monad (when)
+import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Int
 import Data.Text (Text)
@@ -411,15 +418,21 @@ fObjectToH t hType transfer = do
     TransferEverything ->
         if isGO
         then return $ M $ parenthesize $ "wrapObject " <> constructor
-        else badIntroError "Got a transfer of something not a GObject"
+        else badIntroError ("Got a transfer of something not a GObject: " <>
+                            constructor)
     _ ->
         if isGO
         then return $ M $ parenthesize $ "newObject " <> constructor
-        else badIntroError "Wrapping not a GObject with no copy..."
+        else badIntroError ("Wrapping not a GObject with no copy: " <>
+                            constructor)
 
-fCallbackToH :: Callback -> TypeRep -> Transfer -> ExcCodeGen Constructor
-fCallbackToH _ _ _ =
-  notImplementedError "Wrapping foreign callbacks is not supported yet"
+fCallbackToH :: TypeRep -> Transfer -> ExcCodeGen Constructor
+fCallbackToH hType TransferNothing = do
+  let constructor = T.pack . tyConName . typeRepTyCon $ hType
+  return (P (callbackDynamicWrapper constructor))
+fCallbackToH _ transfer =
+  notImplementedError ("ForeignCallback with unsupported transfer type `"
+                       <> tshow transfer <> "'")
 
 fVariantToH :: Transfer -> CodeGen Constructor
 fVariantToH transfer =
@@ -446,7 +459,7 @@ fToH' t a hType fType transfer
     | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
     | Just (APIObject _) <- a = fObjectToH t hType transfer
     | Just (APIInterface _) <- a = fObjectToH t hType transfer
-    | Just (APICallback c) <- a = fCallbackToH c hType transfer
+    | Just (APICallback _) <- a = fCallbackToH hType transfer
     | TCArray True _ _ (TBasicType TUTF8) <- t =
         return $ M "unpackZeroTerminatedUTF8CArray"
     | TCArray True _ _ (TBasicType TFileName) <- t =
@@ -681,6 +694,29 @@ haskellType t@(TInterface ns n) = do
              (APIFlags _) -> "[]" `con` [tname `con` []]
              _ -> tname `con` []
 
+-- | Whether the callable has closure arguments (i.e. "user_data"
+-- style arguments).
+callableHasClosures :: Callable -> Bool
+callableHasClosures = any (/= -1) . map argClosure . args
+
+-- | Basically like `haskellType`, but for types which admit a "isomorphic"
+-- version of the Haskell type distinct from the usual Haskell type.
+-- Generally the Haskell type we expose is isomorphic to the foreign
+-- type, but in some cases, such as callbacks with closure arguments,
+-- this does not hold, as we omit the closure arguments. This function
+-- returns a type which is actually isomorphic.
+isoHaskellType :: Type -> CodeGen TypeRep
+isoHaskellType t@(TInterface ns n) = do
+  api <- findAPI t
+  case api of
+    Just (APICallback (Callback c)) -> do
+        tname <- qualifiedAPI (Name ns n)
+        if callableHasClosures c
+        then return ((callbackHTypeWithClosures tname) `con` [])
+        else return (tname `con` [])
+    _ -> haskellType t
+isoHaskellType t = haskellType t
+
 foreignBasicType TBoolean  = "CInt" `con` []
 foreignBasicType TUTF8     = "CString" `con` []
 foreignBasicType TFileName = "CString" `con` []
@@ -735,7 +771,7 @@ foreignType t@(TInterface ns n) = do
     api <- getAPI t
     case api of
       APICallback _ -> do
-         tname <- qualifiedSymbol (n <> "C") (Name ns n)
+         tname <- qualifiedSymbol (callbackCType n) (Name ns n)
          return (funptr $ tname `con` [])
       _ -> do
          tname <- qualifiedAPI (Name ns n)
@@ -750,16 +786,24 @@ getIsScalar t = do
     (Just (APIFlags _)) -> return True
     _ -> return False
 
--- Whether the given type corresponds to a struct we allocate
--- ourselves. If we need to allocate the struct we return its size in
--- bytes and whether the type is boxed, otherwise we return Nothing.
-requiresAlloc :: Type -> CodeGen (Maybe (Bool, Int))
-requiresAlloc t = do
+-- | Information on how to allocate a type.
+data TypeAllocInfo = TypeAllocInfo {
+      typeAllocInfoIsBoxed :: Bool
+    , typeAllocInfoSize    :: Int -- ^ In bytes.
+    }
+
+-- | Information on how to allocate the given type, if known.
+typeAllocInfo :: Type -> CodeGen (Maybe TypeAllocInfo)
+typeAllocInfo t = do
   api <- findAPI t
   case api of
     Just (APIStruct s) -> case structSize s of
                             0 -> return Nothing
-                            n -> return (Just (structIsBoxed s, n))
+                            n -> let info = TypeAllocInfo {
+                                              typeAllocInfoIsBoxed = structIsBoxed s
+                                            , typeAllocInfoSize = n
+                                            }
+                                 in return (Just info)
     _ -> return Nothing
 
 -- Returns whether the given type corresponds to a ManagedPtr
@@ -777,12 +821,48 @@ isManaged t = do
 -- | Returns whether the given type is represented by a pointer on the
 -- C side.
 typeIsPtr :: Type -> CodeGen Bool
-typeIsPtr (TBasicType TPtr) = return True
-typeIsPtr (TBasicType TUTF8) = return True
-typeIsPtr (TBasicType TFileName) = return True
-typeIsPtr t = do
+typeIsPtr t = isJust <$> typePtrType t
+
+-- | Distinct types of foreign pointers.
+data FFIPtrType = FFIPtr    -- ^ Ordinary `Ptr`.
+                | FFIFunPtr -- ^ `FunPtr`.
+
+-- | For those types represented by pointers on the C side, return the
+-- type of pointer which represents them on the Haskell FFI.
+typePtrType :: Type -> CodeGen (Maybe FFIPtrType)
+typePtrType (TBasicType TPtr) = return (Just FFIPtr)
+typePtrType (TBasicType TUTF8) = return (Just FFIPtr)
+typePtrType (TBasicType TFileName) = return (Just FFIPtr)
+typePtrType t = do
   ft <- foreignType t
-  return (tyConName (typeRepTyCon ft) `elem` ["Ptr", "FunPtr"])
+  case tyConName (typeRepTyCon ft) of
+    "Ptr"    -> return (Just FFIPtr)
+    "FunPtr" -> return (Just FFIFunPtr)
+    _        -> return Nothing
+
+-- | If the passed in type is nullable, return the conversion function
+-- between the FFI pointer type (may be a `Ptr` or a `FunPtr`) and the
+-- corresponding `Maybe` type.
+maybeNullConvert :: Type -> CodeGen (Maybe Text)
+maybeNullConvert (TBasicType TPtr) = return Nothing
+maybeNullConvert (TGList _) = return Nothing
+maybeNullConvert (TGSList _) = return Nothing
+maybeNullConvert t = do
+  pt <- typePtrType t
+  case pt of
+    Just FFIPtr -> return (Just "SP.convertIfNonNull")
+    Just FFIFunPtr -> return (Just "SP.convertFunPtrIfNonNull")
+    Nothing -> return Nothing
+
+-- | An appropriate NULL value for the given type, for types which are
+-- represented by pointers on the C side.
+nullPtrForType :: Type -> CodeGen (Maybe Text)
+nullPtrForType t = do
+  pt <- typePtrType t
+  case pt of
+    Just FFIPtr -> return (Just "FP.nullPtr")
+    Just FFIFunPtr -> return (Just "FP.nullFunPtr")
+    Nothing -> return Nothing
 
 -- | Returns whether the given type should be represented by a
 -- `Maybe` type on the Haskell side. This applies to all properties
@@ -791,11 +871,7 @@ typeIsPtr t = do
 -- which we just pass through to the Haskell side. Notice that
 -- introspection annotations can override this.
 typeIsNullable :: Type -> CodeGen Bool
-typeIsNullable t = case t of
-                     TBasicType TPtr -> return False
-                     TGList _ -> return False
-                     TGSList _ -> return False
-                     _ -> typeIsPtr t
+typeIsNullable t = isJust <$> maybeNullConvert t
 
 -- If the given type maps to a list in Haskell, return the type of the
 -- elements, and the function that maps over them.

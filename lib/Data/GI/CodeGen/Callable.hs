@@ -1,12 +1,18 @@
 {-# LANGUAGE LambdaCase #-}
 module Data.GI.CodeGen.Callable
-    ( genCallable
+    ( genCCallableWrapper
+    , genDynamicCallableWrapper
+    , ForeignSymbol(..)
+    , ExposeClosures(..)
 
     , hOutType
     , arrayLengths
     , arrayLengthsMap
     , callableSignature
     , fixupCallerAllocates
+
+    , callableHInArgs
+    , callableHOutArgs
 
     , wrapMaybe
     , inArgInterfaces
@@ -15,7 +21,7 @@ module Data.GI.CodeGen.Callable
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
-import Control.Monad (forM, forM_, when)
+import Control.Monad (forM, forM_, when, void)
 import Data.Bool (bool)
 import Data.List (nub, (\\))
 import Data.Maybe (isJust)
@@ -35,6 +41,11 @@ import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
 
 import Text.Show.Pretty (ppShow)
+
+-- | Whether to expose closures and the associated destroy notify
+-- handlers in the Haskell wrapper.
+data ExposeClosures = WithClosures
+                    | WithoutClosures
 
 hOutType :: Callable -> [Arg] -> Bool -> ExcCodeGen TypeRep
 hOutType callable outArgs ignoreReturn = do
@@ -57,32 +68,40 @@ hOutType callable outArgs ignoreReturn = do
              (_, "()") -> "(,)" `con` hOutArgTypes
              _         -> "(,)" `con` (maybeHReturnType : hOutArgTypes)
 
-mkForeignImport :: Text -> Callable -> Bool -> CodeGen ()
-mkForeignImport symbol callable throwsGError = do
+-- | Generate a foreign import for the given C symbol. Return the name
+-- of the corresponding Haskell identifier.
+mkForeignImport :: Text -> Callable -> Bool -> CodeGen Text
+mkForeignImport cSymbol callable throwsGError = do
     line first
     indent $ do
         mapM_ (\a -> line =<< fArgStr a) (args callable)
         when throwsGError $
                line $ padTo 40 "Ptr (Ptr GError) -> " <> "-- error"
         line =<< last
+    return hSymbol
     where
-    first = "foreign import ccall \"" <> symbol <> "\" " <>
-                symbol <> " :: "
+    hSymbol = cSymbol
+    first = "foreign import ccall \"" <> cSymbol <> "\" " <> hSymbol <> " :: "
     fArgStr arg = do
         ft <- foreignType $ argType arg
-        weAlloc <- isJust <$> requiresAlloc (argType arg)
-        let ft' = if direction arg == DirectionIn || weAlloc
-                     || argCallerAllocates arg
-                  then
-                      ft
-                  else
-                      ptr ft
+        let ft' = if direction arg == DirectionIn || argCallerAllocates arg
+                  then ft
+                  else ptr ft
         let start = tshow ft' <> " -> "
         return $ padTo 40 start <> "-- " <> (argCName arg)
                    <> " : " <> tshow (argType arg)
     last = tshow <$> io <$> case returnType callable of
                              Nothing -> return $ typeOf ()
                              Just r  -> foreignType r
+
+-- | Make a wrapper for foreign `FunPtr`s of the given type. Return
+-- the name of the resulting dynamic Haskell wrapper.
+mkDynamicImport :: Text -> CodeGen Text
+mkDynamicImport typeSynonym = do
+  line $ "foreign import ccall \"dynamic\" " <> dynamic <> " :: FunPtr "
+           <> typeSynonym <> " -> " <> typeSynonym
+  return dynamic
+      where dynamic = "__dynamic_" <> typeSynonym
 
 -- | Given an argument to a function, return whether it should be
 -- wrapped in a maybe type (useful for nullable types). We do some
@@ -250,18 +269,19 @@ freeInArgsOnError = freeInArgs' freeInArgOnError
 -- should be ignored, as they will be dealt with separately.
 prepareArgForCall :: [Arg] -> Arg -> ExcCodeGen Text
 prepareArgForCall omitted arg = do
-  isCallback <- findAPI (argType arg) >>=
-                \case Just (APICallback _) -> return True
-                      _ -> return False
-  when (isCallback && direction arg /= DirectionIn) $
+  callback <- findAPI (argType arg) >>=
+                \case Just (APICallback c) -> return (Just c)
+                      _ -> return Nothing
+
+  when (isJust callback && direction arg /= DirectionIn) $
        notImplementedError "Only callbacks with DirectionIn are supported"
 
   case direction arg of
     DirectionIn -> if arg `elem` omitted
                    then return . escapedArgName $ arg
-                   else if isCallback
-                        then prepareInCallback arg
-                        else prepareInArg arg
+                   else case callback of
+                        Just c -> prepareInCallback arg c
+                        Nothing -> prepareInArg arg
     DirectionInout -> prepareInoutArg arg
     DirectionOut -> prepareOutArg arg
 
@@ -284,20 +304,24 @@ prepareInArg arg = do
                 return maybeName)
 
 -- Callbacks are a fairly special case, we treat them separately.
-prepareInCallback :: Arg -> CodeGen Text
-prepareInCallback arg = do
+prepareInCallback :: Arg -> Callback -> CodeGen Text
+prepareInCallback arg (Callback cb) = do
   let name = escapedArgName arg
       ptrName = "ptr" <> name
       scope = argScope arg
 
-  (maker, wrapper) <- case argType arg of
-                        TInterface ns n ->
-                            do
-                              let tn = Name ns n
-                              maker <- qualifiedSymbol ("mk" <> n) tn
-                              wrapper <- qualifiedSymbol (lcFirst n <> "Wrapper") tn
-                              return $ (maker, wrapper)
-                        _ -> terror $ "prepareInCallback : Not an interface! " <> T.pack (ppShow arg)
+  (maker, wrapper, drop) <-
+      case argType arg of
+        TInterface ns n ->
+            do
+              let tn = Name ns n
+              drop <- if callableHasClosures cb
+                      then Just <$> qualifiedSymbol (callbackDropClosures n) tn
+                      else return Nothing
+              wrapper <- qualifiedSymbol (callbackHaskellToForeign n) tn
+              maker <- qualifiedSymbol (callbackWrapperAllocator n) tn
+              return (maker, wrapper, drop)
+        _ -> terror $ "prepareInCallback : Not an interface! " <> T.pack (ppShow arg)
 
   when (scope == ScopeTypeAsync) $ do
    ft <- tshow <$> foreignType (argType arg)
@@ -309,8 +333,12 @@ prepareInCallback arg = do
                   p = if (scope == ScopeTypeAsync)
                       then parenthesize $ "Just " <> ptrName
                       else "Nothing"
+                  dropped =
+                      case drop of
+                        Just dropper -> parenthesize (dropper <> " " <> name)
+                        Nothing -> name
               line $ name' <> " <- " <> maker <> " "
-                       <> parenthesize (wrapper <> " " <> p <> " " <> name)
+                       <> parenthesize (wrapper <> " " <> p <> " " <> dropped)
               when (scope == ScopeTypeAsync) $
                    line $ "poke " <> ptrName <> " " <> name'
               return name')
@@ -326,9 +354,14 @@ prepareInCallback arg = do
                          let p = if (scope == ScopeTypeAsync)
                                  then parenthesize $ "Just " <> ptrName
                                  else "Nothing"
+                             dropped =
+                                 case drop of
+                                   Just dropper ->
+                                       parenthesize (dropper <> " " <> jName)
+                                   Nothing -> jName
                          line $ jName' <> " <- " <> maker <> " "
                                   <> parenthesize (wrapper <> " "
-                                                   <> p <> " " <> jName)
+                                                   <> p <> " " <> dropped)
                          when (scope == ScopeTypeAsync) $
                               line $ "poke " <> ptrName <> " " <> jName'
                          line $ "return " <> jName'
@@ -338,9 +371,9 @@ prepareInoutArg :: Arg -> ExcCodeGen Text
 prepareInoutArg arg = do
   name' <- prepareInArg arg
   ft <- foreignType $ argType arg
-  allocInfo <- requiresAlloc (argType arg)
+  allocInfo <- typeAllocInfo (argType arg)
   case allocInfo of
-    Just (isBoxed, n) -> do
+    Just (TypeAllocInfo isBoxed n) -> do
          let allocator = if isBoxed
                          then "callocBoxedBytes"
                          else "callocBytes"
@@ -362,21 +395,26 @@ prepareInoutArg arg = do
         line $ "poke " <> name'' <> " " <> name'
         return name''
 
-prepareOutArg :: Arg -> CodeGen Text
+prepareOutArg :: Arg -> ExcCodeGen Text
 prepareOutArg arg = do
   let name = escapedArgName arg
   ft <- foreignType $ argType arg
-  allocInfo <- requiresAlloc (argType arg)
-  case allocInfo of
-    Just (isBoxed, n) -> do
-        let allocator = if isBoxed
-                        then "callocBoxedBytes"
-                        else "callocBytes"
-        genConversion name $ literal $ M $ allocator <> " " <> tshow n <>
-                                      " :: " <> tshow (io ft)
-    Nothing ->
-        genConversion name $
-                  literal $ M $ "allocMem :: " <> tshow (io $ ptr ft)
+  if argCallerAllocates arg
+  then do
+    allocInfo <- typeAllocInfo (argType arg)
+    case allocInfo of
+      Just (TypeAllocInfo isBoxed n) -> do
+          let allocator = if isBoxed
+                          then "callocBoxedBytes"
+                          else "callocBytes"
+          genConversion name $ literal $ M $ allocator <> " " <> tshow n <>
+                            " :: " <> tshow (io ft)
+      Nothing ->
+          notImplementedError $ ("Don't know how to allocate \""
+                                 <> argCName arg <> "\" of type "
+                                 <> tshow (argType arg))
+  else genConversion name $
+                        literal $ M $ "allocMem :: " <> tshow (io $ ptr ft)
 
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
@@ -514,38 +552,55 @@ freeCallCallbacks callable nameMap =
        when (argScope arg == ScopeTypeCall) $
             line $ "safeFreeFunPtr $ castFunPtrToPtr " <> name'
 
-formatHSignature :: Callable -> Bool -> ExcCodeGen ()
-formatHSignature callable throwsGError = do
-  (constraints, vars) <- callableSignature callable throwsGError
+formatHSignature :: Callable -> ForeignSymbol -> Bool -> ExcCodeGen ()
+formatHSignature callable symbol throwsGError = do
+  (constraints, vars) <- callableSignature callable symbol throwsGError
   indent $ do
       line $ "(" <> T.intercalate ", " constraints <> ") =>"
       forM_ (zip ("" : repeat "-> ") vars) $ \(prefix, (t, name)) ->
            line $ withComment (prefix <> t) name
 
+-- | Name for the first argument in dynamic wrappers (the `FunPtr`).
+funPtr :: Text
+funPtr = "__funPtr"
+
 -- | The Haskell signature for the given callable. It returns a tuple
 -- ([constraints], [(type, argname)]).
-callableSignature :: Callable -> Bool -> ExcCodeGen ([Text], [(Text, Text)])
-callableSignature callable throwsGError = do
+callableSignature :: Callable -> ForeignSymbol -> Bool ->
+                     ExcCodeGen ([Text], [(Text, Text)])
+callableSignature callable symbol throwsGError = do
   let (hInArgs, _) = callableHInArgs callable
+                                    (case symbol of
+                                       KnownForeignSymbol _ -> WithoutClosures
+                                       DynamicForeignSymbol _ -> WithClosures)
   (argConstraints, types) <- inArgInterfaces hInArgs
   let constraints = ("MonadIO m" : argConstraints)
       ignoreReturn = skipRetVal callable throwsGError
   outType <- hOutType callable (callableHOutArgs callable) ignoreReturn
-  let allNames = map escapedArgName hInArgs ++ ["result"]
-      allTypes = types ++ [tshow ("m" `con` [outType])]
-  return (constraints, zip allTypes allNames)
+  case symbol of
+    KnownForeignSymbol _ -> do
+      let allNames = map escapedArgName hInArgs ++ ["result"]
+          allTypes = types ++ [tshow ("m" `con` [outType])]
+      return (constraints, zip allTypes allNames)
+    DynamicForeignSymbol w -> do
+      let allNames = funPtr : map escapedArgName hInArgs ++ ["result"]
+          allTypes = ("FunPtr " <> dynamicType w) :
+                     types ++ [tshow ("m" `con` [outType])]
+      return (constraints, zip allTypes allNames)
 
 -- | "In" arguments for the given callable on the Haskell side,
 -- together with the omitted arguments.
-callableHInArgs :: Callable -> ([Arg], [Arg])
-callableHInArgs callable =
+callableHInArgs :: Callable -> ExposeClosures -> ([Arg], [Arg])
+callableHInArgs callable expose =
     let inArgs = filter ((/= DirectionOut) . direction) $ args callable
                  -- We do not expose user_data arguments,
                  -- destroynotify arguments, and C array length
                  -- arguments to Haskell code.
         closures = map (args callable!!) . filter (/= -1) . map argClosure $ inArgs
         destroyers = map (args callable!!) . filter (/= -1) . map argDestroy $ inArgs
-        omitted = arrayLengths callable <> closures <> destroyers
+        omitted = case expose of
+                    WithoutClosures -> arrayLengths callable <> closures <> destroyers
+                    WithClosures -> arrayLengths callable
     in (filter (`notElem` omitted) inArgs, omitted)
 
 -- | "Out" arguments for the given callable on the Haskell side.
@@ -555,9 +610,9 @@ callableHOutArgs callable =
     in filter (`notElem` (arrayLengths callable)) outArgs
 
 -- | Convert the result of the foreign call to Haskell.
-convertResult :: Callable -> Text -> Bool -> Map.Map Text Text ->
+convertResult :: Name -> Callable -> Bool -> Map.Map Text Text ->
                  ExcCodeGen Text
-convertResult callable symbol ignoreReturn nameMap =
+convertResult n callable ignoreReturn nameMap =
     if ignoreReturn || returnType callable == Nothing
     then return (error "convertResult: unreachable code reached, bug!")
     else do
@@ -571,7 +626,7 @@ convertResult callable symbol ignoreReturn nameMap =
              return "maybeResult"
       else do
         when nullableReturnType $
-             line $ "checkUnexpectedReturnNULL \"" <> symbol
+             line $ "checkUnexpectedReturnNULL \"" <> lowerName n
                       <> "\" result"
         unwrappedConvertResult "result"
 
@@ -625,13 +680,12 @@ convertOutArg callable nameMap arg = do
                          line $ "return " <> wrapped
                      return $ "maybe" <> ucFirst aname')
       t -> do
-          weAlloc <- isJust <$> requiresAlloc t
-          peeked <- if weAlloc || argCallerAllocates arg
+          peeked <- if argCallerAllocates arg
                    then return inName
                    else genConversion inName $ apply $ M "peek"
           -- If we alloc we always take control of the resulting
           -- memory, otherwise we may leak.
-          let transfer' = if weAlloc || argCallerAllocates arg
+          let transfer' = if argCallerAllocates arg
                          then TransferEverything
                          else transfer arg
           result <- do
@@ -656,7 +710,8 @@ convertOutArgs callable nameMap hOutArgs =
     forM hOutArgs (convertOutArg callable nameMap)
 
 -- | Invoke the given C function, taking care of errors.
-invokeCFunction :: Callable -> Text -> Bool -> Bool -> [Text] -> CodeGen ()
+invokeCFunction :: Callable -> ForeignSymbol -> Bool -> Bool -> [Text] ->
+                   CodeGen ()
 invokeCFunction callable symbol throwsGError ignoreReturn argNames = do
   let returnBind = case returnType callable of
                      Nothing -> ""
@@ -666,8 +721,12 @@ invokeCFunction callable symbol throwsGError ignoreReturn argNames = do
       maybeCatchGErrors = if throwsGError
                           then "propagateGError $ "
                           else ""
+      call = case symbol of
+               KnownForeignSymbol s -> s
+               DynamicForeignSymbol w -> parenthesize (dynamicWrapper w
+                                                      <> " " <> funPtr)
   line $ returnBind <> maybeCatchGErrors
-           <> symbol <> (T.concat . map (" " <>)) argNames
+           <> call <> (T.concat . map (" " <>)) argNames
 
 -- | Return the result of the call, possibly including out arguments.
 returnResult :: Callable -> Bool -> Text -> [Text] -> CodeGen ()
@@ -682,21 +741,29 @@ returnResult callable ignoreReturn result pps =
         _  -> line $ "return (" <> T.intercalate ", " (result : pps) <> ")"
 
 -- | Generate a Haskell wrapper for the given foreign function.
-genHaskellWrapper :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
-genHaskellWrapper n symbol callable throwsGError = group $ do
-    let name = lowerName n
-        (hInArgs, omitted) = callableHInArgs callable
+genHaskellWrapper :: Name -> ForeignSymbol -> Callable -> Bool ->
+                     ExposeClosures -> ExcCodeGen Text
+genHaskellWrapper n symbol callable throwsGError expose = group $ do
+    let name = case symbol of
+                 KnownForeignSymbol _ -> lowerName n
+                 DynamicForeignSymbol _ -> callbackDynamicWrapper (upperName n)
+        (hInArgs, omitted) = callableHInArgs callable expose
         hOutArgs = callableHOutArgs callable
         ignoreReturn = skipRetVal callable throwsGError
 
     line $ name <> " ::"
-    formatHSignature callable ignoreReturn
-    line $ name <> " " <> T.intercalate " " (map escapedArgName hInArgs) <> " = liftIO $ do"
+    formatHSignature callable symbol ignoreReturn
+    let argNames = case symbol of
+                     KnownForeignSymbol _ -> map escapedArgName hInArgs
+                     DynamicForeignSymbol _ ->
+                         funPtr : map escapedArgName hInArgs
+    line $ name <> " " <> T.intercalate " " argNames <> " = liftIO $ do"
     indent (genWrapperBody n symbol callable throwsGError
                            ignoreReturn hInArgs hOutArgs omitted)
+    return name
 
 -- | Generate the body of the Haskell wrapper for the given foreign symbol.
-genWrapperBody :: Name -> Text -> Callable -> Bool ->
+genWrapperBody :: Name -> ForeignSymbol -> Callable -> Bool ->
                   Bool -> [Arg] -> [Arg] -> [Arg] ->
                   ExcCodeGen ()
 genWrapperBody n symbol callable throwsGError
@@ -715,7 +782,7 @@ genWrapperBody n symbol callable throwsGError
             invokeCFunction callable symbol throwsGError
                             ignoreReturn inArgNames
             readOutArrayLengths callable nameMap
-            result <- convertResult callable symbol ignoreReturn nameMap
+            result <- convertResult n callable ignoreReturn nameMap
             pps <- convertOutArgs callable nameMap hOutArgs
             freeCallCallbacks callable nameMap
             forM_ (args callable) touchInArg
@@ -733,7 +800,7 @@ genWrapperBody n symbol callable throwsGError
         invokeCFunction callable symbol throwsGError
                         ignoreReturn inArgNames
         readOutArrayLengths callable nameMap
-        result <- convertResult callable symbol ignoreReturn nameMap
+        result <- convertResult n callable ignoreReturn nameMap
         pps <- convertOutArgs callable nameMap hOutArgs
         freeCallCallbacks callable nameMap
         forM_ (args callable) touchInArg
@@ -742,23 +809,27 @@ genWrapperBody n symbol callable throwsGError
 
 -- | caller-allocates arguments are arguments that the caller
 -- allocates, and the called function modifies. They are marked as
--- 'out' argumens in the introspection data, we treat them as 'inout'
--- arguments instead. The semantics are somewhat tricky: for memory
--- management purposes they should be treated as "in" arguments, but
--- from the point of view of the exposed API they should be treated as
--- "inout". Unfortunately we cannot always just assume that they are
--- purely "out", so in many cases the generated API is somewhat
--- suboptimal (since the initial values are not important): for
--- example for g_io_channel_read_chars the size of the buffer to read
--- is determined by the caller-allocates argument. As a compromise, we
--- assume that we can allocate anything that is not a TCArray.
+-- 'out' argumens in the introspection data, we sometimes treat them
+-- as 'inout' arguments instead. The semantics are somewhat tricky:
+-- for memory management purposes they should be treated as "in"
+-- arguments, but from the point of view of the exposed API they
+-- should be treated as "out" or "inout". Unfortunately we cannot
+-- always just assume that they are purely "out", so in many cases the
+-- generated API is somewhat suboptimal (since the initial values are
+-- not important): for example for g_io_channel_read_chars the size of
+-- the buffer to read is determined by the caller-allocates
+-- argument. As a compromise, we assume that we can allocate anything
+-- that is not a TCArray of length determined by an argument.
 fixupCallerAllocates :: Callable -> Callable
 fixupCallerAllocates c =
-    c{args = map (fixupLength . fixupArg . normalize) (args c)}
-    where fixupArg :: Arg -> Arg
-          fixupArg a = if argCallerAllocates a
-                       then a {direction = DirectionInout}
-                       else a
+    c{args = map (fixupLength . fixupDir) (args c)}
+    where fixupDir :: Arg -> Arg
+          fixupDir a = case argType a of
+                         TCArray _ _ l _ ->
+                             if argCallerAllocates a && l > -1
+                             then a {direction = DirectionInout}
+                             else a
+                         _ -> a
 
           lengthsMap :: Map.Map Arg Arg
           lengthsMap = Map.fromList (map swap (arrayLengthsMap c))
@@ -773,30 +844,72 @@ fixupCallerAllocates c =
                                 then a {direction = DirectionIn}
                                 else a
 
-          -- We impose that out or inout arguments of non-array type
-          -- are never caller-allocates.
-          normalize :: Arg -> Arg
-          normalize (a@Arg{argType = TCArray _ _ _ _}) = a
-          normalize a = a {argCallerAllocates = False}
+-- | The foreign symbol to wrap. It is either a foreign symbol wrapped
+-- in a foreign import, in which case we are given the name of the
+-- Haskell wrapper, or alternatively the information about a "dynamic"
+-- wrapper in scope.
+data ForeignSymbol = KnownForeignSymbol Text -- ^ Haskell symbol in scope.
+                   | DynamicForeignSymbol DynamicWrapper
+                     -- ^ Info about the dynamic wrapper.
 
-genCallable :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
-genCallable n symbol callable throwsGError = do
+-- | Information about a dynamic wrapper.
+data DynamicWrapper = DynamicWrapper {
+      dynamicWrapper :: Text    -- ^ Haskell dynamic wrapper
+    , dynamicType    :: Text    -- ^ Name of the type synonym for the
+                                -- type of the function to be wrapped.
+    }
+
+-- | Some debug info for the callable.
+genCallableDebugInfo :: Callable -> Bool -> CodeGen ()
+genCallableDebugInfo callable throwsGError =
     group $ do
-        line $ "-- Args : " <> (tshow $ args callable)
-        line $ "-- Lengths : " <> (tshow $ arrayLengths callable)
-        line $ "-- returnType : " <> (tshow $ returnType callable)
-        line $ "-- throws : " <> (tshow throwsGError)
-        line $ "-- Skip return : " <> (tshow $ skipReturn callable)
-        when (skipReturn callable && returnType callable /= Just (TBasicType TBoolean)) $
-             do line "-- XXX return value ignored, but it is not a boolean."
-                line "--     This may be a memory leak?"
+      line $ "-- Args : " <> (tshow $ args callable)
+      line $ "-- Lengths : " <> (tshow $ arrayLengths callable)
+      line $ "-- returnType : " <> (tshow $ returnType callable)
+      line $ "-- throws : " <> (tshow throwsGError)
+      line $ "-- Skip return : " <> (tshow $ skipReturn callable)
+      when (skipReturn callable && returnType callable /= Just (TBasicType TBoolean)) $
+           do line "-- XXX return value ignored, but it is not a boolean."
+              line "--     This may be a memory leak?"
 
-    let callable' = fixupCallerAllocates callable
+-- | Generate a wrapper for a known C symbol.
+genCCallableWrapper :: Name -> Text -> Callable -> Bool -> ExcCodeGen ()
+genCCallableWrapper n cSymbol callable throwsGError = do
+  genCallableDebugInfo callable throwsGError
 
-    mkForeignImport symbol callable' throwsGError
+  let callable' = fixupCallerAllocates callable
 
-    blank
+  hSymbol <- mkForeignImport cSymbol callable' throwsGError
 
-    line $ deprecatedPragma (lowerName n) (callableDeprecated callable)
-    exportMethod (lowerName n) (lowerName n)
-    genHaskellWrapper n symbol callable' throwsGError
+  blank
+
+  line $ deprecatedPragma (lowerName n) (callableDeprecated callable)
+  void (genHaskellWrapper n (KnownForeignSymbol hSymbol) callable'
+                          throwsGError WithoutClosures)
+
+-- | For callbacks we do not need to keep track of which arguments are
+-- closures.
+forgetClosures :: Callable -> Callable
+forgetClosures c = c {args = map forgetClosure (args c)}
+    where forgetClosure :: Arg -> Arg
+          forgetClosure arg = arg {argClosure = -1}
+
+-- | Generate a wrapper for a dynamic C symbol (i.e. a Haskell
+-- function that will invoke its first argument, which should be a
+-- `FunPtr` of the appropriate type). The caller should have created a
+-- type synonym with the right type for the foreign symbol.
+genDynamicCallableWrapper :: Name -> Text -> Callable -> Bool ->
+                             ExcCodeGen Text
+genDynamicCallableWrapper n typeSynonym callable throwsGError = do
+  genCallableDebugInfo callable throwsGError
+
+  let callable' = forgetClosures (fixupCallerAllocates callable)
+
+  wrapper <- mkDynamicImport typeSynonym
+
+  blank
+
+  let dyn = DynamicWrapper { dynamicWrapper = wrapper
+                           , dynamicType    = typeSynonym }
+  genHaskellWrapper n (DynamicForeignSymbol dyn) callable'
+                    throwsGError WithClosures

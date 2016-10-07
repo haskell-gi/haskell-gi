@@ -11,7 +11,6 @@ import Control.Applicative ((<$>), (<*>))
 #endif
 
 import Control.Monad (when)
-import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 
@@ -226,20 +225,14 @@ freeOut label = return ["freeMem " <> label]
 -- transfer semantics of the callable).
 freeInArg :: Arg -> Text -> Text -> ExcCodeGen [Text]
 freeInArg arg label len = do
-  weAlloc <- isJust <$> requiresAlloc (argType arg)
   -- Arguments that we alloc ourselves do not need to be freed, they
   -- will always be soaked up by the wrapPtr constructor, or they will
   -- be DirectionIn.
-  if not weAlloc
+  if not (argCallerAllocates arg)
   then case direction arg of
          DirectionIn -> freeIn (transfer arg) (argType arg) label len
          DirectionOut -> freeOut label
-         DirectionInout ->
-             -- Caller-allocates arguments are like "in" arguments for
-             -- memory management purposes.
-             if argCallerAllocates arg
-             then freeIn (transfer arg) (argType arg) label len
-             else freeOut label
+         DirectionInout -> freeOut label
   else return []
 
 -- | Same thing as freeInArg, but called in case the call to C didn't

@@ -11,6 +11,15 @@ module Data.GI.CodeGen.SymbolNaming
     , hyphensToCamelCase
     , underscoresToCamelCase
 
+    , callbackCType
+    , callbackHTypeWithClosures
+    , callbackDropClosures
+    , callbackDynamicWrapper
+    , callbackWrapperAllocator
+    , callbackHaskellToForeign
+    , callbackHaskellToForeignWithClosures
+    , callbackClosureGenerator
+
     , submoduleLocation
     , qualifiedAPI
     , qualifiedSymbol
@@ -24,7 +33,7 @@ import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Code (CodeGen, ModuleName, group, line, exportDecl,
                              qualified, getAPI)
 import Data.GI.CodeGen.Type (Type(TInterface))
-import Data.GI.CodeGen.Util (lcFirst, ucFirst)
+import Data.GI.CodeGen.Util (lcFirst, ucFirst, modifyQualified)
 
 -- | Return a qualified form of the constraint for the given name
 -- (which should correspond to a valid `TInterface`).
@@ -36,6 +45,49 @@ classConstraint n@(Name _ s) = qualifiedSymbol ("Is" <> s) n
 typeConstraint :: Type -> CodeGen Text
 typeConstraint (TInterface ns s) = classConstraint (Name ns s)
 typeConstraint t = error $ "Class constraint for non-interface type: " <> show t
+
+-- | Foreign type associated with a callback type. It can be passed in
+-- qualified.
+callbackCType :: Text -> Text
+callbackCType = modifyQualified ("C_" <>)
+
+-- | Haskell type exposing the closure arguments, which are generally
+-- elided.
+callbackHTypeWithClosures :: Text -> Text
+callbackHTypeWithClosures = modifyQualified (<> "_WithClosures")
+
+-- | The name of the dynamic wrapper for the given callback type. It
+-- can be passed in qualified.
+callbackDynamicWrapper :: Text -> Text
+callbackDynamicWrapper = modifyQualified ("dynamic_" <>)
+
+-- | The name of the Haskell to foreign wrapper for the given callback
+-- type. It can be passed in qualified.
+callbackHaskellToForeign :: Text -> Text
+callbackHaskellToForeign = modifyQualified ("wrap_" <>)
+
+-- | The name of the Haskell to foreign wrapper for the given callback
+-- type, keeping the closure arguments (we usually elide them). The
+-- callback type can be passed in qualified.
+callbackHaskellToForeignWithClosures :: Text -> Text
+callbackHaskellToForeignWithClosures = modifyQualified ("with_closures_" <>)
+
+-- | The name of a function which takes a callback without closure
+-- arguments, and generates a function which does accep the closures,
+-- but simply ignores them.
+callbackDropClosures :: Text -> Text
+callbackDropClosures = modifyQualified ("drop_closures_" <>)
+
+-- | The name for the foreign wrapper allocator (@foreign import
+-- "wrapper" ...@) for the given callback type. It can be passed in
+-- qualified.
+callbackWrapperAllocator :: Text -> Text
+callbackWrapperAllocator = modifyQualified ("mk_" <>)
+
+-- | The name for the closure generator for the given callback
+-- type. It can be passed in qualified.
+callbackClosureGenerator :: Text -> Text
+callbackClosureGenerator = modifyQualified ("genClosure_" <>)
 
 -- | Move leading underscores to the end (for example in
 -- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)

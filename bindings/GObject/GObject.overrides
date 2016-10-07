@@ -6,6 +6,13 @@ ignore signal_set_va_marshaller
 # The semantics for the DirectionIn pointer here are somewhat ambiguous.
 ignore ClosureMarshal
 
+# Requires support for non-GObject objects, which we do not support.
+ignore TypePluginClass
+
+# Wrong introspection data.
+set-attr GObject/signal_emitv/@parameters/return_value caller-allocates 1
+set-attr GObject/signal_emitv/@parameters/return_value direction out
+
 # Generated from gobject 2.48.0 with xsltproc Nullable.xslt GObject-2.0.gir
 set-attr GObject/BindingTransformFunc/@parameters/user_data nullable 1
 set-attr GObject/CClosure/marshal_BOOLEAN__BOXED_BOXED/@parameters/invocation_hint nullable 1

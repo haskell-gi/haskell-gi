@@ -71,7 +71,7 @@ testConstructible = do
                  error $ "Unexpected RGBA: " <> show s
     -- We could also use "_red" here, but this serves as a test of the
     -- namespaced attributes.
-    rgba `get` Gdk.rGBARed >>=
+    rgba `get` Gdk.rGBA_red >>=
          -- Here it is fine to compare doubles for equality, since we
          -- want to make sure that the roundtripping does not introduce
          -- errors.

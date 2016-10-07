@@ -9,6 +9,7 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM, forM_, when, unless)
 
+import Data.Maybe (catMaybes)
 import Data.Monoid ((<>))
 import Data.Typeable (typeOf)
 import Data.Bool (bool)
@@ -18,21 +19,29 @@ import Data.Text (Text)
 import Text.Show.Pretty (ppShow)
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Callable (hOutType, arrayLengths, wrapMaybe, fixupCallerAllocates)
+import Data.GI.CodeGen.Callable (hOutType, wrapMaybe,
+                                 fixupCallerAllocates,
+                                 genDynamicCallableWrapper, ExposeClosures(..),
+                                 callableHInArgs, callableHOutArgs)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Transfer (freeContainerType)
 import Data.GI.CodeGen.Type
-import Data.GI.CodeGen.Util (parenthesize, withComment, tshow, terror, ucFirst, lcFirst,
-                prime)
+import Data.GI.CodeGen.Util (parenthesize, withComment, tshow, terror,
+                             ucFirst, prime)
 
 -- The prototype of the callback on the Haskell side (what users of
 -- the binding will see)
-genHaskellCallbackPrototype :: Text -> Callable -> Text -> [Arg] -> [Arg] ->
+genHaskellCallbackPrototype :: Text -> Callable -> Text -> ExposeClosures ->
                                ExcCodeGen ()
-genHaskellCallbackPrototype subsec cb name' hInArgs hOutArgs = do
-  group $ do
+genHaskellCallbackPrototype subsec cb htype expose = group $ do
+    let name' = case expose of
+                  WithClosures -> callbackHTypeWithClosures htype
+                  WithoutClosures -> htype
+        (hInArgs, _) = callableHInArgs cb expose
+        hOutArgs = callableHOutArgs cb
+
     exportSignal subsec name'
     line $ "type " <> name' <> " ="
     indent $ do
@@ -44,16 +53,16 @@ genHaskellCallbackPrototype subsec cb name' hInArgs hOutArgs = do
       ret <- hOutType cb hOutArgs False
       line $ tshow $ io ret
 
-  -- For optional parameters, in case we want to pass Nothing.
-  group $ do
+    -- For optional parameters, in case we want to pass Nothing.
     exportSignal subsec ("no" <> name')
     line $ "no" <> name' <> " :: Maybe " <> name'
     line $ "no" <> name' <> " = Nothing"
 
--- Prototype of the callback on the C side
-genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen ()
+-- | Generate the type synonym for the prototype of the callback on
+-- the C side. Returns the name given to the type synonym.
+genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen Text
 genCCallbackPrototype subsec cb name' isSignal = group $ do
-    let ctypeName = name' <> "C"
+    let ctypeName = callbackCType name'
     exportSignal subsec ctypeName
 
     line $ "type " <> ctypeName <> " ="
@@ -70,29 +79,46 @@ genCCallbackPrototype subsec cb name' isSignal = group $ do
                       Nothing -> return $ typeOf ()
                       Just t -> foreignType t
       line $ tshow ret
+    return ctypeName
 
 -- Generator for wrappers callable from C
 genCallbackWrapperFactory :: Text -> Text -> CodeGen ()
-genCallbackWrapperFactory subsec name' =
-  group $ do
-    let factoryName = "mk" <> name'
+genCallbackWrapperFactory subsec name' = group $ do
+    let factoryName = callbackWrapperAllocator name'
     line "foreign import ccall \"wrapper\""
-    indent $ line $ factoryName <> " :: "
-               <> name' <> "C -> IO (FunPtr " <> name' <> "C)"
+    indent $ line $ factoryName <> " :: " <> callbackCType name'
+               <> " -> IO (FunPtr " <> callbackCType name' <> ")"
     exportSignal subsec factoryName
 
--- Generator of closures
-genClosure :: Text -> Text -> Text -> Bool -> CodeGen ()
-genClosure subsec callback closure isSignal = do
+-- | Wrap the Haskell `cb` callback into a foreign function of the
+-- right type. Returns the name of the wrapped value.
+genWrappedCallback :: Callable -> Text -> Text -> Bool -> CodeGen Text
+genWrappedCallback cb cbArg callback isSignal = do
+  drop <- if callableHasClosures cb
+          then do
+            let arg' = prime cbArg
+            line $ "let " <> arg' <> " = "
+                     <> callbackDropClosures callback <> " " <> cbArg
+            return arg'
+          else return cbArg
+  line $ "let " <> prime drop <> " = " <> callbackHaskellToForeign callback <>
+       if isSignal
+       then " " <> drop
+       else " Nothing " <> drop
+  return (prime drop)
+
+-- | Generator of closures
+genClosure :: Text -> Callable -> Text -> Text -> Bool -> CodeGen ()
+genClosure subsec cb callback name isSignal = group $ do
+  let closure = callbackClosureGenerator name
   exportSignal subsec closure
   group $ do
       line $ closure <> " :: " <> callback <> " -> IO Closure"
-      line $ closure <> " cb = newCClosure =<< mk" <> callback <> " wrapped"
-      indent $
-         line $ "where wrapped = " <> lcFirst callback <> "Wrapper " <>
-              if isSignal
-              then "cb"
-              else "Nothing cb"
+      line $ closure <> " cb = do"
+      indent $ do
+            wrapped <- genWrappedCallback cb "cb" callback isSignal
+            line $ callbackWrapperAllocator callback <> " " <> wrapped
+                     <> " >>= newCClosure"
 
 -- Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.
@@ -176,30 +202,51 @@ saveOutArg arg = do
             else convert name' $ hToF (argType arg) TransferEverything
   line $ "poke " <> name <> " " <> name''
 
+-- | A simple wrapper that drops every closure argument.
+genDropClosures :: Text -> Callable -> Text -> CodeGen ()
+genDropClosures subsec cb name' = group $ do
+  let dropper = callbackDropClosures name'
+      (inWithClosures, _) = callableHInArgs cb WithClosures
+      (inWithoutClosures, _) = callableHInArgs cb WithoutClosures
+      passOrIgnore = \arg -> if arg `elem` inWithoutClosures
+                             then Just (escapedArgName arg)
+                             else Nothing
+      argNames = map (maybe "_" id . passOrIgnore) inWithClosures
+
+  exportSignal subsec dropper
+
+  line $ dropper <> " :: " <> name' <> " -> " <> callbackHTypeWithClosures name'
+  line $ dropper <> " _f " <> T.unwords argNames <> " = _f "
+           <> T.unwords (catMaybes (map passOrIgnore inWithClosures))
+
 -- The wrapper itself, marshalling to and from Haskell. The first
 -- argument is possibly a pointer to a FunPtr to free (via
 -- freeHaskellFunPtr) once the callback is run once, or Nothing if the
 -- FunPtr will be freed by someone else (the function registering the
 -- callback for ScopeTypeCall, or a destroy notifier for
 -- ScopeTypeNotified).
-genCallbackWrapper :: Text -> Callable -> Text -> [Arg] -> [Arg] -> [Arg] ->
-                      Bool -> ExcCodeGen ()
-genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
-  let cName arg = if arg `elem` dataptrs
-                  then "_"
-                  else escapedArgName arg
-      cArgNames = map cName (args cb)
-      wrapperName = lcFirst name' <> "Wrapper"
+genCallbackWrapper :: Text -> Callable -> Text -> Bool -> ExcCodeGen ()
+genCallbackWrapper subsec cb name' isSignal = group $ do
+  let wrapperName = callbackHaskellToForeign name'
+      (hInArgs, _) = callableHInArgs cb WithClosures
+      hOutArgs = callableHOutArgs cb
 
   exportSignal subsec wrapperName
 
   group $ do
     line $ wrapperName <> " ::"
     indent $ do
-      unless isSignal $
-           line $ "Maybe (Ptr (FunPtr (" <> name' <> "C))) ->"
-      line $ name' <> " ->"
-      when isSignal $ line "Ptr () ->"
+      if isSignal
+      then do
+        line $ name' <> " ->"
+        line "Ptr () ->"
+      else do
+           line $ "Maybe (Ptr (FunPtr " <> callbackCType name' <> ")) ->"
+           let hType = if callableHasClosures cb
+                       then callbackHTypeWithClosures name'
+                       else name'
+           line $ hType <> " ->"
+
       forM_ (args cb) $ \arg -> do
         ht <- foreignType $ argType arg
         let ht' = if direction arg /= DirectionIn
@@ -212,7 +259,8 @@ genCallbackWrapper subsec cb name' dataptrs hInArgs hOutArgs isSignal = do
                       Just t -> foreignType t
       line $ tshow ret
 
-    let allArgs = if isSignal
+    let cArgNames = map escapedArgName (args cb)
+        allArgs = if isSignal
                   then T.unwords $ ["_cb", "_"] <> cArgNames <> ["_"]
                   else T.unwords $ ["funptrptr", "_cb"] <> cArgNames
     line $ wrapperName <> " " <> allArgs <> " = do"
@@ -251,15 +299,7 @@ genCallback :: Name -> Callback -> CodeGen ()
 genCallback n (Callback cb) = do
   let name' = upperName n
   line $ "-- callback " <> name'
-
-  let -- user_data pointers, which we generically omit
-      dataptrs = map (args cb !!) . filter (/= -1) . map argClosure $ args cb
-      hidden = dataptrs <> arrayLengths cb
-
-      inArgs = filter ((/= DirectionOut) . direction) $ args cb
-      hInArgs = filter (not . (`elem` hidden)) inArgs
-      outArgs = filter ((/= DirectionIn) . direction) $ args cb
-      hOutArgs = filter (not . (`elem` hidden)) outArgs
+  line $ "--          -> " <> tshow (fixupCallerAllocates cb)
 
   if skipReturn cb
   then group $ do
@@ -267,17 +307,22 @@ genCallback n (Callback cb) = do
     line $ "-- Callbacks skipping return unsupported :\n"
              <> T.pack (ppShow n) <> "\n" <> T.pack (ppShow cb)
   else do
-    let closure = lcFirst name' <> "Closure"
-        cb' = fixupCallerAllocates cb
+    let cb' = fixupCallerAllocates cb
 
     handleCGExc (\e -> line ("-- XXX Could not generate callback wrapper for "
                              <> name' <>
-                             "\n-- Error was : " <> describeCGError e))
-       (genClosure name' name' closure False >>
-        genCCallbackPrototype name' cb' name' False >>
-        genCallbackWrapperFactory name' name' >>
-        genHaskellCallbackPrototype name' cb' name' hInArgs hOutArgs >>
-        genCallbackWrapper name' cb' name' dataptrs hInArgs hOutArgs False)
+                             "\n-- Error was : " <> describeCGError e)) $ do
+      genClosure name' cb' name' name' False
+      typeSynonym <- genCCallbackPrototype name' cb' name' False
+      dynamic <- genDynamicCallableWrapper n typeSynonym cb False
+      exportSignal name' dynamic
+      genCallbackWrapperFactory name' name'
+      line $ deprecatedPragma name' (callableDeprecated cb')
+      genHaskellCallbackPrototype name' cb' name' WithoutClosures
+      when (callableHasClosures cb') $ do
+           genHaskellCallbackPrototype name' cb' name' WithClosures
+           genDropClosures name' cb' name'
+      genCallbackWrapper name' cb' name' False
 
 -- | Return the name for the signal in Haskell CamelCase conventions.
 signalHaskellName :: Text -> Text
@@ -290,24 +335,20 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
 
   line $ "-- signal " <> on' <> "::" <> sn
 
-  let inArgs = filter ((/= DirectionOut) . direction) $ args cb
-      hInArgs = filter (not . (`elem` arrayLengths cb)) inArgs
-      outArgs = filter ((/= DirectionIn) . direction) $ args cb
-      hOutArgs = filter (not . (`elem` arrayLengths cb)) outArgs
-      sn' = signalHaskellName (sn)
+  let sn' = signalHaskellName (sn)
       signalConnectorName = on' <> ucFirst sn'
       cbType = signalConnectorName <> "Callback"
 
-  genHaskellCallbackPrototype (ucFirst sn') cb cbType hInArgs hOutArgs
+  line $ deprecatedPragma cbType (callableDeprecated cb)
+  genHaskellCallbackPrototype (ucFirst sn') cb cbType WithoutClosures
 
-  genCCallbackPrototype (ucFirst sn') cb cbType True
+  _ <- genCCallbackPrototype (ucFirst sn') cb cbType True
 
   genCallbackWrapperFactory (ucFirst sn') cbType
 
-  let closure = lcFirst signalConnectorName <> "Closure"
-  genClosure (ucFirst sn') cbType closure True
+  genClosure (ucFirst sn') cb cbType signalConnectorName True
 
-  genCallbackWrapper (ucFirst sn') cb cbType [] hInArgs hOutArgs True
+  genCallbackWrapper (ucFirst sn') cb cbType True
 
   -- Wrapper for connecting functions to the signal
   -- We can connect to a signal either before the default handler runs
@@ -337,5 +378,7 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
     line $ T.replicate (4 + T.length fullName) " " <> signatureArgs
     line $ fullName <> " obj cb after = liftIO $ do"
     indent $ do
-        line $ "cb' <- mk" <> cbType <> " (" <> lcFirst cbType <> "Wrapper cb)"
-        line $ "connectSignalFunPtr obj \"" <> sn <> "\" cb' after"
+        cb' <- genWrappedCallback cb "cb" cbType True
+        let cb'' = prime cb'
+        line $ cb'' <> " <- " <> callbackWrapperAllocator cbType <> " " <> cb'
+        line $ "connectSignalFunPtr obj \"" <> sn <> "\" " <> cb'' <> " after"

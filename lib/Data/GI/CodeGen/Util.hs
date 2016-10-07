@@ -8,6 +8,8 @@ module Data.GI.CodeGen.Util
   , ucFirst
   , lcFirst
 
+  , modifyQualified
+
   , tshow
   , terror
   ) where
@@ -46,3 +48,14 @@ ucFirst t = T.cons (toUpper $ T.head t) (T.tail t)
 lcFirst :: Text -> Text
 lcFirst "" = ""
 lcFirst t = T.cons (toLower $ T.head t) (T.tail t)
+
+-- | Apply the given modification function to the given symbol. If the
+-- symbol is qualified the modification will only apply to the last
+-- component.
+modifyQualified :: (Text -> Text) -> Text -> Text
+modifyQualified f = T.intercalate "." . modify . T.splitOn "."
+    where modify :: [Text] -> [Text]
+          modify [] = []
+          modify (a:[]) = f a : []
+          modify (a:as) = a : modify as
+

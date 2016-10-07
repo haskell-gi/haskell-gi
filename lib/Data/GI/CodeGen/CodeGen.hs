@@ -21,7 +21,7 @@ import Foreign.Storable (sizeOf)
 import Foreign.C (CUInt)
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Callable (genCallable)
+import Data.GI.CodeGen.Callable (genCCallableWrapper)
 import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.Constant (genConstant)
 import Data.GI.CodeGen.Code
@@ -39,7 +39,7 @@ import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
                   genWrappedPtr)
 import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName,
-                                     submoduleLocation)
+                                     submoduleLocation, lowerName)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -52,7 +52,10 @@ genFunction n (Function symbol throws fnMovedTo callable) =
         handleCGExc (\e -> line ("-- XXX Could not generate function "
                            <> symbol
                            <> "\n-- Error was : " <> describeCGError e))
-                        (genCallable n symbol callable throws)
+                        (do
+                          genCCallableWrapper n symbol callable throws
+                          exportMethod (lowerName n) (lowerName n)
+                        )
 
 genBoxedObject :: Name -> Text -> CodeGen ()
 genBoxedObject n typeInit = do
@@ -352,7 +355,8 @@ genMethod cn m@(Method {
         c'' = if OrdinaryMethod == t
               then fixMethodArgs cn c'
               else c'
-    genCallable mn' sym c'' throws
+    genCCallableWrapper mn' sym c'' throws
+    exportMethod (lowerName mn') (lowerName mn')
 
     cfg <- config
     when (cgOverloadedMethods (cgFlags cfg)) $

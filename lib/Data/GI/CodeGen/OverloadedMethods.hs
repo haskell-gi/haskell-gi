@@ -10,7 +10,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Callable (callableSignature, fixupCallerAllocates)
+import Data.GI.CodeGen.Callable (callableSignature, ForeignSymbol(..),
+                                 fixupCallerAllocates)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, qualifiedSymbol)
 import Data.GI.CodeGen.Util (ucFirst)
@@ -76,7 +77,8 @@ genMethodInfo n m =
       group $ do
         infoName <- methodInfoName n m
         let callable = fixupCallerAllocates (methodCallable m)
-        (constraints, types) <- callableSignature callable (methodThrows m)
+        (constraints, types) <- callableSignature callable
+                                (KnownForeignSymbol undefined) (methodThrows m)
         bline $ "data " <> infoName
         -- This should not happen, since ordinary methods always
         -- have the instance as first argument.
