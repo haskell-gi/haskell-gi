@@ -11,7 +11,7 @@ import Data.GI.Base.BasicTypes
 import Data.GI.Base.ManagedPtr (wrapBoxed)
 import Data.GI.Base.Utils (safeFreeFunPtrPtr)
 
-newtype Closure = Closure (ForeignPtr Closure)
+newtype Closure = Closure (ManagedPtr Closure)
 
 noClosure :: Maybe Closure
 noClosure = Nothing

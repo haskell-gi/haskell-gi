@@ -13,8 +13,8 @@ module Data.GI.Base.BasicTypes
       module Data.GI.Base.GType         -- reexported for convenience
 
      -- * Memory management
-
-    , ForeignPtrNewtype
+    , ManagedPtr(..)
+    , ManagedPtrNewtype
     , BoxedObject(..)
     , BoxedEnum(..)
     , BoxedFlags(..)
@@ -48,6 +48,7 @@ import Control.Applicative ((<$>))
 import Control.Exception (Exception, catch)
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Coerce (Coercible)
+import Data.IORef (IORef)
 import Data.Proxy (Proxy)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
@@ -60,21 +61,29 @@ import GHC.TypeLits
 
 import Data.GI.Base.GType
 
+-- | Thin wrapper over `ForeignPtr`, supporting the extra notion of
+-- `disowning`, that is, not running the finalizers associated with
+-- the foreign ptr.
+data ManagedPtr a = ManagedPtr {
+      managedForeignPtr :: ForeignPtr a
+    , managedPtrIsOwned :: IORef Bool
+    }
+
 -- | A constraint ensuring that the given type is coercible to a
--- ForeignPtr. It will hold for newtypes of the form
+-- ManagedPtr. It will hold for newtypes of the form
 --
--- > newtype Foo = Foo (ForeignPtr Foo)
+-- > newtype Foo = Foo (ManagedPtr Foo)
 --
 -- which is the typical shape of wrapped 'GObject's.
-type ForeignPtrNewtype a = Coercible a (ForeignPtr ())
--- Notice that the Coercible here is to ForeignPtr (), instead of
--- "ForeignPtr a", which would be the most natural thing. Both are
+type ManagedPtrNewtype a = Coercible a (ManagedPtr ())
+-- Notice that the Coercible here is to ManagedPtr (), instead of
+-- "ManagedPtr a", which would be the most natural thing. Both are
 -- representationally equivalent, so this is not a big deal. This is
 -- to work around a problem in ghc 7.10:
 -- https://ghc.haskell.org/trac/ghc/ticket/10715
 
 -- | Wrapped boxed structures, identified by their `GType`.
-class ForeignPtrNewtype a => BoxedObject a where
+class ManagedPtrNewtype a => BoxedObject a where
     boxedType :: a -> IO GType -- This should not use the value of its
                                -- argument.
 
@@ -87,7 +96,7 @@ class BoxedFlags a where
     boxedFlagsType :: Proxy a -> IO GType
 
 -- | Pointers to structs/unions without an associated `GType`.
-class ForeignPtrNewtype a => WrappedPtr a where
+class ManagedPtrNewtype a => WrappedPtr a where
     -- | Allocate a zero-initialized block of memory for the given type.
     wrappedPtrCalloc :: IO (Ptr a)
     -- | Make a copy of the given pointer.
@@ -98,7 +107,7 @@ class ForeignPtrNewtype a => WrappedPtr a where
     wrappedPtrFree   :: Maybe (FunPtr (Ptr a -> IO ()))
 
 -- | A wrapped `GObject`.
-class ForeignPtrNewtype a => GObject a where
+class ManagedPtrNewtype a => GObject a where
     -- | Whether the `GObject` is a descendent of <https://developer.gnome.org/gobject/stable/gobject-The-Base-Object-Type.html#GInitiallyUnowned GInitiallyUnowned>.
     gobjectIsInitiallyUnowned :: a -> Bool
     -- | The `GType` for this object.
@@ -114,7 +123,7 @@ class ForeignPtrNewtype a => GObject a where
 #if MIN_VERSION_base(4,9,0)
 instance {-# OVERLAPPABLE #-}
     (TypeError ('Text "Type ‘" ':<>: 'ShowType a ':<>:
-                'Text "’ does not descend from GObject."), ForeignPtrNewtype a)
+                'Text "’ does not descend from GObject."), ManagedPtrNewtype a)
     => GObject a where
     gobjectIsInitiallyUnowned = undefined
     gobjectType = undefined
@@ -164,10 +173,10 @@ instance NullToNothing (Maybe a) where
     nullToNothing = liftIO
 
 -- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "Data.GI.Base.GVariant" for further methods.
-newtype GVariant = GVariant (ForeignPtr GVariant)
+newtype GVariant = GVariant (ManagedPtr GVariant)
 
 -- | A <https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html GParamSpec>. See "Data.GI.Base.GParamSpec" for further methods.
-newtype GParamSpec = GParamSpec (ForeignPtr GParamSpec)
+newtype GParamSpec = GParamSpec (ManagedPtr GParamSpec)
 
 -- | An enum usable as a flag for a function.
 class Enum a => IsGFlag a

@@ -64,14 +64,13 @@ import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..),
                         CLong(..), CULong(..))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr, nullPtr)
-import Foreign.ForeignPtr (ForeignPtr)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions (cstringToText, textToCString)
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Utils (callocBytes, freeMem)
 
-newtype GValue = GValue (ForeignPtr GValue)
+newtype GValue = GValue (ManagedPtr GValue)
 
 noGValue :: Maybe GValue
 noGValue = Nothing

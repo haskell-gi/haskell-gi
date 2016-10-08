@@ -59,18 +59,20 @@ import Control.Applicative ((<$>))
 #endif
 
 import Foreign (poke, peek)
-import Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 import Foreign.Ptr (Ptr, plusPtr, nullPtr)
 import Foreign.C
 import Control.Exception
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Int
 import Data.Word
 
-import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..))
+import System.IO.Unsafe (unsafePerformIO)
+
+import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), ManagedPtr)
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
-import Data.GI.Base.ManagedPtr (wrapBoxed)
+import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr)
 import Data.GI.Base.Utils (allocMem, freeMem)
 
 #include <glib.h>
@@ -78,8 +80,14 @@ import Data.GI.Base.Utils (allocMem, freeMem)
 -- | A GError, consisting of a domain, code and a human readable
 -- message. These can be accessed by 'gerrorDomain', 'gerrorCode' and
 -- 'gerrorMessage' below.
-newtype GError = GError (ForeignPtr GError)
-    deriving (Typeable, Show)
+newtype GError = GError (ManagedPtr GError)
+    deriving (Typeable)
+
+instance Show GError where
+    show gerror = unsafePerformIO $ do
+                       code <- gerrorCode gerror
+                       message <- gerrorMessage gerror
+                       return $ T.unpack message ++ " (" ++ show code ++ ")"
 
 instance Exception GError
 
@@ -121,20 +129,20 @@ gerrorNew domain code message =
 -- textual representation can be obtained with
 -- `GI.GLib.quarkToString`.
 gerrorDomain :: GError -> IO GQuark
-gerrorDomain (GError fptr) =
-    withForeignPtr fptr $ \ptr ->
+gerrorDomain gerror =
+    withManagedPtr gerror $ \ptr ->
       peek $ ptr `plusPtr` #{offset GError, domain}
 
 -- | The numeric code for the given `GError`.
 gerrorCode :: GError -> IO GErrorCode
-gerrorCode (GError fptr) =
-    withForeignPtr fptr $ \ptr ->
+gerrorCode gerror =
+    withManagedPtr gerror $ \ptr ->
         peek $ ptr `plusPtr` #{offset GError, code}
 
 -- | A text message describing the `GError`.
 gerrorMessage :: GError -> IO GErrorMessage
-gerrorMessage (GError fptr) =
-    withForeignPtr fptr $ \ptr ->
+gerrorMessage gerror =
+    withManagedPtr gerror $ \ptr ->
       (peek $ ptr `plusPtr` #{offset GError, message}) >>= cstringToText
 
 -- | Each error domain's error enumeration type should be an instance of this

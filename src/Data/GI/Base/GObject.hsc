@@ -13,7 +13,7 @@ import Foreign
 
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
                                 attrConstruct)
-import Data.GI.Base.BasicTypes (GType(..), GObject(..))
+import Data.GI.Base.BasicTypes (GType(..), GObject(..), ManagedPtr)
 import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
@@ -26,7 +26,7 @@ foreign import ccall "dbg_g_object_newv" g_object_newv ::
 -- | Construct a GObject given the constructor and a list of settable
 -- attributes.
 constructGObject :: forall o m. (GObject o, MonadIO m)
-    => (ForeignPtr o -> o)
+    => (ManagedPtr o -> o)
     -> [AttrOp o 'AttrConstruct]
     -> m o
 constructGObject constructor attrs = liftIO $ do
@@ -43,7 +43,7 @@ constructGObject constructor attrs = liftIO $ do
 
 -- | Construct the `GObject` given the list of `GValueConstruct`s.
 doConstructGObject :: forall o m. (GObject o, MonadIO m)
-                      => (ForeignPtr o -> o) -> [GValueConstruct o] -> m o
+                      => (ManagedPtr o -> o) -> [GValueConstruct o] -> m o
 doConstructGObject constructor props = liftIO $ do
   let nprops = length props
   params <- mallocBytes (nprops*gparameterSize)
@@ -92,7 +92,7 @@ doConstructGObject constructor props = liftIO $ do
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.
 new' :: (MonadIO m, GObject o) =>
-        (ForeignPtr o -> o) -> [IO (GValueConstruct o)] -> m o
+        (ManagedPtr o -> o) -> [IO (GValueConstruct o)] -> m o
 new' constructor actions = do
   props <- liftIO $ sequence (actions)
   doConstructGObject constructor props

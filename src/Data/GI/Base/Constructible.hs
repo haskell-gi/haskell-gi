@@ -12,16 +12,15 @@ module Data.GI.Base.Constructible
     ( Constructible(..)
     ) where
 
-import Foreign (ForeignPtr)
 import Control.Monad.IO.Class (MonadIO)
 
 import Data.GI.Base.Attributes (AttrOp, AttrOpTag(..))
-import Data.GI.Base.BasicTypes (GObject)
+import Data.GI.Base.BasicTypes (GObject, ManagedPtr)
 import Data.GI.Base.GObject (constructGObject)
 
 -- | Constructible types, i.e. those which can be allocated by `new`.
 class Constructible a (tag :: AttrOpTag) where
-    new :: MonadIO m => (ForeignPtr a -> a) -> [AttrOp a tag] -> m a
+    new :: MonadIO m => (ManagedPtr a -> a) -> [AttrOp a tag] -> m a
 
 -- | Default instance, assuming we have a `GObject`.
 instance

@@ -90,7 +90,7 @@ import Data.GI.Base.GValue
 import Data.GI.Base.GVariant (newGVariantFromPtr)
 import Data.GI.Base.Utils (freeMem, convertIfNonNull)
 
-import Foreign (Ptr, ForeignPtr, Int32, Word32, Int64, Word64, nullPtr)
+import Foreign (Ptr, Int32, Word32, Int64, Word64, nullPtr)
 import Foreign.C (CString, withCString)
 import Foreign.C.Types (CInt, CUInt, CLong, CULong)
 
@@ -340,7 +340,7 @@ constructObjectPropertyObject propName maybeObject = do
       constructObjectProperty propName objectPtr set_object gtype
 
 getObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
-                           a -> String -> (ForeignPtr b -> b) -> IO (Maybe b)
+                           a -> String -> (ManagedPtr b -> b) -> IO (Maybe b)
 getObjectPropertyObject obj propName constructor = do
   gtype <- gobjectType (undefined :: b)
   getObjectProperty obj propName
@@ -363,7 +363,7 @@ constructObjectPropertyBoxed propName maybeBoxed = do
       constructObjectProperty propName boxedPtr set_boxed gtype
 
 getObjectPropertyBoxed :: forall a b. (GObject a, BoxedObject b) =>
-                          a -> String -> (ForeignPtr b -> b) -> IO (Maybe b)
+                          a -> String -> (ManagedPtr b -> b) -> IO (Maybe b)
 getObjectPropertyBoxed obj propName constructor = do
   gtype <- boxedType (undefined :: b)
   getObjectProperty obj propName (get_boxed >=>

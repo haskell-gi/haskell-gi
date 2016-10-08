@@ -8,10 +8,9 @@ module Data.GI.Base.GParamSpec
     ) where
 
 import Foreign.Ptr
-import Foreign.ForeignPtr (withForeignPtr)
 import Control.Monad (void)
 
-import Data.GI.Base.ManagedPtr (newManagedPtr)
+import Data.GI.Base.ManagedPtr (newManagedPtr', withManagedPtr)
 import Data.GI.Base.BasicTypes (GParamSpec(..))
 
 #include <glib-object.h>
@@ -32,20 +31,20 @@ foreign import ccall "&g_param_spec_unref" ptr_to_g_param_spec_unref ::
 wrapGParamSpecPtr :: Ptr GParamSpec -> IO GParamSpec
 wrapGParamSpecPtr ptr = do
   void $ g_param_spec_ref_sink ptr
-  fPtr <- newManagedPtr ptr_to_g_param_spec_unref ptr
+  fPtr <- newManagedPtr' ptr_to_g_param_spec_unref ptr
   return $! GParamSpec fPtr
 
 -- | Construct a Haskell wrapper for the given 'GParamSpec', without
 -- assuming ownership.
 newGParamSpecFromPtr :: Ptr GParamSpec -> IO GParamSpec
 newGParamSpecFromPtr ptr = do
-  fPtr <- g_param_spec_ref ptr >>= newManagedPtr ptr_to_g_param_spec_unref
+  fPtr <- g_param_spec_ref ptr >>= newManagedPtr' ptr_to_g_param_spec_unref
   return $! GParamSpec fPtr
 
 -- | Add a reference to the given 'GParamSpec'.
 refGParamSpec :: GParamSpec -> IO (Ptr GParamSpec)
-refGParamSpec (GParamSpec fptr) = withForeignPtr fptr g_param_spec_ref
+refGParamSpec ps = withManagedPtr ps g_param_spec_ref
 
 -- | Remove a reference to the given 'GParamSpec'.
 unrefGParamSpec :: GParamSpec -> IO ()
-unrefGParamSpec (GParamSpec fptr) = withForeignPtr fptr g_param_spec_unref
+unrefGParamSpec ps = withManagedPtr ps g_param_spec_unref

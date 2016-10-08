@@ -2,26 +2,25 @@
 -- For HasCallStack compatibility
 {-# LANGUAGE ImplicitParams, KindSignatures, ConstraintKinds #-}
 
--- | We wrap most objects in a "managed pointer", which is simply a
--- newtype for a 'ForeignPtr' of the appropriate type:
---
--- > newtype Foo = Foo (ForeignPtr Foo)
---
--- Notice that types of this form are instances of
--- 'ForeignPtrNewtype'. The newtype is useful in order to make the
--- newtype an instance of different typeclasses. The routines in this
--- module deal with the memory management of such managed pointers.
+-- | We wrap most objects in a "managed pointer", which is basically a
+-- 'ForeignPtr' of the appropriate type together with a notion of
+-- "disowning", which means not running the finalizers passed upon
+-- construction of the object upon garbage collection. The routines in
+-- this module deal with the memory management of such managed
+-- pointers.
 
 module Data.GI.Base.ManagedPtr
     (
     -- * Managed pointers
       newManagedPtr
+    , newManagedPtr'
     , withManagedPtr
     , maybeWithManagedPtr
     , withManagedPtrList
     , unsafeManagedPtrGetPtr
     , unsafeManagedPtrCastPtr
     , touchManagedPtr
+    , disownManagedPtr
 
     -- * Safe casting
     , castTo
@@ -48,11 +47,11 @@ import Control.Applicative ((<$>))
 import Control.Monad (when, void)
 
 import Data.Coerce (coerce)
+import Data.IORef (newIORef, readIORef, writeIORef, IORef)
 
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
-import Foreign.ForeignPtr (ForeignPtr, FinalizerPtr,
-                           touchForeignPtr, newForeignPtr_)
+import Foreign.ForeignPtr (FinalizerPtr, touchForeignPtr, newForeignPtr_)
 import qualified Foreign.Concurrent as FC
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
@@ -70,16 +69,45 @@ import GHC.Exts (Constraint)
 type HasCallStack = (() :: Constraint)
 #endif
 
+-- | Thin wrapper over `Foreign.Concurrent.newForeignPtr`.
+newManagedPtr :: Ptr a -> IO () -> IO (ManagedPtr a)
+newManagedPtr ptr finalizer = do
+  let ownedFinalizer :: IORef Bool -> IO ()
+      ownedFinalizer boolRef = do
+        owned <- readIORef boolRef
+        when owned finalizer
+  isOwnedRef <- newIORef True
+  fPtr <- FC.newForeignPtr ptr (ownedFinalizer isOwnedRef)
+  return $ ManagedPtr {
+               managedForeignPtr = fPtr
+             , managedPtrIsOwned = isOwnedRef
+             }
+
 foreign import ccall "dynamic"
    mkFinalizer :: FinalizerPtr a -> Ptr a -> IO ()
 
--- | A thin wrapper over `Foreign.Concurrent.newForeignPtr`.
-newManagedPtr :: FinalizerPtr a -> Ptr a -> IO (ForeignPtr a)
-newManagedPtr finalizer ptr = do
-  FC.newForeignPtr ptr (mkFinalizer finalizer ptr)
+-- | Version of `newManagedPtr` taking a `FinalizerPtr` and a
+-- corresponding `Ptr`, as in `Foreign.ForeignPtr.newForeignPtr`.
+newManagedPtr' :: FinalizerPtr a -> Ptr a -> IO (ManagedPtr a)
+newManagedPtr' finalizer ptr = newManagedPtr ptr (mkFinalizer finalizer ptr)
+
+-- | Thin wrapper over `Foreign.Concurrent.newForeignPtr_`.
+newManagedPtr_ :: Ptr a -> IO (ManagedPtr a)
+newManagedPtr_ ptr = do
+  isOwnedRef <- newIORef True
+  fPtr <- newForeignPtr_ ptr
+  return $ ManagedPtr {
+               managedForeignPtr = fPtr
+             , managedPtrIsOwned = isOwnedRef
+             }
+
+-- | Do not run the finalizers upon garbage collection of the `ManagedPtr`.
+disownManagedPtr :: forall a. ManagedPtrNewtype a => a -> IO ()
+disownManagedPtr managed = writeIORef isOwnedRef False
+    where isOwnedRef = managedPtrIsOwned (coerce managed :: ManagedPtr ())
 
 -- | Perform an IO action on the 'Ptr' inside a managed pointer.
-withManagedPtr :: ForeignPtrNewtype a => a -> (Ptr a -> IO c) -> IO c
+withManagedPtr :: ManagedPtrNewtype a => a -> (Ptr a -> IO c) -> IO c
 withManagedPtr managed action = do
   let ptr = unsafeManagedPtrGetPtr managed
   result <- action ptr
@@ -89,7 +117,7 @@ withManagedPtr managed action = do
 -- | Like `withManagedPtr`, but accepts a `Maybe` type. If the passed
 -- value is `Nothing` the inner action will be executed with a
 -- `nullPtr` argument.
-maybeWithManagedPtr :: ForeignPtrNewtype a => Maybe a -> (Ptr a -> IO c) -> IO c
+maybeWithManagedPtr :: ManagedPtrNewtype a => Maybe a -> (Ptr a -> IO c) -> IO c
 maybeWithManagedPtr Nothing action = action nullPtr
 maybeWithManagedPtr (Just managed) action = do
   let ptr = unsafeManagedPtrGetPtr managed
@@ -99,7 +127,7 @@ maybeWithManagedPtr (Just managed) action = do
 
 -- | Perform an IO action taking a list of 'Ptr' on a list of managed
 -- pointers.
-withManagedPtrList :: ForeignPtrNewtype a => [a] -> ([Ptr a] -> IO c) -> IO c
+withManagedPtrList :: ManagedPtrNewtype a => [a] -> ([Ptr a] -> IO c) -> IO c
 withManagedPtrList managedList action = do
   let ptrs = map unsafeManagedPtrGetPtr managedList
   result <- action ptrs
@@ -111,21 +139,22 @@ withManagedPtrList managedList action = do
 -- /before/ a call to 'touchManagedPtr'. This function is of most
 -- interest to the autogenerated bindings, for hand-written code
 -- 'withManagedPtr' is almost always a better choice.
-unsafeManagedPtrGetPtr :: ForeignPtrNewtype a => a -> Ptr a
+unsafeManagedPtrGetPtr :: ManagedPtrNewtype a => a -> Ptr a
 unsafeManagedPtrGetPtr = unsafeManagedPtrCastPtr
 
 -- | Same as 'unsafeManagedPtrGetPtr', but is polymorphic on the
 -- return type.
-unsafeManagedPtrCastPtr :: forall a b. ForeignPtrNewtype a => a -> Ptr b
-unsafeManagedPtrCastPtr x = let p = coerce x :: ForeignPtr ()
-                            in castPtr (unsafeForeignPtrToPtr p)
+unsafeManagedPtrCastPtr :: forall a b. ManagedPtrNewtype a => a -> Ptr b
+unsafeManagedPtrCastPtr m =
+    let c = coerce m :: ManagedPtr ()
+    in (castPtr . unsafeForeignPtrToPtr . managedForeignPtr) c
 
 -- | Ensure that the 'Ptr' in the given managed pointer is still alive
 -- (i.e. it has not been garbage collected by the runtime) at the
 -- point that this is called.
-touchManagedPtr :: forall a. ForeignPtrNewtype a => a -> IO ()
-touchManagedPtr x = let p = coerce x :: ForeignPtr ()
-                     in touchForeignPtr p
+touchManagedPtr :: forall a. ManagedPtrNewtype a => a -> IO ()
+touchManagedPtr m = let c = coerce m :: ManagedPtr ()
+                    in (touchForeignPtr . managedForeignPtr) c
 
 -- Safe casting machinery
 foreign import ccall unsafe "check_object_type"
@@ -136,7 +165,7 @@ foreign import ccall unsafe "check_object_type"
 --
 -- > maybeWidget <- castTo Widget label
 castTo :: forall o o'. (GObject o, GObject o') =>
-          (ForeignPtr o' -> o') -> o -> IO (Maybe o')
+          (ManagedPtr o' -> o') -> o -> IO (Maybe o')
 castTo constructor obj =
     withManagedPtr obj $ \objPtr -> do
       GType t <- gobjectType (undefined :: o')
@@ -147,7 +176,7 @@ castTo constructor obj =
 -- | Cast to the given type, assuming that the cast will succeed. This
 -- function will call `error` if the cast is illegal.
 unsafeCastTo :: forall o o'. (HasCallStack, GObject o, GObject o') =>
-                (ForeignPtr o' -> o') -> o -> IO o'
+                (ManagedPtr o' -> o') -> o -> IO o'
 unsafeCastTo constructor obj =
   withManagedPtr obj $ \objPtr -> do
     GType t <- gobjectType (undefined :: o')
@@ -168,10 +197,10 @@ foreign import ccall "g_object_ref" g_object_ref ::
 
 -- | Construct a Haskell wrapper for a 'GObject', increasing its
 -- reference count.
-newObject :: (GObject a, GObject b) => (ForeignPtr a -> a) -> Ptr b -> IO a
+newObject :: (GObject a, GObject b) => (ManagedPtr a -> a) -> Ptr b -> IO a
 newObject constructor ptr = do
   void $ g_object_ref ptr
-  fPtr <- newManagedPtr ptr_to_g_object_unref $ castPtr ptr
+  fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
@@ -199,11 +228,11 @@ foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
 -- floating (i.e. not descendents of GInitiallyUnowned) we simply take
 -- control of the reference.
 wrapObject :: forall a b. (GObject a, GObject b) =>
-              (ForeignPtr a -> a) -> Ptr b -> IO a
+              (ManagedPtr a -> a) -> Ptr b -> IO a
 wrapObject constructor ptr = do
   when (gobjectIsInitiallyUnowned (undefined :: a)) $
        void $ g_object_ref_sink ptr
-  fPtr <- newManagedPtr ptr_to_g_object_unref $ castPtr ptr
+  fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 -- | Increase the reference count of the given 'GObject'.
@@ -227,19 +256,19 @@ foreign import ccall "g_boxed_copy" g_boxed_copy ::
 
 -- | Construct a Haskell wrapper for the given boxed object. We make a
 -- copy of the object.
-newBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
+newBoxed :: forall a. BoxedObject a => (ManagedPtr a -> a) -> Ptr a -> IO a
 newBoxed constructor ptr = do
   GType gtype <- boxedType (undefined :: a)
   ptr' <- g_boxed_copy gtype ptr
-  fPtr <- FC.newForeignPtr ptr' (boxed_free_helper gtype ptr')
+  fPtr <- newManagedPtr ptr' (boxed_free_helper gtype ptr')
   return $! constructor fPtr
 
 -- | Like 'newBoxed', but we do not make a copy (we "steal" the passed
 -- object, so now it is managed by the Haskell runtime).
-wrapBoxed :: forall a. BoxedObject a => (ForeignPtr a -> a) -> Ptr a -> IO a
+wrapBoxed :: forall a. BoxedObject a => (ManagedPtr a -> a) -> Ptr a -> IO a
 wrapBoxed constructor ptr = do
   GType gtype <- boxedType (undefined :: a)
-  fPtr <- FC.newForeignPtr ptr (boxed_free_helper gtype ptr)
+  fPtr <- newManagedPtr ptr (boxed_free_helper gtype ptr)
   return $! constructor fPtr
 
 -- | Make a copy of the given boxed object.
@@ -265,20 +294,20 @@ freeBoxed boxed = do
   touchManagedPtr boxed
 
 -- | Wrap a pointer, taking ownership of it.
-wrapPtr :: WrappedPtr a => (ForeignPtr a -> a) -> Ptr a -> IO a
+wrapPtr :: WrappedPtr a => (ManagedPtr a -> a) -> Ptr a -> IO a
 wrapPtr constructor ptr = do
   fPtr <- case wrappedPtrFree of
-            Nothing -> newForeignPtr_ ptr
-            Just finalizer -> newManagedPtr finalizer ptr
+            Nothing -> newManagedPtr_ ptr
+            Just finalizer -> newManagedPtr' finalizer ptr
   return $! constructor fPtr
 
 -- | Wrap a pointer, making a copy of the data.
-newPtr :: WrappedPtr a => (ForeignPtr a -> a) -> Ptr a -> IO a
+newPtr :: WrappedPtr a => (ManagedPtr a -> a) -> Ptr a -> IO a
 newPtr constructor ptr = do
   ptr' <- wrappedPtrCopy ptr
   fPtr <- case wrappedPtrFree of
-            Nothing -> newForeignPtr_ ptr
-            Just finalizer -> newManagedPtr finalizer ptr'
+            Nothing -> newManagedPtr_ ptr
+            Just finalizer -> newManagedPtr' finalizer ptr'
   return $! constructor fPtr
 
 -- | Make a copy of a wrapped pointer using @memcpy@ into a freshly
