@@ -203,7 +203,7 @@ genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
    let name' = upperName n
 
-   let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+   let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
    hsBoot decl
    decl
 
@@ -246,7 +246,7 @@ genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
   let name' = upperName n
 
-  let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+  let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   hsBoot decl
   decl
 
@@ -411,7 +411,7 @@ genObject n o = do
   then line $ "-- APIObject \"" <> name' <>
                 "\" does not descend from GObject, it will be ignored."
   else do
-    bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+    bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
     exportDecl (name' <> "(..)")
 
     -- Type safe casting to parent objects, and implemented interfaces.
@@ -454,7 +454,7 @@ genInterface n iface = do
 
   line $ "-- interface " <> name' <> " "
   line $ deprecatedPragma name' $ ifDeprecated iface
-  bline $ "newtype " <> name' <> " = " <> name' <> " (ForeignPtr " <> name' <> ")"
+  bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   exportDecl (name' <> "(..)")
 
   noName name'
@@ -488,7 +488,7 @@ genInterface n iface = do
   else group $ do
     cls <- classConstraint n
     exportDecl cls
-    bline $ "class ForeignPtrNewtype a => " <> cls <> " a"
+    bline $ "class ManagedPtrNewtype a => " <> cls <> " a"
     line $ "instance " <> cls <> " " <> name'
 
   -- Methods

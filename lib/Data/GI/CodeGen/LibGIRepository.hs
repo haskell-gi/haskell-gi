@@ -18,16 +18,16 @@ import qualified Data.Text as T
 
 import Foreign.C.Types (CInt(..), CSize(..))
 import Foreign.C.String (CString)
-import Foreign (nullPtr, Ptr, ForeignPtr, FunPtr, peek)
+import Foreign (nullPtr, Ptr, FunPtr, peek)
 
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
-import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), CGType)
+import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), CGType, ManagedPtr)
 import Data.GI.Base.GError (GError, checkGError)
 import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr)
 import Data.GI.Base.Utils (allocMem, freeMem)
 
 -- | Wrapper for 'GIBaseInfo'
-newtype BaseInfo = BaseInfo (ForeignPtr BaseInfo)
+newtype BaseInfo = BaseInfo (ManagedPtr BaseInfo)
 
 -- | Wrapper for 'GITypelib'
 newtype Typelib = Typelib (Ptr Typelib)
