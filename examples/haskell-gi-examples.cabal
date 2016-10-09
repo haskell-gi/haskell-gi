@@ -19,7 +19,7 @@ executable SimpleBrowser
   main-is:             SimpleBrowser.hs
   build-depends:       base >= 4.7 && < 5,
                        basic-prelude >= 0.5 && <0.6,
-                       haskell-gi-base >= 0.18 && < 1,
+                       haskell-gi-base >= 0.20 && < 1,
                        gi-glib == 2.0.*,
                        gi-gtk == 3.0.*,
                        gi-webkit2 == 4.0.*,
@@ -33,7 +33,7 @@ executable SimpleBrowser
 executable Cairo
   main-is:              Cairo.hs
   build-depends:        base >= 4.7 && < 5,
-                        haskell-gi-base >= 0.18 && < 1,
+                        haskell-gi-base >= 0.20 && < 1,
                         gi-glib == 2.0.*,
                         gi-cairo == 1.0.*,
                         gi-gdk == 3.0.*,
@@ -43,3 +43,14 @@ executable Cairo
                         old-time == 1.1.*,
                         transformers == 0.5.*
   other-extensions:     OverloadedStrings, OverloadedLabels
+  ghc-options:         -Wall -fwarn-incomplete-patterns -fno-warn-unused-do-bind -fno-warn-name-shadowing -fno-warn-missing-signatures
+
+executable DBusServer
+  main-is:              DBusServer.hs
+  build-depends:        base >= 4.7 && < 5,
+                        haskell-gi-base >= 0.20 && < 1,
+                        gi-glib == 2.0.*,
+                        gi-gio == 2.0.*,
+                        text == 1.2.*
+  other-extensions:     OverloadedStrings, OverloadedLabels, LambdaCase
+  ghc-options:         -Wall -fwarn-incomplete-patterns
