@@ -55,8 +55,8 @@ module Data.GI.Base.GVariant
 
     , wrapGVariantPtr
     , newGVariantFromPtr
-    , refGVariant
     , unrefGVariant
+    , disownGVariant
 
     -- * Manual conversions
 
@@ -155,7 +155,7 @@ import Foreign.Ptr
 import Data.GI.Base.BasicTypes (GVariant(..))
 import Data.GI.Base.BasicConversions
 import Data.GI.Base.ManagedPtr (withManagedPtr, withManagedPtrList,
-                                newManagedPtr')
+                                newManagedPtr', disownManagedPtr)
 import Data.GI.Base.Utils (freeMem)
 
 -- | An alias for @Nothing :: Maybe GVariant@ to save some typing.
@@ -272,13 +272,14 @@ newGVariantFromPtr ptr = do
   fPtr <- g_variant_ref ptr >>= newManagedPtr' ptr_to_g_variant_unref
   return $! GVariant fPtr
 
--- | Add a reference to the given 'GVariant'.
-refGVariant :: GVariant -> IO (Ptr GVariant)
-refGVariant gv = withManagedPtr gv g_variant_ref
-
 -- | Remove a reference to the given 'GVariant'.
 unrefGVariant :: GVariant -> IO ()
 unrefGVariant gv = withManagedPtr gv g_variant_unref
+
+-- | Disown a `GVariant`, i.e. do not unref the underlying object when
+-- the Haskell object is garbage collected.
+disownGVariant :: GVariant -> IO (Ptr GVariant)
+disownGVariant = disownManagedPtr
 
 instance IsGVariant Bool where
     toGVariant = gvariantFromBool

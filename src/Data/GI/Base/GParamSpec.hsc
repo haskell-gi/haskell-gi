@@ -3,14 +3,14 @@ module Data.GI.Base.GParamSpec
 
     , wrapGParamSpecPtr
     , newGParamSpecFromPtr
-    , refGParamSpec
     , unrefGParamSpec
+    , disownGParamSpec
     ) where
 
 import Foreign.Ptr
 import Control.Monad (void)
 
-import Data.GI.Base.ManagedPtr (newManagedPtr', withManagedPtr)
+import Data.GI.Base.ManagedPtr (newManagedPtr', withManagedPtr, disownManagedPtr)
 import Data.GI.Base.BasicTypes (GParamSpec(..))
 
 #include <glib-object.h>
@@ -41,10 +41,12 @@ newGParamSpecFromPtr ptr = do
   fPtr <- g_param_spec_ref ptr >>= newManagedPtr' ptr_to_g_param_spec_unref
   return $! GParamSpec fPtr
 
--- | Add a reference to the given 'GParamSpec'.
-refGParamSpec :: GParamSpec -> IO (Ptr GParamSpec)
-refGParamSpec ps = withManagedPtr ps g_param_spec_ref
-
 -- | Remove a reference to the given 'GParamSpec'.
 unrefGParamSpec :: GParamSpec -> IO ()
 unrefGParamSpec ps = withManagedPtr ps g_param_spec_unref
+
+-- | Disown a `GParamSpec`, i.e. do not longer unref the associated
+-- foreign `GParamSpec` when the Haskell `GParamSpec` gets garbage
+-- collected.
+disownGParamSpec :: GParamSpec -> IO (Ptr GParamSpec)
+disownGParamSpec = disownManagedPtr

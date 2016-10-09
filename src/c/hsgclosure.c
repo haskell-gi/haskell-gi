@@ -47,6 +47,19 @@ void boxed_free_helper (GType gtype, void *boxed)
   }
 }
 
+void dbg_g_object_disown (GObject *obj)
+{
+  GType gtype;
+
+  if (print_debug_info()) {
+    fprintf(stderr, "Disowning a GObject at %p\n", obj);
+    gtype = G_TYPE_FROM_INSTANCE (obj);
+    fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
+    fprintf(stderr, "\tIts refcount before disowning is %d\n",
+            (int)obj->ref_count);
+  }
+}
+
 void dbg_g_object_unref (GObject *obj)
 {
   GType gtype;
