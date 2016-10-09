@@ -282,14 +282,16 @@ genUnion n u = do
   when (cgOverloadedMethods (cgFlags cfg)) $
        genMethodList n (catMaybes methods)
 
--- Add the implicit object argument to methods of an object.  Since we
--- are prepending an argument we need to adjust the offset of the
--- length arguments of CArrays, and closure and destroyer offsets.
-fixMethodArgs :: Name -> Callable -> Callable
-fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
+-- | When parsing the GIR file we add the implicit object argument to
+-- methods of an object.  Since we are prepending an argument we need
+-- to adjust the offset of the length arguments of CArrays, and
+-- closure and destroyer offsets.
+fixMethodArgs :: Callable -> Callable
+fixMethodArgs c = c {  args = args'' , returnType = returnType' }
     where
       returnType' = maybe Nothing (Just . fixCArrayLength) (returnType c)
-      args' = objArg : map (fixDestroyers . fixClosures . fixLengthArg) (args c)
+      args' = map (fixDestroyers . fixClosures . fixLengthArg) (args c)
+      args'' = fixInstance (head args') : tail args'
 
       fixLengthArg :: Arg -> Arg
       fixLengthArg arg = arg { argType = fixCArrayLength (argType arg)}
@@ -299,6 +301,7 @@ fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
           if length > -1
           then TCArray zt fixed (length+1) t
           else TCArray zt fixed length t
+
       fixCArrayLength t = t
 
       fixDestroyers :: Arg -> Arg
@@ -313,16 +316,12 @@ fixMethodArgs cn c = c {  args = args' , returnType = returnType' }
                         then arg {argClosure = closure + 1}
                         else arg
 
-      objArg = Arg {
-                 argCName = "_obj",
-                 argType = TInterface (namespace cn) (name cn),
-                 direction = DirectionIn,
-                 mayBeNull = False,
-                 argScope = ScopeTypeInvalid,
-                 argClosure = -1,
-                 argDestroy = -1,
-                 argCallerAllocates = False,
-                 transfer = TransferNothing }
+      -- We always treat the instance argument of a method as non-null
+      -- and "in", even if sometimes the introspection data may say
+      -- otherwise.
+      fixInstance :: Arg -> Arg
+      fixInstance arg = arg { mayBeNull = False
+                            , direction = DirectionIn}
 
 -- For constructors we want to return the actual type of the object,
 -- rather than a generic superclass (so Gtk.labelNew returns a
@@ -353,7 +352,7 @@ genMethod cn m@(Method {
               then fixConstructorReturnType returnsGObject cn c
               else c
         c'' = if OrdinaryMethod == t
-              then fixMethodArgs cn c'
+              then fixMethodArgs c'
               else c'
     genCCallableWrapper mn' sym c'' throws
     exportMethod (lowerName mn') (lowerName mn')

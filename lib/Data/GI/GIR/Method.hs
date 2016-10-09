@@ -6,6 +6,7 @@ module Data.GI.GIR.Method
 
 import Data.Text (Text)
 
+import Data.GI.GIR.Arg (Arg, parseArg)
 import Data.GI.GIR.Callable (Callable(..), parseCallable)
 import Data.GI.GIR.Parser
 
@@ -24,6 +25,16 @@ data Method = Method {
       methodCallable    :: Callable
     } deriving (Eq, Show)
 
+parseInstanceArg :: Parser Arg
+parseInstanceArg = do
+  instanceInfo <- parseChildrenWithLocalName "parameters" parseInstPars
+  case instanceInfo of
+    [[inst]] -> return inst
+    [] -> parseError $ "No instance-parameter found."
+    _ -> parseError $ "Too many instance parameters."
+  where parseInstPars :: Parser [Arg]
+        parseInstPars = parseChildrenWithLocalName "instance-parameter" parseArg
+
 parseMethod :: MethodType -> Parser Method
 parseMethod mType = do
   name <- parseName
@@ -31,7 +42,12 @@ parseMethod mType = do
   let exposedName = case shadows of
                       Just n -> name {name = n}
                       Nothing -> name
-  callable <- parseCallable
+  callable <- if mType /= OrdinaryMethod
+              then parseCallable
+              else do
+                c <- parseCallable
+                instanceArg <- parseInstanceArg
+                return $ c {args = instanceArg : args c}
   symbol <- getAttrWithNamespace CGIRNS "identifier"
   throws <- optionalAttr "throws" False parseBool
   movedTo <- queryAttr "moved-to"

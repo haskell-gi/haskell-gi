@@ -74,7 +74,7 @@ guessReadNullability methods p
                -- for the property.
                Just m ->
                    let c = methodCallable m
-                   in if length (args c) == 0 &&
+                   in if length (args c) == 1 &&
                       returnType c == Just (propType p) &&
                       returnTransfer c == TransferNothing &&
                       skipReturn c == False &&
@@ -99,15 +99,15 @@ guessWriteNullability methods p
                -- Check that it looks like a sensible setter.
                Just m ->
                    let c = methodCallable m
-                   in if length (args c) == 1 &&
-                          (argType . head . args) c == propType p &&
+                   in if length (args c) == 2 &&
+                          (argType . last . args) c == propType p &&
                           returnType c == Nothing &&
-                          (transfer . head . args) c == TransferNothing &&
-                          (direction . head . args) c == DirectionIn &&
+                          (transfer . last . args) c == TransferNothing &&
+                          (direction . last . args) c == DirectionIn &&
                           methodMovedTo m == Nothing &&
                           methodType m == OrdinaryMethod &&
                           methodThrows m == False
-                      then Just ((mayBeNull . head . args) c)
+                      then Just ((mayBeNull . last . args) c)
                       else Nothing
 
 -- | Find the first method with the given name, if any.
