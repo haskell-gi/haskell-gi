@@ -126,7 +126,7 @@ drawClockFace False = do
 
 drawHourMarks = do
   save
-  forM_ [1..12] $ \_ -> do
+  forM_ ([1..12] :: [Integer]) $ \_ -> do
     rotate (pi/6)
     moveTo (4.5/6) 0
     lineTo (5.0/6) 0
