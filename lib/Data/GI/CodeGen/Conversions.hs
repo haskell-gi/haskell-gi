@@ -185,31 +185,31 @@ hObjectToF t transfer =
   then do
     isGO <- isGObject t
     if isGO
-    then return $ M "refObject"
+    then return $ M "B.ManagedPtr.disownObject"
     else badIntroError "Transferring a non-GObject object"
   -- castPtr since we accept any instance of the class associated with
   -- the GObject, not just the precise type of the GObject, while the
   -- foreign function declaration requires a pointer of the precise
   -- type.
-  else return "unsafeManagedPtrCastPtr"
+  else return $ M "unsafeManagedPtrCastPtr"
 
 hVariantToF :: Transfer -> CodeGen Constructor
 hVariantToF transfer =
   if transfer == TransferEverything
-  then return $ M "refGVariant"
-  else return "unsafeManagedPtrGetPtr"
+  then return $ M "B.GVariant.disownGVariant"
+  else return $ M "unsafeManagedPtrGetPtr"
 
 hParamSpecToF :: Transfer -> CodeGen Constructor
 hParamSpecToF transfer =
   if transfer == TransferEverything
-  then return $ M "refGParamSpec"
-  else return "unsafeManagedPtrGetPtr"
+  then return $ M "B.GParamSpec.disownGParamSpec"
+  else return $ M "unsafeManagedPtrGetPtr"
 
 hBoxedToF :: Transfer -> CodeGen Constructor
 hBoxedToF transfer =
   if transfer == TransferEverything
-  then return $ M "copyBoxed"
-  else return "unsafeManagedPtrGetPtr"
+  then return $ M "B.ManagedPtr.disownBoxed"
+  else return $ M "unsafeManagedPtrGetPtr"
 
 hStructToF :: Struct -> Transfer -> ExcCodeGen Constructor
 hStructToF s transfer =
@@ -218,7 +218,7 @@ hStructToF s transfer =
     else do
         when (structSize s == 0) $
              badIntroError "Transferring a non-boxed struct with unknown size!"
-        return "unsafeManagedPtrGetPtr"
+        return $ M "unsafeManagedPtrGetPtr"
 
 hUnionToF :: Union -> Transfer -> ExcCodeGen Constructor
 hUnionToF u transfer =
@@ -227,7 +227,7 @@ hUnionToF u transfer =
     else do
         when (unionSize u == 0) $
              badIntroError "Transferring a non-boxed union with unknown size!"
-        return "unsafeManagedPtrGetPtr"
+        return $ M "unsafeManagedPtrGetPtr"
 
 -- Given the Haskell and Foreign types, returns the name of the
 -- function marshalling between both.

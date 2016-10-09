@@ -52,7 +52,7 @@ writeCabal fname info =
        , "custom-setup"
        , "      setup-depends: base >= 4.7 && < 5,"
        , "                     Cabal >= 1.24,"
-       , "                     haskell-gi >= 0.19 && < 1"
+       , "                     haskell-gi >= 0.20 && < 1"
        , ""
        , "Flag overloaded-methods"
        , "      Description: Generate support for overloaded methods."
@@ -73,7 +73,7 @@ writeCabal fname info =
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([baseVersion info
-               , "haskell-gi-base >= 0.19 && < 1"
+               , "haskell-gi-base >= 0.20 && < 1"
                ] ++ giDepends info ++ PI.standardDeps)
        ]
 
