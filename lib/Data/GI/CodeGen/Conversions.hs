@@ -806,10 +806,13 @@ typeAllocInfo t = do
                                  in return (Just info)
     _ -> return Nothing
 
--- Returns whether the given type corresponds to a ManagedPtr
--- instance (a thin wrapper over a ForeignPtr).
+-- | Returns whether the given type corresponds to a `ManagedPtr`
+-- instance (a thin wrapper over a `ForeignPtr`).
 isManaged   :: Type -> CodeGen Bool
-isManaged t = do
+isManaged TError = return True
+isManaged TVariant = return True
+isManaged TParamSpec = return True
+isManaged t@(TInterface _ _) = do
   a <- findAPI t
   case a of
     Just (APIObject _)    -> return True
@@ -817,6 +820,7 @@ isManaged t = do
     Just (APIStruct _)    -> return True
     Just (APIUnion _)     -> return True
     _                     -> return False
+isManaged _ = return False
 
 -- | Returns whether the given type is represented by a pointer on the
 -- C side.
