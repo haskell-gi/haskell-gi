@@ -2,6 +2,7 @@
 -- | Parsing type information from GIR files.
 module Data.GI.GIR.Type
     ( parseType
+    , parseCType
     , parseOptionalType
     ) where
 
@@ -140,6 +141,19 @@ parseTypeElements = do
   arrays <- parseChildrenWithLocalName "array" parseArrayInfo
   return (types ++ map Just arrays)
 
+-- | Find the C name (or if not present, the introspection name) for
+-- the current element.
+parseCTypeName :: Parser Text
+parseCTypeName = queryAttrWithNamespace CGIRNS "type"
+                 >>= maybe (getAttr "name") return
+
+-- | Find the children giving the C type for the element.
+parseCTypeNameElements :: Parser [Text]
+parseCTypeNameElements = do
+  types <- parseChildrenWithLocalName "type" parseCTypeName
+  arrays <- parseChildrenWithLocalName "array" parseCTypeName
+  return (types ++ arrays)
+
 -- | Try to find a type node, but do not error out if it is not
 -- found. This _does_ give an error if more than one type node is
 -- found, or if the type name is "none".
@@ -166,3 +180,11 @@ parseOptionalType =
            [e] -> return e
            [] -> parseError $ "Did not find a type for the element."
            _ -> parseError $ "Found more than one type for the element."
+
+-- | Parse the C-type associated to the element. If there is no
+-- "c:type" attribute we return the type name.
+parseCType :: Parser Text
+parseCType = parseCTypeNameElements >>= \case
+             [e] -> return e
+             [] -> parseError $ "Did not find a C type for the element."
+             _ -> parseError $ "Found more than one type for the element."

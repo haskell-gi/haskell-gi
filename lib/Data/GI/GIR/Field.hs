@@ -6,17 +6,18 @@ module Data.GI.GIR.Field
     ) where
 
 import Data.Monoid ((<>))
-import Data.Text (Text)
+import Data.Text (Text, isSuffixOf)
 
 import Data.GI.GIR.BasicTypes (Type(..))
 import Data.GI.GIR.Callback (Callback, parseCallback)
-import Data.GI.GIR.Type (parseType)
+import Data.GI.GIR.Type (parseType, parseCType)
 import Data.GI.GIR.Parser
 
 data Field = Field {
       fieldName :: Text,
       fieldVisible :: Bool,
       fieldType :: Type,
+      fieldIsPointer :: Bool,
       fieldCallback :: Maybe Callback,
       fieldOffset :: Int,
       fieldFlags :: [FieldInfoFlag],
@@ -40,7 +41,7 @@ parseField = do
              <> if writable then [FieldIsWritable] else []
   introspectable <- optionalAttr "introspectable" True parseBool
   private <- optionalAttr "private" False parseBool
-  (t, callback) <-
+  (t, ctype, callback) <-
       if introspectable
       then do
         callbacks <- parseChildrenWithLocalName "callback" parseCallback
@@ -48,22 +49,27 @@ parseField = do
                              [] -> return (Nothing, Nothing)
                              [(n, cb)] -> return (Just n, Just cb)
                              _ -> parseError "Multiple callbacks in field"
-        t <- case cbn of
-               Nothing -> parseType
-               Just (Name ns n) -> return (TInterface ns n)
-        return (t, callback)
+        (t, ct) <- case cbn of
+               Nothing -> do
+                 t <- parseType
+                 ct <- parseCType
+                 return (t, Just ct)
+               Just (Name ns n) -> return (TInterface ns n, Nothing)
+        return (t, ct, callback)
       else do
         callbacks <- parseAllChildrenWithLocalName "callback" parseName
         case callbacks of
           [] -> do
                t <- parseType
-               return (t, Nothing)
-          [Name ns n] -> return (TInterface ns n, Nothing)
+               ct <- parseCType
+               return (t, Just ct, Nothing)
+          [Name ns n] -> return (TInterface ns n, Nothing, Nothing)
           _ -> parseError "Multiple callbacks in field"
   return $ Field {
                fieldName = name
              , fieldVisible = introspectable && not private
              , fieldType = t
+             , fieldIsPointer = maybe True ("*" `isSuffixOf`) ctype
              , fieldCallback = callback
              , fieldOffset = error ("unfixed field offset " ++ show name)
              , fieldFlags = flags

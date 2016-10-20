@@ -2,8 +2,9 @@
 -- | A minimal wrapper for libgirepository.
 module Data.GI.CodeGen.LibGIRepository
     ( girRequire
-    , girStructSizeAndOffsets
-    , girUnionSizeAndOffsets
+    , FieldInfo(..)
+    , girStructFieldInfo
+    , girUnionFieldInfo
     , girLoadGType
     ) where
 
@@ -11,7 +12,7 @@ module Data.GI.CodeGen.LibGIRepository
 import Control.Applicative ((<$>))
 #endif
 
-import Control.Monad (forM, when)
+import Control.Monad (forM, when, (>=>))
 import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -31,6 +32,13 @@ newtype BaseInfo = BaseInfo (ManagedPtr BaseInfo)
 
 -- | Wrapper for 'GITypelib'
 newtype Typelib = Typelib (Ptr Typelib)
+
+-- | Extra info about a field in a struct or union which is not easily
+-- determined from the GIR file. (And which we determine by using
+-- libgirepository.)
+data FieldInfo = FieldInfo {
+      fieldInfoOffset    :: Int
+    }
 
 foreign import ccall "g_base_info_gtype_get_type" c_g_base_info_gtype_get_type :: IO GType
 
@@ -72,6 +80,13 @@ foreign import ccall "g_field_info_get_offset" g_field_info_get_offset ::
 foreign import ccall "g_base_info_get_name" g_base_info_get_name ::
     Ptr BaseInfo -> IO CString
 
+-- | Get the extra information for the given field.
+getFieldInfo :: BaseInfo -> IO (Text, FieldInfo)
+getFieldInfo field = withManagedPtr field $ \fi -> do
+     fname <- (g_base_info_get_name fi >>= cstringToText)
+     fOffset <- g_field_info_get_offset fi
+     return (fname, FieldInfo { fieldInfoOffset = fromIntegral fOffset })
+
 foreign import ccall "g_struct_info_get_size" g_struct_info_get_size ::
     Ptr BaseInfo -> IO CSize
 foreign import ccall "g_struct_info_get_n_fields" g_struct_info_get_n_fields ::
@@ -81,20 +96,15 @@ foreign import ccall "g_struct_info_get_field" g_struct_info_get_field ::
 
 -- | Find out the size of a struct, and the map from field names to
 -- offsets inside the struct.
-girStructSizeAndOffsets :: Text -> Text -> IO (Int, M.Map Text Int)
-girStructSizeAndOffsets ns name = do
+girStructFieldInfo :: Text -> Text -> IO (Int, M.Map Text FieldInfo)
+girStructFieldInfo ns name = do
   baseinfo <- girFindByName ns name
   withManagedPtr baseinfo $ \si -> do
      size <- g_struct_info_get_size si
      nfields <- g_struct_info_get_n_fields si
-     fieldOffsets <- forM [0..(nfields-1)] $ \i -> do
-                       fieldInfo <- (g_struct_info_get_field si i
-                                     >>= wrapBoxed BaseInfo)
-                       withManagedPtr fieldInfo $ \fi -> do
-                         fname <- (g_base_info_get_name fi >>= cstringToText)
-                         fOffset <- g_field_info_get_offset fi
-                         return (fname, fromIntegral fOffset)
-     return (fromIntegral size, M.fromList fieldOffsets)
+     fieldInfos <- forM [0..(nfields-1)]
+           (g_struct_info_get_field si >=> wrapBoxed BaseInfo >=> getFieldInfo)
+     return (fromIntegral size, M.fromList fieldInfos)
 
 foreign import ccall "g_union_info_get_size" g_union_info_get_size ::
     Ptr BaseInfo -> IO CSize
@@ -105,20 +115,15 @@ foreign import ccall "g_union_info_get_field" g_union_info_get_field ::
 
 -- | Find out the size of a union, and the map from field names to
 -- offsets inside the union.
-girUnionSizeAndOffsets :: Text -> Text -> IO (Int, M.Map Text Int)
-girUnionSizeAndOffsets ns name = do
+girUnionFieldInfo :: Text -> Text -> IO (Int, M.Map Text FieldInfo)
+girUnionFieldInfo ns name = do
   baseinfo <- girFindByName ns name
   withManagedPtr baseinfo $ \ui -> do
      size <- g_union_info_get_size ui
      nfields <- g_union_info_get_n_fields ui
-     fieldOffsets <- forM [0..(nfields-1)] $ \i -> do
-                       fieldInfo <- (g_union_info_get_field ui i
-                                     >>= wrapBoxed BaseInfo)
-                       withManagedPtr fieldInfo $ \fi -> do
-                         fname <- (g_base_info_get_name fi >>= cstringToText)
-                         fOffset <- g_field_info_get_offset fi
-                         return (fname, fromIntegral fOffset)
-     return (fromIntegral size, M.fromList fieldOffsets)
+     fieldInfos <- forM [0..(nfields-1)] (
+           g_union_info_get_field ui >=> wrapBoxed BaseInfo >=> getFieldInfo)
+     return (fromIntegral size, M.fromList fieldInfos)
 
 foreign import ccall "g_typelib_symbol" g_typelib_symbol ::
     Ptr Typelib -> CString -> Ptr (FunPtr a) -> IO CInt
