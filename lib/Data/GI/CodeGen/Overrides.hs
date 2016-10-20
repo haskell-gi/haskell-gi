@@ -258,12 +258,18 @@ parseSetAttr t =
 parsePathSpec :: Text -> Parser GIRPath
 parsePathSpec spec = mapM parseNodeSpec (T.splitOn "/" spec)
 
+-- | A specification of a name, which is either a regex (prefixed with
+-- "~") or a plain name.
+parseGIRNameTag :: Text -> GIRNameTag
+parseGIRNameTag (T.stripPrefix "~" -> Just regex) = GIRRegex regex
+parseGIRNameTag t = GIRPlainName t
+
 -- | Parse a single node specification.
 parseNodeSpec :: Text -> Parser GIRNodeSpec
 parseNodeSpec spec = case T.splitOn "@" spec of
-                       [n] -> return (GIRNamed n)
+                       [n] -> return (GIRNamed (parseGIRNameTag n))
                        ["", t] -> return (GIRType t)
-                       [n, t] -> return (GIRTypedName t n)
+                       [n, t] -> return (GIRTypedName t (parseGIRNameTag n))
                        _ -> throwError ("Could not understand node spec \""
                                         <> spec <> "\".")
 

@@ -9,6 +9,7 @@ module Data.GI.CodeGen.API
     , GIRRule(..)
     , GIRPath
     , GIRNodeSpec(..)
+    , GIRNameTag(..)
 
     -- Reexported from Data.GI.GIR.BasicTypes
     , Name(..)
@@ -71,6 +72,8 @@ import Foreign.C.Types (CUInt)
 import Text.XML hiding (Name)
 import qualified Text.XML as XML
 
+import Text.Regex.TDFA ((=~))
+
 import Data.GI.GIR.Alias (documentListAliases)
 import Data.GI.GIR.Allocation (AllocationInfo(..), AllocationOp(..), unknownAllocationInfo)
 import Data.GI.GIR.Arg (Arg(..), Direction(..), Scope(..))
@@ -99,8 +102,9 @@ import Data.GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr,
 import Data.GI.Base.BasicConversions (unpackStorableArrayWithLength)
 import Data.GI.Base.BasicTypes (GType(..), CGType, gtypeName)
 import Data.GI.Base.Utils (allocMem, freeMem)
-import Data.GI.CodeGen.LibGIRepository (girRequire, girStructSizeAndOffsets,
-                           girUnionSizeAndOffsets, girLoadGType)
+import Data.GI.CodeGen.LibGIRepository (girRequire, FieldInfo(..),
+                                        girStructFieldInfo, girUnionFieldInfo,
+                                        girLoadGType)
 import Data.GI.CodeGen.GType (gtypeIsBoxed)
 import Data.GI.CodeGen.Type (Type)
 
@@ -131,10 +135,15 @@ data GIRInfoParse = GIRInfoParse {
 type GIRPath = [GIRNodeSpec]
 
 -- | Node selector for a path in the GIR file.
-data GIRNodeSpec = GIRNamed Text     -- ^ Node with the given "name" attr.
-                 | GIRType Text      -- ^ Node of the given type.
-                 | GIRTypedName Text Text -- ^ Combination of the above.
+data GIRNodeSpec = GIRNamed GIRNameTag  -- ^ Node with the given "name" attr.
+                 | GIRType Text         -- ^ Node of the given type.
+                 | GIRTypedName Text GIRNameTag -- ^ Combination of the above.
                    deriving (Show)
+
+-- | A name tag, which is either a name or a regular expression.
+data GIRNameTag = GIRPlainName Text
+                | GIRRegex Text
+                  deriving (Show)
 
 -- | A rule for modifying the GIR file.
 data GIRRule = GIRSetAttr (GIRPath, XML.Name) Text -- ^ (Path to element,
@@ -387,9 +396,9 @@ fixupStructIsBoxed (Name ns _) s = do
 -- by using libgirepository than reading the GIR file directly.
 fixupStructSizeAndOffsets :: Name -> Struct -> IO Struct
 fixupStructSizeAndOffsets (Name ns n) s = do
-  (size, offsetMap) <- girStructSizeAndOffsets ns n
+  (size, infoMap) <- girStructFieldInfo ns n
   return (s { structSize = size
-            , structFields = map (fixupField offsetMap) (structFields s)})
+            , structFields = map (fixupField infoMap) (structFields s)})
 
 -- | Same thing for unions.
 fixupUnion :: M.Map Text Name -> (Name, API) -> IO (Name, API)
@@ -401,17 +410,17 @@ fixupUnion _ api = return api
 -- | Like 'fixupStructSizeAndOffset' above.
 fixupUnionSizeAndOffsets :: Name -> Union -> IO Union
 fixupUnionSizeAndOffsets (Name ns n) u = do
-  (size, offsetMap) <- girUnionSizeAndOffsets ns n
+  (size, infoMap) <- girUnionFieldInfo ns n
   return (u { unionSize = size
-            , unionFields = map (fixupField offsetMap) (unionFields u)})
+            , unionFields = map (fixupField infoMap) (unionFields u)})
 
 -- | Fixup the offsets of fields using the given offset map.
-fixupField :: M.Map Text Int -> Field -> Field
+fixupField :: M.Map Text FieldInfo -> Field -> Field
 fixupField offsetMap f =
     f {fieldOffset = case M.lookup (fieldName f) offsetMap of
                        Nothing -> error $ "Could not find field "
                                   ++ show (fieldName f)
-                       Just o -> o }
+                       Just o -> fieldInfoOffset o }
 
 -- | Fixup parsed GIRInfos: some of the required information is not
 -- found in the GIR files themselves, but can be obtained by
@@ -467,13 +476,23 @@ girSetAttr (spec:rest, attr) newVal n@(XML.NodeElement elem) =
     else n
 girSetAttr _ _ n = n
 
+-- | Lookup the given attribute and if present see if it matches the
+-- given regex.
+lookupAndMatch :: GIRNameTag -> M.Map XML.Name Text -> XML.Name -> Bool
+lookupAndMatch tag attrs attr =
+    case M.lookup attr attrs of
+      Just s -> case tag of
+                  GIRPlainName pn -> s == pn
+                  GIRRegex r -> T.unpack s =~ T.unpack r
+      Nothing -> False
+
 -- | See if a given node specification applies to the given node.
 specMatch :: GIRNodeSpec -> XML.Node -> Bool
 specMatch (GIRType t) (XML.NodeElement elem) =
     XML.nameLocalName (XML.elementName elem) == t
 specMatch (GIRNamed name) (XML.NodeElement elem) =
-    M.lookup (xmlLocalName "name") (XML.elementAttributes elem) == Just name
+    lookupAndMatch name  (XML.elementAttributes elem) (xmlLocalName "name")
 specMatch (GIRTypedName t name) (XML.NodeElement elem) =
     XML.nameLocalName (XML.elementName elem) == t &&
-    M.lookup (xmlLocalName "name") (XML.elementAttributes elem) == Just name
+    lookupAndMatch name (XML.elementAttributes elem) (xmlLocalName "name")
 specMatch _ _ = False
