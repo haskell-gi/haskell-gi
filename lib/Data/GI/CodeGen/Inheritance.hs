@@ -96,13 +96,13 @@ fullInterfaceInheritableList n iface =
   (++) (map ((,) n) (ifInheritables iface))
     <$> (concat <$> mapM fullAPIInheritableList (ifPrerequisites iface))
 
--- It is sometimes the case that a property name or signal is defined
+-- | It is sometimes the case that a property name or signal is defined
 -- both in an object and in one of its ancestors/implemented
 -- interfaces. This is harmless if the properties are isomorphic
 -- (there will be more than one qualified set of property
 -- setters/getters that we can call, but they are all isomorphic). If
--- they are not isomorphic we refuse to set either, and print a
--- warning in the generated code.
+-- they are not isomorphic we print a warning, and choose to use the
+-- one closest to the leaves of the object hierarchy.
 removeDuplicates :: forall i. (Eq i, Show i, Inheritable i) =>
                         Bool -> [(Name, i)] -> CodeGen [(Name, i)]
 removeDuplicates verbose inheritables =
@@ -125,7 +125,7 @@ removeDuplicates verbose inheritables =
           Nothing -> return $ M.insert (iName prop) (False, name, prop) m
       filterTainted :: [(Text, (Bool, Name, i))] -> [(Name, i)]
       filterTainted xs =
-          [(name, prop) | (_, (tainted, name, prop)) <- xs, not tainted]
+          [(name, prop) | (_, (_, name, prop)) <- xs]
 
 -- | List all properties defined for an object, including those
 -- defined by its ancestors.
