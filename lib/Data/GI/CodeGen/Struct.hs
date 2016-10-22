@@ -82,13 +82,33 @@ infoType owner field = do
   let fName = (underscoresToCamelCase . fieldName) field
   return $ name <> fName <> "FieldInfo"
 
+-- | Whether a given field is an embedded struct/union.
+isEmbedded :: Field -> CodeGen Bool
+isEmbedded field
+    | fieldIsPointer field = return False
+    | otherwise = do
+  api <- findAPI (fieldType field)
+  case api of
+    Just (APIStruct _) -> return True
+    Just (APIUnion _) -> return True
+    _ -> return False
+
+-- Notice that when reading the field we return a copy of any embedded
+-- structs, so modifications of the returned struct will not affect
+-- the original struct. This is on purpose, in order to increase
+-- safety (otherwise the garbage collector may decide to free the
+-- parent structure while we are modifying the embedded one, and havoc
+-- will ensue).
 -- | Extract a field from a struct.
 buildFieldReader :: Name -> Field -> ExcCodeGen ()
 buildFieldReader n field = group $ do
   let name' = upperName n
-  let getter = fieldGetter n field
+      getter = fieldGetter n field
 
-  nullConvert <- maybeNullConvert (fieldType field)
+  embedded <- isEmbedded field
+  nullConvert <- if embedded
+                 then return Nothing
+                 else maybeNullConvert (fieldType field)
   hType <- tshow <$> if isJust nullConvert
                      then maybeT <$> isoHaskellType (fieldType field)
                      else isoHaskellType (fieldType field)
@@ -100,10 +120,14 @@ buildFieldReader n field = group $ do
               else hType
   line $ getter <> " s = liftIO $ withManagedPtr s $ \\ptr -> do"
   indent $ do
-    line $ "val <- peek (ptr `plusPtr` " <> tshow (fieldOffset field)
-         <> ") :: IO " <> if T.any (== ' ') fType
-                         then parenthesize fType
-                         else fType
+    let peekedType = if T.any (== ' ') fType
+                     then parenthesize fType
+                     else fType
+    if embedded
+    then line $ "let val = ptr `plusPtr` " <> tshow (fieldOffset field)
+             <> " :: " <> peekedType
+    else line $ "val <- peek (ptr `plusPtr` " <> tshow (fieldOffset field)
+             <> ") :: IO " <> peekedType
     result <- case nullConvert of
               Nothing -> convert "val" $ fToH (fieldType field) TransferNothing
               Just nullConverter -> do
@@ -182,8 +206,9 @@ genAttrInfo owner field = do
 
   isPtr <- typeIsPtr (fieldType field)
 
+  embedded <- isEmbedded field
   isNullable <- typeIsNullable (fieldType field)
-  outType <- tshow <$> if isNullable
+  outType <- tshow <$> if not embedded && isNullable
                        then maybeT <$> isoHaskellType (fieldType field)
                        else isoHaskellType (fieldType field)
   inType <- if isPtr
@@ -194,9 +219,11 @@ genAttrInfo owner field = do
   line $ "instance AttrInfo " <> it <> " where"
   indent $ do
     line $ "type AttrAllowedOps " <> it <>
-             if isPtr
-             then " = '[ 'AttrSet, 'AttrGet, 'AttrClear]"
-             else " = '[ 'AttrSet, 'AttrGet]"
+             if embedded
+             then " = '[ 'AttrGet]"
+             else if isPtr
+                  then " = '[ 'AttrSet, 'AttrGet, 'AttrClear]"
+                  else " = '[ 'AttrSet, 'AttrGet]"
     line $ "type AttrSetTypeConstraint " <> it <> " = (~) "
              <> if T.any (== ' ') inType
                 then parenthesize inType
@@ -205,9 +232,11 @@ genAttrInfo owner field = do
     line $ "type AttrGetType " <> it <> " = " <> outType
     line $ "type AttrLabel " <> it <> " = \"" <> fieldName field <> "\""
     line $ "attrGet _ = " <> fieldGetter owner field
-    line $ "attrSet _ = " <> fieldSetter owner field
+    line $ "attrSet _ = " <> if not embedded
+                             then fieldSetter owner field
+                             else "undefined"
     line $ "attrConstruct = undefined"
-    line $ "attrClear _ = " <> if isPtr
+    line $ "attrClear _ = " <> if not embedded && isPtr
                                then fieldClear owner field
                                else "undefined"
 
@@ -229,14 +258,20 @@ buildFieldAttributes n field
     | otherwise = group $ do
      nullPtr <- nullPtrForType (fieldType field)
 
-     buildFieldReader n field
-     buildFieldWriter n field
-     maybe (return ()) (buildFieldClear n field) nullPtr
+     embedded <- isEmbedded field
 
+     buildFieldReader n field
      exportProperty (fName field) (fieldGetter n field)
-     exportProperty (fName field) (fieldSetter n field)
-     when (isJust nullPtr) $
-           exportProperty (fName field) (fieldClear n field)
+
+     when (not embedded) $ do
+         buildFieldWriter n field
+         exportProperty (fName field) (fieldSetter n field)
+
+         case nullPtr of
+           Just null -> do
+              buildFieldClear n field null
+              exportProperty (fName field) (fieldClear n field)
+           Nothing -> return ()
 
      cfg <- config
      if cgOverloadedProperties (cgFlags cfg)
