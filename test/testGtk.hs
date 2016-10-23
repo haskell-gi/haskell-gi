@@ -430,7 +430,9 @@ testArrayOfArrays :: IO ()
 testArrayOfArrays = do
   performGC
   putStrLn "*** Array of array test"
+#if !defined(mingw32_HOST_OS)
   Gio.desktopAppInfoSearch "text" >>= print
+#endif
   performGC
   putStrLn "+++ Array of array test done"
 
@@ -544,7 +546,9 @@ main = do
         testAllocations
         testBoxedOutArgs
         testGio
+#if !defined(mingw32_HOST_OS)
         testExceptions
+#endif
         testNullableArgs
         testOutArgs
         testBoxed
