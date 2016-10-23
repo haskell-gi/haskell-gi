@@ -65,6 +65,7 @@ import Data.Monoid (Monoid(..))
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Control.Monad.Except
+import qualified Data.ByteString as B
 import qualified Data.Foldable as F
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Monoid ((<>))
@@ -74,7 +75,7 @@ import qualified Data.Sequence as S
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+import qualified Data.Text.Encoding as TE
 
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (joinPath, takeDirectory)
@@ -764,11 +765,11 @@ writeModuleInfo verbose dirPrefix minfo = do
   when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
-  TIO.writeFile fname (T.unlines [pragmas, optionsGHC, haddock, prelude,
-                                  imports, deps, code])
+  B.writeFile fname (TE.encodeUtf8 $ T.unlines [pragmas, optionsGHC, haddock,
+                                                prelude, imports, deps, code])
   when (bootCode minfo /= NoCode) $ do
     let bootFName = moduleNameToPath dirPrefix (moduleName minfo) ".hs-boot"
-    TIO.writeFile bootFName (genHsBoot minfo)
+    B.writeFile bootFName (TE.encodeUtf8 (genHsBoot minfo))
 
 -- | Generate the .hs-boot file for the given module.
 genHsBoot :: ModuleInfo -> Text
