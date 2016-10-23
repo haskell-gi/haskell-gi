@@ -1,5 +1,9 @@
 namespace GIRepository
 
+# https://bugzilla.gnome.org/show_bug.cgi?id=773376
+set-attr GIRepository/BaseInfo/iterate_attributes/@parameters/iterator direction in
+set-attr GIRepository/callable_info_iterate_return_attributes/@parameters/iterator direction in
+
 # Generated from gobject-introspection 1.48.0 with xsltproc Nullable.xslt GIRepository-2.0.gir
 set-attr GIRepository/ObjectInfoGetValueFunction/@return-value nullable 1
 set-attr GIRepository/ObjectInfoRefFunction/@return-value nullable 1
