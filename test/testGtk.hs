@@ -122,7 +122,7 @@ testGio = do
             name <- Gio.appInfoGetName info
             exe <- Gio.appInfoGetExecutable info
             putStrLn $ "name: " ++ name
-            putStrLn $ "exe: " ++ exe
+            putStrLn $ "exe: " ++ pack exe
   performGC
   putStrLn "+++ Gio test done"
 
@@ -138,14 +138,18 @@ testExceptions = do
 
   -- Trying to read a file that does not exist should throw
   -- FileErrorNoent, in the FileError domain.
-  _ <- GLib.catchFileError (GLib.fileGetContents "this file does not exist") $
-       \code msg ->
+  ret <- GLib.catchFileError (Just <$> GLib.fileGetContents "this file does not exist") $
+         \code msg ->
            case code of
-             GLib.FileErrorNoent -> do
-                       putStrLn "<< Exception handled >>"
-                       return ""
+             GLib.FileErrorNoent -> return Nothing
              _ -> error $ "Unexpected error code : \"" ++ show code ++
                             "\" with message : \"" ++ msg ++ "\""
+
+  case ret of
+    Just buf -> error $ "Exception did not arise! Got the following contents: "
+                ++ show (buf)
+    Nothing -> putStrLn "<< Exception handled >>"
+
   performGC
   putStrLn "+++ Exception test done"
 
