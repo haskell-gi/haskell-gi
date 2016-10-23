@@ -12,9 +12,10 @@ import Control.Monad (forM_)
 import GHC.Generics
 
 import qualified Data.Aeson as A
+import qualified Data.ByteString as B
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
-import qualified Data.Text.IO as TIO
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
 import Data.Text (Text)
 
@@ -33,7 +34,7 @@ readGIRInfo fname = do
 
 writeCabal :: FilePath -> ProjectInfo -> IO ()
 writeCabal fname info =
-    TIO.writeFile fname $ T.unlines
+    B.writeFile fname $ TE.encodeUtf8 $ T.unlines
        [ "name:                 " <> name info
        , "version:              " <> version info
        , "synopsis:             " <> synopsis info
@@ -79,7 +80,7 @@ writeCabal fname info =
 
 writeSetup :: FilePath -> ProjectInfo -> IO ()
 writeSetup fname info =
-    TIO.writeFile fname $ T.unlines
+    B.writeFile fname $ TE.encodeUtf8 $ T.unlines
            [ "{-# LANGUAGE OverloadedStrings #-}"
            , ""
            , "import Data.GI.CodeGen.CabalHooks (setupHaskellGIBinding)"
@@ -96,7 +97,7 @@ writeSetup fname info =
           tshow = T.pack . show
 
 writeLicense :: FilePath -> IO ()
-writeLicense fname = TIO.writeFile fname PI.licenseText
+writeLicense fname = B.writeFile fname (TE.encodeUtf8 PI.licenseText)
 
 main :: IO ()
 main = do
