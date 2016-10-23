@@ -1,0 +1,24 @@
+name:                build-tools
+version:             0.0.1
+synopsis:            Utils for generating bindings, for internal use
+description:         Utils for generating bindings, for internal use
+homepage:            https://github.com/haskell-gi/haskell-gi
+license:             LGPL-2.1
+                     -- or above
+author:              Iñaki García Etxebarria
+maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+stability:           Experimental
+category:            Development
+build-type:          Simple
+cabal-version:       >=1.8
+
+executable genBuildInfo
+  main-is:              genBuildInfo.hs
+
+  build-depends:        base >= 4.7 && < 5,
+                        haskell-gi >= 0.20,
+                        text >= 1.2,
+                        filepath >= 1.4,
+                        bytestring >= 0.10,
+                        aeson,
+                        aeson-pretty
