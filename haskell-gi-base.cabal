@@ -56,5 +56,6 @@ library
     ghc-options: -Wall -fwarn-incomplete-patterns
 
   build-tools:         hsc2hs
+  cc-options:          -fPIC
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse
   c-sources:           src/c/hsgclosure.c
