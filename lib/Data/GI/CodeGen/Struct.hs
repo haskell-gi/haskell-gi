@@ -248,7 +248,7 @@ genAttrInfo owner field = do
     line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst (fName field) <> "\""
     line $ labelProxy <> " = AttrLabelProxy"
 
-    exportProperty (fName field) labelProxy
+    exportProperty (lcFirst $ fName field) labelProxy
 
   return $ "'(\"" <> (lcFirst  . fName) field <> "\", " <> it <> ")"
 
@@ -262,16 +262,16 @@ buildFieldAttributes n field
      embedded <- isEmbedded field
 
      buildFieldReader n field
-     exportProperty (fName field) (fieldGetter n field)
+     exportProperty (lcFirst $ fName field) (fieldGetter n field)
 
      when (not embedded) $ do
          buildFieldWriter n field
-         exportProperty (fName field) (fieldSetter n field)
+         exportProperty (lcFirst $ fName field) (fieldSetter n field)
 
          case nullPtr of
            Just null -> do
               buildFieldClear n field null
-              exportProperty (fName field) (fieldClear n field)
+              exportProperty (lcFirst $ fName field) (fieldClear n field)
            Nothing -> return ()
 
      cfg <- config

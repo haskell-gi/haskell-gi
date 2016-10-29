@@ -92,7 +92,7 @@ genMethodInfo n m =
         let mn = methodName m
             mangled = lowerName (mn {name = name n <> "_" <> name mn})
         indent $ line $ "overloadedMethod _ = " <> mangled
-        exportMethod mangled infoName
+        exportMethod (lowerName mn) infoName
 
 -- | Generate a method info that is not actually callable, but rather
 -- gives a type error when trying to use it.

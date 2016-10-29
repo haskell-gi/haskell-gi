@@ -29,7 +29,7 @@ import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Transfer (freeContainerType)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (parenthesize, withComment, tshow, terror,
-                             ucFirst, prime)
+                             lcFirst, ucFirst, prime)
 
 -- The prototype of the callback on the Haskell side (what users of
 -- the binding will see)
@@ -340,15 +340,15 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
       cbType = signalConnectorName <> "Callback"
 
   line $ deprecatedPragma cbType (callableDeprecated cb)
-  genHaskellCallbackPrototype (ucFirst sn') cb cbType WithoutClosures
+  genHaskellCallbackPrototype (lcFirst sn') cb cbType WithoutClosures
 
-  _ <- genCCallbackPrototype (ucFirst sn') cb cbType True
+  _ <- genCCallbackPrototype (lcFirst sn') cb cbType True
 
-  genCallbackWrapperFactory (ucFirst sn') cbType
+  genCallbackWrapperFactory (lcFirst sn') cbType
 
-  genClosure (ucFirst sn') cb cbType signalConnectorName True
+  genClosure (lcFirst sn') cb cbType signalConnectorName True
 
-  genCallbackWrapper (ucFirst sn') cb cbType True
+  genCallbackWrapper (lcFirst sn') cb cbType True
 
   -- Wrapper for connecting functions to the signal
   -- We can connect to a signal either before the default handler runs
@@ -366,8 +366,8 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
     line $ afterName <> signature
     line $ afterName <> " obj cb = connect"
              <> signalConnectorName <> " obj cb SignalConnectAfter"
-    exportSignal (ucFirst sn') onName
-    exportSignal (ucFirst sn') afterName
+    exportSignal (lcFirst sn') onName
+    exportSignal (lcFirst sn') afterName
 
   group $ do
     let fullName = "connect" <> signalConnectorName

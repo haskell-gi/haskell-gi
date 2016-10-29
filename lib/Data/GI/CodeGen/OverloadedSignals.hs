@@ -87,7 +87,7 @@ genInstance owner signal = group $ do
           cbHaskellType = signalConnectorName <> "Callback"
       line $ "type HaskellCallbackType " <> si <> " = " <> cbHaskellType
       line $ "connectSignal _ = " <> "connect" <> name <> sn
-  exportSignal sn si
+  exportSignal (lcFirst sn) si
 
 -- | Signal instances for (GObject-derived) objects.
 genObjectSignals :: Name -> Object -> CodeGen ()

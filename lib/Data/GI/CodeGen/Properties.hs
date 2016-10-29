@@ -91,7 +91,7 @@ attrType prop = do
   return (constraints, t)
 
 genPropertySetter :: Text -> Name -> Text -> Property -> CodeGen ()
-genPropertySetter setter n cName prop = group $ do
+genPropertySetter setter n docSection prop = group $ do
   (constraints, t) <- attrType prop
   isNullable <- typeIsNullable (propType prop)
   cls <- classConstraint n
@@ -104,10 +104,10 @@ genPropertySetter setter n cName prop = group $ do
            <> if isNullable
               then "\" (Just val)"
               else "\" val"
-  exportProperty cName setter
+  exportProperty docSection setter
 
 genPropertyGetter :: Text -> Name -> Text -> Property -> CodeGen ()
-genPropertyGetter getter n cName prop = group $ do
+genPropertyGetter getter n docSection prop = group $ do
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
   constructorType <- haskellType (propType prop)
@@ -128,10 +128,10 @@ genPropertyGetter getter n cName prop = group $ do
            if tStr `elem` ["Object", "Boxed"]
            then " " <> tshow constructorType -- These require the constructor.
            else ""
-  exportProperty cName getter
+  exportProperty docSection getter
 
 genPropertyConstructor :: Text -> Name -> Text -> Property -> CodeGen ()
-genPropertyConstructor constructor n cName prop = group $ do
+genPropertyConstructor constructor n docSection prop = group $ do
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
   isNullable <- typeIsNullable (propType prop)
@@ -145,10 +145,10 @@ genPropertyConstructor constructor n cName prop = group $ do
            <> if isNullable
               then "\" (Just val)"
               else "\" val"
-  exportProperty cName constructor
+  exportProperty docSection constructor
 
 genPropertyClear :: Text -> Name -> Text -> Property -> CodeGen ()
-genPropertyClear clear n cName prop = group $ do
+genPropertyClear clear n docSection prop = group $ do
   nothingType <- tshow . maybeT <$> haskellType (propType prop)
   cls <- classConstraint n
   let constraints = ["MonadIO m", cls <> " o"]
@@ -158,7 +158,7 @@ genPropertyClear clear n cName prop = group $ do
   line $ clear <> " obj = liftIO $ setObjectProperty" <> tStr
            <> " obj \"" <> propName prop <> "\" (Nothing :: "
            <> nothingType <> ")"
-  exportProperty cName clear
+  exportProperty docSection clear
 
 -- | The property name as a lexically valid Haskell identifier. Note
 -- that this is not escaped, since it is assumed that it will be used
@@ -209,6 +209,7 @@ genOneProperty :: Name -> Property -> ExcCodeGen ()
 genOneProperty owner prop = do
   let name = upperName owner
       cName = (hyphensToCamelCase . propName) prop
+      docSection = lcFirst cName
       pName = name <> cName
       flags = propFlags prop
       writable = PropertyWritable `elem` flags &&
@@ -246,11 +247,11 @@ genOneProperty owner prop = do
                                 propWriteNullable prop /= Just False)
            "clear" owner cName
 
-  when (getter /= "undefined") $ genPropertyGetter getter owner cName prop
-  when (setter /= "undefined") $ genPropertySetter setter owner cName prop
+  when (getter /= "undefined") $ genPropertyGetter getter owner docSection prop
+  when (setter /= "undefined") $ genPropertySetter setter owner docSection prop
   when (constructor /= "undefined") $
-       genPropertyConstructor constructor owner cName prop
-  when (clear /= "undefined") $ genPropertyClear clear owner cName prop
+       genPropertyConstructor constructor owner docSection prop
+  when (clear /= "undefined") $ genPropertyClear clear owner docSection prop
 
   outType <- if not readable
              then return "()"
@@ -289,7 +290,7 @@ genOneProperty owner prop = do
                          then ["'AttrClear"]
                          else [])
     it <- infoType owner prop
-    exportProperty cName it
+    exportProperty docSection it
     bline $ "data " <> it
     line $ "instance AttrInfo " <> it <> " where"
     indent $ do
@@ -313,7 +314,8 @@ genPlaceholderProperty owner prop = do
   line $ "-- XXX Placeholder"
   it <- infoType owner prop
   let cName = (hyphensToCamelCase . propName) prop
-  exportProperty cName it
+      docSection = lcFirst cName
+  exportProperty docSection it
   line $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"
   indent $ do
@@ -372,8 +374,9 @@ genNamespacedAttrLabels owner attrNames methods = do
   forM_ filteredAttrs $ \attr -> group $ do
     let cName = ucFirst attr
         labelProxy = lcFirst name <> cName
+        docSection = lcFirst cName
 
     line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst cName <> "\""
     line $ labelProxy <> " = AttrLabelProxy"
 
-    exportProperty cName labelProxy
+    exportProperty docSection labelProxy

@@ -355,7 +355,7 @@ genMethod cn m@(Method {
               then fixMethodArgs c'
               else c'
     genCCallableWrapper mn' sym c'' throws
-    exportMethod (lowerName mn') (lowerName mn')
+    exportMethod (lowerName mn) (lowerName mn')
 
     cfg <- config
     when (cgOverloadedMethods (cgFlags cfg)) $
