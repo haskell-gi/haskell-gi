@@ -178,8 +178,10 @@ class AttrInfo (info :: *) where
     type AttrBaseTypeConstraint info :: * -> Constraint
     -- | Type returned by `attrGet`.
     type AttrGetType info
-    -- | A string describing the attribute (for error messages).
+    -- | Name of the attribute.
     type AttrLabel info :: Symbol
+    -- | Type which introduces the attribute.
+    type AttrOrigin info
     -- | Get the value of the given attribute.
     attrGet :: AttrBaseTypeConstraint info o =>
                Proxy info -> o -> IO (AttrGetType info)
@@ -198,31 +200,43 @@ class AttrInfo (info :: *) where
                      Proxy info -> b -> IO (GValueConstruct o)
 
 -- | Result of checking whether an op is allowed on an attribute.
-data OpAllowed tag attrName =
+data OpAllowed tag attrName definingType useType =
     OpIsAllowed
 #if !MIN_VERSION_base(4,9,0)
-        | AttrOpNotAllowed Symbol tag Symbol attrName
+        | AttrOpNotAllowed Symbol tag Symbol definingType Symbol attrName
+#endif
+
+#if MIN_VERSION_base(4,9,0)
+type family TypeOriginInfo definingType useType :: ErrorMessage where
+    TypeOriginInfo definingType definingType =
+        'Text "‘" ':<>: 'ShowType definingType ':<>: 'Text "’"
+    TypeOriginInfo definingType useType =
+        'Text "‘" ':<>: 'ShowType useType ':<>:
+        'Text "’ (inherited from parent type ‘" ':<>:
+        'ShowType definingType ':<>: 'Text "’)"
 #endif
 
 -- | Look in the given list to see if the given `AttrOp` is a member,
 -- if not return an error type.
-type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Symbol) :: OpAllowed AttrOpTag Symbol where
-    AttrOpIsAllowed tag '[] label =
+type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Symbol) (definingType :: *) (useType :: *) :: OpAllowed AttrOpTag Symbol * * where
+    AttrOpIsAllowed tag '[] label definingType useType =
 #if !MIN_VERSION_base(4,9,0)
-        'AttrOpNotAllowed "Error: operation " tag " not allowed for attribute type " label
+        'AttrOpNotAllowed "Error: operation " tag " not allowed for attribute " definingType "." label
 #else
         TypeError ('Text "Attribute ‘" ':<>: 'Text label ':<>:
-                   'Text "’ is not " ':<>:
+                   'Text "’ for type " ':<>:
+                   TypeOriginInfo definingType useType ':<>:
+                   'Text " is not " ':<>:
                    'Text (AttrOpText tag) ':<>: 'Text ".")
 #endif
-    AttrOpIsAllowed tag (tag ': ops) label = 'OpIsAllowed
-    AttrOpIsAllowed tag (other ': ops) label = AttrOpIsAllowed tag ops label
+    AttrOpIsAllowed tag (tag ': ops) label definingType useType = 'OpIsAllowed
+    AttrOpIsAllowed tag (other ': ops) label definingType useType = AttrOpIsAllowed tag ops label definingType useType
 
 -- | Whether a given `AttrOpTag` is allowed on an attribute, given the
 -- info type.
-type family AttrOpAllowed (tag :: AttrOpTag) (info :: *) :: Constraint where
-    AttrOpAllowed tag info =
-        AttrOpIsAllowed tag (AttrAllowedOps info) (AttrLabel info) ~ 'OpIsAllowed
+type family AttrOpAllowed (tag :: AttrOpTag) (info :: *) (useType :: *) :: Constraint where
+    AttrOpAllowed tag info useType =
+        AttrOpIsAllowed tag (AttrAllowedOps info) (AttrLabel info) (AttrOrigin info) useType ~ 'OpIsAllowed
 
 -- | Possible operations on an attribute.
 data AttrOpTag = AttrGet | AttrSet | AttrConstruct | AttrClear
@@ -243,7 +257,7 @@ type AttrSetC info obj attr value = (HasAttributeList obj,
                                      info ~ ResolveAttribute attr obj,
                                      AttrInfo info,
                                      AttrBaseTypeConstraint info obj,
-                                     AttrOpAllowed 'AttrSet info,
+                                     AttrOpAllowed 'AttrSet info obj,
                                      (AttrSetTypeConstraint info) value)
 
 -- | Constraint on a @obj@\/@value@ pair so that `new` works on values
@@ -252,7 +266,7 @@ type AttrConstructC info obj attr value = (HasAttributeList obj,
                                            info ~ ResolveAttribute attr obj,
                                            AttrInfo info,
                                            AttrBaseTypeConstraint info obj,
-                                           AttrOpAllowed 'AttrConstruct info,
+                                           AttrOpAllowed 'AttrConstruct info obj,
                                            (AttrSetTypeConstraint info) value)
 
 -- | Constructors for the different operations allowed on an attribute.
@@ -262,7 +276,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
-              AttrOpAllowed tag info,
+              AttrOpAllowed tag info obj,
               (AttrSetTypeConstraint info) b) =>
              AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
     -- Assign the result of an IO action to an attribute
@@ -270,7 +284,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               info ~ ResolveAttribute attr obj,
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
-              AttrOpAllowed tag info,
+              AttrOpAllowed tag info obj,
               (AttrSetTypeConstraint info) b) =>
              AttrLabelProxy (attr :: Symbol) -> IO b -> AttrOp obj tag
     -- Apply an update function to an attribute
@@ -279,8 +293,8 @@ data AttrOp obj (tag :: AttrOpTag) where
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
-              AttrOpAllowed 'AttrSet info,
-              AttrOpAllowed 'AttrGet info,
+              AttrOpAllowed 'AttrSet info obj,
+              AttrOpAllowed 'AttrGet info obj,
               (AttrSetTypeConstraint info) b,
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (a -> b) -> AttrOp obj tag
@@ -290,8 +304,8 @@ data AttrOp obj (tag :: AttrOpTag) where
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
-              AttrOpAllowed 'AttrSet info,
-              AttrOpAllowed 'AttrGet info,
+              AttrOpAllowed 'AttrSet info obj,
+              AttrOpAllowed 'AttrGet info obj,
               (AttrSetTypeConstraint info) b,
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (a -> IO b) -> AttrOp obj tag
@@ -301,7 +315,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
-              AttrOpAllowed tag info,
+              AttrOpAllowed tag info obj,
               (AttrSetTypeConstraint info) b) =>
              AttrLabelProxy (attr :: Symbol) -> (obj -> b) -> AttrOp obj tag
     -- Apply an update function to an attribute with the object as an
@@ -311,8 +325,8 @@ data AttrOp obj (tag :: AttrOpTag) where
               AttrInfo info,
               AttrBaseTypeConstraint info obj,
               tag ~ 'AttrSet,
-              AttrOpAllowed 'AttrSet info,
-              AttrOpAllowed 'AttrGet info,
+              AttrOpAllowed 'AttrSet info obj,
+              AttrOpAllowed 'AttrGet info obj,
               (AttrSetTypeConstraint info) b,
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (obj -> a -> b) -> AttrOp obj tag
@@ -341,7 +355,7 @@ type AttrGetC info obj attr result = (HasAttributeList obj,
                                       info ~ ResolveAttribute attr obj,
                                       AttrInfo info,
                                       (AttrBaseTypeConstraint info) obj,
-                                      AttrOpAllowed 'AttrGet info,
+                                      AttrOpAllowed 'AttrGet info obj,
                                       result ~ AttrGetType info)
 
 -- | Get the value of an attribute for an object.
@@ -355,7 +369,7 @@ type AttrClearC info obj attr = (HasAttributeList obj,
                                  info ~ ResolveAttribute attr obj,
                                  AttrInfo info,
                                  (AttrBaseTypeConstraint info) obj,
-                                 AttrOpAllowed 'AttrClear info)
+                                 AttrOpAllowed 'AttrClear info obj)
 
 -- | Set a nullable attribute to @NULL@.
 clear :: forall info attr obj m.
