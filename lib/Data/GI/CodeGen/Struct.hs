@@ -231,6 +231,7 @@ genAttrInfo owner field = do
     line $ "type AttrBaseTypeConstraint " <> it <> " = (~) " <> on
     line $ "type AttrGetType " <> it <> " = " <> outType
     line $ "type AttrLabel " <> it <> " = \"" <> fieldName field <> "\""
+    line $ "type AttrOrigin " <> it <> " = " <> on
     line $ "attrGet _ = " <> fieldGetter owner field
     line $ "attrSet _ = " <> if not embedded
                              then fieldSetter owner field
