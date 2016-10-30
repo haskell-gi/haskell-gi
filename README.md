@@ -49,7 +49,7 @@ This program uses the new `OverloadedLabels` extension in GHC 8.0, so make sure 
 $ ghc -o hello hello.hs
 $ ./hello
 ```
-For a more involved example, see for instance [this WebKit example](https://github.com/haskell-gi/haskell-gi/tree/master/examples).
+For a more involved example, see for instance [this WebKit example](https://github.com/haskell-gi/haskell-gi/tree/master/examples). Further documentation can be found in [the Wiki](https://github.com/haskell-gi/haskell-gi/wiki).
 
 ##  Binding to new libraries
 
