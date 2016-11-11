@@ -436,7 +436,7 @@ missingInfoError s = throwError $ CGErrorMissingInfo s
 
 findAPI :: Type -> CodeGen (Maybe API)
 findAPI TError = Just <$> findAPIByName (Name "GLib" "Error")
-findAPI (TInterface ns n) = Just <$> findAPIByName (Name ns n)
+findAPI (TInterface n) = Just <$> findAPIByName n
 findAPI _ = return Nothing
 
 -- | Find the API associated with a given type. If the API cannot be

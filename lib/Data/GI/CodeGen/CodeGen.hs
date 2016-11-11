@@ -330,7 +330,7 @@ fixConstructorReturnType :: Bool -> Name -> Callable -> Callable
 fixConstructorReturnType returnsGObject cn c = c { returnType = returnType' }
     where
       returnType' = if returnsGObject then
-                        Just (TInterface (namespace cn) (name cn))
+                        Just (TInterface cn)
                     else
                         returnType c
 
@@ -403,7 +403,7 @@ genGObjectCasts isIU n cn_ parents = do
 genObject :: Name -> Object -> CodeGen ()
 genObject n o = do
   let name' = upperName n
-  let t = (\(Name ns' n') -> TInterface ns' n') n
+  let t = TInterface n
   isGO <- isGObject t
 
   if not isGO

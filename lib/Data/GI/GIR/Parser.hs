@@ -101,15 +101,15 @@ currentNamespace = ctxNamespace <$> ask
 
 -- | Check whether there is an alias for the given name, and return
 -- the corresponding type in case it exists, and otherwise a TInterface.
-resolveQualifiedTypeName :: Text -> Text -> Parser Type
-resolveQualifiedTypeName ns n = do
+resolveQualifiedTypeName :: Name -> Parser Type
+resolveQualifiedTypeName name = do
   ctx <- ask
-  case M.lookup (Alias (ns, n)) (knownAliases ctx) of
+  case M.lookup (Alias name) (knownAliases ctx) of
     -- The resolved type may be an alias itself, like for
     -- Gtk.Allocation -> Gdk.Rectangle -> cairo.RectangleInt
-    Just (TInterface ns n) -> resolveQualifiedTypeName ns n
+    Just (TInterface n) -> resolveQualifiedTypeName n
     Just t -> return t
-    Nothing -> return $ TInterface ns n
+    Nothing -> return $ TInterface name
 
 -- | Return the value of an attribute for the given element. If the
 -- attribute is not present this throws an error.

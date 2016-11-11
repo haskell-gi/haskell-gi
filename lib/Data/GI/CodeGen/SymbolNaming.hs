@@ -43,7 +43,7 @@ classConstraint n@(Name _ s) = qualifiedSymbol ("Is" <> s) n
 -- | Same as `classConstraint`, but applicable directly to a type. The
 -- type should be a `TInterface`, otherwise an error will be raised.
 typeConstraint :: Type -> CodeGen Text
-typeConstraint (TInterface ns s) = classConstraint (Name ns s)
+typeConstraint (TInterface n) = classConstraint n
 typeConstraint t = error $ "Class constraint for non-interface type: " <> show t
 
 -- | Foreign type associated with a callback type. It can be passed in
@@ -107,14 +107,14 @@ upperName (Name _ s) = underscoresToCamelCase (sanitize s)
 -- | Return an identifier for the given interface type valid in the current
 -- module.
 qualifiedAPI :: Name -> CodeGen Text
-qualifiedAPI n@(Name ns s) = do
-  api <- getAPI (TInterface ns s)
+qualifiedAPI n@(Name ns _) = do
+  api <- getAPI (TInterface n)
   qualified ("GI" : ucFirst ns : submoduleLocation n api) n
 
 -- | Construct an identifier for the given symbol in the given API.
 qualifiedSymbol :: Text -> Name -> CodeGen Text
-qualifiedSymbol s n@(Name ns nn) = do
-  api <- getAPI (TInterface ns nn)
+qualifiedSymbol s n@(Name ns _) = do
+  api <- getAPI (TInterface n)
   qualified ("GI" : ucFirst ns : submoduleLocation n api) (Name ns s)
 
 -- | Construct the submodule name (as a list, to be joined by

@@ -20,7 +20,7 @@ namespaceListAliases ns =
       Just nsName -> case runParser nsName M.empty ns parseAliases of
                        Left err -> (error . T.unpack) err
                        Right aliases -> M.fromList (map addNS aliases)
-                           where addNS (n, t) = (Alias (nsName, n), t)
+                           where addNS (n, t) = (Alias (Name nsName n), t)
 
 -- | Parse all the aliases in the current namespace
 parseAliases :: Parser [(Text, Type)]

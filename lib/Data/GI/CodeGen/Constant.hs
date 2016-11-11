@@ -61,7 +61,7 @@ assignValue name t@(TBasicType b) value = do
   ht <- tshow <$> haskellType t
   hv <- showBasicType b value
   writePattern name (SimpleSynonym hv ht)
-assignValue name t@(TInterface _ _) value = do
+assignValue name t@(TInterface _) value = do
   ht <- tshow <$> haskellType t
   api <- findAPI t
   case api of

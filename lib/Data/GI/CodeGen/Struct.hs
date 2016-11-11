@@ -49,7 +49,7 @@ fixCallbackStructFields (Name ns structName) s = s {structFields = fixedFields}
               case fieldCallback field of
                 Nothing -> field
                 Just _ -> let n' = fieldCallbackType structName field
-                          in field {fieldType = TInterface ns n'}
+                          in field {fieldType = TInterface (Name ns n')}
 
 -- | Fix the interface names of callback fields in an APIStruct to
 -- correspond to the ones that we are going to generate. If something
@@ -280,7 +280,7 @@ buildFieldAttributes n field
      else return Nothing
 
     where privateType :: Type -> Bool
-          privateType (TInterface _ n) = "Private" `T.isSuffixOf` n
+          privateType (TInterface n) = "Private" `T.isSuffixOf` name n
           privateType _ = False
 
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()

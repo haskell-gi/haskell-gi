@@ -20,7 +20,7 @@ data Transfer = TransferNothing
                 deriving (Show, Eq, Ord)
 
 -- | An alias, which is simply (Namespace, name).
-newtype Alias = Alias (Text, Text) deriving (Ord, Eq, Show)
+newtype Alias = Alias Name deriving (Ord, Eq, Show)
 
 -- | Basic types. These are generally trivial to marshal, and the GIR
 -- assumes that they are defined.
@@ -63,5 +63,5 @@ data Type
     | TGList Type      -- ^ GList
     | TGSList Type     -- ^ GSList
     | TGHash Type Type -- ^ GHashTable
-    | TInterface Text Text -- ^ A reference to some API in the GIR
+    | TInterface Name  -- ^ A reference to some API in the GIR
       deriving (Eq, Show, Ord)

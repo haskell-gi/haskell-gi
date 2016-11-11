@@ -59,8 +59,8 @@ propTypeStr t = case t of
    TCArray True _ _ (TBasicType TUTF8) -> return "StringArray"
    TCArray True _ _ (TBasicType TFileName) -> return "StringArray"
    TGList (TBasicType TPtr) -> return "PtrGList"
-   t@(TInterface ns n) -> do
-     api <- findAPIByName (Name ns n)
+   t@(TInterface n) -> do
+     api <- findAPIByName n
      case api of
        APIEnum _ -> return "Enum"
        APIFlags _ -> return "Flags"
