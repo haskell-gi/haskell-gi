@@ -14,6 +14,7 @@ maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
 stability:           Experimental
 category:            Development
 build-type:          Simple
+tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1
 cabal-version:       >=1.8
 
 source-repository head
