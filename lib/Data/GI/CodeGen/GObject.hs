@@ -16,9 +16,8 @@ import Data.GI.CodeGen.Type
 
 -- Returns whether the given type is a descendant of the given parent.
 typeDoParentSearch :: Name -> Type -> CodeGen Bool
-typeDoParentSearch parent (TInterface ns n) = findAPIByName name >>=
-                                              apiDoParentSearch parent name
-                                                  where name = Name ns n
+typeDoParentSearch parent (TInterface n) = findAPIByName n >>=
+                                           apiDoParentSearch parent n
 typeDoParentSearch _ _ = return False
 
 apiDoParentSearch :: Name -> Name -> API -> CodeGen Bool
@@ -27,7 +26,7 @@ apiDoParentSearch parent n api
     | otherwise   = case api of
       APIObject o ->
         case objParent o of
-          Just (Name pns pn) -> typeDoParentSearch parent (TInterface pns pn)
+          Just  p -> typeDoParentSearch parent (TInterface p)
           Nothing -> return False
       APIInterface iface ->
         do let prs = ifPrerequisites iface

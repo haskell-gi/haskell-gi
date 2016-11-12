@@ -312,9 +312,8 @@ prepareInCallback arg (Callback cb) = do
 
   (maker, wrapper, drop) <-
       case argType arg of
-        TInterface ns n ->
+        TInterface tn@(Name _ n) ->
             do
-              let tn = Name ns n
               drop <- if callableHasClosures cb
                       then Just <$> qualifiedSymbol (callbackDropClosures n) tn
                       else return Nothing

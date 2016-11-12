@@ -114,7 +114,7 @@ parseFundamentalType "GLib" "Error" = return TError
 parseFundamentalType "GLib" "Variant" = return TVariant
 parseFundamentalType "GObject" "ParamSpec" = return TParamSpec
 -- A TInterface type (basically, everything that is not of a known type).
-parseFundamentalType ns n = resolveQualifiedTypeName ns n
+parseFundamentalType ns n = resolveQualifiedTypeName (Name ns n)
 
 -- | Parse information on a "type" element. Returns either a `Type`,
 -- or `Nothing` indicating that the name of the type in the

@@ -166,7 +166,7 @@ computeArrayLength array (TCArray _ _ _ t) = do
     where findReader = case t of
                      TBasicType TUInt8 -> return "B.length"
                      TBasicType _      -> return "length"
-                     TInterface _ _    -> return "length"
+                     TInterface _      -> return "length"
                      TCArray{}         -> return "length"
                      _ -> notImplementedError $
                           "Don't know how to compute length of " <> tshow t
@@ -362,7 +362,7 @@ hToF (TCArray zt _ _ t@(TCArray{})) transfer = do
                else "pack"
   hToF_PackedType t (packer <> "PtrArray") transfer
 
-hToF (TCArray zt _ _ t@(TInterface _ _)) transfer = do
+hToF (TCArray zt _ _ t@(TInterface _)) transfer = do
   isScalar <- getIsScalar t
   let packer = if zt
                then "packZeroTerminated"
@@ -536,7 +536,7 @@ fToH (TGHash a b) transfer = fToH_UnpackGHashTable a b transfer
 fToH (TCArray False (-1) (-1) _) _ = return $ Pure ()
 fToH (TCArray True _ _ t@(TCArray{})) transfer =
   fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
-fToH (TCArray True _ _ t@(TInterface _ _)) transfer = do
+fToH (TCArray True _ _ t@(TInterface _)) transfer = do
   isScalar <- getIsScalar t
   if isScalar
   then fToH_PackedType t "unpackZeroTerminatedStorableArray" transfer
@@ -570,7 +570,7 @@ unpackCArray length (TCArray False _ _ t) transfer =
                          "unpackMapStorableArrayWithLength realToFrac " <> length
     TBasicType _ -> return $ apply $ M $ parenthesize $
                          "unpackStorableArrayWithLength " <> length
-    TInterface _ _ -> do
+    TInterface _ -> do
            a <- findAPI t
            isScalar <- getIsScalar t
            hType <- haskellType t
@@ -685,11 +685,11 @@ haskellType (TGHash a b) = do
 haskellType TError = return $ "GError" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
 haskellType TParamSpec = return $ "GParamSpec" `con` []
-haskellType (TInterface "GObject" "Value") = return $ "GValue" `con` []
-haskellType (TInterface "GObject" "Closure") = return $ "Closure" `con` []
-haskellType t@(TInterface ns n) = do
+haskellType (TInterface (Name "GObject" "Value")) = return $ "GValue" `con` []
+haskellType (TInterface (Name "GObject" "Closure")) = return $ "Closure" `con` []
+haskellType t@(TInterface n) = do
   api <- getAPI t
-  tname <- qualifiedAPI (Name ns n)
+  tname <- qualifiedAPI n
   return $ case api of
              (APIFlags _) -> "[]" `con` [tname `con` []]
              _ -> tname `con` []
@@ -706,11 +706,11 @@ callableHasClosures = any (/= -1) . map argClosure . args
 -- this does not hold, as we omit the closure arguments. This function
 -- returns a type which is actually isomorphic.
 isoHaskellType :: Type -> CodeGen TypeRep
-isoHaskellType t@(TInterface ns n) = do
+isoHaskellType t@(TInterface n) = do
   api <- findAPI t
   case api of
     Just (APICallback (Callback c)) -> do
-        tname <- qualifiedAPI (Name ns n)
+        tname <- qualifiedAPI n
         if callableHasClosures c
         then return ((callbackHTypeWithClosures tname) `con` [])
         else return (tname `con` [])
@@ -760,10 +760,10 @@ foreignType (TGHash a b) = do
 foreignType t@TError = ptr <$> haskellType t
 foreignType t@TVariant = ptr <$> haskellType t
 foreignType t@TParamSpec = ptr <$> haskellType t
-foreignType (TInterface "GObject" "Value") = return $ ptr $ "GValue" `con` []
-foreignType (TInterface "GObject" "Closure") =
+foreignType (TInterface (Name "GObject" "Value")) = return $ ptr $ "GValue" `con` []
+foreignType (TInterface (Name "GObject" "Closure")) =
     return $ ptr $ "Closure" `con` []
-foreignType t@(TInterface ns n) = do
+foreignType t@(TInterface n) = do
   isScalar <- getIsScalar t
   if isScalar
   then return $ "CUInt" `con` []
@@ -771,10 +771,10 @@ foreignType t@(TInterface ns n) = do
     api <- getAPI t
     case api of
       APICallback _ -> do
-         tname <- qualifiedSymbol (callbackCType n) (Name ns n)
+         tname <- qualifiedSymbol (callbackCType $ name n) n
          return (funptr $ tname `con` [])
       _ -> do
-         tname <- qualifiedAPI (Name ns n)
+         tname <- qualifiedAPI n
          return (ptr $ tname `con` [])
 
 getIsScalar :: Type -> CodeGen Bool
@@ -812,7 +812,7 @@ isManaged   :: Type -> CodeGen Bool
 isManaged TError = return True
 isManaged TVariant = return True
 isManaged TParamSpec = return True
-isManaged t@(TInterface _ _) = do
+isManaged t@(TInterface _) = do
   a <- findAPI t
   case a of
     Just (APIObject _)    -> return True

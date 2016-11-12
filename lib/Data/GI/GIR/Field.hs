@@ -54,7 +54,7 @@ parseField = do
                  t <- parseType
                  ct <- parseCType
                  return (t, Just ct)
-               Just (Name ns n) -> return (TInterface ns n, Nothing)
+               Just n -> return (TInterface n, Nothing)
         return (t, ct, callback)
       else do
         callbacks <- parseAllChildrenWithLocalName "callback" parseName
@@ -63,7 +63,7 @@ parseField = do
                t <- parseType
                ct <- parseCType
                return (t, Just ct, Nothing)
-          [Name ns n] -> return (TInterface ns n, Nothing, Nothing)
+          [n] -> return (TInterface n, Nothing, Nothing)
           _ -> parseError "Multiple callbacks in field"
   return $ Field {
                fieldName = name

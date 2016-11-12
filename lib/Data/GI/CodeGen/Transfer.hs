@@ -29,7 +29,7 @@ basicFreeFn :: Type -> Maybe Text
 basicFreeFn (TBasicType TUTF8) = Just "freeMem"
 basicFreeFn (TBasicType TFileName) = Just "freeMem"
 basicFreeFn (TBasicType _) = Nothing
-basicFreeFn (TInterface _ _) = Nothing
+basicFreeFn (TInterface _) = Nothing
 basicFreeFn (TCArray False (-1) (-1) _) = Nothing -- Just passing it along
 basicFreeFn (TCArray{}) = Just "freeMem"
 basicFreeFn (TGArray _) = Just "unrefGArray"
@@ -58,7 +58,7 @@ basicFreeFnOnError TParamSpec transfer =
     return $ if transfer == TransferEverything
              then Just "unrefGParamSpec"
              else Nothing
-basicFreeFnOnError t@(TInterface _ _) transfer = do
+basicFreeFnOnError t@(TInterface _) transfer = do
   api <- findAPI t
   case api of
     Just (APIObject _) -> if transfer == TransferEverything
