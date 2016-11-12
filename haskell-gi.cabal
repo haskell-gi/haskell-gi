@@ -78,6 +78,7 @@ Library
                        Data.GI.CodeGen.Config,
                        Data.GI.CodeGen.Constant,
                        Data.GI.CodeGen.Conversions,
+                       Data.GI.CodeGen.EnumFlags,
                        Data.GI.CodeGen.Fixups,
                        Data.GI.CodeGen.GObject,
                        Data.GI.CodeGen.GType,
