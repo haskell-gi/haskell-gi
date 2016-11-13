@@ -13,6 +13,8 @@ build()
     done
 }
 
-../dist-newstyle/build/build-tools-0.0.1/build/genBuildInfo/genBuildInfo $(./TravisPKGS.sh)
+genBuildInfo=$(find ../dist-newstyle -type f -executable -iname genBuildInfo)
+
+$genBuildInfo $(./TravisPKGS.sh)
 
 build $(./TravisPKGS.sh)
