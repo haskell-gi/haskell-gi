@@ -1,7 +1,7 @@
 packages: base/haskell-gi-base.cabal
           haskell-gi.cabal
-          bindings/build-tools.cabal
-          test/haskell-gi-test.cabal
+--          bindings/build-tools.cabal
+--          test/haskell-gi-test.cabal
 
 optional-packages: bindings/GLib/gi-glib.cabal
                    bindings/GObject/gi-gobject.cabal
