@@ -19,12 +19,17 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Text (Text)
+import qualified Data.Version as V
+
+import Text.ParserCombinators.ReadP (readP_to_S)
 
 import qualified System.Info as SI
 import qualified System.Environment as SE
 
 import Data.GI.CodeGen.API
 import qualified Text.XML as XML
+import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
+import Data.GI.CodeGen.Util (tshow)
 import Data.GI.GIR.XMLUtils (xmlLocalName, xmlNSName,
                              GIRXMLNamespace(CGIRNS, GLibGIRNS))
 
@@ -81,7 +86,10 @@ instance Monoid Overrides where
 -- | The state of the overrides parser.
 data ParserState = ParserState {
       currentNS :: Maybe Text   -- ^ The current namespace.
-    , flags     :: [ParserFlag] -- ^ Currently loaded flags.
+    , flags     :: [Bool] -- ^ The contents of the override file will
+                          -- be ignored if there is any `False` value
+                          -- here. @if@ primitive push (prepend)
+                          -- values here, @endif@ pop them.
     } deriving (Show)
 
 -- | Default, empty, parser state.
@@ -91,12 +99,6 @@ emptyParserState = ParserState {
                    , flags = []
                    }
 
--- | Conditional flags for the parser
-data ParserFlag = FlagLinux
-                | FlagOSX
-                | FlagWindows
-                  deriving (Show)
-
 -- | Get the current namespace.
 getNS :: Parser (Maybe Text)
 getNS = currentNS <$> get
@@ -105,24 +107,9 @@ getNS = currentNS <$> get
 withFlags :: Parser () -> Parser ()
 withFlags p = do
   fs <- flags <$> get
-  check <- and <$> liftIO (traverse checkFlag fs)
-  if check
+  if and fs
   then p
   else return ()
-
--- | Check whether the given flag holds.
-checkFlag :: ParserFlag -> IO Bool
-checkFlag FlagLinux = checkOS "linux"
-checkFlag FlagOSX = checkOS "darwin"
-checkFlag FlagWindows = checkOS "mingw32"
-
--- | Check whether we are running under the given OS. We take the OS
--- from `System.Info.os`, but it is possible to override this value by
--- setting the environment variable @HASKELL_GI_OVERRIDE_OS@.
-checkOS :: String -> IO Bool
-checkOS os = SE.lookupEnv "HASKELL_GI_OVERRIDE_OS" >>= \case
-             Nothing -> return (SI.os == os)
-             Just ov -> return (ov == os)
 
 -- | We have a bit of context (the current namespace), and can fail,
 -- encode this in a monad.
@@ -160,8 +147,7 @@ parseOneLine (T.stripPrefix "namespace-version " -> Just s) =
     withFlags $ parseNsVersion s
 parseOneLine (T.stripPrefix "set-attr " -> Just s) =
     withFlags $ parseSetAttr s
-parseOneLine (T.stripPrefix "if " -> Just s) =
-    withFlags $ parseIf s
+parseOneLine (T.stripPrefix "if " -> Just s) = parseIf s
 parseOneLine (T.stripPrefix "endif" -> Just s) = parseEndif s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 
@@ -282,15 +268,64 @@ parseXMLName a = case T.splitOn ":" a of
                    _ -> throwError ("Could not understand xml name \""
                                     <> a <> "\".")
 
+-- | Known operating systems.
+data OSType = Linux
+            | OSX
+            | Windows
+              deriving (Show)
+
+-- | Check whether we are running under the given OS. We take the OS
+-- from `System.Info.os`, but it is possible to override this value by
+-- setting the environment variable @HASKELL_GI_OVERRIDE_OS@.
+checkOS :: String -> Parser Bool
+checkOS os = liftIO (SE.lookupEnv "HASKELL_GI_OVERRIDE_OS") >>= \case
+             Nothing -> return (SI.os == os)
+             Just ov -> return (ov == os)
+
+-- | Parse a textual representation of a version into a `Data.Version.Version`.
+parseVersion :: Text -> Parser V.Version
+parseVersion v = (chooseFullParse . readP_to_S V.parseVersion . T.unpack) v
+    where chooseFullParse :: [(V.Version, String)] -> Parser V.Version
+          chooseFullParse [] = throwError ("Could not parse version \""
+                                           <> v <> "\".")
+          chooseFullParse [(parsed, "")] = return parsed
+          chooseFullParse (_ : rest) = chooseFullParse rest
+
+-- | Check that the given pkg-config package has a version compatible
+-- with the given constraint.
+checkPkgConfigVersion :: Text -> Text -> Text -> Parser Bool
+checkPkgConfigVersion pkg op tVersion = do
+  version <- parseVersion tVersion
+  pcVersion <- liftIO (tryPkgConfig pkg) >>= \case
+               Nothing ->
+                   throwError ("Could not determine pkg-config version for \""
+                               <> pkg <> "\".")
+               Just (_, tv) -> parseVersion tv
+  case op of
+    "==" -> return (pcVersion == version)
+    "/=" -> return (pcVersion /= version)
+    ">=" -> return (pcVersion >= version)
+    ">"  -> return (pcVersion >  version)
+    "<=" -> return (pcVersion <= version)
+    "<"  -> return (pcVersion <  version)
+    _    -> throwError ("Unrecognized comparison operator \"" <> op <> "\".")
+
 -- | Parse a 'if' directive.
 parseIf :: Text -> Parser ()
 parseIf cond = case T.words cond of
                  [] -> throwError ("Empty 'if' condition.")
-                 ["linux"] -> setFlag FlagLinux
-                 ["osx"] -> setFlag FlagOSX
-                 ["windows"] -> setFlag FlagWindows
+                 ["linux"] -> checkOS "linux" >>= setFlag
+                 ["osx"] -> checkOS "darwin" >>= setFlag
+                 ["windows"] -> checkOS "mingw32" >>= setFlag
+                 ("pkg-config-version" : rest) ->
+                     case rest of
+                       [pkg, op, version] ->
+                           checkPkgConfigVersion pkg op version >>= setFlag
+                       _ -> throwError ("Syntax for `pkg-config-version' is "
+                                        <> "\"pkg op version\", got \""
+                                        <> tshow rest <> "\".")
                  _ -> throwError ("Unknown condition \"" <> cond <> "\".")
-    where setFlag :: ParserFlag -> Parser ()
+    where setFlag :: Bool -> Parser ()
           setFlag flag = modify' (\s -> s {flags = flag : flags s})
 
 -- | Parse an 'endif' directive.
