@@ -20,7 +20,6 @@ source-repository head
   location: git://github.com/haskell-gi/haskell-gi-base.git
 
 library
-  hs-source-dirs:      src
   exposed-modules:     Data.GI.Base,
                        Data.GI.Base.Attributes,
                        Data.GI.Base.BasicConversions,
@@ -58,4 +57,4 @@ library
   build-tools:         hsc2hs
   cc-options:          -fPIC
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse
-  c-sources:           src/c/hsgclosure.c
+  c-sources:           c/hsgclosure.c
