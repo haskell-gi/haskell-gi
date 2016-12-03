@@ -3,6 +3,10 @@ namespace Pango
 # https://bugzilla.gnome.org/show_bug.cgi?id=766452
 alloc-info Attribute calloc=none copy=pango_attribute_copy free=pango_attribute_destroy
 
+# Wrong annotation
+# https://mail.gnome.org/archives/gir-devel-list/2016-October/msg00000.html
+set-attr Pango/Matrix/transform_pixel_rectangle/@parameters/rect direction in
+
 set-attr Pango/AttrFontDesc/new introspectable 1
 set-attr Pango/AttrFontFeatures/new introspectable 1
 set-attr Pango/AttrLanguage/new introspectable 1
