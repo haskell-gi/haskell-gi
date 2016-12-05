@@ -274,13 +274,9 @@ data OSType = Linux
             | Windows
               deriving (Show)
 
--- | Check whether we are running under the given OS. We take the OS
--- from `System.Info.os`, but it is possible to override this value by
--- setting the environment variable @HASKELL_GI_OVERRIDE_OS@.
+-- | Check whether we are running under the given OS.
 checkOS :: String -> Parser Bool
-checkOS os = liftIO (SE.lookupEnv "HASKELL_GI_OVERRIDE_OS") >>= \case
-             Nothing -> return (SI.os == os)
-             Just ov -> return (ov == os)
+checkOS os = return (SI.os == os)
 
 -- | Parse a textual representation of a version into a `Data.Version.Version`.
 parseVersion :: Text -> Parser V.Version
