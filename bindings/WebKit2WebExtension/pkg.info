@@ -5,7 +5,7 @@
     "synopsis": "WebKit2-WebExtension bindings",
     "girName": "WebKit2WebExtension",
     "girVersion": "4.0",
-    "girOverrides": null,
+    "girOverrides": "WebKit2WebExtension.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [
         "gi-soup == 2.4.*",

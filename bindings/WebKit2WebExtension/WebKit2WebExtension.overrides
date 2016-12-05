@@ -1,0 +1,4 @@
+namespace WebKit2WebExtension
+
+# https://github.com/haskell-gi/haskell-gi/issues/67
+ignore DOMNode.clone_node
