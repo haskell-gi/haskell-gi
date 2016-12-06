@@ -24,7 +24,6 @@ import qualified Data.Version as V
 import Text.ParserCombinators.ReadP (readP_to_S)
 
 import qualified System.Info as SI
-import qualified System.Environment as SE
 
 import Data.GI.CodeGen.API
 import qualified Text.XML as XML
