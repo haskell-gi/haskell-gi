@@ -70,6 +70,7 @@ import Data.GI.Gtk.ModelView.Types
 import Data.GI.Gtk.ModelView.TreeModel
 import Data.GI.Gtk.ModelView.CustomStore (customStoreGetRow)
 import Data.GI.Base (get)
+import Data.GI.Base.BasicTypes (ManagedPtr(..))
 
 --------------------
 -- Methods
@@ -152,7 +153,7 @@ cellLayoutSetDataFunc' self cell model func = liftIO $
   cellLayoutSetCellDataFunc self cell . Just $ \_ (CellRenderer cellPtr') model' iter -> do
     iter <- convertIterFromParentToChildModel iter model' =<< toTreeModel model
     CellRenderer cellPtr <- toCellRenderer cell
-    if cellPtr /= cellPtr' then
+    if managedForeignPtr cellPtr /= managedForeignPtr cellPtr' then
       error ("cellLayoutSetAttributeFunc: attempt to set attributes of "++
              "a different CellRenderer.")
       else func iter
@@ -174,14 +175,14 @@ convertIterFromParentToChildModel ::
   -> IO TreeIter
 convertIterFromParentToChildModel iter parentModel@(TreeModel parentModelPtr) childModel =
   let (TreeModel modelPtr) = childModel in
-  if modelPtr==parentModelPtr
+  if managedForeignPtr modelPtr == managedForeignPtr parentModelPtr
     then return iter
     else
         castTo TreeModelFilter parentModel >>= \case
             Just tmFilter -> do
                 childIter <- treeModelFilterConvertIterToChildIter tmFilter iter
                 Just child@(TreeModel childPtr) <- getTreeModelFilterChildModel tmFilter
-                if childPtr == modelPtr
+                if managedForeignPtr childPtr == managedForeignPtr modelPtr
                     then return childIter
                     else convertIterFromParentToChildModel childIter child childModel
             Nothing -> do
@@ -189,7 +190,7 @@ convertIterFromParentToChildModel iter parentModel@(TreeModel parentModelPtr) ch
                     Just tmSort -> do
                         childIter <- treeModelSortConvertIterToChildIter tmSort iter
                         child@(TreeModel childPtr) <- getTreeModelSortModel tmSort
-                        if childPtr == modelPtr
+                        if managedForeignPtr childPtr == managedForeignPtr modelPtr
                             then return childIter
                             else convertIterFromParentToChildModel childIter child childModel
                     Nothing -> do
@@ -198,8 +199,8 @@ convertIterFromParentToChildModel iter parentModel@(TreeModel parentModelPtr) ch
                         ud2 <- getTreeIterUserData2 iter
                         ud3 <- getTreeIterUserData3 iter
                         error ("CellLayout: don't know how to convert iter "++show (stamp, ud1, ud2, ud3)++
-                               " from model "++show parentModelPtr++" to model "++
-                               show modelPtr++". Is it possible that you are setting the "++
+                               " from model "++show (managedForeignPtr parentModelPtr)++" to model "++
+                               show (managedForeignPtr modelPtr)++". Is it possible that you are setting the "++
                                "attributes of a CellRenderer using a different model than "++
                                "that which was set in the view?")
 

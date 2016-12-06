@@ -50,7 +50,6 @@ module Data.GI.Gtk.ModelView.Types (
   treePathNewFromIndices',
   treePathGetIndices',
   withTreePath,
-  maybeWithTreePath,
   stringToTreePath,
 
   treeSelectionGetSelectedRows',
@@ -86,7 +85,9 @@ import Foreign.Marshal.Alloc (alloca)
 import Foreign.Marshal.Utils (toBool)
 import System.IO.Unsafe (unsafePerformIO)
 import Foreign.Marshal.Utils (with)
-import Data.GI.Base.BasicTypes (ForeignPtrNewtype, UnexpectedNullPointerReturn, GObject(..))
+import Data.GI.Base.BasicTypes
+       (ManagedPtr(..), ManagedPtrNewtype, UnexpectedNullPointerReturn,
+        GObject(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import Data.GI.Base.GValue (GValue)
 import GI.GObject.Objects.Object (Object(..))
@@ -104,13 +105,11 @@ import Data.GI.Base.Constructible (Constructible(..))
 import Data.GI.Base.Attributes (AttrOp(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Data.GI.Base (set, get)
+import Data.IORef (newIORef)
 
-nullForeignPtr :: ForeignPtr a
-nullForeignPtr = unsafePerformIO $ newForeignPtr_ nullPtr
-
-equalManagedPtr :: ForeignPtrNewtype a => a -> a -> Bool
+equalManagedPtr :: ManagedPtrNewtype a => a -> a -> Bool
 equalManagedPtr a b =
-    (coerce a :: ForeignPtr ()) == (coerce b :: ForeignPtr ())
+    managedForeignPtr (coerce a :: ManagedPtr ()) == managedForeignPtr (coerce b :: ManagedPtr ())
 
 newtype TypedTreeModel row = TypedTreeModel (ForeignPtr (TypedTreeModel row))
 
@@ -128,7 +127,7 @@ unsafeTreeModelToGeneric = unsafeCoerce#
 
 instance IsTypedTreeModel TypedTreeModel
 
-newtype TypedTreeModelSort row = TypedTreeModelSort (ForeignPtr (TypedTreeModelSort row))
+newtype TypedTreeModelSort row = TypedTreeModelSort (ManagedPtr (TypedTreeModelSort row))
 
 instance IsTreeModelSort (TypedTreeModelSort row)
 instance IsTreeSortable (TypedTreeModelSort row)
@@ -176,8 +175,8 @@ treePathGetIndices' path = treePathGetDepth path >>= \case
 withTreePath :: MonadIO m => [Int32] -> (TreePath -> m a) -> m a
 withTreePath tp act = treePathNewFromIndices' tp >>= act
 
-maybeWithTreePath :: MonadIO m => Maybe [Int32] -> (TreePath -> m a) -> m a
-maybeWithTreePath mbTp act = maybe (act (TreePath nullForeignPtr)) (`withTreePath` act) mbTp
+--maybeWithTreePath :: MonadIO m => Maybe [Int32] -> (TreePath -> m a) -> m a
+--maybeWithTreePath mbTp act = maybe (act (TreePath nullManagedPtr)) (`withTreePath` act) mbTp
 
 treeSelectionGetSelectedRows' :: (MonadIO m, IsTreeSelection sel) => sel -> m [TreePath]
 treeSelectionGetSelectedRows' sel = treeSelectionCountSelectedRows sel >>= \case

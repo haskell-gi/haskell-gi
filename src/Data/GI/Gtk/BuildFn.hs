@@ -53,7 +53,7 @@ type BuildFn a = ReaderT Builder IO a
 buildWithBuilder :: MonadIO m => BuildFn a -> Builder -> m a
 buildWithBuilder fn builder = liftIO $ runReaderT fn builder
 
-getObject :: GObject a => (ForeignPtr a -> a) -> T.Text -> BuildFn a
+getObject :: GObject a => (ManagedPtr a -> a) -> T.Text -> BuildFn a
 getObject ctor name = do
     builder <- ask
     Just obj <- nullToNothing $ builderGetObject builder name

@@ -65,9 +65,11 @@ import Foreign.StablePtr (deRefStablePtr, newStablePtr, StablePtr(..))
 import Foreign.Marshal (fromBool)
 import Foreign.Storable (peek, poke, peekByteOff)
 import System.IO.Unsafe (unsafePerformIO)
-import Data.GI.Base.BasicTypes (GObject(..), GType, CGType(..), gtypeToCGType, gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
+import Data.GI.Base.BasicTypes
+       (ManagedPtr(..), GObject(..), GType, CGType(..), gtypeToCGType,
+        gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
-import Data.GI.Base.ManagedPtr (newObject, withManagedPtr)
+import Data.GI.Base.ManagedPtr (newPtr, newObject, withManagedPtr)
 import Data.GI.Base.GValue (GValue(..))
 import GI.GObject (Object)
 import GI.GdkPixbuf.Objects (Pixbuf(..))
@@ -104,7 +106,7 @@ treeIterOverwrite iterOut iterIn = do
 --   create an instance of a 'CustomStore' or use one of the pre-defined
 --   models 'Data.GI.Gtk.ModelView.ListStore.ListStore' or
 --   'Data.GI.Gtk.ModelView.TreeStore.TreeStore'.
-newtype CustomStore private row = CustomStore (ForeignPtr (CustomStore private row))
+newtype CustomStore private row = CustomStore (ManagedPtr (CustomStore private row))
 instance IsTreeModel (CustomStore private row)
 
 instance GObject (CustomStore private row) where
@@ -264,10 +266,10 @@ foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_get_impl"
 -- | Return the private data stored in this 'CustomStore'. The private data
 --   is meant as a container for the data stored in this model.
 customStoreGetPrivate :: CustomStore private row -> private
-customStoreGetPrivate (CustomStore model) =
+customStoreGetPrivate model =
   unsafePerformIO $ -- this is safe because the priv member is set at
                     -- construction time and never modified after that
-  withForeignPtr model gtk2hs_store_get_priv >>= deRefStablePtr
+  withManagedPtr model gtk2hs_store_get_priv >>= deRefStablePtr
 
 foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_get_priv"
   gtk2hs_store_get_priv :: Ptr (CustomStore private row) -> IO (StablePtr private)
@@ -280,8 +282,8 @@ foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_get_priv"
 --   use a stale 'TreeIter', i.e., one that refers to an old model.
 --
 customStoreGetStamp :: MonadIO m => CustomStore private row -> m Int32
-customStoreGetStamp (CustomStore model) = liftIO $ fromIntegral <$>
-  withForeignPtr model gtk2hs_store_get_stamp
+customStoreGetStamp model = liftIO $ fromIntegral <$>
+  withManagedPtr model gtk2hs_store_get_stamp
 
 foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_get_stamp"
   gtk2hs_store_get_stamp :: Ptr (CustomStore private row) -> IO CInt
@@ -289,8 +291,8 @@ foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_get_stamp"
 -- | Create a new stamp. See 'customStoreGetStamp'.
 --
 customStoreInvalidateIters :: MonadIO m => CustomStore private row -> m ()
-customStoreInvalidateIters (CustomStore model) = liftIO $
-  withForeignPtr model gtk2hs_store_increment_stamp
+customStoreInvalidateIters model = liftIO $
+  withManagedPtr model gtk2hs_store_increment_stamp
 
 foreign import ccall unsafe "Gtk2HsStore.h gtk2hs_store_increment_stamp"
   gtk2hs_store_increment_stamp :: Ptr (CustomStore private row) -> IO ()
@@ -340,9 +342,11 @@ foreign export ccall "gtk2hs_store_get_flags_impl"
 
 treeModelIfaceGetIter_static :: StablePtr (CustomStoreImplementation model row) -> Ptr TreeIter -> Ptr TreePath -> IO CInt
 treeModelIfaceGetIter_static storePtr iterPtr pathPtr = do
-  iterOut <- TreeIter <$> newForeignPtr_ iterPtr -- Take care not to use this outside of this function
+  isOwned <- newIORef False
+  ptr <- newForeignPtr_ iterPtr
+  let iterOut = TreeIter $ ManagedPtr ptr isOwned  -- Take care not to use this outside of this function
   store <- customStoreIface <$> deRefStablePtr storePtr
-  path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
+  path <- newBoxed TreePath pathPtr
   treeModelIfaceGetIter store path >>= \case
     Nothing   -> return (fromBool False)
     Just iter -> do treeIterOverwrite iterOut iter
@@ -402,7 +406,9 @@ foreign export ccall "gtk2hs_store_get_value_impl"
 
 treeModelIfaceIterNext_static :: StablePtr (CustomStoreImplementation model row) -> Ptr TreeIter -> IO CInt
 treeModelIfaceIterNext_static storePtr iterPtr = do
-  iterOut <- TreeIter <$> newForeignPtr_ iterPtr -- Take care not to use this outside of this function
+  isOwned <- newIORef False
+  ptr <- newForeignPtr_ iterPtr
+  let iterOut = TreeIter $ ManagedPtr ptr isOwned  -- Take care not to use this outside of this function
   store <- customStoreIface <$> deRefStablePtr storePtr
   iter <- newBoxed TreeIter iterPtr
   treeModelIfaceIterNext store iter >>= \case
@@ -416,7 +422,9 @@ foreign export ccall "gtk2hs_store_iter_next_impl"
 
 treeModelIfaceIterChildren_static :: StablePtr (CustomStoreImplementation model row) -> Ptr TreeIter -> Ptr TreeIter -> IO CInt
 treeModelIfaceIterChildren_static storePtr iterPtr parentIterPtr = do
-  iterOut <- TreeIter <$> newForeignPtr_ iterPtr -- Take care not to use this outside of this function
+  isOwned <- newIORef False
+  ptr <- newForeignPtr_ iterPtr
+  let iterOut = TreeIter $ ManagedPtr ptr isOwned  -- Take care not to use this outside of this function
   store <- customStoreIface <$> deRefStablePtr storePtr
   parentIter <- maybeNull (newBoxed TreeIter) parentIterPtr
   treeModelIfaceIterChildren store parentIter >>= \case
@@ -450,7 +458,9 @@ foreign export ccall "gtk2hs_store_iter_n_children_impl"
 
 treeModelIfaceIterNthChild_static :: StablePtr (CustomStoreImplementation model row) -> Ptr TreeIter -> Ptr TreeIter -> CInt -> IO CInt
 treeModelIfaceIterNthChild_static storePtr iterPtr parentIterPtr n = do
-  iterOut <- TreeIter <$> newForeignPtr_ iterPtr -- Take care not to use this outside of this function
+  isOwned <- newIORef False
+  ptr <- newForeignPtr_ iterPtr
+  let iterOut = TreeIter $ ManagedPtr ptr isOwned  -- Take care not to use this outside of this function
   store <- customStoreIface <$> deRefStablePtr storePtr
   parentIter <- maybeNull (newBoxed TreeIter) parentIterPtr
   treeModelIfaceIterNthChild store parentIter (fromIntegral n) >>= \case
@@ -464,7 +474,9 @@ foreign export ccall "gtk2hs_store_iter_nth_child_impl"
 
 treeModelIfaceIterParent_static :: StablePtr (CustomStoreImplementation model row) -> Ptr TreeIter -> Ptr TreeIter -> IO CInt
 treeModelIfaceIterParent_static  storePtr iterPtr childIterPtr = do
-  iterOut <- TreeIter <$> newForeignPtr_ iterPtr -- Take care not to use this outside of this function
+  isOwned <- newIORef False
+  ptr <- newForeignPtr_ iterPtr
+  let iterOut = TreeIter $ ManagedPtr ptr isOwned  -- Take care not to use this outside of this function
   store <- customStoreIface <$> deRefStablePtr storePtr
   childIter <- newBoxed TreeIter childIterPtr
   iter <- treeModelIfaceIterParent store childIter
@@ -500,7 +512,7 @@ customDragSourceRowDraggable_static :: Ptr TreeModel -> StablePtr (CustomStoreIm
 customDragSourceRowDraggable_static mPtr storePtr pathPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragSourceIface <$> deRefStablePtr storePtr
-  path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
+  path <- newBoxed TreePath pathPtr
   fromBool <$> customDragSourceRowDraggable store (unsafeTreeModelToGeneric model) path
 
 foreign export ccall "gtk2hs_store_row_draggable_impl"
@@ -510,8 +522,8 @@ customDragSourceDragDataGet_static :: Ptr TreeModel -> StablePtr (CustomStoreImp
 customDragSourceDragDataGet_static mPtr storePtr pathPtr selectionPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragSourceIface <$> deRefStablePtr storePtr
-  path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
-  selection <- selectionDataCopy . SelectionData =<< newForeignPtr_ selectionPtr
+  path <- newBoxed TreePath pathPtr
+  selection <- newBoxed SelectionData selectionPtr
   fromBool <$> customDragSourceDragDataGet store (unsafeTreeModelToGeneric model) path selection
 
 foreign export ccall "gtk2hs_store_drag_data_get_impl"
@@ -521,7 +533,7 @@ customDragSourceDragDataDelete_static :: Ptr TreeModel -> StablePtr (CustomStore
 customDragSourceDragDataDelete_static mPtr storePtr pathPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragSourceIface <$> deRefStablePtr storePtr
-  path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
+  path <- newBoxed TreePath pathPtr
   fromBool <$> customDragSourceDragDataDelete store (unsafeTreeModelToGeneric model) path
 
 foreign export ccall "gtk2hs_store_drag_data_delete_impl"
@@ -531,8 +543,8 @@ customDragDestDragDataReceived_static :: Ptr TreeModel -> StablePtr (CustomStore
 customDragDestDragDataReceived_static mPtr storePtr pathPtr selectionPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragDestIface <$> deRefStablePtr storePtr
-  path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
-  selection <- selectionDataCopy . SelectionData =<< newForeignPtr_ selectionPtr
+  path <- newBoxed TreePath pathPtr
+  selection <- newBoxed SelectionData selectionPtr
   fromBool <$> customDragDestDragDataReceived store (unsafeTreeModelToGeneric model) path selection
 
 foreign export ccall "gtk2hs_store_drag_data_received_impl"
@@ -542,8 +554,8 @@ customDragDestRowDropPossible_static :: Ptr TreeModel -> StablePtr (CustomStoreI
 customDragDestRowDropPossible_static mPtr storePtr pathPtr selectionPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragDestIface <$> deRefStablePtr storePtr
-  path <- treePathCopy . TreePath =<< newForeignPtr_ pathPtr
-  selection <- selectionDataCopy . SelectionData =<< newForeignPtr_ selectionPtr
+  path <- newBoxed TreePath pathPtr
+  selection <- newBoxed SelectionData selectionPtr
   fromBool <$> customDragDestRowDropPossible store (unsafeTreeModelToGeneric model) path selection
 
 foreign export ccall "gtk2hs_store_row_drop_possible_impl"

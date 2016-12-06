@@ -74,7 +74,8 @@ import Data.GI.Gtk.ModelView.CustomStore
        (customStoreGetStamp, customStoreGetPrivate,
         TreeModelIface(..), customStoreNew, DragDestIface(..),
         DragSourceIface(..), CustomStore(..))
-import Data.GI.Base.BasicTypes (GObject(..), GObject)
+import Data.GI.Base.BasicTypes
+       (ManagedPtr(..), GObject(..), GObject)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import GI.Gtk.Interfaces.TreeModel
        (treeModelRowDeleted, treeModelRowInserted,
@@ -100,7 +101,7 @@ seqStoreIterNew s u1 = do
     setTreeIterUserData3 i nullPtr
     return i
 
-newtype SeqStore a = SeqStore (ForeignPtr (CustomStore (IORef (Seq a)) a))
+newtype SeqStore a = SeqStore (ManagedPtr (CustomStore (IORef (Seq a)) a))
 
 mkSeqStore :: CustomStore (IORef (Seq a)) a -> SeqStore a
 mkSeqStore (CustomStore ptr) = SeqStore ptr

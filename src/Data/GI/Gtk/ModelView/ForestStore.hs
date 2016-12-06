@@ -73,7 +73,8 @@ import Data.IORef
 
 import Foreign.ForeignPtr (ForeignPtr)
 
-import Data.GI.Base.BasicTypes (GObject(..), GObject)
+import Data.GI.Base.BasicTypes
+       (ManagedPtr(..), GObject(..), GObject)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 
 import Data.GI.Gtk.ModelView.Types
@@ -125,7 +126,7 @@ forestStoreIterSetStamp (ForestStoreIter _ a b c) s = ForestStoreIter s a b c
 
 -- | A store for hierarchical data.
 --
-newtype ForestStore a = ForestStore (ForeignPtr (CustomStore (IORef (Store a)) a))
+newtype ForestStore a = ForestStore (ManagedPtr (CustomStore (IORef (Store a)) a))
 
 mkForestStore :: CustomStore (IORef (Store a)) a -> ForestStore a
 mkForestStore (CustomStore ptr) = ForestStore ptr

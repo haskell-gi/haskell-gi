@@ -111,12 +111,12 @@ foreign import ccall "g_object_set_qdata_full" g_object_set_qdata_full ::
 --
 objectSetAttribute :: (MonadIO m, GObject o) => o -> GQuark -> Maybe a -> m ()
 objectSetAttribute obj attr Nothing = liftIO $ do
-  let obj' = unsafeManagedPtrCastPtr obj
+  obj' <- unsafeManagedPtrCastPtr obj
   g_object_set_qdata obj' (fromIntegral attr) nullPtr
   touchManagedPtr obj
 objectSetAttribute obj attr (Just val) = liftIO $ do
   sPtr <- newStablePtr val
-  let obj' = unsafeManagedPtrCastPtr obj
+  obj' <- unsafeManagedPtrCastPtr obj
   g_object_set_qdata_full obj' attr (castStablePtrToPtr sPtr) destroyStablePtr
   touchManagedPtr obj
 
@@ -131,7 +131,7 @@ foreign import ccall "g_object_get_qdata" g_object_get_qdata ::
 --
 objectGetAttributeUnsafe :: (MonadIO m, GObject o) => o -> GQuark -> m (Maybe a)
 objectGetAttributeUnsafe obj attr = liftIO $ do
-  let obj' = unsafeManagedPtrCastPtr obj
+  obj' <- unsafeManagedPtrCastPtr obj
   sPtr <- g_object_get_qdata obj' attr
   touchManagedPtr obj
   if sPtr==nullPtr then return Nothing else
