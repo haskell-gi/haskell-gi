@@ -9,3 +9,4 @@ cabal.sandbox.config
 *~
 *.bak
 *.swp
+/dist-newstyle/
