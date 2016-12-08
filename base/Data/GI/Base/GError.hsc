@@ -181,10 +181,9 @@ catchGErrorJust :: GErrorClass err => err  -- ^ The error to catch
                 -> (GErrorMessage -> IO a) -- ^ Handler to invoke if
                                            -- an exception is raised
                 -> IO a
-catchGErrorJust code action handler = do
-  domainQuark <- gErrorQuarkFromDomain $ gerrorClassDomain code
-  catch action (handler' domainQuark)
-  where handler' quark gerror = do
+catchGErrorJust code action handler = catch action handler'
+  where handler' gerror = do
+          quark <- gErrorQuarkFromDomain (gerrorClassDomain code)
           domain <- gerrorDomain gerror
           code' <- gerrorCode gerror
           if domain == quark && code' == (fromIntegral . fromEnum) code
@@ -208,10 +207,9 @@ catchGErrorJustDomain :: forall err a. GErrorClass err =>
                          IO a        -- ^ The computation to run
                       -> (err -> GErrorMessage -> IO a) -- ^ Handler to invoke if an exception is raised
                       -> IO a
-catchGErrorJustDomain action handler = do
-  domainQuark <- gErrorQuarkFromDomain $ gerrorClassDomain (undefined::err)
-  catch action (handler' domainQuark)
-  where handler' quark gerror = do
+catchGErrorJustDomain action handler = catch action handler'
+  where handler' gerror = do
+          quark <- gErrorQuarkFromDomain (gerrorClassDomain (undefined :: err))
           domain <- gerrorDomain gerror
           if domain == quark
           then do
