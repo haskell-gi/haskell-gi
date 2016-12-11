@@ -349,8 +349,18 @@ hToF_PackGHashTable keys elems = do
                                  keyDestroy, elemDestroy]))
 
 hToF :: Type -> Transfer -> ExcCodeGen Converter
-hToF (TGList t) transfer = hToF_PackedType t "packGList" transfer
-hToF (TGSList t) transfer = hToF_PackedType t "packGSList" transfer
+hToF (TGList t) transfer = do
+  isPtr <- typeIsPtr t
+  when (not isPtr) $
+       badIntroError ("'" <> tshow t <>
+                      "' is not a pointer type, cannot pack into a GList.")
+  hToF_PackedType t "packGList" transfer
+hToF (TGSList t) transfer = do
+  isPtr <- typeIsPtr t
+  when (not isPtr) $
+       badIntroError ("'" <> tshow t <>
+                      "' is not a pointer type, cannot pack into a GSList.")
+  hToF_PackedType t "packGSList" transfer
 hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
 hToF (TPtrArray t) transfer = hToF_PackedType t "packGPtrArray" transfer
 hToF (TGHash ta tb) _ = hToF_PackGHashTable ta tb
@@ -526,9 +536,18 @@ fToH_UnpackGHashTable keys elems transfer = do
     apply (P "Map.fromList")
 
 fToH :: Type -> Transfer -> ExcCodeGen Converter
-
-fToH (TGList t) transfer = fToH_PackedType t "unpackGList" transfer
-fToH (TGSList t) transfer = fToH_PackedType t "unpackGSList" transfer
+fToH (TGList t) transfer = do
+  isPtr <- typeIsPtr t
+  when (not isPtr) $
+       badIntroError ("'" <> tshow t <>
+                      "' is not a pointer type, cannot unpack from a GList.")
+  fToH_PackedType t "unpackGList" transfer
+fToH (TGSList t) transfer = do
+  isPtr <- typeIsPtr t
+  when (not isPtr) $
+       badIntroError ("'" <> tshow t <>
+                      "' is not a pointer type, cannot unpack from a GSList.")
+  fToH_PackedType t "unpackGSList" transfer
 fToH (TGArray t) transfer = fToH_PackedType t "unpackGArray" transfer
 fToH (TPtrArray t) transfer = fToH_PackedType t "unpackGPtrArray" transfer
 fToH (TGHash a b) transfer = fToH_UnpackGHashTable a b transfer
