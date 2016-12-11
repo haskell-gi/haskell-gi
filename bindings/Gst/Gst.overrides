@@ -3,6 +3,10 @@ namespace Gst
 # Not needed for the bindings
 ignore MiniObject.take
 
+# Wrong introspection data, reported as https://bugzilla.gnome.org/show_bug.cgi?id=775944
+set-attr Gst/Event/new_select_streams/@parameters/streams/@type/@type name utf8
+set-attr Gst/Event/parse_select_streams/@parameters/streams/@type/@type name utf8
+
 # Generated from gst 1.8.0 with xsltproc Nullable.xslt Gst-1.0.gir
 set-attr Gst/Allocator/find/@return-value nullable 1
 set-attr Gst/Allocator/find/@parameters/name nullable 1
