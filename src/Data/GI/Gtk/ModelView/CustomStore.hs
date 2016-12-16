@@ -337,7 +337,7 @@ foreign export ccall "gtk2hs_store_get_flags_impl"
 
 tempManagedPtr :: Ptr a -> IO (ManagedPtr a)
 tempManagedPtr p = do
-  isOwned <- newIORef False
+  isOwned <- newIORef True
   fPtr <- newForeignPtr_ p
   return $ ManagedPtr fPtr isOwned
 
