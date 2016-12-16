@@ -79,7 +79,6 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Control.Exception (catch)
 import Foreign.Storable (Storable(..))
 import Foreign.Ptr (Ptr, castPtr, plusPtr, minusPtr, nullPtr)
-import Foreign.ForeignPtr (ForeignPtr, newForeignPtr_)
 import Foreign.C.Types (CInt(..))
 import Foreign.Marshal.Alloc (alloca)
 import Foreign.Marshal.Utils (toBool)
@@ -111,7 +110,7 @@ equalManagedPtr :: ManagedPtrNewtype a => a -> a -> Bool
 equalManagedPtr a b =
     managedForeignPtr (coerce a :: ManagedPtr ()) == managedForeignPtr (coerce b :: ManagedPtr ())
 
-newtype TypedTreeModel row = TypedTreeModel (ForeignPtr (TypedTreeModel row))
+newtype TypedTreeModel row = TypedTreeModel (ManagedPtr (TypedTreeModel row))
 
 class IsTypedTreeModel model where
   dummy :: model a -> a
@@ -142,7 +141,7 @@ unsafeTreeModelSortToGeneric = unsafeCoerce#
 
 instance IsTypedTreeModel TypedTreeModelSort
 
-newtype TypedTreeModelFilter row = TypedTreeModelFilter (ForeignPtr (TypedTreeModelFilter row))
+newtype TypedTreeModelFilter row = TypedTreeModelFilter (ManagedPtr (TypedTreeModelFilter row))
 
 unsafeTreeModelFilterToGeneric :: TreeModelFilter -> TypedTreeModelFilter row
 unsafeTreeModelFilterToGeneric = unsafeCoerce#
