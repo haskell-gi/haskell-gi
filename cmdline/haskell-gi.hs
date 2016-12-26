@@ -32,6 +32,7 @@ import Data.GI.CodeGen.Cabal (cabalConfig, setupHs, genCabalProject)
 import Data.GI.CodeGen.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText, minBaseVersion)
 import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.CodeGen (genModule)
+import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
 import Data.GI.CodeGen.OverloadedSignals (genOverloadedSignalConnectors)
 import Data.GI.CodeGen.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups)
@@ -94,8 +95,8 @@ optDescrs = [
                          (\arg opt -> opt {optOutputDir = Just arg}) "DIR")
     "\tset the output directory",
   Option "s" ["search"] (ReqArg
-    (\arg opt -> opt { optSearchPaths = arg : optSearchPaths opt }) "PATH")
-    "\tprepend a directory to the typelib search path",
+    (\arg opt -> opt { optSearchPaths = arg : optSearchPaths opt}) "PATH")
+    "\tprepend a directory to the GIR and typelib search path",
   Option "M" ["noMethodOverloading"] (NoArg $ \opt -> opt {optOvMethods = False})
     "\tdo not generate method overloading support",
   Option "P" ["noPropertyOverloading"] (NoArg $ \opt -> opt {optOvProperties = False})
@@ -222,6 +223,7 @@ process :: Options -> [Text] -> IO ()
 process options names = do
   let extraPaths = optSearchPaths options
   configs <- traverse TIO.readFile (optOverridesFiles options)
+  setupTypelibSearchPath (optSearchPaths options)
   parseOverridesFile (concatMap T.lines configs) >>= \case
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"

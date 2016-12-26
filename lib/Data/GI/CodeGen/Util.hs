@@ -12,6 +12,8 @@ module Data.GI.CodeGen.Util
 
   , tshow
   , terror
+
+  , splitOn
   ) where
 
 import Data.Monoid ((<>))
@@ -59,3 +61,10 @@ modifyQualified f = T.intercalate "." . modify . T.splitOn "."
           modify (a:[]) = f a : []
           modify (a:as) = a : modify as
 
+-- | Split a list into sublists delimited by the given element.
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn x xs = go xs []
+    where go [] acc = [reverse acc]
+          go (y : ys) acc = if x == y
+                            then reverse acc : go ys []
+                            else go ys (y : acc)

@@ -2,6 +2,7 @@
 -- | A minimal wrapper for libgirepository.
 module Data.GI.CodeGen.LibGIRepository
     ( girRequire
+    , setupTypelibSearchPath
     , FieldInfo(..)
     , girStructFieldInfo
     , girUnionFieldInfo
@@ -12,20 +13,23 @@ module Data.GI.CodeGen.LibGIRepository
 import Control.Applicative ((<$>))
 #endif
 
-import Control.Monad (forM, when, (>=>))
+import Control.Monad (forM, when, (>=>), mapM_)
 import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Data.Text as T
 
 import Foreign.C.Types (CInt(..), CSize(..))
-import Foreign.C.String (CString)
+import Foreign.C.String (CString, withCString)
 import Foreign (nullPtr, Ptr, FunPtr, peek)
+
+import System.Environment (lookupEnv)
 
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
 import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), CGType, ManagedPtr)
 import Data.GI.Base.GError (GError, checkGError)
 import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr)
 import Data.GI.Base.Utils (allocMem, freeMem)
+import Data.GI.CodeGen.Util (splitOn)
 
 -- | Wrapper for 'GIBaseInfo'
 newtype BaseInfo = BaseInfo (ManagedPtr BaseInfo)
@@ -45,9 +49,30 @@ foreign import ccall "g_base_info_gtype_get_type" c_g_base_info_gtype_get_type :
 instance BoxedObject BaseInfo where
     boxedType _ = c_g_base_info_gtype_get_type
 
+foreign import ccall "g_irepository_prepend_search_path" g_irepository_prepend_search_path :: CString -> IO ()
+
+-- | Add the given directory to the typelib search path, this is a
+-- thin wrapper over `g_irepository_prepend_search_path`.
+girPrependSearchPath :: FilePath -> IO ()
+girPrependSearchPath fp = withCString fp g_irepository_prepend_search_path
+
 foreign import ccall "g_irepository_require" g_irepository_require ::
     Ptr () -> CString -> CString -> CInt -> Ptr (Ptr GError)
     -> IO (Ptr Typelib)
+
+-- | A convenience function for setting up the typelib search path
+-- from the environment. Note that for efficiency reasons this should
+-- only be called once per program run. If the list of paths passed in
+-- is empty, the environment variable @HASKELL_GI_TYPELIB_SEARCH_PATH@
+-- will be checked. In either case the system directories will be
+-- searched after the passed in directories.
+setupTypelibSearchPath :: [FilePath] -> IO ()
+setupTypelibSearchPath [] = do
+  env <- lookupEnv "HASKELL_GI_TYPELIB_SEARCH_PATH"
+  case env of
+    Nothing -> return ()
+    Just paths -> mapM_ girPrependSearchPath (splitOn ':' paths)
+setupTypelibSearchPath paths = mapM_ girPrependSearchPath paths
 
 -- | Ensure that the given version of the namespace is loaded. If that
 -- is not possible we error out.

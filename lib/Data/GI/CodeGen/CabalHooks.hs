@@ -16,6 +16,7 @@ import Data.GI.CodeGen.API (loadGIRInfo)
 import Data.GI.CodeGen.Code (genCode, writeModuleTree, listModuleTree)
 import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
+import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
                                   filterAPIsAndDeps)
 import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
@@ -90,6 +91,8 @@ confCodeGenHook :: Text -- ^ name
                 -> ConfHook
 confCodeGenHook name version verbosity overrides outputDir
                 defaultConfHook (gpd, hbi) flags = do
+  setupTypelibSearchPath []
+
   ovsData <- case overrides of
                Nothing -> return ""
                Just fname -> TIO.readFile fname
