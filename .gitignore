@@ -18,6 +18,7 @@ bindings/*/*.cabal
 bindings/*/Setup.hs
 bindings/*/LICENSE
 bindings/*/stack.yaml
+bindings/*/README.md
 bindings/sdists
 bindings/dumps
 examples/GI/*

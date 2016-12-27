@@ -14,6 +14,7 @@ clean()
         rm -f Setup.hs
         rm -f stack.yaml
         rm -f LICENSE
+        rm -f README.md
 	popd > /dev/null
     done
 }
