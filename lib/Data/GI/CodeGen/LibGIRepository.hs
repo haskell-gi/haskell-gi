@@ -13,7 +13,7 @@ module Data.GI.CodeGen.LibGIRepository
 import Control.Applicative ((<$>))
 #endif
 
-import Control.Monad (forM, when, (>=>), mapM_)
+import Control.Monad (forM, when, (>=>))
 import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Data.Text as T
