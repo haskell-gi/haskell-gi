@@ -11,6 +11,11 @@ ignore Overlay.get-child-position
 # upstream issue: https://bugzilla.gnome.org/show_bug.cgi?id=761339
 ignore WidgetPath.iter_add_qclass
 
+# Wrong introspection data in old gtk versions, see
+# https://bugzilla.gnome.org/show_bug.cgi?id=674537
+set-attr Gtk/MenuPositionFunc/@parameters/x direction inout
+set-attr Gtk/MenuPositionFunc/@parameters/y direction inout
+
 if osx
     # Not supported in Quartz version of Gtk
     ignore drag_set_icon_gicon
