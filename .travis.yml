@@ -40,6 +40,9 @@ script:
  - cabal install --dependencies-only
  - cabal configure
  - cabal build
+ # For building the test program later, doing it now avoids a recompilation
+ - cabal run haskell-gi -- -l -O test Gtk Gdk
+ - cabal run haskell-gi -- -c -O test Gtk
  - cabal clean
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
@@ -60,10 +63,7 @@ script:
      cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
      cabal install -j1 ./Gtk
      cabal install -j3 ./GtkSource ./WebKit
-     cd ..
-     cabal run haskell-gi -- -l -O test Gtk Gdk
-     cabal run haskell-gi -- -c -O test Gtk
-     cd test
+     cd ../test
      cabal install --dependencies-only
      cabal configure
      cabal build
