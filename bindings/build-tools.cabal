@@ -22,3 +22,5 @@ executable genBuildInfo
                         bytestring >= 0.10,
                         aeson,
                         aeson-pretty
+
+  ghc-options:         -Wall
