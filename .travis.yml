@@ -60,10 +60,11 @@ script:
      cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
      cabal install -j1 ./Gtk
      cabal install -j3 ./GtkSource ./WebKit
-     cd ../test
+     cd ..
+     cabal run haskell-gi -- -l -O test Gtk Gdk
+     cabal run haskell-gi -- -c -O test Gtk
+     cd test
      cabal install --dependencies-only
-     ../dist/build/haskell-gi/haskell-gi -l Gtk Gdk
-     ../dist/build/haskell-gi/haskell-gi -c Gtk
      cabal configure
      cabal build
    fi
