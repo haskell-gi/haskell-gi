@@ -23,6 +23,7 @@ import Foreign.C.String (CString, withCString)
 import Foreign (nullPtr, Ptr, FunPtr, peek)
 
 import System.Environment (lookupEnv)
+import System.FilePath (searchPathSeparator)
 
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
 import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), CGType, ManagedPtr)
@@ -71,7 +72,7 @@ setupTypelibSearchPath [] = do
   env <- lookupEnv "HASKELL_GI_TYPELIB_SEARCH_PATH"
   case env of
     Nothing -> return ()
-    Just paths -> mapM_ girPrependSearchPath (splitOn ':' paths)
+    Just paths -> mapM_ girPrependSearchPath (splitOn searchPathSeparator paths)
 setupTypelibSearchPath paths = mapM_ girPrependSearchPath paths
 
 -- | Ensure that the given version of the namespace is loaded. If that

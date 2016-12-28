@@ -17,7 +17,7 @@ import qualified Text.XML as XML
 import System.Directory
 import System.Environment (lookupEnv)
 import System.Environment.XDG.BaseDir (getSystemDataDirs)
-import System.FilePath
+import System.FilePath (searchPathSeparator, takeBaseName, (</>), (<.>))
 
 girDataDirs :: IO [FilePath]
 girDataDirs = getSystemDataDirs "gir-1.0"
@@ -63,7 +63,7 @@ girFile name version extraPaths = do
   paths <- case extraPaths of
              [] -> lookupEnv "HASKELL_GI_GIR_SEARCH_PATH" >>= \case
                    Nothing -> return []
-                   Just s -> return (splitOn ':' s)
+                   Just s -> return (splitOn searchPathSeparator s)
              ps -> return ps
   dataDirs <- girDataDirs
   firstJust <$> (mapM (girFile' name version) (paths ++ dataDirs))
