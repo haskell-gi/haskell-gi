@@ -20,7 +20,7 @@ import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
                                   filterAPIsAndDeps)
 import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
-import Data.GI.CodeGen.Util (ucFirst, tshow)
+import Data.GI.CodeGen.Util (ucFirst, tshow, utf8ReadFile, utf8WriteFile)
 
 import Control.Monad (when)
 
@@ -29,7 +29,6 @@ import qualified Data.Map as M
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
 
 import System.Directory (doesFileExist)
 import System.FilePath ((</>), (<.>))
@@ -43,7 +42,7 @@ type ConfHook = (GenericPackageDescription, HookedBuildInfo) -> ConfigFlags
 genPkgInfo :: [Dependency] -> [(FlagName, Bool)] -> FilePath -> Text -> IO ()
 genPkgInfo deps flags fName modName = do
   versions <- mapM findVersion deps
-  TIO.writeFile fName $ T.unlines
+  utf8WriteFile fName $ T.unlines
          [ "module " <> modName <> " (pkgConfigVersions, flags) where"
          , ""
          , "import Prelude (String, Bool(..))"
@@ -95,7 +94,7 @@ confCodeGenHook name version verbosity overrides outputDir
 
   ovsData <- case overrides of
                Nothing -> return ""
-               Just fname -> TIO.readFile fname
+               Just fname -> utf8ReadFile fname
   ovs <- parseOverridesFile (T.lines ovsData) >>= \case
          Left err -> error $ "Error when parsing overrides file: "
                      ++ T.unpack err

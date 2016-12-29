@@ -21,7 +21,6 @@ import System.IO (hPutStr, hPutStrLn, stderr)
 
 import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
 import qualified Data.Set as S
 
 import Data.GI.Base.GError
@@ -37,7 +36,7 @@ import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
 import Data.GI.CodeGen.OverloadedSignals (genOverloadedSignalConnectors)
 import Data.GI.CodeGen.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups)
 import Data.GI.CodeGen.ProjectInfo (licenseText)
-import Data.GI.CodeGen.Util (ucFirst)
+import Data.GI.CodeGen.Util (ucFirst, utf8ReadFile, utf8WriteFile)
 
 data Mode = GenerateCode | Dump | Labels | Signals | Help
 
@@ -203,13 +202,13 @@ processMod options ovs extraPaths name = do
     case err of
       Nothing -> do
                putStrLn $ "\t\t+ " ++ fname
-               TIO.writeFile (p fname) (codeToText (moduleCode m))
+               utf8WriteFile (p fname) (codeToText (moduleCode m))
                putStrLn "\t\t+ cabal.config"
-               TIO.writeFile (p "cabal.config") cabalConfig
+               utf8WriteFile (p "cabal.config") cabalConfig
                putStrLn "\t\t+ Setup.hs"
-               TIO.writeFile (p "Setup.hs") setupHs
+               utf8WriteFile (p "Setup.hs") setupHs
                putStrLn "\t\t+ LICENSE"
-               TIO.writeFile (p "LICENSE") licenseText
+               utf8WriteFile (p "LICENSE") licenseText
       Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
                   ++ "\nError was: " ++ T.unpack msg
 
@@ -222,7 +221,7 @@ dump options ovs name = do
 process :: Options -> [Text] -> IO ()
 process options names = do
   let extraPaths = optSearchPaths options
-  configs <- traverse TIO.readFile (optOverridesFiles options)
+  configs <- traverse utf8ReadFile (optOverridesFiles options)
   setupTypelibSearchPath (optSearchPaths options)
   parseOverridesFile (concatMap T.lines configs) >>= \case
     Left errorMsg -> do

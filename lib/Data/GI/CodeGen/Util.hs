@@ -13,13 +13,20 @@ module Data.GI.CodeGen.Util
   , tshow
   , terror
 
+  , utf8ReadFile
+  , utf8WriteFile
+
   , splitOn
   ) where
 
 import Data.Monoid ((<>))
 import Data.Char (toLower, toUpper)
+
+import qualified Data.ByteString as B
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+
 
 padTo :: Int -> Text -> Text
 padTo n s = s <> T.replicate (n - T.length s) " "
@@ -68,3 +75,18 @@ splitOn x xs = go xs []
           go (y : ys) acc = if x == y
                             then reverse acc : go ys []
                             else go ys (y : acc)
+
+-- | Read a file assuming it is UTF-8 encoded. If decoding fails this
+-- calls `error`.
+utf8ReadFile :: FilePath -> IO T.Text
+utf8ReadFile fname = do
+  bytes <- B.readFile fname
+  case TE.decodeUtf8' bytes of
+    Right text -> return text
+    Left error -> terror ("Input file " <> tshow fname <>
+                          " seems not to be valid UTF-8. Error was:\n" <>
+                          tshow error)
+
+-- | Write the given `Text` into an UTF-8 encoded file.
+utf8WriteFile :: FilePath -> T.Text -> IO ()
+utf8WriteFile fname text = B.writeFile fname (TE.encodeUtf8 text)
