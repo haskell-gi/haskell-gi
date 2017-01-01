@@ -4,10 +4,6 @@ module Data.GI.GIR.Documentation
     , queryDocumentation
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
-
 import Data.Text (Text)
 import Text.XML (Element)
 
