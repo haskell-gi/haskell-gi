@@ -103,6 +103,12 @@ Library
 
   other-modules:       Paths_haskell_gi
 
+test-suite doctests
+  type:          exitcode-stdio-1.0
+  ghc-options:   -threaded
+  main-is:       DocTests.hs
+  build-depends: base, doctest >= 0.8
+
 executable haskell-gi
   main-is:             haskell-gi.hs
   hs-source-dirs:      cmdline
