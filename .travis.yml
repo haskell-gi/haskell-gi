@@ -38,13 +38,18 @@ script:
  - cabal install
  - popd
  - cabal install --dependencies-only
- - cabal install --enable-tests --dependencies-only
  - cabal configure
  - cabal build
  # For building the test program later, doing it now avoids a recompilation
  - cabal run haskell-gi -- -l -O test Gtk Gdk
  - cabal run haskell-gi -- -c -O test Gtk
- - cabal test
+ - |
+   if [ ${GHCVER%.*} = "7.8" ]; then
+     echo Warning: No tests run since doctest does not install in GHC 7.8
+   else
+     cabal install --enable-tests --dependencies-only
+     cabal test
+   fi
  - cabal clean
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
