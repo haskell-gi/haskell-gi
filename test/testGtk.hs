@@ -26,6 +26,10 @@ import System.Mem (performGC)
 import Control.Monad (when, replicateM_, forM_)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString (ByteString)
+#if !MIN_VERSION_base(4,8,0)
+import Data.Monoid (Monoid)
+import Control.Applicative ((<$>))
+#endif
 import Data.Monoid ((<>))
 import Data.Text (pack, unpack, Text)
 import Data.Text.IO (putStrLn)
