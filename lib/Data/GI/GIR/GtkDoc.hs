@@ -52,6 +52,7 @@ newtype GtkDoc = GtkDoc [Token]
 --
 -- >>> parseGtkDoc "Call foo() for free cookies"
 -- Right (GtkDoc [Literal "Call ",FunctionRef "foo",Literal " for free cookies"])
+--
 -- >>> parseGtkDoc "The signal ##%#GtkButton::activate is related to gtk_button_activate()."
 -- Right (GtkDoc [Literal "The signal ##%",SignalRef "GtkButton" "activate",Literal " is related to ",FunctionRef "gtk_button_activate",Literal "."])
 parseGtkDoc :: Text -> Either Text GtkDoc
