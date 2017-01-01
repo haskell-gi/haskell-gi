@@ -61,8 +61,10 @@ script:
    (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
 
  - cd bindings
+ - cabal sandbox init
  - cabal install --dependencies-only
  - cabal run genBuildInfo `./PKGS.sh`
+ - cabal sandbox delete
  - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
  - cabal install -j1 ./Gtk
  - cabal install -j3 ./GtkSource ./WebKit
