@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
 
 module ProjectInfo
     ( ProjectInfo(..)
@@ -25,7 +25,10 @@ data ProjectInfo = ProjectInfo {
     , girName           :: Text         -- ^ GIR file (without version)
     , girVersion        :: Text         -- ^ Its version
     , girOverrides      :: Maybe Text   -- ^ Possibly an overrides file
-    } deriving (Show, Generic, A.ToJSON, A.FromJSON)
+    } deriving (Show, Generic)
+
+instance A.FromJSON ProjectInfo
+instance A.ToJSON ProjectInfo
 
 emptyProjectInfo :: ProjectInfo
 emptyProjectInfo = ProjectInfo {

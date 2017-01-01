@@ -61,20 +61,15 @@ script:
    (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
 
  - cd bindings
- - |
-   if [ ${GHCVER%.*} = "7.8" ]; then
-     echo Warning: No packages checked since genBuildInfo.hs does not work on GHC 7.8
-   else
-     cabal install --dependencies-only
-     for a in `./PKGS.sh`; do cabal run genBuildInfo $a; done
-     cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
-     cabal install -j1 ./Gtk
-     cabal install -j3 ./GtkSource ./WebKit
-     cd ../test
-     cabal install --dependencies-only
-     cabal configure
-     cabal build
-   fi
+ - cabal install --dependencies-only
+ - cabal run genBuildInfo `./PKGS.sh`
+ - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
+ - cabal install -j1 ./Gtk
+ - cabal install -j3 ./GtkSource ./WebKit
+ - cd ../test
+ - cabal install --dependencies-only
+ - cabal configure
+ - cabal build
 notifications:
   irc:
     channels: "irc.freenode.net#gtk2hs"

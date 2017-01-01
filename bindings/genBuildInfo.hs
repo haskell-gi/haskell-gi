@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ViewPatterns, DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | Generate the cabal info for the given subdirectories, assuming
 -- the existence of appropriate "GIR.info" files.
