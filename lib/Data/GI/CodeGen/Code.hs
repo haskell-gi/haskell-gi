@@ -84,6 +84,7 @@ import Data.GI.CodeGen.Type (Type(..))
 import Data.GI.CodeGen.Util (tshow, terror, padTo, utf8WriteFile)
 import Data.GI.CodeGen.ProjectInfo (authors, license, maintainers)
 import Data.GI.GIR.Documentation (Documentation(..))
+import Data.GI.GIR.GtkDoc (parseGtkDoc)
 
 data Code
     = NoCode              -- ^ No code
@@ -545,7 +546,8 @@ setModuleMinBase v =
 addModuleDocumentation :: Maybe Documentation -> CodeGen ()
 addModuleDocumentation Nothing = return ()
 addModuleDocumentation (Just doc) =
-    modify' $ \s -> s{moduleDoc = moduleDoc s <> Just (docText doc)}
+    modify' $ \s -> s{moduleDoc = moduleDoc s <>
+                                  Just (tshow . parseGtkDoc . rawDocText $ doc)}
 
 -- | Return a text representation of the `Code`.
 codeToText :: Code -> Text

@@ -4,14 +4,21 @@ module Data.GI.GIR.Documentation
     , queryDocumentation
     ) where
 
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<$>))
+#endif
+
 import Data.Text (Text)
 import Text.XML (Element)
 
 import Data.GI.GIR.XMLUtils (firstChildWithLocalName, getElementContent)
 
--- | Documentation for a given element.
+-- | Documentation for a given element. The documentation text is
+-- typically encoded in the gtk-doc format, see
+-- https://developer.gnome.org/gtk-doc-manual/ . This can be parsed
+-- with `Data.GI.GIR.parseGtkDoc`.
 data Documentation = Documentation {
-      docText :: Text
+      rawDocText :: Text
     } deriving (Show, Eq)
 
 -- | Parse the documentation node for the given element of the GIR file.
