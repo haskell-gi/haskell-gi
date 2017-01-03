@@ -427,7 +427,7 @@ genModule' apis = do
 
   -- Make sure we generate a "Callbacks" module, since it is imported
   -- by other modules. It is fine if it ends up empty.
-  submodule ["Callbacks"] (return ())
+  submodule "Callbacks" (return ())
 
 genModule :: M.Map Name API -> CodeGen ()
 genModule apis = do

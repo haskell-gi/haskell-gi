@@ -30,8 +30,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Code (CodeGen, ModuleName, group, line, exportDecl,
+import Data.GI.CodeGen.Code (CodeGen, group, line, exportDecl,
                              qualified, getAPI)
+import Data.GI.CodeGen.ModulePath (ModulePath, (/.), toModulePath)
 import Data.GI.CodeGen.Type (Type(TInterface))
 import Data.GI.CodeGen.Util (lcFirst, ucFirst, modifyQualified)
 
@@ -89,18 +90,32 @@ callbackWrapperAllocator = modifyQualified ("mk_" <>)
 callbackClosureGenerator :: Text -> Text
 callbackClosureGenerator = modifyQualified ("genClosure_" <>)
 
--- | Move leading underscores to the end (for example in
--- GObject::_Value_Data_Union -> GObject::Value_Data_Union_)
+-- | Move leading underscores to the end.
+--
+-- === Examples
+-- >>> sanitize "_Value_Data_Union"
+-- "Value_Data_Union_"
 sanitize :: Text -> Text
 sanitize (T.uncons -> Just ('_', xs)) = sanitize xs <> "_"
 sanitize xs = xs
 
+-- | Turn the given `Name` into camelCase, starting with a lowercase
+-- letter.
+--
+-- === __Examples__
+-- >>> lowerName (Name "Gtk" "main_quit")
+-- "mainQuit"
 lowerName :: Name -> Text
 lowerName (Name _ s) =
     case underscoresToCamelCase (sanitize s) of
       "" -> error "empty name!!"
       n -> lcFirst n
 
+-- | Turn the given `Name` into CamelCase, starting with a capital letter.
+--
+-- === __Examples__
+-- >>> upperName (Name "Foo" "bar_baz")
+-- "BarBaz"
 upperName :: Name -> Text
 upperName (Name _ s) = underscoresToCamelCase (sanitize s)
 
@@ -109,28 +124,27 @@ upperName (Name _ s) = underscoresToCamelCase (sanitize s)
 qualifiedAPI :: Name -> CodeGen Text
 qualifiedAPI n@(Name ns _) = do
   api <- getAPI (TInterface n)
-  qualified ("GI" : ucFirst ns : submoduleLocation n api) n
+  qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) n
 
 -- | Construct an identifier for the given symbol in the given API.
 qualifiedSymbol :: Text -> Name -> CodeGen Text
 qualifiedSymbol s n@(Name ns _) = do
   api <- getAPI (TInterface n)
-  qualified ("GI" : ucFirst ns : submoduleLocation n api) (Name ns s)
+  qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) (Name ns s)
 
--- | Construct the submodule name (as a list, to be joined by
--- intercalating ".") where the given API element will live. This is
--- the path relative to the root for the corresponding
+-- | Construct the submodule path where the given API element will
+-- live. This is the path relative to the root for the corresponding
 -- namespace. I.e. the "GI.Gtk" part is not prepended.
-submoduleLocation :: Name -> API -> ModuleName
-submoduleLocation _ (APIConst _) = ["Constants"]
-submoduleLocation _ (APIFunction _) = ["Functions"]
-submoduleLocation _ (APICallback _) = ["Callbacks"]
-submoduleLocation _ (APIEnum _) = ["Enums"]
-submoduleLocation _ (APIFlags _) = ["Flags"]
-submoduleLocation n (APIInterface _) = ["Interfaces", upperName n]
-submoduleLocation n (APIObject _) = ["Objects", upperName n]
-submoduleLocation n (APIStruct _) = ["Structs", upperName n]
-submoduleLocation n (APIUnion _) = ["Unions", upperName n]
+submoduleLocation :: Name -> API -> ModulePath
+submoduleLocation _ (APIConst _) = "Constants"
+submoduleLocation _ (APIFunction _) = "Functions"
+submoduleLocation _ (APICallback _) = "Callbacks"
+submoduleLocation _ (APIEnum _) = "Enums"
+submoduleLocation _ (APIFlags _) = "Flags"
+submoduleLocation n (APIInterface _) = "Interfaces" /. upperName n
+submoduleLocation n (APIObject _) = "Objects" /. upperName n
+submoduleLocation n (APIStruct _) = "Structs" /. upperName n
+submoduleLocation n (APIUnion _) = "Unions" /. upperName n
 
 -- | Save a bit of typing for optional arguments in the case that we
 -- want to pass Nothing.
@@ -140,13 +154,28 @@ noName name' = group $ do
                  line $ "no" <> name' <> " = Nothing"
                  exportDecl ("no" <> name')
 
--- | For a string of the form "one-sample-string" return "OneSampleString"
+-- | Turn a hyphen-separated identifier into camel case.
+--
+-- === __Examples__
+-- >>> hyphensToCamelCase "one-sample-string"
+-- "OneSampleString"
 hyphensToCamelCase :: Text -> Text
 hyphensToCamelCase = T.concat . map ucFirst . T.split (== '-')
 
--- | Similarly, turn a name separated_by_underscores into
--- CamelCase. We preserve final and initial underscores, and n>1
--- consecutive underscores are transformed into n-1 underscores.
+-- | Similarly to `hyphensToCamelCase`, turn a name
+-- separated_by_underscores into CamelCase. We preserve final and
+-- initial underscores, and n>1 consecutive underscores are
+-- transformed into n-1 underscores.
+--
+-- === __Examples__
+-- >>> underscoresToCamelCase "sample_id"
+-- "SampleId"
+--
+-- >>> underscoresToCamelCase "_internal_id_"
+-- "_InternalId_"
+--
+-- >>> underscoresToCamelCase "multiple___underscores"
+-- "Multiple__Underscores"
 underscoresToCamelCase :: Text -> Text
 underscoresToCamelCase =
     T.concat . map normalize . map ucFirst . T.split (== '_')

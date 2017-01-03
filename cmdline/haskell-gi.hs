@@ -32,6 +32,7 @@ import Data.GI.CodeGen.Code (genCode, evalCodeGen, transitiveModuleDeps, writeMo
 import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
+import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
 import Data.GI.CodeGen.OverloadedSignals (genOverloadedSignalConnectors)
 import Data.GI.CodeGen.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups)
@@ -140,7 +141,7 @@ genLabels options ovs modules extraPaths = do
                     cgFlags = genFlags options
                    }
   putStrLn $ "\t* Generating GI.OverloadedLabels"
-  m <- genCode cfg allAPIs ["GI", "OverloadedLabels"]
+  m <- genCode cfg allAPIs "OverloadedLabels"
        (genOverloadedLabels (M.toList allAPIs))
   _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
   return ()
@@ -156,7 +157,7 @@ genGenericConnectors options ovs modules extraPaths = do
                     cgFlags = genFlags options
                    }
   putStrLn $ "\t* Generating GI.Signals"
-  m <- genCode cfg allAPIs ["GI", "Signals"] (genOverloadedSignalConnectors (M.toList allAPIs))
+  m <- genCode cfg allAPIs "Signals" (genOverloadedSignalConnectors (M.toList allAPIs))
   _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
   return ()
 
@@ -180,7 +181,7 @@ processMod options ovs extraPaths name = do
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
 
-  m <- genCode cfg allAPIs ["GI", nm] (genModule apis)
+  m <- genCode cfg allAPIs (toModulePath nm) (genModule apis)
   let modDeps = transitiveModuleDeps m
   moduleList <- writeModuleTree (optVerbose options) (optOutputDir options) m
 
@@ -198,7 +199,8 @@ processMod options ovs extraPaths name = do
         actualDeps = filter ((`S.member` usedDeps) . girNSName) girDeps
         baseVersion = minBaseVersion m
         p = \n -> joinPath [fromMaybe "" (optOutputDir options), n]
-    (err, m) <- evalCodeGen cfg allAPIs [] (genCabalProject gir actualDeps moduleList baseVersion)
+    (err, m) <- evalCodeGen cfg allAPIs (error "undefined module path")
+                (genCabalProject gir actualDeps moduleList baseVersion)
     case err of
       Nothing -> do
                putStrLn $ "\t\t+ " ++ fname

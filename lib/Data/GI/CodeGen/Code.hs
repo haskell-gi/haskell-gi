@@ -17,7 +17,6 @@ module Data.GI.CodeGen.Code
     , BaseVersion(..)
     , showBaseVersion
 
-    , ModuleName
     , registerNSDependency
     , qualified
     , getDeps
@@ -80,6 +79,7 @@ import System.FilePath (joinPath, takeDirectory)
 
 import Data.GI.CodeGen.API (API, Name(..))
 import Data.GI.CodeGen.Config (Config(..))
+import Data.GI.CodeGen.ModulePath (ModulePath(..), dotModulePath, (/.))
 import Data.GI.CodeGen.Type (Type(..))
 import Data.GI.CodeGen.Util (tshow, terror, padTo, utf8WriteFile)
 import Data.GI.CodeGen.ProjectInfo (authors, license, maintainers)
@@ -106,7 +106,6 @@ instance Monoid Code where
     a `mappend` b = Sequence (a <| b <| S.empty)
 
 type Deps = Set.Set Text
-type ModuleName = [Text]
 
 -- | Subsection of the haddock documentation where the export should
 -- be located.
@@ -135,14 +134,14 @@ data ExportType = ExportTypeDecl -- ^ A type declaration.
 
 -- | Information on a generated module.
 data ModuleInfo = ModuleInfo {
-      moduleName :: ModuleName -- ^ Full module name: ["GI", "Gtk", "Label"].
+      modulePath :: ModulePath -- ^ Full module name: ["Gtk", "Label"].
     , moduleCode :: Code       -- ^ Generated code for the module.
     , bootCode   :: Code       -- ^ Interface going into the .hs-boot file.
     , submodules :: M.Map Text ModuleInfo -- ^ Indexed by the relative
                                           -- module name.
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
     , moduleExports :: Seq Export -- ^ Exports for the module.
-    , qualifiedImports :: Set.Set ModuleName -- ^ Qualified (source) imports
+    , qualifiedImports :: Set.Set ModulePath -- ^ Qualified (source) imports
     , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
     , moduleGHCOpts :: Set.Set Text -- ^ GHC options for compiling the module.
     , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
@@ -167,8 +166,8 @@ showBaseVersion Base47 = "4.7"
 showBaseVersion Base48 = "4.8"
 
 -- | Generate the empty module.
-emptyModule :: ModuleName -> ModuleInfo
-emptyModule m = ModuleInfo { moduleName = m
+emptyModule :: ModulePath -> ModuleInfo
+emptyModule m = ModuleInfo { modulePath = m
                            , moduleCode = NoCode
                            , bootCode = NoCode
                            , submodules = M.empty
@@ -289,7 +288,7 @@ submodule' :: Text -> BaseCodeGen e () -> BaseCodeGen e ()
 submodule' modName cg = do
   cfg <- ask
   oldInfo <- get
-  let info = emptyModule (moduleName oldInfo ++ [modName])
+  let info = emptyModule (modulePath oldInfo /. modName)
   liftIO (runCodeGen cg cfg info) >>= \case
          Left e -> throwError e
          Right (_, smInfo) -> if moduleCode smInfo == NoCode &&
@@ -299,9 +298,9 @@ submodule' modName cg = do
 
 -- | Run the given CodeGen in order to generate a submodule (specified
 -- an an ordered list) of the current module.
-submodule :: [Text] -> BaseCodeGen e () -> BaseCodeGen e ()
-submodule [] cg = cg
-submodule (m:ms) cg = submodule' m (submodule ms cg)
+submodule :: ModulePath -> BaseCodeGen e () -> BaseCodeGen e ()
+submodule (ModulePath []) cg = cg
+submodule (ModulePath (m:ms)) cg = submodule' m (submodule (ModulePath ms) cg)
 
 -- | Try running the given `action`, and if it fails run `fallback`
 -- instead.
@@ -329,7 +328,7 @@ config = hConfig <$> ask
 currentModule :: CodeGen Text
 currentModule = do
   s <- get
-  return (T.intercalate "." (moduleName s))
+  return (dotWithPrefix (modulePath s))
 
 -- | Return the list of APIs available to the generator.
 getAPIs :: CodeGen (M.Map Name API)
@@ -349,16 +348,16 @@ unwrapCodeGen cg cfg info =
         Right (r, newInfo) -> return (r, newInfo)
 
 -- | Like `evalCodeGen`, but discard the resulting output value.
-genCode :: Config -> M.Map Name API -> ModuleName -> CodeGen () ->
+genCode :: Config -> M.Map Name API -> ModulePath -> CodeGen () ->
            IO ModuleInfo
-genCode cfg apis mName cg = snd <$> evalCodeGen cfg apis mName cg
+genCode cfg apis mPath cg = snd <$> evalCodeGen cfg apis mPath cg
 
 -- | Run a code generator, and return the information for the
 -- generated module together with the return value of the generator.
-evalCodeGen :: Config -> M.Map Name API -> ModuleName -> CodeGen a ->
+evalCodeGen :: Config -> M.Map Name API -> ModulePath -> CodeGen a ->
                IO (a, ModuleInfo)
-evalCodeGen cfg apis mName cg = do
-  let initialInfo = emptyModule mName
+evalCodeGen cfg apis mPath cg = do
+  let initialInfo = emptyModule mPath
       cfg' = CodeGenConfig {hConfig = cfg, loadedAPIs = apis}
   unwrapCodeGen cg cfg' initialInfo
 
@@ -379,36 +378,35 @@ transitiveModuleDeps minfo =
 
 -- | Given a module name and a symbol in the module (including a
 -- proper namespace), return a qualified name for the symbol.
-qualified :: ModuleName -> Name -> CodeGen Text
-qualified mn (Name ns s) = do
+qualified :: ModulePath -> Name -> CodeGen Text
+qualified mp (Name ns s) = do
   cfg <- config
   -- Make sure the module is listed as a dependency.
   when (modName cfg /= Just ns) $
     registerNSDependency ns
   minfo <- get
-  if mn == moduleName minfo
+  if mp == modulePath minfo
   then return s
   else do
-    qm <- qualifiedImport mn
+    qm <- qualifiedImport mp
     return (qm <> "." <> s)
 
 -- | Import the given module name qualified (as a source import if the
 -- namespace is the same as the current one), and return the name
 -- under which the module was imported.
-qualifiedImport :: ModuleName -> CodeGen Text
-qualifiedImport mn = do
-  modify' $ \s -> s {qualifiedImports = Set.insert mn (qualifiedImports s)}
-  return (qualifiedModuleName mn)
+qualifiedImport :: ModulePath -> CodeGen Text
+qualifiedImport mp = do
+  modify' $ \s -> s {qualifiedImports = Set.insert mp (qualifiedImports s)}
+  return (qualifiedModuleName mp)
 
 -- | Construct a simplified version of the module name, suitable for a
 -- qualified import.
-qualifiedModuleName :: ModuleName -> Text
-qualifiedModuleName ["GI", ns, "Objects", o] = ns <> "." <> o
-qualifiedModuleName ["GI", ns, "Interfaces", i] = ns <> "." <> i
-qualifiedModuleName ["GI", ns, "Structs", s] = ns <> "." <> s
-qualifiedModuleName ["GI", ns, "Unions", u] = ns <> "." <> u
-qualifiedModuleName ("GI" : rest) = dotModuleName rest
-qualifiedModuleName mn = dotModuleName mn
+qualifiedModuleName :: ModulePath -> Text
+qualifiedModuleName (ModulePath [ns, "Objects", o]) = ns <> "." <> o
+qualifiedModuleName (ModulePath [ns, "Interfaces", i]) = ns <> "." <> i
+qualifiedModuleName (ModulePath [ns, "Structs", s]) = ns <> "." <> s
+qualifiedModuleName (ModulePath [ns, "Unions", u]) = ns <> "." <> u
+qualifiedModuleName mp = dotModulePath mp
 
 -- | Return the minimal base version supported by the module and all
 -- its submodules.
@@ -709,18 +707,18 @@ modulePrelude name exports reexportedModules =
 -- prefix for the namespace being currently generated, modules with
 -- this prefix will be imported as {-# SOURCE #-}, and otherwise will
 -- be imported normally.
-importDeps :: ModuleName -> [ModuleName] -> Text
+importDeps :: ModulePath -> [ModulePath] -> Text
 importDeps _ [] = ""
-importDeps prefix deps = T.unlines . map toImport $ deps
-    where toImport :: ModuleName -> Text
+importDeps (ModulePath prefix) deps = T.unlines . map toImport $ deps
+    where toImport :: ModulePath -> Text
           toImport dep = let impSt = if importSource dep
                                      then "import {-# SOURCE #-} qualified "
                                      else "import qualified "
-                         in impSt <> dotModuleName dep <>
+                         in impSt <> dotWithPrefix dep <>
                                 " as " <> qualifiedModuleName dep
-          importSource :: ModuleName -> Bool
-          importSource ["GI", _, "Callbacks"] = False
-          importSource mn = take (length prefix) mn == prefix
+          importSource :: ModulePath -> Bool
+          importSource (ModulePath [_, "Callbacks"]) = False
+          importSource (ModulePath mp) = take (length prefix) mp == prefix
 
 -- | Standard imports.
 moduleImports :: Text
@@ -739,67 +737,66 @@ moduleImports = T.unlines [
                 , "import qualified Data.Map as Map"
                 , "import qualified Foreign.Ptr as FP" ]
 
+-- | Like `dotModulePath`, but add a "GI." prefix.
+dotWithPrefix :: ModulePath -> Text
+dotWithPrefix mp = dotModulePath ("GI" <> mp)
+
 -- | Write to disk the code for a module, under the given base
 -- directory. Does not write submodules recursively, for that use
 -- `writeModuleTree`.
 writeModuleInfo :: Bool -> Maybe FilePath -> ModuleInfo -> IO ()
 writeModuleInfo verbose dirPrefix minfo = do
-  let submoduleNames = map (moduleName) (M.elems (submodules minfo))
+  let submodulePaths = map (modulePath) (M.elems (submodules minfo))
       -- We reexport any submodules.
-      submoduleExports = map dotModuleName submoduleNames
-      fname = moduleNameToPath dirPrefix (moduleName minfo) ".hs"
+      submoduleExports = map dotWithPrefix submodulePaths
+      fname = modulePathToFilePath dirPrefix (modulePath minfo) ".hs"
       dirname = takeDirectory fname
       code = codeToText (moduleCode minfo)
       pragmas = languagePragmas (Set.toList $ modulePragmas minfo)
       optionsGHC = ghcOptions (Set.toList $ moduleGHCOpts minfo)
-      prelude = modulePrelude (dotModuleName $ moduleName minfo)
+      prelude = modulePrelude (dotWithPrefix $ modulePath minfo)
                 (F.toList (moduleExports minfo))
                 submoduleExports
       imports = if ImplicitPrelude `Set.member` moduleFlags minfo
                 then ""
                 else moduleImports
-      pkgRoot = take 2 (moduleName minfo)
+      pkgRoot = ModulePath (take 1 (modulePathToList $ modulePath minfo))
       deps = importDeps pkgRoot (Set.toList $ qualifiedImports minfo)
       haddock = moduleHaddock (moduleDoc minfo)
 
-  when verbose $ putStrLn ((T.unpack . dotModuleName . moduleName) minfo
+  when verbose $ putStrLn ((T.unpack . dotWithPrefix . modulePath) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
   utf8WriteFile fname (T.unlines [pragmas, optionsGHC, haddock,
                                  prelude, imports, deps, code])
   when (bootCode minfo /= NoCode) $ do
-    let bootFName = moduleNameToPath dirPrefix (moduleName minfo) ".hs-boot"
+    let bootFName = modulePathToFilePath dirPrefix (modulePath minfo) ".hs-boot"
     utf8WriteFile bootFName (genHsBoot minfo)
 
 -- | Generate the .hs-boot file for the given module.
 genHsBoot :: ModuleInfo -> Text
 genHsBoot minfo =
-    "module " <> (dotModuleName . moduleName) minfo <> " where\n\n" <>
+    "module " <> (dotWithPrefix . modulePath) minfo <> " where\n\n" <>
     moduleImports <> "\n" <>
     codeToText (bootCode minfo)
 
 -- | Construct the filename corresponding to the given module.
-moduleNameToPath :: Maybe FilePath -> ModuleName -> FilePath -> FilePath
-moduleNameToPath dirPrefix mn ext =
-    joinPath (fromMaybe "" dirPrefix : map T.unpack mn) ++ ext
-
--- | Turn an abstract module name into its dotted representation. For
--- instance, ["GI", "Gtk", "Types"] -> GI.Gtk.Types.
-dotModuleName :: ModuleName -> Text
-dotModuleName mn = T.intercalate "." mn
+modulePathToFilePath :: Maybe FilePath -> ModulePath -> FilePath -> FilePath
+modulePathToFilePath dirPrefix (ModulePath mp) ext =
+    joinPath (fromMaybe "" dirPrefix : "GI" : map T.unpack mp) ++ ext
 
 -- | Write down the code for a module and its submodules to disk under
 -- the given base directory. It returns the list of written modules.
 writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO [Text]
 writeModuleTree verbose dirPrefix minfo = do
-  submoduleNames <- concat <$> forM (M.elems (submodules minfo))
+  submodulePaths <- concat <$> forM (M.elems (submodules minfo))
                                     (writeModuleTree verbose dirPrefix)
   writeModuleInfo verbose dirPrefix minfo
-  return $ (dotModuleName (moduleName minfo) : submoduleNames)
+  return $ (dotWithPrefix (modulePath minfo) : submodulePaths)
 
 -- | Return the list of modules `writeModuleTree` would write, without
 -- actually writing anything to disk.
 listModuleTree :: ModuleInfo -> [Text]
 listModuleTree minfo =
-    let submoduleNames = concatMap listModuleTree (M.elems (submodules minfo))
-    in dotModuleName (moduleName minfo) : submoduleNames
+    let submodulePaths = concatMap listModuleTree (M.elems (submodules minfo))
+    in dotWithPrefix (modulePath minfo) : submodulePaths

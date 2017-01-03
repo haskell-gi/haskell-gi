@@ -17,6 +17,7 @@ import Data.GI.CodeGen.Code (genCode, writeModuleTree, listModuleTree)
 import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
+import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
                                   filterAPIsAndDeps)
 import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
@@ -108,7 +109,7 @@ confCodeGenHook name version verbosity overrides outputDir
                     overrides = ovs,
                     cgFlags = parseFlags (configConfigurationsFlags flags)}
 
-  m <- genCode cfg allAPIs ["GI", ucFirst name] (genModule apis)
+  m <- genCode cfg allAPIs (toModulePath name) (genModule apis)
   alreadyDone <- doesFileExist (fromMaybe "" outputDir
                                 </> "GI" </> T.unpack (ucFirst name) <.> "hs")
   moduleList <- if not alreadyDone
