@@ -83,15 +83,18 @@ infoType owner field = do
   return $ name <> fName <> "FieldInfo"
 
 -- | Whether a given field is an embedded struct/union.
-isEmbedded :: Field -> CodeGen Bool
-isEmbedded field
-    | fieldIsPointer field = return False
-    | otherwise = do
+isEmbedded :: Field -> ExcCodeGen Bool
+isEmbedded field = do
   api <- findAPI (fieldType field)
   case api of
-    Just (APIStruct _) -> return True
-    Just (APIUnion _) -> return True
+    Just (APIStruct _) -> checkEmbedding
+    Just (APIUnion _) -> checkEmbedding
     _ -> return False
+  where
+    checkEmbedding :: ExcCodeGen Bool
+    checkEmbedding = case fieldIsPointer field of
+      Nothing -> badIntroError "Cannot determine whether the field is embedded."
+      Just isPtr -> return (not isPtr)
 
 -- Notice that when reading the field we return a copy of any embedded
 -- structs, so modifications of the returned struct will not affect
@@ -199,7 +202,7 @@ fName = underscoresToCamelCase . fieldName
 -- | Support for modifying fields as attributes. Returns a tuple with
 -- the name of the overloaded label to be used for the field, and the
 -- associated info type.
-genAttrInfo :: Name -> Field -> CodeGen Text
+genAttrInfo :: Name -> Field -> ExcCodeGen Text
 genAttrInfo owner field = do
   it <- infoType owner field
   let on = upperName owner

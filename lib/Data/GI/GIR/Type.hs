@@ -3,6 +3,7 @@
 module Data.GI.GIR.Type
     ( parseType
     , parseCType
+    , queryElementCType
     , parseOptionalType
     ) where
 
@@ -10,6 +11,7 @@ module Data.GI.GIR.Type
 import Control.Applicative ((<$>))
 #endif
 
+import Data.Maybe (catMaybes)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -141,18 +143,20 @@ parseTypeElements = do
   arrays <- parseChildrenWithLocalName "array" parseArrayInfo
   return (types ++ map Just arrays)
 
--- | Find the C name (or if not present, the introspection name) for
--- the current element.
-parseCTypeName :: Parser Text
-parseCTypeName = queryAttrWithNamespace CGIRNS "type"
-                 >>= maybe (getAttr "name") return
+-- | Find the C name for the current element.
+queryCType :: Parser (Maybe Text)
+queryCType = queryAttrWithNamespace CGIRNS "type"
+
+-- | Parse the C type for the current node.
+parseCType :: Parser Text
+parseCType = getAttrWithNamespace CGIRNS "type"
 
 -- | Find the children giving the C type for the element.
 parseCTypeNameElements :: Parser [Text]
 parseCTypeNameElements = do
-  types <- parseChildrenWithLocalName "type" parseCTypeName
-  arrays <- parseChildrenWithLocalName "array" parseCTypeName
-  return (types ++ arrays)
+  types <- parseChildrenWithLocalName "type" queryCType
+  arrays <- parseChildrenWithLocalName "array" queryCType
+  return (catMaybes (types ++ arrays))
 
 -- | Try to find a type node, but do not error out if it is not
 -- found. This _does_ give an error if more than one type node is
@@ -181,10 +185,9 @@ parseOptionalType =
            [] -> parseError $ "Did not find a type for the element."
            _ -> parseError $ "Found more than one type for the element."
 
--- | Parse the C-type associated to the element. If there is no
--- "c:type" attribute we return the type name.
-parseCType :: Parser Text
-parseCType = parseCTypeNameElements >>= \case
-             [e] -> return e
-             [] -> parseError $ "Did not find a C type for the element."
+-- | Parse the C-type associated to the element, if found.
+queryElementCType :: Parser (Maybe Text)
+queryElementCType = parseCTypeNameElements >>= \case
+             [ctype] -> return (Just ctype)
+             [] -> return Nothing
              _ -> parseError $ "Found more than one type for the element."

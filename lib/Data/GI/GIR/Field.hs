@@ -5,19 +5,20 @@ module Data.GI.GIR.Field
     , parseFields
     ) where
 
+import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Text (Text, isSuffixOf)
 
 import Data.GI.GIR.BasicTypes (Type(..))
 import Data.GI.GIR.Callback (Callback, parseCallback)
-import Data.GI.GIR.Type (parseType, parseCType)
+import Data.GI.GIR.Type (parseType, queryElementCType)
 import Data.GI.GIR.Parser
 
 data Field = Field {
       fieldName :: Text,
       fieldVisible :: Bool,
       fieldType :: Type,
-      fieldIsPointer :: Bool,
+      fieldIsPointer :: Maybe Bool, -- ^ `Nothing` if not known.
       fieldCallback :: Maybe Callback,
       fieldOffset :: Int,
       fieldFlags :: [FieldInfoFlag],
@@ -41,7 +42,7 @@ parseField = do
              <> if writable then [FieldIsWritable] else []
   introspectable <- optionalAttr "introspectable" True parseBool
   private <- optionalAttr "private" False parseBool
-  (t, ctype, callback) <-
+  (t, isPtr, callback) <-
       if introspectable
       then do
         callbacks <- parseChildrenWithLocalName "callback" parseCallback
@@ -49,27 +50,29 @@ parseField = do
                              [] -> return (Nothing, Nothing)
                              [(n, cb)] -> return (Just n, Just cb)
                              _ -> parseError "Multiple callbacks in field"
-        (t, ct) <- case cbn of
+        (t, isPtr) <- case cbn of
                Nothing -> do
                  t <- parseType
-                 ct <- parseCType
-                 return (t, Just ct)
+                 ct <- queryElementCType
+                 return (t, fmap ("*" `isSuffixOf`) ct)
                Just n -> return (TInterface n, Nothing)
-        return (t, ct, callback)
+        return (t, isPtr, callback)
       else do
         callbacks <- parseAllChildrenWithLocalName "callback" parseName
         case callbacks of
           [] -> do
                t <- parseType
-               ct <- parseCType
-               return (t, Just ct, Nothing)
-          [n] -> return (TInterface n, Nothing, Nothing)
+               ct <- queryElementCType
+               return (t, fmap ("*" `isSuffixOf`) ct, Nothing)
+          [n] -> return (TInterface n, Just True, Nothing)
           _ -> parseError "Multiple callbacks in field"
   return $ Field {
                fieldName = name
              , fieldVisible = introspectable && not private
              , fieldType = t
-             , fieldIsPointer = maybe True ("*" `isSuffixOf`) ctype
+             , fieldIsPointer = if isJust callback
+                                then Just True
+                                else isPtr
              , fieldCallback = callback
              , fieldOffset = error ("unfixed field offset " ++ show name)
              , fieldFlags = flags
