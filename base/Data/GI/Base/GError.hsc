@@ -51,7 +51,7 @@ module Data.GI.Base.GError
 
     , propagateGError
     , checkGError
-
+    , maybePokeGError
     ) where
 
 #if __GLASGOW_HASKELL__ < 710
@@ -72,7 +72,7 @@ import System.IO.Unsafe (unsafePerformIO)
 
 import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), ManagedPtr)
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
-import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr)
+import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr, copyBoxed)
 import Data.GI.Base.Utils (allocMem, freeMem)
 
 #include <glib.h>
@@ -244,3 +244,11 @@ checkGError f handler = do
   if gerror /= nullPtr
   then wrapBoxed GError gerror >>= handler
   else return result
+
+-- | If the passed in @`Maybe` `GError`@ is not `Nothing`, store a
+-- copy in the passed in pointer, unless the pointer is `nullPtr`.
+maybePokeGError :: Ptr (Ptr GError) -> Maybe GError -> IO ()
+maybePokeGError _ Nothing = return ()
+maybePokeGError ptrPtr (Just gerror)
+  | ptrPtr == nullPtr = return ()
+  | otherwise = copyBoxed gerror >>= poke ptrPtr

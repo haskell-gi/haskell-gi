@@ -33,6 +33,7 @@ module Data.GI.Base.ManagedPtr
     , disownObject
     , newBoxed
     , wrapBoxed
+    , copyBoxed
     , copyBoxedPtr
     , freeBoxed
     , disownBoxed
@@ -302,6 +303,12 @@ wrapBoxed constructor ptr = do
   GType gtype <- boxedType (undefined :: a)
   fPtr <- newManagedPtr ptr (boxed_free_helper gtype ptr)
   return $! constructor fPtr
+
+-- | Make a copy of the given boxed object.
+copyBoxed :: forall a. BoxedObject a => a -> IO (Ptr a)
+copyBoxed b = do
+  GType gtype <- boxedType b
+  withManagedPtr b (g_boxed_copy gtype)
 
 -- | Like 'copyBoxed', but acting directly on a pointer, instead of a
 -- managed pointer.
