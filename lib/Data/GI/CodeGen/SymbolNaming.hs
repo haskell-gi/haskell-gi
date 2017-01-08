@@ -1,6 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 module Data.GI.CodeGen.SymbolNaming
     ( lowerName
+    , lowerSymbol
     , upperName
     , noName
     , escapedArgName
@@ -99,17 +100,25 @@ sanitize :: Text -> Text
 sanitize (T.uncons -> Just ('_', xs)) = sanitize xs <> "_"
 sanitize xs = xs
 
--- | Turn the given `Name` into camelCase, starting with a lowercase
--- letter.
+-- | Same as `lowerSymbol`, but accepts a `Name`. The namespace part
+-- of the name will be discarded.
 --
 -- === __Examples__
 -- >>> lowerName (Name "Gtk" "main_quit")
 -- "mainQuit"
 lowerName :: Name -> Text
-lowerName (Name _ s) =
-    case underscoresToCamelCase (sanitize s) of
-      "" -> error "empty name!!"
-      n -> lcFirst n
+lowerName (Name _ s) = lowerSymbol s
+
+-- | Turn the given identifier into camelCase, starting with a
+-- lowercase letter.
+--
+-- === __Examples__
+-- >>> lowerSymbol "main_quit"
+-- "mainQuit"
+lowerSymbol :: Text -> Text
+lowerSymbol s = case underscoresToCamelCase (sanitize s) of
+                  "" -> error "empty name!!"
+                  n -> lcFirst n
 
 -- | Turn the given `Name` into CamelCase, starting with a capital letter.
 --
@@ -118,19 +127,6 @@ lowerName (Name _ s) =
 -- "BarBaz"
 upperName :: Name -> Text
 upperName (Name _ s) = underscoresToCamelCase (sanitize s)
-
--- | Return an identifier for the given interface type valid in the current
--- module.
-qualifiedAPI :: Name -> CodeGen Text
-qualifiedAPI n@(Name ns _) = do
-  api <- getAPI (TInterface n)
-  qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) n
-
--- | Construct an identifier for the given symbol in the given API.
-qualifiedSymbol :: Text -> Name -> CodeGen Text
-qualifiedSymbol s n@(Name ns _) = do
-  api <- getAPI (TInterface n)
-  qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) (Name ns s)
 
 -- | Construct the submodule path where the given API element will
 -- live. This is the path relative to the root for the corresponding
@@ -145,6 +141,19 @@ submoduleLocation n (APIInterface _) = "Interfaces" /. upperName n
 submoduleLocation n (APIObject _) = "Objects" /. upperName n
 submoduleLocation n (APIStruct _) = "Structs" /. upperName n
 submoduleLocation n (APIUnion _) = "Unions" /. upperName n
+
+-- | Return an identifier for the given interface type valid in the current
+-- module.
+qualifiedAPI :: Name -> CodeGen Text
+qualifiedAPI n@(Name ns _) = do
+  api <- getAPI (TInterface n)
+  qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) n
+
+-- | Construct an identifier for the given symbol in the given API.
+qualifiedSymbol :: Text -> Name -> CodeGen Text
+qualifiedSymbol s n@(Name ns _) = do
+  api <- getAPI (TInterface n)
+  qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) (Name ns s)
 
 -- | Save a bit of typing for optional arguments in the case that we
 -- want to pass Nothing.

@@ -24,6 +24,7 @@ import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
 import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability)
 import Data.GI.CodeGen.GObject
+import Data.GI.CodeGen.Haddock (deprecatedPragma, addModuleDocumentation)
 import Data.GI.CodeGen.Inheritance (instanceTree, fullObjectMethodList,
                        fullInterfaceMethodList)
 import Data.GI.CodeGen.Properties (genInterfaceProperties, genObjectProperties,
@@ -41,7 +42,7 @@ import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
 genFunction :: Name -> Function -> CodeGen ()
-genFunction n (Function symbol throws fnMovedTo callable) =
+genFunction n (Function symbol fnMovedTo callable) =
     -- Only generate the function if it has not been moved.
     when (Nothing == fnMovedTo) $
       group $ do
@@ -50,7 +51,7 @@ genFunction n (Function symbol throws fnMovedTo callable) =
                            <> symbol
                            <> "\n-- Error was : " <> describeCGError e))
                         (do
-                          genCCallableWrapper n symbol callable throws
+                          genCCallableWrapper n symbol callable
                           exportMethod (lowerName n) (lowerName n)
                         )
 
@@ -119,6 +120,8 @@ genUnion n u = do
   let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   hsBoot decl
   decl
+
+  addModuleDocumentation (unionDocumentation u)
 
   if unionIsBoxed u
   then genBoxedObject n (fromJust $ unionTypeInit u)
@@ -209,8 +212,7 @@ genMethod cn m@(Method {
                   methodName = mn,
                   methodSymbol = sym,
                   methodCallable = c,
-                  methodType = t,
-                  methodThrows = throws
+                  methodType = t
                 }) = do
     let name' = upperName cn
     returnsGObject <- maybe (return False) isGObject (returnType c)
@@ -224,7 +226,7 @@ genMethod cn m@(Method {
         c'' = if OrdinaryMethod == t
               then fixMethodArgs c'
               else c'
-    genCCallableWrapper mn' sym c'' throws
+    genCCallableWrapper mn' sym c''
     exportMethod (lowerName mn) (lowerName mn')
 
     cfg <- config
@@ -283,6 +285,8 @@ genObject n o = do
     bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
     exportDecl (name' <> "(..)")
 
+    addModuleDocumentation (objDocumentation o)
+
     -- Type safe casting to parent objects, and implemented interfaces.
     isIU <- isInitiallyUnowned t
     parents <- instanceTree n
@@ -322,9 +326,11 @@ genInterface n iface = do
   let name' = upperName n
 
   line $ "-- interface " <> name' <> " "
-  line $ deprecatedPragma name' $ ifDeprecated iface
+  deprecatedPragma name' $ ifDeprecated iface
   bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   exportDecl (name' <> "(..)")
+
+  addModuleDocumentation (ifDocumentation iface)
 
   noName name'
 

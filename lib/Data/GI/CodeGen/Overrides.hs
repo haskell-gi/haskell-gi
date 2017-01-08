@@ -1,6 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 module Data.GI.CodeGen.Overrides
-    ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion, girFixups)
+    ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion, girFixups,
+                onlineDocsMap)
     , parseOverridesFile
     , filterAPIsAndDeps
     ) where
@@ -39,7 +40,7 @@ data Overrides = Overrides {
       ignoredAPIs     :: S.Set Name,
       -- | Structs for which accessors should not be auto-generated.
       sealedStructs   :: S.Set Name,
-      -- | Explicit calloc/copy/free for structs/unions.
+      -- | Explicit calloc\/copy\/free for structs/unions.
       allocInfo       :: M.Map Name AllocationInfo,
       -- | Mapping from GObject Introspection namespaces to pkg-config
       pkgConfigMap    :: M.Map Text Text,
@@ -48,7 +49,9 @@ data Overrides = Overrides {
       -- | Prefered version of the namespace.
       nsChooseVersion :: M.Map Text Text,
       -- | Fixups for the GIR data.
-      girFixups       :: [GIRRule]
+      girFixups       :: [GIRRule],
+      -- | Known places where to find the C docs.
+      onlineDocsMap   :: M.Map Text Text
 } deriving (Show)
 
 -- | Construct the generic config for a module.
@@ -61,7 +64,8 @@ defaultOverrides = Overrides {
                      pkgConfigMap    = M.empty,
                      cabalPkgVersion = Nothing,
                      nsChooseVersion = M.empty,
-                     girFixups       = []
+                     girFixups       = [],
+                     onlineDocsMap   = M.empty
                    }
 
 -- | There is a sensible notion of zero and addition of Overridess,
@@ -79,7 +83,8 @@ instance Monoid Overrides where
                         then cabalPkgVersion b
                         else cabalPkgVersion a,
       nsChooseVersion = nsChooseVersion a <> nsChooseVersion b,
-      girFixups = girFixups a <> girFixups b
+      girFixups = girFixups a <> girFixups b,
+      onlineDocsMap = onlineDocsMap a <> onlineDocsMap b
     }
 
 -- | The state of the overrides parser.
@@ -146,6 +151,8 @@ parseOneLine (T.stripPrefix "namespace-version " -> Just s) =
     withFlags $ parseNsVersion s
 parseOneLine (T.stripPrefix "set-attr " -> Just s) =
     withFlags $ parseSetAttr s
+parseOneLine (T.stripPrefix "C-docs-url " -> Just u) =
+    withFlags $ parseDocsUrl u
 parseOneLine (T.stripPrefix "if " -> Just s) = parseIf s
 parseOneLine (T.stripPrefix "endif" -> Just s) = parseEndif s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
@@ -236,6 +243,15 @@ parseSetAttr t =
     throwError ("set-attr syntax is of the form\n" <>
                "\t\"set-attr nodePath attrName newValue\"\n" <>
                "Got \"set-attr " <> t <> "\" instead.")
+
+-- | Parse a documentation URL for the given module.
+parseDocsUrl :: Text -> Parser ()
+parseDocsUrl (T.words -> [ns, url]) = do
+  tell $ defaultOverrides { onlineDocsMap = M.singleton ns url }
+parseDocsUrl t =
+  throwError ("C-docs-url syntax of of the form\n" <>
+              "\t\"C-docs-url namespace url\"\n" <>
+              "Got \"C-docs-url " <> t <> "\" instead.")
 
 -- | Parse a path specification, which is of the form
 -- "nodeSpec1/nodeSpec2/../nodeSpecN", where nodeSpec is a node

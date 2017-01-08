@@ -19,7 +19,6 @@ data MethodType = Constructor    -- ^ Constructs an instance of the parent type
 data Method = Method {
       methodName        :: Name,
       methodSymbol      :: Text,
-      methodThrows      :: Bool,
       methodType        :: MethodType,
       methodMovedTo     :: Maybe Text,
       methodCallable    :: Callable
@@ -49,12 +48,10 @@ parseMethod mType = do
                 instanceArg <- parseInstanceArg
                 return $ c {args = instanceArg : args c}
   symbol <- getAttrWithNamespace CGIRNS "identifier"
-  throws <- optionalAttr "throws" False parseBool
   movedTo <- queryAttr "moved-to"
   return $ Method {
               methodName = exposedName
             , methodSymbol = symbol
-            , methodThrows = throws
             , methodType = mType
             , methodMovedTo = movedTo
             , methodCallable = callable

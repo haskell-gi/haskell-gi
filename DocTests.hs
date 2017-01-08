@@ -11,6 +11,7 @@ main = doctest [ "-XCPP", "-XOverloadedStrings", "-XRankNTypes", "-XLambdaCase"
                , "-lgobject-2.0"
                , "-lglib-2.0"
                -- The actual modules to test
-               , "Data.GI.GIR.GtkDoc"
+               , "Data.GI.CodeGen.GtkDoc"
                , "Data.GI.CodeGen.ModulePath"
-               , "Data.GI.CodeGen.SymbolNaming" ]
+               , "Data.GI.CodeGen.SymbolNaming"
+               , "Data.GI.CodeGen.Haddock" ]

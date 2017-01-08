@@ -31,6 +31,7 @@ data Arg = Arg {
         argType :: Type,
         direction :: Direction,
         mayBeNull :: Bool,
+        argDoc :: Documentation,
         argScope :: Scope,
         argClosure :: Int,
         argDestroy :: Int,
@@ -68,8 +69,10 @@ parseArg = do
   nullable <- optionalAttr "nullable" False parseBool
   callerAllocates <- optionalAttr "caller-allocates" False parseBool
   t <- parseType
+  doc <- parseDocumentation
   return $ Arg { argCName = name
                , argType = t
+               , argDoc = doc
                , direction = d
                , mayBeNull = nullable
                , argScope = scope

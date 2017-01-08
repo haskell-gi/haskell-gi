@@ -7,13 +7,15 @@ module Data.GI.GIR.Constant
 import Data.Text (Text)
 
 import Data.GI.GIR.BasicTypes (Type)
-import Data.GI.GIR.Type (parseType)
+import Data.GI.GIR.Type (parseType, parseCType)
 import Data.GI.GIR.Parser
 
 -- | Info about a constant.
 data Constant = Constant {
       constantType        :: Type,
       constantValue       :: Text,
+      constantCType       :: Text,
+      constantDocumentation :: Documentation,
       constantDeprecated  :: Maybe DeprecationInfo
     } deriving (Show)
 
@@ -24,4 +26,11 @@ parseConstant = do
   deprecated <- parseDeprecation
   value <- getAttr "value"
   t <- parseType
-  return (name, Constant t value deprecated)
+  ctype <- parseCType
+  doc <- parseDocumentation
+  return (name, Constant { constantType = t
+                         , constantValue = value
+                         , constantCType = ctype
+                         , constantDocumentation = doc
+                         , constantDeprecated = deprecated
+                         })

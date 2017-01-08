@@ -12,6 +12,8 @@ import Data.Text (Text)
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Conversions
+import Data.GI.CodeGen.Haddock (deprecatedPragma, writeDocumentation,
+                                RelativeDocPosition(..))
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -41,15 +43,14 @@ writePattern name (ExplicitSynonym view expression value t) = do
           name <> " = " <> expression <> " " <> value <> " :: " <> t
 
 genConstant :: Name -> Constant -> CodeGen ()
-genConstant (Name _ name) (Constant t value deprecated) =
-    group $ do
-      setLanguagePragmas ["PatternSynonyms", "ScopedTypeVariables",
-                          "ViewPatterns"]
-      line $ deprecatedPragma name deprecated
+genConstant (Name _ name) c = group $ do
+  setLanguagePragmas ["PatternSynonyms", "ScopedTypeVariables", "ViewPatterns"]
+  deprecatedPragma name (constantDeprecated c)
 
-      handleCGExc (\e -> line $ "-- XXX: Could not generate constant: " <> describeCGError e)
-                  (assignValue name t value >>
-                   exportToplevel ("pattern " <> name))
+  handleCGExc (\e -> line $ "-- XXX: Could not generate constant: " <> describeCGError e)
+    (do writeDocumentation DocBeforeSymbol (constantDocumentation c)
+        assignValue name (constantType c) (constantValue c)
+        exportToplevel ("pattern " <> name))
 
 -- | Assign to the given name the given constant value, in a way that
 -- can be assigned to the corresponding Haskell type.

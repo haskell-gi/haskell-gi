@@ -78,7 +78,7 @@ guessReadNullability methods p
                       returnType c == Just (propType p) &&
                       returnTransfer c == TransferNothing &&
                       skipReturn c == False &&
-                      methodThrows m == False &&
+                      callableThrows c == False &&
                       methodType m == OrdinaryMethod &&
                       methodMovedTo m == Nothing
                       then Just (returnMayBeNull c)
@@ -106,7 +106,7 @@ guessWriteNullability methods p
                           (direction . last . args) c == DirectionIn &&
                           methodMovedTo m == Nothing &&
                           methodType m == OrdinaryMethod &&
-                          methodThrows m == False
+                          callableThrows c == False
                       then Just ((mayBeNull . last . args) c)
                       else Nothing
 

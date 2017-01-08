@@ -170,8 +170,8 @@ parseDeprecation = do
   ctx <- ask
   return $ queryDeprecated (currentElement ctx)
 
--- | Parse the documentation text, if present.
-parseDocumentation :: Parser (Maybe Documentation)
+-- | Parse the documentation info for the current node.
+parseDocumentation :: Parser Documentation
 parseDocumentation = do
   ctx <- ask
   return $ queryDocumentation (currentElement ctx)

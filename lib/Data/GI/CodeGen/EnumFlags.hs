@@ -4,68 +4,72 @@ module Data.GI.CodeGen.EnumFlags
     , genFlags
     ) where
 
-import Control.Monad (when, forM_, forM)
-import qualified Data.Map as M
+import Control.Monad (when, forM_)
 import Data.Monoid ((<>))
 import Data.Text (Text)
-import Data.Tuple (swap)
 
 import Foreign.C (CUInt)
 import Foreign.Storable (sizeOf)
 
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Code
+import Data.GI.CodeGen.Haddock (deprecatedPragma, writeDocumentation,
+                                writeHaddock, RelativeDocPosition(..))
 import Data.GI.CodeGen.SymbolNaming (upperName)
 import Data.GI.CodeGen.Util (tshow)
 
 genEnumOrFlags :: Name -> Enumeration -> ExcCodeGen ()
-genEnumOrFlags n@(Name ns name) (Enumeration fields eDomain _maybeTypeInit storageBytes isDeprecated) = do
+genEnumOrFlags n@(Name ns name) e = do
   -- Conversion functions expect enums and flags to map to CUInt,
   -- which we assume to be of 32 bits. Fail early, instead of giving
   -- strange errors at runtime.
   when (sizeOf (0 :: CUInt) /= 4) $
        notImplementedError $ "Unsupported CUInt size: " <> tshow (sizeOf (0 :: CUInt))
-  when (storageBytes /= 4) $
-       notImplementedError $ "Storage of size /= 4 not supported : " <> tshow storageBytes
+  when (enumStorageBytes e /= 4) $
+       notImplementedError $ "Storage of size /= 4 not supported : " <> tshow (enumStorageBytes e)
 
   let name' = upperName n
-  fields' <- forM fields $ \(fieldName, value) -> do
-      let n = upperName $ Name ns (name <> "_" <> fieldName)
-      return (n, value)
+      members' = flip map (enumMembers e) $ \member ->
+        let n = upperName $ Name ns (name <> "_" <> enumMemberName member)
+        in (n, member)
 
-  line $ deprecatedPragma name' isDeprecated
+  deprecatedPragma name' (enumDeprecated e)
 
   group $ do
     exportDecl (name' <> "(..)")
     hsBoot . line $ "data " <> name'
+    writeDocumentation DocBeforeSymbol (enumDocumentation e)
     line $ "data " <> name' <> " = "
     indent $
-      case fields' of
-        ((fieldName, _value):fs) -> do
+      case members' of
+        ((fieldName, firstMember):fs) -> do
           line $ "  " <> fieldName
-          forM_ fs $ \(n, _) -> line $ "| " <> n
+          writeDocumentation DocAfterSymbol (enumMemberDoc firstMember)
+          forM_ fs $ \(n, member) -> do
+            line $ "| " <> n
+            writeDocumentation DocAfterSymbol (enumMemberDoc member)
           line $ "| Another" <> name' <> " Int"
+          writeHaddock DocAfterSymbol "Catch-all for unknown values"
           line "deriving (Show, Eq)"
         _ -> return ()
 
   group $ do
     bline $ "instance P.Enum " <> name' <> " where"
     indent $ do
-            forM_ fields' $ \(n, v) ->
-                line $ "fromEnum " <> n <> " = " <> tshow v
+            forM_ members' $ \(n, m) ->
+                line $ "fromEnum " <> n <> " = " <> tshow (enumMemberValue m)
             line $ "fromEnum (Another" <> name' <> " k) = k"
-    let valueNames = M.toList . M.fromListWith (curry snd) $ map swap fields'
     blank
     indent $ do
-            forM_ valueNames $ \(v, n) ->
-                line $ "toEnum " <> tshow v <> " = " <> n
+            forM_ members' $ \(n, m) ->
+                line $ "toEnum " <> tshow (enumMemberValue m) <> " = " <> n
             line $ "toEnum k = Another" <> name' <> " k"
 
   group $ do
     line $ "instance P.Ord " <> name' <> " where"
     indent $ line "compare a b = P.compare (P.fromEnum a) (P.fromEnum b)"
 
-  maybe (return ()) (genErrorDomain name') eDomain
+  maybe (return ()) (genErrorDomain name') (enumErrorDomain e)
 
 genBoxedEnum :: Name -> Text -> CodeGen ()
 genBoxedEnum n typeInit = do

@@ -25,8 +25,10 @@ module Data.GI.CodeGen.API
     , Scope(..)
 
     -- Reexported from Data.GI.GIR.Deprecation
-    , deprecatedPragma
     , DeprecationInfo
+
+    -- Reexported from Data.GI.GIR.Enumeration
+    , EnumerationMember(..)
 
     -- Reexported from Data.GI.GIR.Property
     , PropertyFlag(..)
@@ -81,8 +83,8 @@ import Data.GI.GIR.BasicTypes (Alias, Name(..), Transfer(..))
 import Data.GI.GIR.Callable (Callable(..))
 import Data.GI.GIR.Callback (Callback(..), parseCallback)
 import Data.GI.GIR.Constant (Constant(..), parseConstant)
-import Data.GI.GIR.Deprecation (DeprecationInfo, deprecatedPragma)
-import Data.GI.GIR.Enum (Enumeration(..), parseEnum)
+import Data.GI.GIR.Deprecation (DeprecationInfo)
+import Data.GI.GIR.Enum (Enumeration(..), EnumerationMember(..), parseEnum)
 import Data.GI.GIR.Field (Field(..))
 import Data.GI.GIR.Flags (Flags(..), parseFlags)
 import Data.GI.GIR.Function (Function(..), parseFunction)

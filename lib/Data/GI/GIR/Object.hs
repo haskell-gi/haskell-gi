@@ -10,14 +10,16 @@ import Data.GI.GIR.Method (Method, parseMethod, MethodType(..))
 import Data.GI.GIR.Property (Property, parseProperty)
 import Data.GI.GIR.Signal (Signal, parseSignal)
 import Data.GI.GIR.Parser
+import Data.GI.GIR.Type (queryCType)
 
 data Object = Object {
     objParent :: Maybe Name,
     objTypeInit :: Text,
     objTypeName :: Text,
+    objCType :: Maybe Text,
     objInterfaces :: [Name],
     objDeprecated :: Maybe DeprecationInfo,
-    objDocumentation :: Maybe Documentation,
+    objDocumentation :: Documentation,
     objMethods :: [Method],
     objProperties :: [Property],
     objSignals :: [Signal]
@@ -37,10 +39,12 @@ parseObject = do
   typeInit <- getAttrWithNamespace GLibGIRNS "get-type"
   typeName <- getAttrWithNamespace GLibGIRNS "type-name"
   signals <- parseChildrenWithNSName GLibGIRNS "signal" parseSignal
+  ctype <- queryCType
   return (name,
          Object {
             objParent = parent
           , objTypeInit = typeInit
+          , objCType = ctype
           , objTypeName = typeName
           , objInterfaces = interfaces
           , objDeprecated = deprecated

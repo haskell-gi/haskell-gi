@@ -39,7 +39,6 @@ module Data.GI.CodeGen.Code
     , setGHCOptions
     , setModuleFlags
     , setModuleMinBase
-    , addModuleDocumentation
 
     , exportToplevel
     , exportModule
@@ -52,6 +51,7 @@ module Data.GI.CodeGen.Code
     , getAPI
     , findAPIByName
     , getAPIs
+    , getC2HMap
 
     , config
     , currentModule
@@ -79,12 +79,12 @@ import System.FilePath (joinPath, takeDirectory)
 
 import Data.GI.CodeGen.API (API, Name(..))
 import Data.GI.CodeGen.Config (Config(..))
+import {-# SOURCE #-} Data.GI.CodeGen.CtoHaskellMap (cToHaskellMap)
+import Data.GI.CodeGen.GtkDoc (CRef)
 import Data.GI.CodeGen.ModulePath (ModulePath(..), dotModulePath, (/.))
 import Data.GI.CodeGen.Type (Type(..))
 import Data.GI.CodeGen.Util (tshow, terror, padTo, utf8WriteFile)
 import Data.GI.CodeGen.ProjectInfo (authors, license, maintainers)
-import Data.GI.GIR.Documentation (Documentation(..))
-import Data.GI.GIR.GtkDoc (parseGtkDoc)
 
 data Code
     = NoCode              -- ^ No code
@@ -183,8 +183,10 @@ emptyModule m = ModuleInfo { modulePath = m
 
 -- | Information for the code generator.
 data CodeGenConfig = CodeGenConfig {
-      hConfig     :: Config        -- ^ Ambient config.
-    , loadedAPIs :: M.Map Name API -- ^ APIs available to the generator.
+      hConfig     :: Config          -- ^ Ambient config.
+    , loadedAPIs  :: M.Map Name API  -- ^ APIs available to the generator.
+    , c2hMap      :: M.Map CRef Text -- ^ Map from C references to
+                                     -- Haskell symbols.
     }
 
 data CGError = CGErrorNotImplemented Text
@@ -236,15 +238,16 @@ recurseCG cg = do
      Right (r, new) -> put (mergeInfoState oldInfo new) >>
                        return (r, moduleCode new)
 
--- | Like `recurse`, giving explicitly the set of loaded APIs for the
--- subgenerator.
+-- | Like `recurse`, giving explicitly the set of loaded APIs and C to
+-- Haskell map for the subgenerator.
 recurseWithAPIs :: M.Map Name API -> CodeGen () -> CodeGen ()
 recurseWithAPIs apis cg = do
   cfg <- ask
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
   let info = cleanInfo oldInfo
-      cfg' = cfg {loadedAPIs = apis}
+      cfg' = cfg {loadedAPIs = apis,
+                  c2hMap = cToHaskellMap (M.toList apis)}
   liftIO (runCodeGen cg cfg' info) >>= \case
      Left e -> throwError e
      Right (_, new) -> put (mergeInfo oldInfo new)
@@ -334,6 +337,10 @@ currentModule = do
 getAPIs :: CodeGen (M.Map Name API)
 getAPIs = loadedAPIs <$> ask
 
+-- | Return the C -> Haskell available to the generator.
+getC2HMap :: CodeGen (M.Map CRef Text)
+getC2HMap = c2hMap <$> ask
+
 -- | Due to the `forall` in the definition of `CodeGen`, if we want to
 -- run the monad transformer stack until we get an `IO` action, our
 -- only option is ignoring the possible error code from
@@ -348,17 +355,18 @@ unwrapCodeGen cg cfg info =
         Right (r, newInfo) -> return (r, newInfo)
 
 -- | Like `evalCodeGen`, but discard the resulting output value.
-genCode :: Config -> M.Map Name API -> ModulePath -> CodeGen () ->
-           IO ModuleInfo
+genCode :: Config -> M.Map Name API ->
+           ModulePath -> CodeGen () -> IO ModuleInfo
 genCode cfg apis mPath cg = snd <$> evalCodeGen cfg apis mPath cg
 
 -- | Run a code generator, and return the information for the
 -- generated module together with the return value of the generator.
-evalCodeGen :: Config -> M.Map Name API -> ModulePath -> CodeGen a ->
-               IO (a, ModuleInfo)
+evalCodeGen :: Config -> M.Map Name API ->
+               ModulePath -> CodeGen a -> IO (a, ModuleInfo)
 evalCodeGen cfg apis mPath cg = do
   let initialInfo = emptyModule mPath
-      cfg' = CodeGenConfig {hConfig = cfg, loadedAPIs = apis}
+      cfg' = CodeGenConfig {hConfig = cfg, loadedAPIs = apis,
+                            c2hMap = cToHaskellMap (M.toList apis)}
   unwrapCodeGen cg cfg' initialInfo
 
 -- | Mark the given dependency as used by the module.
@@ -382,7 +390,7 @@ qualified :: ModulePath -> Name -> CodeGen Text
 qualified mp (Name ns s) = do
   cfg <- config
   -- Make sure the module is listed as a dependency.
-  when (modName cfg /= Just ns) $
+  when (modName cfg /= ns) $
     registerNSDependency ns
   minfo <- get
   if mp == modulePath minfo
@@ -538,14 +546,6 @@ setModuleFlags flags =
 setModuleMinBase :: BaseVersion -> CodeGen ()
 setModuleMinBase v =
     modify' $ \s -> s{moduleMinBase = max v (moduleMinBase s)}
-
--- | Add the given text to the module-level documentation for the
--- module being generated.
-addModuleDocumentation :: Maybe Documentation -> CodeGen ()
-addModuleDocumentation Nothing = return ()
-addModuleDocumentation (Just doc) =
-    modify' $ \s -> s{moduleDoc = moduleDoc s <>
-                                  Just (tshow . parseGtkDoc . rawDocText $ doc)}
 
 -- | Return a text representation of the `Code`.
 codeToText :: Code -> Text
@@ -730,6 +730,7 @@ moduleImports = T.unlines [
                 , ""
                 , "import qualified Data.GI.Base.Attributes as GI.Attributes"
                 , "import qualified Data.GI.Base.ManagedPtr as B.ManagedPtr"
+                , "import qualified Data.GI.Base.GError as B.GError"
                 , "import qualified Data.GI.Base.GVariant as B.GVariant"
                 , "import qualified Data.GI.Base.GParamSpec as B.GParamSpec"
                 , "import qualified Data.Text as T"

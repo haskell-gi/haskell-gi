@@ -629,15 +629,22 @@ argumentType letters@(l:ls) t = do
     -- Instead of restricting to the actual class,
     -- we allow for any object descending from it.
     Just (APIInterface _) -> do
-             cls <- typeConstraint t
-             return (ls, T.singleton l, [cls <> " " <> T.singleton l])
+      cls <- typeConstraint t
+      return (ls, T.singleton l, [cls <> " " <> T.singleton l])
     Just (APIObject _) -> do
-             isGO <- isGObject t
-             if isGO
-             then do
-               cls <- typeConstraint t
-               return (ls, T.singleton l, [cls <> " " <> T.singleton l])
-             else return (letters, s, [])
+      isGO <- isGObject t
+      if isGO
+        then do cls <- typeConstraint t
+                return (ls, T.singleton l, [cls <> " " <> T.singleton l])
+        else return (letters, s, [])
+    Just (APICallback cb) ->
+      -- See [Note: Callables that throw]
+      if callableThrows (cbCallable cb)
+      then do
+        ft <- tshow <$> foreignType t
+        return (letters, ft, [])
+      else
+        return (letters, s, [])
     _ -> return (letters, s, [])
 
 haskellBasicType TPtr      = ptr $ typeOf ()
@@ -728,9 +735,9 @@ isoHaskellType :: Type -> CodeGen TypeRep
 isoHaskellType t@(TInterface n) = do
   api <- findAPI t
   case api of
-    Just (APICallback (Callback c)) -> do
+    Just (APICallback cb) -> do
         tname <- qualifiedAPI n
-        if callableHasClosures c
+        if callableHasClosures (cbCallable cb)
         then return ((callbackHTypeWithClosures tname) `con` [])
         else return (tname `con` [])
     _ -> haskellType t

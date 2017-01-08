@@ -19,7 +19,7 @@ data CodeGenFlags = CodeGenFlags {
 
 data Config = Config {
       -- | Name of the module being generated.
-      modName        :: Maybe Text,
+      modName        :: Text,
       -- | Whether to print extra info.
       verbose        :: Bool,
       -- | List of loaded overrides for the code generator.

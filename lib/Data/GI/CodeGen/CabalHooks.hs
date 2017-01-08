@@ -104,7 +104,7 @@ confCodeGenHook name version verbosity overrides outputDir
   (gir, girDeps) <- loadGIRInfo verbosity name (Just version) [] (girFixups ovs)
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
-      cfg = Config {modName = Just name,
+      cfg = Config {modName = name,
                     verbose = verbosity,
                     overrides = ovs,
                     cgFlags = parseFlags (configConfigurationsFlags flags)}

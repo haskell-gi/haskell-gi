@@ -4,14 +4,21 @@ module Data.GI.GIR.Callback
     , parseCallback
     ) where
 
-import Data.GI.GIR.Parser
-import Data.GI.GIR.Callable (Callable, parseCallable)
+import Data.Text (Text)
 
-data Callback = Callback Callable
+import Data.GI.GIR.Callable (Callable, parseCallable)
+import Data.GI.GIR.Parser
+import Data.GI.GIR.Type (queryCType)
+
+data Callback = Callback { cbCallable :: Callable
+                         , cbCType    :: Maybe Text
+                         }
     deriving Show
 
 parseCallback :: Parser (Name, Callback)
 parseCallback = do
   name <- parseName
   callable <- parseCallable
-  return (name, Callback callable)
+  ctype <- queryCType
+  return (name, Callback { cbCallable = callable
+                         , cbCType = ctype })

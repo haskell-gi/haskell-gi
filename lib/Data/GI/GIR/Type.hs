@@ -2,6 +2,7 @@
 -- | Parsing type information from GIR files.
 module Data.GI.GIR.Type
     ( parseType
+    , queryCType
     , parseCType
     , queryElementCType
     , parseOptionalType

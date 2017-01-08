@@ -11,15 +11,15 @@
 --
 -- For convenience, generated code also includes specialized variants
 -- of 'catchGErrorJust' \/ 'handleGErrorJust' for each error type. For
--- example, for errors of type 'GI.GdkPixbuf.PixbufError' one could
--- invoke 'GI.GdkPixbuf.catchPixbufError' \/
--- 'GI.GdkPixbuf.handlePixbufError'. The definition is simply
+-- example, for errors of type 'GI.GdkPixbuf.Enums.PixbufError' one could
+-- invoke 'GI.GdkPixbuf.Enums.catchPixbufError' \/
+-- 'GI.GdkPixbuf.Enums.handlePixbufError'. The definition is simply
 --
 -- > catchPixbufError :: IO a -> (PixbufError -> GErrorMessage -> IO a) -> IO a
 -- > catchPixbufError = catchGErrorJustDomain
 --
 -- Notice that the type is suitably specialized, so only
--- errors of type 'GI.GdkPixbuf.PixbufError' will be caught.
+-- errors of type 'GI.GdkPixbuf.Enums.PixbufError' will be caught.
 module Data.GI.Base.GError
     (
     -- * Unpacking GError

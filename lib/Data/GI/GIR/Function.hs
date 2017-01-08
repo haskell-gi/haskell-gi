@@ -10,7 +10,6 @@ import Data.GI.GIR.Parser
 
 data Function = Function {
       fnSymbol   :: Text
-    , fnThrows   :: Bool
     , fnMovedTo  :: Maybe Text
     , fnCallable :: Callable
     } deriving Show
@@ -24,12 +23,10 @@ parseFunction = do
                       Nothing -> name
   callable <- parseCallable
   symbol <- getAttrWithNamespace CGIRNS "identifier"
-  throws <- optionalAttr "throws" False parseBool
   movedTo <- queryAttr "moved-to"
   return $ (exposedName,
             Function {
               fnSymbol = symbol
             , fnCallable = callable
-            , fnThrows = throws
             , fnMovedTo = movedTo
             })

@@ -10,8 +10,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Callable (callableSignature, ForeignSymbol(..),
-                                 fixupCallerAllocates)
+import Data.GI.CodeGen.Callable (callableSignature, Signature(..),
+                                 ForeignSymbol(..), fixupCallerAllocates)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, qualifiedSymbol)
 import Data.GI.CodeGen.Util (ucFirst)
@@ -77,17 +77,17 @@ genMethodInfo n m =
       group $ do
         infoName <- methodInfoName n m
         let callable = fixupCallerAllocates (methodCallable m)
-        (constraints, types) <- callableSignature callable
-                                (KnownForeignSymbol undefined) (methodThrows m)
+        sig <- callableSignature callable (KnownForeignSymbol undefined)
         bline $ "data " <> infoName
         -- This should not happen, since ordinary methods always
         -- have the instance as first argument.
-        when (null types) $
+        when (null (signatureArgTypes sig)) $
           error $ "Internal error: too few parameters! " ++ show m
-        let (obj:otherTypes) = map fst types
-            sigConstraint = "signature ~ (" <> T.intercalate " -> " otherTypes
-                            <> ")"
-        line $ "instance (" <> T.intercalate ", " (sigConstraint : constraints)
+        let (obj:otherTypes) = map snd (signatureArgTypes sig)
+            sigConstraint = "signature ~ (" <> T.intercalate " -> "
+              (otherTypes ++ [signatureReturnType sig]) <> ")"
+        line $ "instance (" <> T.intercalate ", " (sigConstraint :
+                                                   signatureConstraints sig)
                  <> ") => O.MethodInfo " <> infoName <> " " <> obj <> " signature where"
         let mn = methodName m
             mangled = lowerName (mn {name = name n <> "_" <> name mn})
