@@ -54,3 +54,13 @@ executable DBusServer
                         text == 1.2.*
   other-extensions:     OverloadedStrings, OverloadedLabels, LambdaCase
   ghc-options:         -Wall -fwarn-incomplete-patterns
+
+executable GstHelloWorld
+  main-is:              GstHelloWorld.hs
+  build-depends:        base >= 4.7 && < 5,
+                        haskell-gi-base,
+                        gi-glib,
+                        gi-gst,
+                        text
+  other-extensions:     OverloadedStrings, OverloadedLabels
+  ghc-options:         -Wall
