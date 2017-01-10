@@ -105,7 +105,7 @@ newManagedPtr_ ptr = do
              }
 
 -- | Do not run the finalizers upon garbage collection of the `ManagedPtr`.
-disownManagedPtr :: forall a. ManagedPtrNewtype a => a -> IO (Ptr a)
+disownManagedPtr :: forall a. (HasCallStack, ManagedPtrNewtype a) => a -> IO (Ptr a)
 disownManagedPtr managed = do
   ptr <- unsafeManagedPtrGetPtr managed
   writeIORef (managedPtrIsOwned c) False
@@ -113,7 +113,7 @@ disownManagedPtr managed = do
     where c = coerce managed :: ManagedPtr ()
 
 -- | Perform an IO action on the 'Ptr' inside a managed pointer.
-withManagedPtr :: ManagedPtrNewtype a => a -> (Ptr a -> IO c) -> IO c
+withManagedPtr :: (HasCallStack, ManagedPtrNewtype a) => a -> (Ptr a -> IO c) -> IO c
 withManagedPtr managed action = do
   ptr <- unsafeManagedPtrGetPtr managed
   result <- action ptr
@@ -123,7 +123,7 @@ withManagedPtr managed action = do
 -- | Like `withManagedPtr`, but accepts a `Maybe` type. If the passed
 -- value is `Nothing` the inner action will be executed with a
 -- `nullPtr` argument.
-maybeWithManagedPtr :: ManagedPtrNewtype a => Maybe a -> (Ptr a -> IO c) -> IO c
+maybeWithManagedPtr :: (HasCallStack, ManagedPtrNewtype a) => Maybe a -> (Ptr a -> IO c) -> IO c
 maybeWithManagedPtr Nothing action = action nullPtr
 maybeWithManagedPtr (Just managed) action = do
   ptr <- unsafeManagedPtrGetPtr managed
@@ -133,7 +133,7 @@ maybeWithManagedPtr (Just managed) action = do
 
 -- | Perform an IO action taking a list of 'Ptr' on a list of managed
 -- pointers.
-withManagedPtrList :: ManagedPtrNewtype a => [a] -> ([Ptr a] -> IO c) -> IO c
+withManagedPtrList :: (HasCallStack, ManagedPtrNewtype a) => [a] -> ([Ptr a] -> IO c) -> IO c
 withManagedPtrList managedList action = do
   ptrs <- mapM unsafeManagedPtrGetPtr managedList
   result <- action ptrs
@@ -164,7 +164,7 @@ notOwnedWarning :: HasCallStack => Ptr a -> IO ()
 notOwnedWarning ptr = do
   hPutStrLn stderr ("Accessing a disowned pointer <" ++ show ptr
                      ++ ">, this may lead to crashes.\n"
-                     ++ callstack)
+                     ++ callstack )
   where
 #if MIN_VERSION_base(4,9,0)
     callstack = prettyCallStack (callStack)
@@ -321,7 +321,7 @@ foreign import ccall "g_boxed_free" g_boxed_free ::
     CGType -> Ptr a -> IO ()
 
 -- | Free the memory associated with a boxed object
-freeBoxed :: forall a. BoxedObject a => a -> IO ()
+freeBoxed :: forall a. (HasCallStack, BoxedObject a) => a -> IO ()
 freeBoxed boxed = do
   GType gtype <- boxedType (undefined :: a)
   ptr <- unsafeManagedPtrGetPtr boxed
