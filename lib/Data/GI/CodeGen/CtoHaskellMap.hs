@@ -2,11 +2,14 @@
 -- elements in the bindings.
 module Data.GI.CodeGen.CtoHaskellMap
   ( cToHaskellMap
+  , Hyperlink(..)
   ) where
 
 import qualified Data.Map as M
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.String (IsString(..))
 
 import Data.GI.CodeGen.GtkDoc (CRef(..))
 import Data.GI.CodeGen.API (API(..), Name(..), Callback(..),
@@ -18,14 +21,24 @@ import Data.GI.CodeGen.ModulePath (ModulePath, dotModulePath, (/.))
 import Data.GI.CodeGen.SymbolNaming (submoduleLocation, lowerName, upperName)
 import Data.GI.CodeGen.Util (ucFirst)
 
+-- | Link to an identifier, module, etc.
+data Hyperlink = IdentifierLink Text
+               | ModuleLink Text
+               | ModuleLinkWithAnchor Text Text
+  deriving (Show, Eq)
+
+-- Just for convenience
+instance IsString Hyperlink where
+  fromString = IdentifierLink . T.pack
+
 -- | Given a set of APIs, build a `Map` that given a Text
 -- corresponding to a certain C identifier returns the corresponding
 -- Haskell element in the bindings. For instance, `gtk_widget_show`
 -- will get mapped to `GI.Gtk.Objects.Widget.show`.
-cToHaskellMap :: [(Name, API)] -> M.Map CRef Text
+cToHaskellMap :: [(Name, API)] -> M.Map CRef Hyperlink
 cToHaskellMap apis = M.union (M.fromList builtins)
                      (M.fromList $ concatMap extractRefs apis)
-  where extractRefs :: (Name, API) -> [(CRef, Text)]
+  where extractRefs :: (Name, API) -> [(CRef, Hyperlink)]
         extractRefs (n, APIConst c) = constRefs n c
         extractRefs (n, APIFunction f) = funcRefs n f
         extractRefs (n, api@(APIEnum e)) = enumRefs api n e
@@ -36,7 +49,7 @@ cToHaskellMap apis = M.union (M.fromList builtins)
         extractRefs (n, APIInterface i) = ifaceRefs n i
         extractRefs (n, APIObject o) = objectRefs n o
 
-        builtins :: [(CRef, Text)]
+        builtins :: [(CRef, Hyperlink)]
         builtins = [(TypeRef "gboolean", "Bool"),
                     (ConstantRef "TRUE", "True"),
                     (ConstantRef "FALSE", "False"),
@@ -51,43 +64,44 @@ location :: Name -> API -> ModulePath
 location n api = ("GI" /. ucFirst (namespace n)) <> submoduleLocation n api
 
 -- | Obtain the fully qualified symbol.
-fullyQualified :: Name -> API -> Text -> Text
-fullyQualified n api symbol = dotModulePath (location n api) <> "." <> symbol
+fullyQualified :: Name -> API -> Text -> Hyperlink
+fullyQualified n api symbol =
+  IdentifierLink $ dotModulePath (location n api) <> "." <> symbol
 
 -- | Extract the C name of a constant. These are often referred to as
 -- types, so we allow that too.
-constRefs :: Name -> Constant -> [(CRef, Text)]
+constRefs :: Name -> Constant -> [(CRef, Hyperlink)]
 constRefs n c = [(ConstantRef (constantCType c),
                   fullyQualified n (APIConst c) $ name n),
                  (TypeRef (constantCType c),
                   fullyQualified n (APIConst c) $ name n)]
 
 -- | Extract the C name of a function.
-funcRefs :: Name -> Function -> [(CRef, Text)]
+funcRefs :: Name -> Function -> [(CRef, Hyperlink)]
 funcRefs n f = [(FunctionRef (fnSymbol f),
                  fullyQualified n (APIFunction f) $ lowerName n)]
 
 -- | Extract the C names of the fields in an enumeration/flags, and
 -- the name of the type itself.
-enumRefs :: API -> Name -> Enumeration -> [(CRef, Text)]
+enumRefs :: API -> Name -> Enumeration -> [(CRef, Hyperlink)]
 enumRefs api n e = (TypeRef (enumCType e), fullyQualified n api $ upperName n) :
                    map memberToRef (enumMembers e)
-  where memberToRef :: EnumerationMember -> (CRef, Text)
+  where memberToRef :: EnumerationMember -> (CRef, Hyperlink)
         memberToRef em = (ConstantRef (enumMemberCId em),
                           fullyQualified n api $ upperName $
                           n {name = name n <> "_" <> enumMemberName em})
 
 -- | Given an optional C type and the API constructor construct the
 -- list of associated refs.
-maybeCType :: Name -> API -> Maybe Text -> [(CRef, Text)]
+maybeCType :: Name -> API -> Maybe Text -> [(CRef, Hyperlink)]
 maybeCType _ _ Nothing = []
 maybeCType n api (Just ctype) = [(TypeRef ctype,
                                   fullyQualified n api (upperName n))]
 
 -- | Refs to the methods for a given owner.
-methodRefs :: Name -> API -> [Method] -> [(CRef, Text)]
+methodRefs :: Name -> API -> [Method] -> [(CRef, Hyperlink)]
 methodRefs n api methods = map methodRef methods
-  where methodRef :: Method -> (CRef, Text)
+  where methodRef :: Method -> (CRef, Hyperlink)
         methodRef m@(Method {methodName = mn}) =
           -- Method name namespaced by the owner.
           let mn' = mn {name = name n <> "_" <> name mn}
@@ -95,25 +109,25 @@ methodRefs n api methods = map methodRef methods
               fullyQualified n api $ lowerName mn')
 
 -- | Extract the C name of a callback.
-callbackRefs :: Name -> Callback -> [(CRef, Text)]
+callbackRefs :: Name -> Callback -> [(CRef, Hyperlink)]
 callbackRefs n cb = maybeCType n (APICallback cb) (cbCType cb)
 
 -- | Extract the C references in a struct.
-structRefs :: Name -> Struct -> [(CRef, Text)]
+structRefs :: Name -> Struct -> [(CRef, Hyperlink)]
 structRefs n s = maybeCType n (APIStruct s) (structCType s)
                  <> methodRefs n (APIStruct s) (structMethods s)
 
 -- | Extract the C references in a union.
-unionRefs :: Name -> Union -> [(CRef, Text)]
+unionRefs :: Name -> Union -> [(CRef, Hyperlink)]
 unionRefs n u = maybeCType n (APIUnion u) (unionCType u)
                  <> methodRefs n (APIUnion u) (unionMethods u)
 
 -- | Extract the C references in an interface.
-ifaceRefs :: Name -> Interface -> [(CRef, Text)]
+ifaceRefs :: Name -> Interface -> [(CRef, Hyperlink)]
 ifaceRefs n i = maybeCType n (APIInterface i) (ifCType i)
                  <> methodRefs n (APIInterface i) (ifMethods i)
 
 -- | Extract the C references in an object.
-objectRefs :: Name -> Object -> [(CRef, Text)]
+objectRefs :: Name -> Object -> [(CRef, Hyperlink)]
 objectRefs n o = maybeCType n (APIObject o) (objCType o)
                  <> methodRefs n (APIObject o) (objMethods o)

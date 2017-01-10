@@ -79,7 +79,8 @@ import System.FilePath (joinPath, takeDirectory)
 
 import Data.GI.CodeGen.API (API, Name(..))
 import Data.GI.CodeGen.Config (Config(..))
-import {-# SOURCE #-} Data.GI.CodeGen.CtoHaskellMap (cToHaskellMap)
+import {-# SOURCE #-} Data.GI.CodeGen.CtoHaskellMap (cToHaskellMap,
+                                                     Hyperlink)
 import Data.GI.CodeGen.GtkDoc (CRef)
 import Data.GI.CodeGen.ModulePath (ModulePath(..), dotModulePath, (/.))
 import Data.GI.CodeGen.Type (Type(..))
@@ -185,8 +186,8 @@ emptyModule m = ModuleInfo { modulePath = m
 data CodeGenConfig = CodeGenConfig {
       hConfig     :: Config          -- ^ Ambient config.
     , loadedAPIs  :: M.Map Name API  -- ^ APIs available to the generator.
-    , c2hMap      :: M.Map CRef Text -- ^ Map from C references to
-                                     -- Haskell symbols.
+    , c2hMap      :: M.Map CRef Hyperlink -- ^ Map from C references
+                                          -- to Haskell symbols.
     }
 
 data CGError = CGErrorNotImplemented Text
@@ -338,7 +339,7 @@ getAPIs :: CodeGen (M.Map Name API)
 getAPIs = loadedAPIs <$> ask
 
 -- | Return the C -> Haskell available to the generator.
-getC2HMap :: CodeGen (M.Map CRef Text)
+getC2HMap :: CodeGen (M.Map CRef Hyperlink)
 getC2HMap = c2hMap <$> ask
 
 -- | Due to the `forall` in the definition of `CodeGen`, if we want to
@@ -599,8 +600,18 @@ formatTypeDecls exports =
                                                 . exportSymbol )
                                       $ exportedTypes ]
 
+-- | A subsection name, with an optional anchor name.
+data Subsection = Subsection { subsectionTitle  :: Text
+                             , subsectionAnchor :: Maybe Text
+                             } deriving (Eq, Show, Ord)
+
+-- | A subsection with an anchor given by the title and @prefix:title@ anchor.
+subsecWithPrefix prefix title =
+  Subsection { subsectionTitle = title
+             , subsectionAnchor = Just (prefix <> ":" <> title) }
+
 -- | Format a given section made of subsections.
-formatSection :: Text -> (Export -> Maybe (HaddockSection, SymbolName)) ->
+formatSection :: Text -> (Export -> Maybe (Subsection, SymbolName)) ->
                  [Export] -> Maybe Text
 formatSection section filter exports =
     if M.null exportedSubsections
@@ -611,20 +622,23 @@ formatSection section filter exports =
                               . M.toList ) exportedSubsections]
 
     where
-      filteredExports :: [(HaddockSection, SymbolName)]
+      filteredExports :: [(Subsection, SymbolName)]
       filteredExports = catMaybes (map filter exports)
 
-      exportedSubsections :: M.Map HaddockSection (Set.Set SymbolName)
+      exportedSubsections :: M.Map Subsection (Set.Set SymbolName)
       exportedSubsections = foldr extract M.empty filteredExports
 
-      extract :: (HaddockSection, SymbolName) ->
-                 M.Map Text (Set.Set Text) -> M.Map Text (Set.Set Text)
+      extract :: (Subsection, SymbolName) -> M.Map Subsection (Set.Set Text)
+              -> M.Map Subsection (Set.Set Text)
       extract (subsec, m) secs =
           M.insertWith Set.union subsec (Set.singleton m) secs
 
-      formatSubsection :: (HaddockSection, Set.Set SymbolName) -> Text
+      formatSubsection :: (Subsection, Set.Set SymbolName) -> Text
       formatSubsection (subsec, symbols) =
-          T.unlines [ "-- ** " <> subsec
+          T.unlines [ "-- ** " <> case subsectionAnchor subsec of
+                                    Just anchor -> subsectionTitle subsec <>
+                                                   " #" <> anchor <> "#"
+                                    Nothing -> subsectionTitle subsec
                     , ( T.concat
                       . map (paddedLine 1 . comma)
                       . Set.toList ) symbols]
@@ -632,22 +646,25 @@ formatSection section filter exports =
 -- | Format the list of methods.
 formatMethods :: [Export] -> Maybe Text
 formatMethods = formatSection "Methods" toMethod
-    where toMethod :: Export -> Maybe (HaddockSection, SymbolName)
-          toMethod (Export (ExportMethod s) m) = Just (s, m)
+    where toMethod :: Export -> Maybe (Subsection, SymbolName)
+          toMethod (Export (ExportMethod s) m) =
+            Just (subsecWithPrefix "method" s, m)
           toMethod _ = Nothing
 
 -- | Format the list of properties.
 formatProperties :: [Export] -> Maybe Text
 formatProperties = formatSection "Properties" toProperty
-    where toProperty :: Export -> Maybe (HaddockSection, SymbolName)
-          toProperty (Export (ExportProperty s) m) = Just (s, m)
+    where toProperty :: Export -> Maybe (Subsection, SymbolName)
+          toProperty (Export (ExportProperty s) m) =
+            Just (subsecWithPrefix "attr" s, m)
           toProperty _ = Nothing
 
 -- | Format the list of signals.
 formatSignals :: [Export] -> Maybe Text
 formatSignals = formatSection "Signals" toSignal
-    where toSignal :: Export -> Maybe (HaddockSection, SymbolName)
-          toSignal (Export (ExportSignal s) m) = Just (s, m)
+    where toSignal :: Export -> Maybe (Subsection, SymbolName)
+          toSignal (Export (ExportSignal s) m) =
+            Just (subsecWithPrefix "signal" s, m)
           toSignal _ = Nothing
 
 -- | Format the given export list. This is just the inside of the

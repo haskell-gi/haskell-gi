@@ -28,6 +28,7 @@ import Data.GI.GIR.Documentation (Documentation(..))
 import Data.GI.CodeGen.Code (CodeGen, config, line, blank,
                              getC2HMap, ModuleInfo(moduleDoc))
 import Data.GI.CodeGen.Config (modName, overrides)
+import Data.GI.CodeGen.CtoHaskellMap (Hyperlink(..))
 import Data.GI.CodeGen.GtkDoc (GtkDoc(..), Token(..), CRef(..), Language(..),
                                Link(..), ListItem(..), parseGtkDoc)
 import Data.GI.CodeGen.Overrides (onlineDocsMap)
@@ -57,7 +58,7 @@ data RelativeDocPosition = DocBeforeSymbol
 --
 -- >>> formatHaddock M.empty "a" (GtkDoc [List [ListItem (GtkDoc [Image (Link "test" "test.png")]) []]])
 -- "\n* <<a/test.png test>>\n"
-formatHaddock :: M.Map CRef Text -> Text -> GtkDoc -> Text
+formatHaddock :: M.Map CRef Hyperlink -> Text -> GtkDoc -> Text
 formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
   where formatToken :: Token -> Text
         formatToken (Literal l) = escape l
@@ -69,35 +70,41 @@ formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
         formatToken (List l) = formatList c2h docBase l
         formatToken (SymbolRef (ParamRef p)) = "/@" <> lowerSymbol p <> "@/"
         formatToken (SymbolRef cr) = case M.lookup cr c2h of
-          Just hr -> "'" <> hr <> "'"
+          Just hr -> formatHyperlink hr
           Nothing -> formatUnknownCRef c2h cr
 
 -- | Format a `CRef` whose Haskell representation is not known.
-formatUnknownCRef :: M.Map CRef Text -> CRef -> Text
+formatUnknownCRef :: M.Map CRef Hyperlink -> CRef -> Text
 formatUnknownCRef _ (FunctionRef f) = formatCRef $ f <> "()"
-formatUnknownCRef _ (ParamRef p) = error $ "Should not be reached"
+formatUnknownCRef _ (ParamRef _) = error $ "Should not be reached"
 formatUnknownCRef c2h (SignalRef owner signal) =
   case M.lookup (TypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "::" <> signal
-    Just r -> r <> "::" <> formatCRef signal
+    Just r -> formatHyperlink r <> "::" <> formatCRef signal
 formatUnknownCRef c2h (PropertyRef owner prop) =
   case M.lookup (TypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> ":" <> prop
-    Just r -> r <> ":" <> formatCRef prop
+    Just r -> formatHyperlink r <> ":" <> formatCRef prop
 formatUnknownCRef c2h (VMethodRef owner vmethod) =
   case M.lookup (TypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "." <> vmethod <> "()"
-    Just r -> r <> "." <> formatCRef vmethod <> "()"
+    Just r -> formatHyperlink r <> "." <> formatCRef vmethod <> "()"
 formatUnknownCRef c2h (StructFieldRef owner field) =
   case M.lookup (TypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "." <> field
-    Just r -> r <> "." <> formatCRef field
+    Just r -> formatHyperlink r <> "." <> formatCRef field
 formatUnknownCRef _ (TypeRef t) = formatCRef t
 formatUnknownCRef _ (ConstantRef t) = formatCRef t
 
 -- | Formatting for an unknown C reference.
 formatCRef :: Text -> Text
 formatCRef t = "@/" <> escape t <> "/@"
+
+-- | Format a `Hyperlink` into plain `Text`.
+formatHyperlink :: Hyperlink -> Text
+formatHyperlink (IdentifierLink t) = "'" <> t <> "'"
+formatHyperlink (ModuleLink m) = "\"" <> m <> "\""
+formatHyperlink (ModuleLinkWithAnchor m a) = "\"" <> m <> "#" <> a <> "\""
 
 -- | Format a code block in a specified language.
 formatCodeBlock :: Maybe Language -> Text -> Text
@@ -137,12 +144,12 @@ formatImage (Link {linkName = name, linkAddress = address}) docBase =
 -- | Format a section header of the given level and with the given
 -- text. Note that the level will be truncated to 2, if it is larger
 -- than that.
-formatSectionHeader :: M.Map CRef Text -> Text -> Int -> GtkDoc -> Text
+formatSectionHeader :: M.Map CRef Hyperlink -> Text -> Int -> GtkDoc -> Text
 formatSectionHeader c2h docBase level header =
   T.replicate level "=" <> " " <> formatHaddock c2h docBase header <> "\n"
 
 -- | Format a list of items.
-formatList :: M.Map CRef Text -> Text -> [ListItem] -> Text
+formatList :: M.Map CRef Hyperlink -> Text -> [ListItem] -> Text
 formatList c2h docBase items = "\n" <> T.concat (map formatListItem items)
   where formatListItem :: ListItem -> Text
         formatListItem (ListItem first rest) =
