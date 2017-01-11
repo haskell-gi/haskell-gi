@@ -7,6 +7,9 @@ ignore MiniObject.take
 set-attr Gst/Event/new_select_streams/@parameters/streams/@type/@type name utf8
 set-attr Gst/Event/parse_select_streams/@parameters/streams/@type/@type name utf8
 
+# Wrong introspection data, see https://github.com/haskell-gi/haskell-gi/pull/73, and the discussion in https://bugzilla.gnome.org/show_bug.cgi?id=702960
+set-attr Gst/Bin/add/@parameters/element transfer-ownership none
+
 # Generated from gst 1.8.0 with xsltproc Nullable.xslt Gst-1.0.gir
 set-attr Gst/Allocator/find/@return-value nullable 1
 set-attr Gst/Allocator/find/@parameters/name nullable 1
