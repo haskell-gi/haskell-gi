@@ -13,6 +13,10 @@ ignore Overlay.get-child-position
 # upstream issue: https://bugzilla.gnome.org/show_bug.cgi?id=761339
 ignore WidgetPath.iter_add_qclass
 
+# Wrong introspection annotation, see
+# https://bugzilla.gnome.org/show_bug.cgi?id=693393
+set-attr Gtk/PrintOperation/create-custom-widget/@return-value transfer-ownership full
+
 # Wrong introspection data in old gtk versions, see
 # https://bugzilla.gnome.org/show_bug.cgi?id=674537
 set-attr Gtk/MenuPositionFunc/@parameters/x direction inout
