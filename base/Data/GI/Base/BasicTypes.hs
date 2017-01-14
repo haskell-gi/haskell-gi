@@ -143,6 +143,7 @@ type family UnMaybe a :: * where
     UnMaybe (Maybe a) = a
     UnMaybe a         = a
 
+{-# DEPRECATED nullToNothing ["This will be removed in future versions of haskell-gi.", "If you know of wrong introspection data in a binding please report it as an issue at", "http://github.com/haskell-gi/haskell-gi", "so that it can be fixed."] #-}
 class NullToNothing a where
     -- | Some functions are not marked as having a nullable return type
     -- in the introspection data.  The result is that they currently do
