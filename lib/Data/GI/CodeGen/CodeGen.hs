@@ -234,8 +234,8 @@ genMethod cn m@(Method {
          genMethodInfo cn (m {methodCallable = c''})
 
 -- Type casting with type checking
-genGObjectCasts :: Bool -> Name -> Text -> [Name] -> CodeGen ()
-genGObjectCasts isIU n cn_ parents = do
+genGObjectCasts :: Name -> Text -> [Name] -> CodeGen ()
+genGObjectCasts n cn_ parents = do
   let name' = upperName n
 
   group $ do
@@ -245,7 +245,6 @@ genGObjectCasts isIU n cn_ parents = do
   group $ do
     bline $ "instance GObject " <> name' <> " where"
     indent $ group $ do
-            line $ "gobjectIsInitiallyUnowned _ = " <> tshow isIU
             line $ "gobjectType _ = c_" <> cn_
 
   className <- classConstraint n
@@ -288,9 +287,8 @@ genObject n o = do
     addModuleDocumentation (objDocumentation o)
 
     -- Type safe casting to parent objects, and implemented interfaces.
-    isIU <- isInitiallyUnowned t
     parents <- instanceTree n
-    genGObjectCasts isIU n (objTypeInit o) (parents <> objInterfaces o)
+    genGObjectCasts n (objTypeInit o) (parents <> objInterfaces o)
 
     noName name'
 
@@ -354,11 +352,10 @@ genInterface n iface = do
   if isGO
   then do
     let cn_ = fromMaybe (error "GObject derived interface without a type!") (ifTypeInit iface)
-    isIU <- apiIsInitiallyUnowned n (APIInterface iface)
     gobjectPrereqs <- filterM nameIsGObject (ifPrerequisites iface)
     allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
     let uniqueParents = nub (concat allParents)
-    genGObjectCasts isIU n cn_ uniqueParents
+    genGObjectCasts n cn_ uniqueParents
 
   else group $ do
     cls <- classConstraint n

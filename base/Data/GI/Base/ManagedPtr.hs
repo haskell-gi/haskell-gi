@@ -215,46 +215,22 @@ unsafeCastTo constructor obj =
 foreign import ccall "&dbg_g_object_unref"
     ptr_to_g_object_unref :: FunPtr (Ptr a -> IO ())
 
-foreign import ccall "g_object_ref" g_object_ref ::
-    Ptr a -> IO (Ptr a)
-
--- | Construct a Haskell wrapper for a 'GObject', increasing its
--- reference count.
-newObject :: (GObject a, GObject b) => (ManagedPtr a -> a) -> Ptr b -> IO a
-newObject constructor ptr = do
-  void $ g_object_ref ptr
-  fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
-  return $! constructor fPtr
-
 foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
     Ptr a -> IO (Ptr a)
 
--- | Same as 'newObject', but we take ownership of the object. Newly
--- created 'GObject's are typically floating, so we use
--- <https://developer.gnome.org/gobject/stable/gobject-The-Base-Object-Type.html#g-object-ref-sink g_object_ref_sink>.
+-- | Construct a Haskell wrapper for a 'GObject', increasing its
+-- reference count, or taking ownership of the floating reference if
+-- there is one.
+newObject :: (GObject a, GObject b) => (ManagedPtr a -> a) -> Ptr b -> IO a
+newObject constructor ptr = do
+  void $ g_object_ref_sink ptr
+  fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
+  return $! constructor fPtr
 
--- Notice that the
--- semantics here are a little bit subtle: some objects (such as
--- GtkWindow, see the code about "user_ref_count" in gtkwindow.c in
--- the gtk+ distribution) are created /without/ the floating flag,
--- since they own a reference to themselves. So, wrapping them is
--- really about adding a ref. If we add the ref, when Haskell drops
--- the last ref to the 'GObject' it will /g_object_unref/, and the
--- window will /g_object_unref/ itself upon destruction, so by the end
--- we don't leak memory. If we don't add the ref, there will be two
--- /g_object_unrefs/ acting on the object (one from Haskell and one from
--- the GtkWindow destroy) when the object is destroyed and the second
--- one will give a segfault.
---
--- This is the story for GInitiallyUnowned objects (e.g. anything that
--- is a descendant from GtkWidget). For objects that are not initially
--- floating (i.e. not descendents of GInitiallyUnowned) we simply take
--- control of the reference.
+-- | Same as 'newObject', but we steal ownership of the object.
 wrapObject :: forall a b. (GObject a, GObject b) =>
               (ManagedPtr a -> a) -> Ptr b -> IO a
 wrapObject constructor ptr = do
-  when (gobjectIsInitiallyUnowned (undefined :: a)) $
-       void $ g_object_ref_sink ptr
   fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 

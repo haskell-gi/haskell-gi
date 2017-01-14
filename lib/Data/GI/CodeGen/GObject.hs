@@ -2,8 +2,6 @@ module Data.GI.CodeGen.GObject
     ( isGObject
     , apiIsGObject
     , nameIsGObject
-    , isInitiallyUnowned
-    , apiIsInitiallyUnowned
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -43,9 +41,3 @@ nameIsGObject n = findAPIByName n >>= apiIsGObject n
 
 apiIsGObject :: Name -> API -> CodeGen Bool
 apiIsGObject = apiDoParentSearch $ Name "GObject" "Object"
-
-isInitiallyUnowned :: Type -> CodeGen Bool
-isInitiallyUnowned = typeDoParentSearch $ Name "GObject" "InitiallyUnowned"
-
-apiIsInitiallyUnowned :: Name -> API -> CodeGen Bool
-apiIsInitiallyUnowned = apiDoParentSearch $ Name "GObject" "InitiallyUnowned"

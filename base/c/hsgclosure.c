@@ -79,6 +79,20 @@ void dbg_g_object_unref (GObject *obj)
   }
 }
 
+/**
+ * dbg_g_object_new:
+ * @gtype: #GType for the object to construct.
+ * @n_params: Number of parameters for g_object_newv().
+ * @params: (array length=n_params) Parameters for g_object_newv().
+ *
+ * Allocate a #GObject of #GType @gtype, with the given @params. The
+ * returned object is never floating, and we always own a reference to
+ * it. (It might not be the only existing to the object, but it is in
+ * any case safe to call g_object_unref() when we are not wrapping the
+ * object ourselves anymore.)
+ *
+ * Returns: A new #GObject.
+ */
 gpointer dbg_g_object_newv (GType gtype, guint n_params, GParameter *params)
 {
   gpointer result;
@@ -89,6 +103,22 @@ gpointer dbg_g_object_newv (GType gtype, guint n_params, GParameter *params)
   }
 
   result = g_object_newv (gtype, n_params, params);
+
+  /*
+    Initially unowned GObjects can be either floating or not after
+    construction. They are generally floating, but GtkWindow for
+    instance is not floating after construction.
+
+    In either case we want to call g_object_ref_sink(): if the object
+    is floating to take ownership of the reference, and otherwise to
+    add a reference that we own.
+
+    If the object is not initially unowned we simply take control of
+    the initial reference (implicitly).
+   */
+  if (G_IS_INITIALLY_UNOWNED (result)) {
+    g_object_ref_sink (result);
+  }
 
   if (print_debug_info()) {
     fprintf(stderr, "\tdone, got a pointer at %p\n", result);

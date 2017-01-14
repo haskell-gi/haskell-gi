@@ -108,8 +108,6 @@ class ManagedPtrNewtype a => WrappedPtr a where
 
 -- | A wrapped `GObject`.
 class ManagedPtrNewtype a => GObject a where
-    -- | Whether the `GObject` is a descendent of <https://developer.gnome.org/gobject/stable/gobject-The-Base-Object-Type.html#GInitiallyUnowned GInitiallyUnowned>.
-    gobjectIsInitiallyUnowned :: a -> Bool
     -- | The `GType` for this object.
     gobjectType :: a -> IO GType
 
@@ -125,7 +123,6 @@ instance {-# OVERLAPPABLE #-}
     (TypeError ('Text "Type ‘" ':<>: 'ShowType a ':<>:
                 'Text "’ does not descend from GObject."), ManagedPtrNewtype a)
     => GObject a where
-    gobjectIsInitiallyUnowned = undefined
     gobjectType = undefined
 #endif
 
