@@ -57,20 +57,10 @@ import qualified Foreign.Concurrent as FC
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import Data.GI.Base.BasicTypes
+import Data.GI.Base.CallStack (HasCallStack, prettyCallStack, callStack)
 import Data.GI.Base.Utils
 
 import System.IO (hPutStrLn, stderr)
-
-#if MIN_VERSION_base(4,9,0)
-import GHC.Stack (HasCallStack, prettyCallStack, callStack)
-#elif MIN_VERSION_base(4,8,1)
-import GHC.Stack (CallStack)
-import GHC.Exts (Constraint)
-type HasCallStack = ((?callStack :: CallStack) :: Constraint)
-#else
-import GHC.Exts (Constraint)
-type HasCallStack = (() :: Constraint)
-#endif
 
 -- | Thin wrapper over `Foreign.Concurrent.newForeignPtr`.
 newManagedPtr :: Ptr a -> IO () -> IO (ManagedPtr a)
@@ -164,13 +154,7 @@ notOwnedWarning :: HasCallStack => Ptr a -> IO ()
 notOwnedWarning ptr = do
   hPutStrLn stderr ("Accessing a disowned pointer <" ++ show ptr
                      ++ ">, this may lead to crashes.\n"
-                     ++ callstack )
-  where
-#if MIN_VERSION_base(4,9,0)
-    callstack = prettyCallStack (callStack)
-#else
-    callstack = "<CallStack only available with GHC 8.0>"
-#endif
+                     ++ prettyCallStack callStack)
 
 -- | Ensure that the 'Ptr' in the given managed pointer is still alive
 -- (i.e. it has not been garbage collected by the runtime) at the

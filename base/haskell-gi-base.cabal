@@ -24,6 +24,7 @@ library
                        Data.GI.Base.Attributes,
                        Data.GI.Base.BasicConversions,
                        Data.GI.Base.BasicTypes,
+                       Data.GI.Base.CallStack,
                        Data.GI.Base.Closure,
                        Data.GI.Base.Constructible,
                        Data.GI.Base.GError,
