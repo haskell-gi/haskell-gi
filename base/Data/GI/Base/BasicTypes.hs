@@ -135,7 +135,10 @@ instance {-# OVERLAPPABLE #-}
 -- an unexpected `Foreign.Ptr.nullPtr`.
 data UnexpectedNullPointerReturn =
     UnexpectedNullPointerReturn { nullPtrErrorMsg :: T.Text }
-                                deriving (Show, Typeable)
+                                deriving (Typeable)
+
+instance Show UnexpectedNullPointerReturn where
+  show r = T.unpack (nullPtrErrorMsg r)
 
 instance Exception UnexpectedNullPointerReturn
 

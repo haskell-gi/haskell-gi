@@ -1,4 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables, TupleSections, OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables, TupleSections, OverloadedStrings,
+    FlexibleContexts, ConstraintKinds #-}
 {- | Assorted utility functions for bindings. -}
 module Data.GI.Base.Utils
     ( whenJust
@@ -44,6 +45,7 @@ import Foreign.Storable (Storable(..))
 
 import Data.GI.Base.BasicTypes (GType(..), CGType, BoxedObject(..),
                                 UnexpectedNullPointerReturn(..))
+import Data.GI.Base.CallStack (HasCallStack, callStack, prettyCallStack)
 
 -- | When the given value is of "Just a" form, execute the given action,
 -- otherwise do nothing.
@@ -178,12 +180,14 @@ maybeReleaseFunPtr (Just f) = do
 
 -- | Check that the given pointer is not NULL. If it is, raise a
 -- `UnexpectedNullPointerReturn` exception.
-checkUnexpectedReturnNULL :: T.Text -> Ptr a -> IO ()
+checkUnexpectedReturnNULL :: HasCallStack => T.Text -> Ptr a -> IO ()
 checkUnexpectedReturnNULL fnName ptr
     | ptr == nullPtr =
         throwIO (UnexpectedNullPointerReturn {
                    nullPtrErrorMsg = "Received unexpected nullPtr in \""
-                                     <> fnName <> "\"."
+                                     <> fnName <> "\".\n" <>
+                                     "This is a bug in the introspection data, please report it at\nhttps://github.com/haskell-gi/haskell-gi/issues\n" <>
+                                     T.pack (prettyCallStack callStack)
                  })
     | otherwise = return ()
 
@@ -196,5 +200,7 @@ checkUnexpectedNothing fnName action = do
     Just r -> return r
     Nothing -> throwIO (UnexpectedNullPointerReturn {
                  nullPtrErrorMsg = "Received unexpected nullPtr in \""
-                                     <> fnName <> "\"."
+                                     <> fnName <> "\".\n" <>
+                                     "This is a bug in the introspection data, please report it at\nhttps://github.com/haskell-gi/haskell-gi/issues\n" <>
+                                     T.pack (prettyCallStack callStack)
                  })

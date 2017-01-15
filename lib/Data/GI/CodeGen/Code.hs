@@ -750,6 +750,7 @@ moduleImports = T.unlines [
                 , "import qualified Data.GI.Base.GError as B.GError"
                 , "import qualified Data.GI.Base.GVariant as B.GVariant"
                 , "import qualified Data.GI.Base.GParamSpec as B.GParamSpec"
+                , "import qualified Data.GI.Base.CallStack as B.CallStack"
                 , "import qualified Data.Text as T"
                 , "import qualified Data.ByteString.Char8 as B"
                 , "import qualified Data.Map as Map"

@@ -565,7 +565,8 @@ formatHSignature :: Callable -> ForeignSymbol -> ExcCodeGen ()
 formatHSignature callable symbol = do
   sig <- callableSignature callable symbol
   indent $ do
-      line $ "(" <> T.intercalate ", " (signatureConstraints sig) <> ") =>"
+      let constraints = "B.CallStack.HasCallStack" : signatureConstraints sig
+      line $ "(" <> T.intercalate ", " constraints <> ") =>"
       forM_ (zip ("" : repeat "-> ") (signatureArgTypes sig)) $
         \(prefix, (maybeArg, t)) -> do
           line $ prefix <> t
