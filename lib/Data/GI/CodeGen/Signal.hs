@@ -47,7 +47,7 @@ genHaskellCallbackPrototype subsec cb htype expose = group $ do
     line $ "type " <> name' <> " ="
     indent $ do
       forM_ hInArgs $ \arg -> do
-        ht <- haskellType (argType arg)
+        ht <- isoHaskellType (argType arg)
         wrapMaybe arg >>= bool
                           (line $ tshow ht <> " ->")
                           (line $ tshow (maybeT ht) <> " ->")
@@ -127,11 +127,14 @@ genClosure subsec cb callback name isSignal = group $ do
 
 -- Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.
-convertNullable :: Text -> BaseCodeGen e Text -> BaseCodeGen e Text
-convertNullable aname c = do
+convertNullable :: Text -> Type -> BaseCodeGen e Text -> BaseCodeGen e Text
+convertNullable aname t c = do
   line $ "maybe" <> ucFirst aname <> " <-"
   indent $ do
-    line $ "if " <> aname <> " == nullPtr"
+    nullPtr <- nullPtrForType t >>= \case
+      Just null -> return null
+      Nothing -> error "[Internal error] nullPtrForType"
+    line $ "if " <> aname <> " == " <> nullPtr
     line   "then return Nothing"
     line   "else do"
     indent $ do
@@ -145,7 +148,7 @@ convertCallbackInCArray :: Callable -> Arg -> Type -> Text -> ExcCodeGen Text
 convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname =
   if length > -1
   then wrapMaybe arg >>= bool convertAndFree
-                         (convertNullable aname convertAndFree)
+                         (convertNullable aname t convertAndFree)
   else
     -- Not much we can do, we just pass the pointer along, and let
     -- the callback deal with it.
@@ -178,7 +181,7 @@ prepareInArg cb arg = do
     t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
     _ -> do
       let c = convert name $ fToH (argType arg) (transfer arg)
-      wrapMaybe arg >>= bool c (convertNullable name c)
+      wrapMaybe arg >>= bool c (convertNullable name (argType arg) c)
 
 prepareInoutArg :: Arg -> ExcCodeGen Text
 prepareInoutArg arg = do
