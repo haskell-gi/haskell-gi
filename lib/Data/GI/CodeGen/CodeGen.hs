@@ -356,12 +356,12 @@ genInterface n iface = do
     allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
     let uniqueParents = nub (concat allParents)
     genGObjectCasts n cn_ uniqueParents
-
   else group $ do
     cls <- classConstraint n
     exportDecl cls
     bline $ "class ManagedPtrNewtype a => " <> cls <> " a"
     line $ "instance " <> cls <> " " <> name'
+    genWrappedPtr n (ifAllocationInfo iface) 0
 
   -- Methods
   forM_ (ifMethods iface) $ \f -> do

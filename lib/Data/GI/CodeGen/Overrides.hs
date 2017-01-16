@@ -402,10 +402,16 @@ filterOneAPI _ (n, APIObject o, Just ignores) =
                      objSignals = filter ((`S.notMember` ignores) . sigName)
                                   (objSignals o)
                     })
-filterOneAPI _ (n, APIInterface i, Just ignores) =
+filterOneAPI ovs (n, APIInterface i, Just ignores) =
     (n, APIInterface i {ifMethods = filterMethods (ifMethods i) ignores,
                         ifSignals = filter ((`S.notMember` ignores) . sigName)
-                                    (ifSignals i)
+                                    (ifSignals i),
+                        ifAllocationInfo =
+                           let ai = ifAllocationInfo i
+                           in case M.lookup n (allocInfo ovs) of
+                                Just info -> filterAllocInfo ai info
+                                Nothing -> ai
+
                        })
 filterOneAPI _ (n, api, _) = (n, api)
 

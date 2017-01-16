@@ -424,17 +424,16 @@ fObjectToH :: Type -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fObjectToH t hType transfer = do
   let constructor = T.pack . tyConName . typeRepTyCon $ hType
   isGO <- isGObject t
-  case transfer of
+  return $ M $ parenthesize $
+    case transfer of
     TransferEverything ->
         if isGO
-        then return $ M $ parenthesize $ "wrapObject " <> constructor
-        else badIntroError ("Got a transfer of something not a GObject: " <>
-                            constructor)
+        then "wrapObject " <> constructor
+        else "wrapPtr " <> constructor
     _ ->
         if isGO
-        then return $ M $ parenthesize $ "newObject " <> constructor
-        else badIntroError ("Wrapping not a GObject with no copy: " <>
-                            constructor)
+        then "newObject " <> constructor
+        else "newPtr " <> constructor
 
 fCallbackToH :: TypeRep -> Transfer -> ExcCodeGen Constructor
 fCallbackToH hType TransferNothing = do

@@ -5,6 +5,7 @@ module Data.GI.GIR.Interface
 
 import Data.Text (Text)
 
+import Data.GI.GIR.Allocation (AllocationInfo, unknownAllocationInfo)
 import Data.GI.GIR.Method (Method, MethodType(..), parseMethod)
 import Data.GI.GIR.Property (Property, parseProperty)
 import Data.GI.GIR.Signal (Signal, parseSignal)
@@ -19,6 +20,7 @@ data Interface = Interface {
         ifProperties :: [Property],
         ifSignals :: [Signal],
         ifMethods :: [Method],
+        ifAllocationInfo :: AllocationInfo,
         ifDeprecated :: Maybe DeprecationInfo
     } deriving Show
 
@@ -43,5 +45,6 @@ parseInterface = do
           , ifCType = ctype
           , ifDocumentation = doc
           , ifMethods = constructors ++ methods ++ functions
+          , ifAllocationInfo = unknownAllocationInfo
           , ifDeprecated = deprecated
           })
