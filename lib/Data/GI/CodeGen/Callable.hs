@@ -289,7 +289,7 @@ prepareArgForCall omitted arg = do
                         Just c -> if callableThrows (cbCallable c)
                                   -- See [Note: Callables that throw]
                                   then return (escapedArgName arg)
-                                  else prepareInCallback arg
+                                  else prepareInCallback arg c
                         Nothing -> prepareInArg arg
     DirectionInout -> prepareInoutArg arg
     DirectionOut -> prepareOutArg arg
@@ -313,19 +313,22 @@ prepareInArg arg = do
                 return maybeName)
 
 -- | Callbacks are a fairly special case, we treat them separately.
-prepareInCallback :: Arg -> CodeGen Text
-prepareInCallback arg = do
+prepareInCallback :: Arg -> Callback -> CodeGen Text
+prepareInCallback arg (Callback {cbCallable = cb}) = do
   let name = escapedArgName arg
       ptrName = "ptr" <> name
       scope = argScope arg
 
-  (maker, wrapper) <-
+  (maker, wrapper, drop) <-
       case argType arg of
         TInterface tn@(Name _ n) ->
             do
+              drop <- if callableHasClosures cb
+                      then Just <$> qualifiedSymbol (callbackDropClosures n) tn
+                      else return Nothing
               wrapper <- qualifiedSymbol (callbackHaskellToForeign n) tn
               maker <- qualifiedSymbol (callbackWrapperAllocator n) tn
-              return (maker, wrapper)
+              return (maker, wrapper, drop)
         _ -> terror $ "prepareInCallback : Not an interface! " <> T.pack (ppShow arg)
 
   when (scope == ScopeTypeAsync) $ do
@@ -338,8 +341,12 @@ prepareInCallback arg = do
                   p = if (scope == ScopeTypeAsync)
                       then parenthesize $ "Just " <> ptrName
                       else "Nothing"
+                  dropped =
+                      case drop of
+                        Just dropper -> parenthesize (dropper <> " " <> name)
+                        Nothing -> name
               line $ name' <> " <- " <> maker <> " "
-                       <> parenthesize (wrapper <> " " <> p <> " " <> name)
+                       <> parenthesize (wrapper <> " " <> p <> " " <> dropped)
               when (scope == ScopeTypeAsync) $
                    line $ "poke " <> ptrName <> " " <> name'
               return name')
@@ -355,9 +362,14 @@ prepareInCallback arg = do
                          let p = if (scope == ScopeTypeAsync)
                                  then parenthesize $ "Just " <> ptrName
                                  else "Nothing"
+                             dropped =
+                                 case drop of
+                                   Just dropper ->
+                                       parenthesize (dropper <> " " <> jName)
+                                   Nothing -> jName
                          line $ jName' <> " <- " <> maker <> " "
                                   <> parenthesize (wrapper <> " "
-                                                   <> p <> " " <> jName)
+                                                   <> p <> " " <> dropped)
                          when (scope == ScopeTypeAsync) $
                               line $ "poke " <> ptrName <> " " <> jName'
                          line $ "return " <> jName'

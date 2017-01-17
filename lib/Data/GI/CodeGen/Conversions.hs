@@ -623,7 +623,7 @@ argumentType letters (TGSList a) = do
   return (ls, "[" <> name <> "]", constraints)
 argumentType letters@(l:ls) t = do
   api <- findAPI t
-  s <- tshow <$> isoHaskellType t
+  s <- tshow <$> haskellType t
   case api of
     -- Instead of restricting to the actual class,
     -- we allow for any object descending from it.
