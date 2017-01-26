@@ -39,7 +39,7 @@ module Data.GI.Base.ManagedPtr
     , disownBoxed
     , wrapPtr
     , newPtr
-    , copyPtr
+    , copyBytes
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -305,16 +305,14 @@ wrapPtr constructor ptr = do
 -- | Wrap a pointer, making a copy of the data.
 newPtr :: WrappedPtr a => (ManagedPtr a -> a) -> Ptr a -> IO a
 newPtr constructor ptr = do
-  ptr' <- wrappedPtrCopy ptr
-  fPtr <- case wrappedPtrFree of
-            Nothing -> newManagedPtr_ ptr
-            Just finalizer -> newManagedPtr' finalizer ptr'
-  return $! constructor fPtr
+  tmpWrap <- newManagedPtr_ ptr
+  ptr' <- wrappedPtrCopy (constructor tmpWrap)
+  return $! ptr'
 
 -- | Make a copy of a wrapped pointer using @memcpy@ into a freshly
 -- allocated memory region of the given size.
-copyPtr :: WrappedPtr a => Int -> Ptr a -> IO (Ptr a)
-copyPtr size ptr = do
+copyBytes :: WrappedPtr a => Int -> Ptr a -> IO (Ptr a)
+copyBytes size ptr = do
   ptr' <- wrappedPtrCalloc
   memcpy ptr' ptr size
   return ptr'

@@ -363,14 +363,14 @@ prefixedFunPtrImport prefix symbol prototype = group $ do
   return (prefix <> symbol)
 
 -- | Generate the typeclass with information for how to
--- allocate/deallocate unboxed structs and unions.
+-- allocate/deallocate a given type.
 genWrappedPtr :: Name -> AllocationInfo -> Int -> CodeGen ()
 genWrappedPtr n info size = group $ do
   let name' = upperName n
 
   let prefix = \op -> "_" <> name' <> "_" <> op <> "_"
 
-  when (size == 0) $
+  when (size == 0 && allocFree info == AllocationOpUnknown) $
        line $ "-- XXX Wrapping a foreign struct/union with no known destructor or size, leak?"
 
   calloc <- case allocCalloc info of
@@ -384,11 +384,14 @@ genWrappedPtr n info size = group $ do
                   else return "return nullPtr"
 
   copy <- case allocCopy info of
-            AllocationOp op ->
-                prefixedForeignImport (prefix "copy") op "Ptr a -> IO (Ptr a)"
+            AllocationOp op -> do
+                copy <- prefixedForeignImport (prefix "copy") op "Ptr a -> IO (Ptr a)"
+                return ("\\p -> withManagedPtr p (" <> copy <>
+                        " >=> wrapPtr " <> name' <> ")")
             AllocationOpUnknown ->
                 if size > 0
-                then return ("copyPtr " <> tshow size)
+                then return ("\\p -> withManagedPtr p (copyBytes "
+                              <> tshow size <> " >=> wrapPtr " <> name' <> ")")
                 else return "return"
 
   free <- case allocFree info of
@@ -406,4 +409,3 @@ genWrappedPtr n info size = group $ do
       line $ "wrappedPtrFree = " <> free
 
   hsBoot $ line $ "instance WrappedPtr " <> name' <> " where"
-

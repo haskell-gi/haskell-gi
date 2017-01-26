@@ -45,6 +45,7 @@ module Data.GI.Base.ShortPrelude
     , ($)
     , (++)
     , (=<<)
+    , (>=>)
     , Bool(..)
     , Float
     , Double
@@ -59,7 +60,7 @@ module Data.GI.Base.ShortPrelude
     , realToFrac
     ) where
 
-import Control.Monad (when)
+import Control.Monad (when, (>=>))
 import Data.Char (Char, ord, chr)
 import Data.Int (Int, Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)

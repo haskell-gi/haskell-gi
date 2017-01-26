@@ -99,8 +99,8 @@ class BoxedFlags a where
 class ManagedPtrNewtype a => WrappedPtr a where
     -- | Allocate a zero-initialized block of memory for the given type.
     wrappedPtrCalloc :: IO (Ptr a)
-    -- | Make a copy of the given pointer.
-    wrappedPtrCopy   :: Ptr a -> IO (Ptr a)
+    -- | Make a copy of the given `WrappedPtr`.
+    wrappedPtrCopy   :: a -> IO a
     -- | A pointer to a function for freeing the given pointer, or
     -- `Nothing` is the memory associated to the pointer does not need
     -- to be freed.
