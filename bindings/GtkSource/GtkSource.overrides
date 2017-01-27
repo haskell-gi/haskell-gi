@@ -1,5 +1,12 @@
 namespace GtkSource
 
+# Wrong introspection data, see
+# https://bugzilla.gnome.org/show_bug.cgi?id=762556
+# and
+# https://github.com/haskell-gi/haskell-gi/issues/75
+set-attr GtkSource/Buffer/iter_forward_to_context_class_toggle/@parameters/iter direction in
+set-attr GtkSource/Buffer/iter_backward_to_context_class_toggle/@parameters/iter direction in
+
 # Generated from gtksourceview 3.20.1 with xsltproc Nullable.xslt GtkSource-3.0.gir
 set-attr GtkSource/Buffer/new/@parameters/table nullable 1
 set-attr GtkSource/Buffer/backward_iter_to_source_mark/@parameters/category nullable 1
