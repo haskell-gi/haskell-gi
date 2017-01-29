@@ -333,20 +333,15 @@ genInterface n iface = do
   noName name'
 
   cfg <- config
-  when (cgOverloadedMethods (cgFlags cfg)) $
-       fullInterfaceMethodList n iface >>= genMethodList n
 
   forM_ (ifSignals iface) $ \s -> handleCGExc
-       (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
-                       , sigName s
-                       , "\n", "-- Error was : "] <>) . describeCGError)
-       (genSignal s n)
+     (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
+                     , sigName s
+                     , "\n", "-- Error was : "] <>) . describeCGError)
+     (genSignal s n)
 
-  genInterfaceProperties n iface
-  when (cgOverloadedProperties (cgFlags cfg)) $
-       genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
   when (cgOverloadedSignals (cgFlags cfg)) $
-       genInterfaceSignals n iface
+     genInterfaceSignals n iface
 
   isGO <- apiIsGObject n (APIInterface iface)
   if isGO
@@ -356,6 +351,11 @@ genInterface n iface = do
     allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
     let uniqueParents = nub (concat allParents)
     genGObjectCasts n cn_ uniqueParents
+
+    genInterfaceProperties n iface
+    when (cgOverloadedProperties (cgFlags cfg)) $
+       genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
+
   else group $ do
     cls <- classConstraint n
     exportDecl cls
@@ -363,7 +363,13 @@ genInterface n iface = do
     line $ "instance " <> cls <> " " <> name'
     genWrappedPtr n (ifAllocationInfo iface) 0
 
+    when (not . null . ifProperties $ iface) $ group $ do
+       line $ "-- XXX Skipping property generation for non-GObject interface"
+
   -- Methods
+  when (cgOverloadedMethods (cgFlags cfg)) $
+       fullInterfaceMethodList n iface >>= genMethodList n
+
   forM_ (ifMethods iface) $ \f -> do
       let mn = methodName f
       isFunction <- symbolFromFunction (methodSymbol f)
