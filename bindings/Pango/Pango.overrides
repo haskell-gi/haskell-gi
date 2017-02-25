@@ -7,6 +7,12 @@ alloc-info Attribute calloc=none copy=pango_attribute_copy free=pango_attribute_
 # https://mail.gnome.org/archives/gir-devel-list/2016-October/msg00000.html
 set-attr Pango/Matrix/transform_pixel_rectangle/@parameters/rect direction in
 
+# Wrongly annotated as caller-allocates
+# https://github.com/haskell-gi/haskell-gi/issues/78
+# https://bugzilla.gnome.org/show_bug.cgi?id=779232
+set-attr Pango/Layout/get_size/@parameters/width caller-allocates 0
+set-attr Pango/Layout/get_size/@parameters/height caller-allocates 0
+
 set-attr Pango/AttrFontDesc/new introspectable 1
 set-attr Pango/AttrFontFeatures/new introspectable 1
 set-attr Pango/AttrLanguage/new introspectable 1
