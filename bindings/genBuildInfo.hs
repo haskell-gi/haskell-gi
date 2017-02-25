@@ -46,9 +46,10 @@ writeCabal fname info =
        , "category:             " <> PI.category
        , "build-type:           Custom"
        , "cabal-version:        >= 1.24"
-       , case girOverrides info of
-           Nothing -> "\nextra-source-files: README.md stack.yaml\n"
-           Just ov -> "\nextra-source-files: README.md stack.yaml " <> ov <> "\n"
+       , let commonFiles = "README.md ChangeLog.md stack.yaml"
+         in case girOverrides info of
+           Nothing -> "\nextra-source-files: " <> commonFiles <> "\n"
+           Just ov -> "\nextra-source-files: " <> commonFiles <> " " <> ov <> "\n"
        , "custom-setup"
        , "      setup-depends: base >= 4.7 && < 5,"
        , "                     Cabal >= 1.24,"
