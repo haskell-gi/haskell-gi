@@ -3,12 +3,13 @@ module Data.GI.GIR.Alias
     ) where
 
 import qualified Data.Map as M
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Text.XML (Element(elementAttributes), Document(documentRoot))
 
-import Data.GI.GIR.BasicTypes (Alias(..), Type)
-import Data.GI.GIR.Type (parseType)
+import Data.GI.GIR.BasicTypes (Alias(..), Type(..), BasicType(..))
+import Data.GI.GIR.Type (parseOptionalType)
 import Data.GI.GIR.Parser
 import Data.GI.GIR.XMLUtils (childElemsWithLocalName)
 
@@ -30,8 +31,8 @@ parseAliases = parseChildrenWithLocalName "alias" parseAlias
 parseAlias :: Parser (Text, Type)
 parseAlias = do
   name <- getAttr "name"
-  t <- parseType
-  return (name, t)
+  t <- parseOptionalType
+  return (name, fromMaybe (TBasicType TPtr) t)
 
 -- | Find all aliases in a given document.
 documentListAliases :: Document -> M.Map Alias Type
