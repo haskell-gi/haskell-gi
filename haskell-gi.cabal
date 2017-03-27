@@ -17,6 +17,8 @@ build-type:          Simple
 tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1
 cabal-version:       >=1.8
 
+extra-source-files: ChangeLog.md
+
 source-repository head
   type: git
   location: git://github.com/haskell-gi/haskell-gi.git
