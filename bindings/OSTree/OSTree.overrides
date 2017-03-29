@@ -1,0 +1,6 @@
+namespace OSTree
+
+ignore RepoFileEnumeratorClass
+ignore LzmaDecompressorClass
+ignore LzmaCompressorClass
+ignore LibarchiveInputStreamClass
