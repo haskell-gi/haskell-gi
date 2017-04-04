@@ -193,7 +193,7 @@ checkUnexpectedReturnNULL fnName ptr
 
 -- | An annotated version of `fromJust`, which raises a
 -- `UnexpectedNullPointerReturn` in case it encounters a `Nothing`.
-checkUnexpectedNothing :: T.Text -> IO (Maybe a) -> IO a
+checkUnexpectedNothing :: HasCallStack => T.Text -> IO (Maybe a) -> IO a
 checkUnexpectedNothing fnName action = do
   result <- action
   case result of

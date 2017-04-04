@@ -75,6 +75,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.Text.Foreign as TF
 
 import Foreign.Ptr (Ptr, plusPtr, nullPtr, nullFunPtr, castPtr)
@@ -87,9 +88,11 @@ import Data.Int (Int32)
 import Data.Bits (Bits, (.|.), (.&.), shift)
 
 import Data.GI.Base.BasicTypes
+import Data.GI.Base.CallStack (HasCallStack)
 import Data.GI.Base.GHashTable (GEqualFunc, GHashFunc)
 import Data.GI.Base.ManagedPtr (copyBoxedPtr)
-import Data.GI.Base.Utils (allocBytes, callocBytes, memcpy, freeMem)
+import Data.GI.Base.Utils (allocBytes, callocBytes, memcpy, freeMem,
+                           checkUnexpectedReturnNULL)
 
 #include <glib-object.h>
 
@@ -370,7 +373,7 @@ packZeroTerminatedUTF8CArray items = do
                                poke ptr cstring
                                fill (ptr `plusPtr` sizeOf cstring) xs
 
-unpackZeroTerminatedUTF8CArray :: Ptr CString -> IO [Text]
+unpackZeroTerminatedUTF8CArray :: HasCallStack => Ptr CString -> IO [Text]
 unpackZeroTerminatedUTF8CArray listPtr = go listPtr
     where go :: Ptr CString -> IO [Text]
           go ptr = do
@@ -380,7 +383,8 @@ unpackZeroTerminatedUTF8CArray listPtr = go listPtr
                else (:) <$> cstringToText cstring
                         <*> go (ptr `plusPtr` sizeOf cstring)
 
-unpackUTF8CArrayWithLength :: Integral a => a -> Ptr CString -> IO [Text]
+unpackUTF8CArrayWithLength :: (HasCallStack, Integral a) =>
+                              a -> Ptr CString -> IO [Text]
 unpackUTF8CArrayWithLength n ptr = go (fromIntegral n) ptr
     where go       :: Int -> Ptr CString -> IO [Text]
           go 0 _   = return []
@@ -414,7 +418,7 @@ packZeroTerminatedFileNameArray items = do
                                poke ptr cstring
                                fill (ptr `plusPtr` sizeOf cstring) xs
 
-unpackZeroTerminatedFileNameArray :: Ptr CString -> IO [String]
+unpackZeroTerminatedFileNameArray :: HasCallStack => Ptr CString -> IO [String]
 unpackZeroTerminatedFileNameArray listPtr = go listPtr
     where go :: Ptr CString -> IO [String]
           go ptr = do
@@ -424,7 +428,7 @@ unpackZeroTerminatedFileNameArray listPtr = go listPtr
                else (:) <$> cstringToString cstring
                         <*> go (ptr `plusPtr` sizeOf cstring)
 
-unpackFileNameArrayWithLength :: Integral a =>
+unpackFileNameArrayWithLength :: (HasCallStack, Integral a) =>
                                  a -> Ptr CString -> IO [String]
 unpackFileNameArrayWithLength n ptr = go (fromIntegral n) ptr
     where go       :: Int -> Ptr CString -> IO [String]
@@ -442,8 +446,10 @@ foreign import ccall "g_strdup" g_strdup :: CString -> IO CString
 stringToCString :: String -> IO CString
 stringToCString str = withCString str g_strdup
 
-cstringToString :: CString -> IO String
-cstringToString = peekCString
+cstringToString :: HasCallStack => CString -> IO String
+cstringToString cstr = do
+  checkUnexpectedReturnNULL (T.pack "cstringToString") cstr
+  peekCString cstr
 
 foreign import ccall "g_strndup" g_strndup ::
     CString -> #{type gsize} -> IO CString
@@ -463,8 +469,9 @@ withTextCString text action = bracket (textToCString text) freeMem action
 foreign import ccall "strlen" c_strlen ::
     CString -> IO (CSize)
 
-cstringToText :: CString -> IO Text
+cstringToText :: HasCallStack => CString -> IO Text
 cstringToText cstr = do
+  checkUnexpectedReturnNULL (T.pack "cstringToText") cstr
   len <- c_strlen cstr
   let cstrlen = (cstr, fromIntegral len)
   TF.peekCStringLen cstrlen
@@ -472,8 +479,10 @@ cstringToText cstr = do
 byteStringToCString :: ByteString -> IO CString
 byteStringToCString bs = B.useAsCString bs g_strdup
 
-cstringToByteString :: CString -> IO ByteString
-cstringToByteString = B.packCString
+cstringToByteString :: HasCallStack => CString -> IO ByteString
+cstringToByteString cstr = do
+  checkUnexpectedReturnNULL (T.pack "cstringToByteString") cstr
+  B.packCString cstr
 
 packPtrArray :: [Ptr a] -> IO (Ptr (Ptr a))
 packPtrArray items = do
