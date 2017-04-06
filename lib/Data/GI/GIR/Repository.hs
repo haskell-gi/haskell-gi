@@ -19,9 +19,6 @@ import System.Environment (lookupEnv)
 import System.Environment.XDG.BaseDir (getSystemDataDirs)
 import System.FilePath (searchPathSeparator, takeBaseName, (</>), (<.>))
 
-girDataDirs :: IO [FilePath]
-girDataDirs = getSystemDataDirs "gir-1.0"
-
 girFilePath :: String -> String -> FilePath -> FilePath
 girFilePath name version path = path </> name ++ "-" ++ version <.> "gir"
 
@@ -52,21 +49,29 @@ splitOn x xs = go xs []
                             then reverse acc : go ys []
                             else go ys (y : acc)
 
--- | Search for an appropriate @.gir@ file in the search path. This is
--- either passed in explicitly, or if that is absent, loaded from the
--- environment variable @HASKELL_GI_GIR_SEARCH_PATH@. In either case
+girDataDirs :: IO [FilePath]
+girDataDirs = getSystemDataDirs "gir-1.0"
+
+-- | Construct the GIR search path, possibly looking into the
+-- @HASKELL_GI_GIR_SEARCH_PATH@ environment variable if no explicit
+-- list of extra paths is given. In either case
 -- the system data dirs are also searched if nothing can be found in
 -- the explicitly passed paths, or in the contents of
 -- @HASKELL_GI_GIR_SEARCH_PATH@.
-girFile :: Text -> Maybe Text -> [FilePath] -> IO (Maybe FilePath)
-girFile name version extraPaths = do
+buildSearchPath :: [FilePath] -> IO [FilePath]
+buildSearchPath extraPaths = do
   paths <- case extraPaths of
              [] -> lookupEnv "HASKELL_GI_GIR_SEARCH_PATH" >>= \case
-                   Nothing -> return []
-                   Just s -> return (splitOn searchPathSeparator s)
+               Nothing -> return []
+               Just s -> return (splitOn searchPathSeparator s)
              ps -> return ps
   dataDirs <- girDataDirs
-  firstJust <$> (mapM (girFile' name version) (paths ++ dataDirs))
+  return (paths ++ dataDirs)
+
+-- | Search for an appropriate @.gir@ file in the search path.
+girFile :: Text -> Maybe Text -> [FilePath] -> IO (Maybe FilePath)
+girFile name version searchPath =
+  firstJust <$> (mapM (girFile' name version) searchPath)
     where firstJust = listToMaybe . catMaybes
 
 -- | Try to load the `.gir` file corresponding to the given repository
@@ -75,13 +80,13 @@ readGiRepository :: Bool        -- ^ verbose
                  -> Maybe Text  -- ^ version
                  -> [FilePath]  -- ^ searchPath
                  -> IO XML.Document
-readGiRepository verbose name version extraPaths =
-    girFile name version extraPaths >>= \case
+readGiRepository verbose name version extraPaths = do
+  searchPath <- buildSearchPath extraPaths
+  girFile name version searchPath >>= \case
         Just path -> do
             when verbose $ putStrLn $ "Loading GI repository: " ++ path
             XML.readFile XML.def path
-        Nothing -> do
-            dataDirs <- girDataDirs
-            error $ "Did not find a GI repository for " ++ (T.unpack name)
-                ++ maybe "" ("-" ++) (T.unpack <$> version)
-                ++ " in " ++ show dataDirs
+        Nothing -> error $ "Did not find a GI repository for "
+                   ++ (T.unpack name)
+                   ++ maybe "" ("-" ++) (T.unpack <$> version)
+                   ++ " in " ++ show searchPath ++ "."
