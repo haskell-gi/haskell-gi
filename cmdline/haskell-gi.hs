@@ -72,17 +72,17 @@ parseKeyValue s =
    in (a, b)
 
 solveNameVersion::Overrides -> Text -> (Text, Maybe Text)
-solveNameVersion ovs name = (namewithoutversion, version)
+solveNameVersion ovs name = (nameWithoutVersion, version)
  where
-   namepieces = T.splitOn "-" name
-   namewithoutversion = head namepieces
-   versioninname = if length namepieces == 2
-                     then Just (last namepieces)
+   namePieces = T.splitOn "-" name
+   nameWithoutVersion = head namePieces
+   versionInName = if length namePieces == 2
+                     then Just (last namePieces)
                      else Nothing
-   versioninoveride = M.lookup namewithoutversion (nsChooseVersion ovs)
-   version = if isNothing versioninoveride
-                 then versioninname
-                 else versioninoveride
+   versionInOverride = M.lookup nameWithoutVersion (nsChooseVersion ovs)
+   version = if isNothing versionInOverride 
+                then versionInName
+                else versionInOverride
 
 
 optDescrs :: [OptDescr (Options -> Options)]
@@ -132,8 +132,8 @@ printGError = handle (gerrorMessage >=> putStrLn . T.unpack)
 -- | Load a dependency without further postprocessing.
 loadRawAPIs :: Bool -> Overrides -> [FilePath] -> Text -> IO [(Name, API)]
 loadRawAPIs verbose ovs extraPaths name = do
-  let (namewithoutversion, version) = solveNameVersion ovs name
-  gir <- loadRawGIRInfo verbose namewithoutversion version extraPaths
+  let (nameWithoutVersion, version) = solveNameVersion ovs name
+  gir <- loadRawGIRInfo verbose nameWithoutVersion version extraPaths
   return (girAPIs gir)
 
 -- | Set up the flags for the code generator.
@@ -179,18 +179,18 @@ genGenericConnectors options ovs modules extraPaths = do
 -- for this module.
 processMod :: Options -> Overrides -> [FilePath] -> Text -> IO ()
 processMod options ovs extraPaths name = do
-  let (namewithoutversion, version) = solveNameVersion ovs name
-      cfg = Config {modName = namewithoutversion,
+  let (nameWithoutVersion, version) = solveNameVersion ovs name
+      cfg = Config {modName = nameWithoutVersion,
                     verbose = optVerbose options,
                     overrides = ovs,
                     cgFlags = genFlags options
                    }
-      nm = ucFirst namewithoutversion
+      nm = ucFirst nameWithoutVersion
       mp = T.unpack . ("GI." <>)
 
   putStrLn $ "\t* Generating " ++ mp nm
 
-  (gir, girDeps) <- loadGIRInfo (optVerbose options) namewithoutversion version extraPaths
+  (gir, girDeps) <- loadGIRInfo (optVerbose options) nameWithoutVersion version extraPaths
                     (girFixups ovs)
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
@@ -207,7 +207,7 @@ processMod options ovs extraPaths name = do
                              ++ cabal ++ ".new instead") >>
                    return (cabal ++ ".new"))
     -- The module is not a dep of itself
-    let usedDeps = S.delete namewithoutversion modDeps
+    let usedDeps = S.delete nameWithoutVersion modDeps
         -- We only list as dependencies in the cabal file the
         -- dependencies that we use, disregarding what the .gir file says.
         actualDeps = filter ((`S.member` usedDeps) . girNSName) girDeps
@@ -230,8 +230,8 @@ processMod options ovs extraPaths name = do
 
 dump :: Options -> Overrides -> Text -> IO ()
 dump options ovs name = do
-  let (namewithoutversion, version) = solveNameVersion ovs name
-  (doc, _) <- loadGIRInfo (optVerbose options) namewithoutversion version (optSearchPaths options) []
+  let (nameWithoutVersion, version) = solveNameVersion ovs name
+  (doc, _) <- loadGIRInfo (optVerbose options) nameWithoutVersion version (optSearchPaths options) []
   mapM_ (putStrLn . ppShow) (girAPIs doc)
 
 process :: Options -> [Text] -> IO ()
