@@ -5,10 +5,11 @@ import Data.Traversable (traverse)
 #endif
 import Control.Monad (forM_, when, (>=>))
 import Control.Exception (handle)
+import Control.Applicative ((<|>))
 
 import Data.Char (toLower)
 import Data.Bool (bool)
-import Data.Maybe (fromMaybe, isNothing)
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Text (Text)
 
@@ -80,10 +81,7 @@ solveNameVersion ovs name = (nameWithoutVersion, version)
                      then Just (last namePieces)
                      else Nothing
    versionInOverride = M.lookup nameWithoutVersion (nsChooseVersion ovs)
-   version = if isNothing versionInOverride 
-                then versionInName
-                else versionInOverride
-
+   version = versionInOverride <|> versionInName
 
 optDescrs :: [OptDescr (Options -> Options)]
 optDescrs = [
