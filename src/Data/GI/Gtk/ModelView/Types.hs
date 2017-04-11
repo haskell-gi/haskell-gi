@@ -133,8 +133,12 @@ instance IsTreeSortable (TypedTreeModelSort row)
 instance IsTreeModel (TypedTreeModelSort row)
 
 instance GObject (TypedTreeModelSort row) where
+#if MIN_VERSION_haskell_gi_base(0,20,1)
+    boxedType _ = boxedType (undefined :: TreeModelSort)
+#else
     gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModelSort)
+#endif
 
 unsafeTreeModelSortToGeneric :: TreeModelSort -> TypedTreeModelSort row
 unsafeTreeModelSortToGeneric = unsafeCoerce#

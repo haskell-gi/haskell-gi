@@ -109,8 +109,12 @@ mkSeqStore (CustomStore ptr) = SeqStore ptr
 instance IsTreeModel (SeqStore a)
 
 instance GObject (SeqStore a) where
+#if MIN_VERSION_haskell_gi_base(0,20,1)
+    boxedType _ = boxedType (undefined :: TreeModel)
+#else
     gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModel)
+#endif
 
 instance IsTypedTreeModel SeqStore
 
