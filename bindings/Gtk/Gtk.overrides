@@ -38,7 +38,7 @@ set-attr Gtk/Widget/intersect/@parameters/intersection direction out
 set-attr Gtk/Widget/intersect/@parameters/intersection caller-allocates 1
 set-attr Gtk/Widget/intersect/@parameters/intersection nullable 0
 
-# Generated from gtk+ 3.20.3 with xsltproc Nullable.xslt Gtk-3.0.gir
+# Generated from gtk+ 3.22.11 with xsltproc Nullable.xslt Gtk-3.0.gir
 set-attr Gtk/AboutDialog/set_comments/@parameters/comments nullable 1
 set-attr Gtk/AboutDialog/set_copyright/@parameters/copyright nullable 1
 set-attr Gtk/AboutDialog/set_license/@parameters/license nullable 1
@@ -77,8 +77,11 @@ set-attr Gtk/ActionGroup/set_accel_group/@parameters/accel_group nullable 1
 set-attr Gtk/ActionGroup/set_translate_func/@parameters/data nullable 1
 set-attr Gtk/ActionGroup/set_translation_domain/@parameters/domain nullable 1
 set-attr Gtk/Actionable/get_action_name/@return-value nullable 1
+set-attr Gtk/Actionable/set_action_name/@parameters/action_name nullable 1
 set-attr Gtk/Actionable/get_action_name/@return-value nullable 1
+set-attr Gtk/Actionable/set_action_name/@parameters/action_name nullable 1
 set-attr Gtk/ActionableInterface/get_action_name/get_action_name/@return-value nullable 1
+set-attr Gtk/ActionableInterface/set_action_name/set_action_name/@parameters/action_name nullable 1
 set-attr Gtk/Activatable/sync_action_properties/@parameters/action nullable 1
 set-attr Gtk/Activatable/sync_action_properties/@parameters/action nullable 1
 set-attr Gtk/ActivatableIface/sync_action_properties/sync_action_properties/@parameters/action nullable 1
@@ -89,6 +92,7 @@ set-attr Gtk/AppChooserDialog/new_for_content_type/@parameters/parent nullable 1
 set-attr Gtk/AppChooserDialog/get_heading/@return-value nullable 1
 set-attr Gtk/Application/new/@parameters/application_id nullable 1
 set-attr Gtk/Application/add_accelerator/@parameters/parameter nullable 1
+set-attr Gtk/Application/get_app_menu/@return-value nullable 1
 set-attr Gtk/Application/get_window_by_id/@return-value nullable 1
 set-attr Gtk/Application/inhibit/@parameters/window nullable 1
 set-attr Gtk/Application/inhibit/@parameters/reason nullable 1
@@ -137,6 +141,7 @@ set-attr Gtk/Builder/lookup_callback_symbol/@return-value nullable 1
 set-attr Gtk/Builder/set_translation_domain/@parameters/domain nullable 1
 set-attr Gtk/BuilderConnectFunc/@parameters/connect_object nullable 1
 set-attr Gtk/BuilderConnectFunc/@parameters/user_data nullable 1
+set-attr Gtk/Button/new_from_icon_name/@parameters/icon_name nullable 1
 set-attr Gtk/Button/get_image/@return-value nullable 1
 set-attr Gtk/Calendar/set_detail_func/@parameters/data nullable 1
 set-attr Gtk/CalendarDetailFunc/@return-value nullable 1
@@ -166,10 +171,15 @@ set-attr Gtk/CellLayoutIface/set_cell_data_func/set_cell_data_func/@parameters/f
 set-attr Gtk/CellLayoutIface/get_area/get_area/@return-value nullable 1
 set-attr Gtk/CellRenderer/get_size/@parameters/cell_area nullable 1
 set-attr Gtk/CellRenderer/start_editing/@return-value nullable 1
+set-attr Gtk/CellRenderer/start_editing/@parameters/event nullable 1
 set-attr Gtk/CellRenderer/get_size/@parameters/cell_area nullable 1
+set-attr Gtk/CellRenderer/get_state/@parameters/cell nullable 1
+set-attr Gtk/CellRenderer/get_state/@parameters/widget nullable 1
 set-attr Gtk/CellRenderer/start_editing/@return-value nullable 1
+set-attr Gtk/CellRenderer/start_editing/@parameters/event nullable 1
 set-attr Gtk/CellRendererClass/get_size/get_size/@parameters/cell_area nullable 1
 set-attr Gtk/CellRendererClass/start_editing/start_editing/@return-value nullable 1
+set-attr Gtk/CellRendererClass/start_editing/start_editing/@parameters/event nullable 1
 set-attr Gtk/CellView/get_displayed_row/@return-value nullable 1
 set-attr Gtk/CellView/get_model/@return-value nullable 1
 set-attr Gtk/CellView/set_displayed_row/@parameters/path nullable 1
@@ -288,6 +298,7 @@ set-attr Gtk/FileFilterFunc/@parameters/data nullable 1
 set-attr Gtk/FlowBox/bind_model/@parameters/model nullable 1
 set-attr Gtk/FlowBox/bind_model/@parameters/user_data nullable 1
 set-attr Gtk/FlowBox/get_child_at_index/@return-value nullable 1
+set-attr Gtk/FlowBox/get_child_at_pos/@return-value nullable 1
 set-attr Gtk/FlowBox/selected_foreach/@parameters/data nullable 1
 set-attr Gtk/FlowBox/set_filter_func/@parameters/filter_func nullable 1
 set-attr Gtk/FlowBox/set_filter_func/@parameters/user_data nullable 1
@@ -333,6 +344,7 @@ set-attr Gtk/Gesture/get_last_event/@return-value nullable 1
 set-attr Gtk/Gesture/get_last_updated_sequence/@return-value nullable 1
 set-attr Gtk/Gesture/get_point/@parameters/sequence nullable 1
 set-attr Gtk/Gesture/get_window/@return-value nullable 1
+set-attr Gtk/Gesture/handles_sequence/@parameters/sequence nullable 1
 set-attr Gtk/Gesture/set_window/@parameters/window nullable 1
 set-attr Gtk/GestureDrag/get_offset/@parameters/x nullable 1
 set-attr Gtk/GestureDrag/get_offset/@parameters/y nullable 1
@@ -354,6 +366,7 @@ set-attr Gtk/HeaderBar/set_title/@parameters/title nullable 1
 set-attr Gtk/IMContext/set_client_window/@parameters/window nullable 1
 set-attr Gtk/IMContext/set_client_window/@parameters/window nullable 1
 set-attr Gtk/IMContextClass/set_client_window/set_client_window/@parameters/window nullable 1
+set-attr Gtk/IconInfo/get_builtin_pixbuf/@return-value nullable 1
 set-attr Gtk/IconInfo/get_filename/@return-value nullable 1
 set-attr Gtk/IconInfo/load_icon_async/@parameters/cancellable nullable 1
 set-attr Gtk/IconInfo/load_icon_async/@parameters/callback nullable 1
@@ -398,13 +411,16 @@ set-attr Gtk/IconView/set_drag_dest_item/@parameters/path nullable 1
 set-attr Gtk/IconView/set_model/@parameters/model nullable 1
 set-attr Gtk/IconView/set_tooltip_cell/@parameters/cell nullable 1
 set-attr Gtk/IconViewForeachFunc/@parameters/data nullable 1
+set-attr Gtk/Image/new_from_icon_name/@parameters/icon_name nullable 1
 set-attr Gtk/Image/new_from_pixbuf/@parameters/pixbuf nullable 1
 set-attr Gtk/Image/new_from_surface/@parameters/surface nullable 1
 set-attr Gtk/Image/get_animation/@return-value nullable 1
 set-attr Gtk/Image/get_pixbuf/@return-value nullable 1
 set-attr Gtk/Image/set_from_file/@parameters/filename nullable 1
+set-attr Gtk/Image/set_from_icon_name/@parameters/icon_name nullable 1
 set-attr Gtk/Image/set_from_pixbuf/@parameters/pixbuf nullable 1
 set-attr Gtk/Image/set_from_resource/@parameters/resource_path nullable 1
+set-attr Gtk/Image/set_from_surface/@parameters/surface nullable 1
 set-attr Gtk/ImageMenuItem/new_from_stock/@parameters/accel_group nullable 1
 set-attr Gtk/ImageMenuItem/set_image/@parameters/image nullable 1
 set-attr Gtk/InfoBar/new_with_buttons/@parameters/first_button_text nullable 1
@@ -457,6 +473,9 @@ set-attr Gtk/Menu/popup/@parameters/parent_menu_shell nullable 1
 set-attr Gtk/Menu/popup/@parameters/parent_menu_item nullable 1
 set-attr Gtk/Menu/popup/@parameters/func nullable 1
 set-attr Gtk/Menu/popup/@parameters/data nullable 1
+set-attr Gtk/Menu/popup_at_pointer/@parameters/trigger_event nullable 1
+set-attr Gtk/Menu/popup_at_rect/@parameters/trigger_event nullable 1
+set-attr Gtk/Menu/popup_at_widget/@parameters/trigger_event nullable 1
 set-attr Gtk/Menu/popup_for_device/@parameters/device nullable 1
 set-attr Gtk/Menu/popup_for_device/@parameters/parent_menu_shell nullable 1
 set-attr Gtk/Menu/popup_for_device/@parameters/parent_menu_item nullable 1
@@ -466,6 +485,8 @@ set-attr Gtk/Menu/popup_for_device/@parameters/destroy nullable 1
 set-attr Gtk/Menu/set_accel_group/@parameters/accel_group nullable 1
 set-attr Gtk/Menu/set_accel_path/@parameters/accel_path nullable 1
 set-attr Gtk/Menu/set_screen/@parameters/screen nullable 1
+set-attr Gtk/Menu/popped-up/@parameters/flipped_rect nullable 1
+set-attr Gtk/Menu/popped-up/@parameters/final_rect nullable 1
 set-attr Gtk/MenuButton/get_align_widget/@return-value nullable 1
 set-attr Gtk/MenuButton/get_menu_model/@return-value nullable 1
 set-attr Gtk/MenuButton/get_popover/@return-value nullable 1
@@ -514,11 +535,16 @@ set-attr Gtk/Notebook/prepend_page_menu/@parameters/menu_label nullable 1
 set-attr Gtk/Notebook/set_group_name/@parameters/group_name nullable 1
 set-attr Gtk/Notebook/set_menu_label/@parameters/menu_label nullable 1
 set-attr Gtk/Notebook/set_tab_label/@parameters/tab_label nullable 1
+set-attr Gtk/NumerableIcon/get_background_gicon/@return-value nullable 1
+set-attr Gtk/NumerableIcon/get_background_icon_name/@return-value nullable 1
+set-attr Gtk/NumerableIcon/get_label/@return-value nullable 1
+set-attr Gtk/NumerableIcon/get_style_context/@return-value nullable 1
 set-attr Gtk/NumerableIcon/set_background_gicon/@parameters/icon nullable 1
 set-attr Gtk/NumerableIcon/set_background_icon_name/@parameters/icon_name nullable 1
 set-attr Gtk/NumerableIcon/set_label/@parameters/label nullable 1
 set-attr Gtk/OffscreenWindow/get_pixbuf/@return-value nullable 1
 set-attr Gtk/OffscreenWindow/get_surface/@return-value nullable 1
+set-attr Gtk/PadController/new/@parameters/pad nullable 1
 set-attr Gtk/PageSetup/new_from_key_file/@parameters/group_name nullable 1
 set-attr Gtk/PageSetup/load_key_file/@parameters/group_name nullable 1
 set-attr Gtk/PageSetupDoneFunc/@parameters/data nullable 1
@@ -600,7 +626,11 @@ set-attr Gtk/RecentChooserIface/set_sort_func/set_sort_func/@parameters/data_des
 set-attr Gtk/RecentFilter/add_custom/@parameters/data nullable 1
 set-attr Gtk/RecentFilter/get_name/@return-value nullable 1
 set-attr Gtk/RecentFilterFunc/@parameters/user_data nullable 1
+set-attr Gtk/RecentInfo/create_app_info/@return-value nullable 1
 set-attr Gtk/RecentInfo/create_app_info/@parameters/app_name nullable 1
+set-attr Gtk/RecentInfo/get_gicon/@return-value nullable 1
+set-attr Gtk/RecentInfo/get_icon/@return-value nullable 1
+set-attr Gtk/RecentInfo/get_uri_display/@return-value nullable 1
 set-attr Gtk/RecentManager/lookup_item/@return-value nullable 1
 set-attr Gtk/RecentManager/move_item/@parameters/new_uri nullable 1
 set-attr Gtk/RecentSortFunc/@parameters/user_data nullable 1
@@ -616,6 +646,8 @@ set-attr Gtk/ScrolledWindow/new/@parameters/vadjustment nullable 1
 set-attr Gtk/SelectionData/get_pixbuf/@return-value nullable 1
 set-attr Gtk/SelectionData/get_text/@return-value nullable 1
 set-attr Gtk/Settings/get_default/@return-value nullable 1
+set-attr Gtk/ShortcutLabel/get_accelerator/@return-value nullable 1
+set-attr Gtk/ShortcutLabel/get_disabled_text/@return-value nullable 1
 set-attr Gtk/SpinButton/new/@parameters/adjustment nullable 1
 set-attr Gtk/SpinButton/configure/@parameters/adjustment nullable 1
 set-attr Gtk/Stack/get_child_by_name/@return-value nullable 1
@@ -624,6 +656,12 @@ set-attr Gtk/Stack/get_visible_child_name/@return-value nullable 1
 set-attr Gtk/StackSidebar/get_stack/@return-value nullable 1
 set-attr Gtk/StackSwitcher/get_stack/@return-value nullable 1
 set-attr Gtk/StackSwitcher/set_stack/@parameters/stack nullable 1
+set-attr Gtk/StatusIcon/get_gicon/@return-value nullable 1
+set-attr Gtk/StatusIcon/get_icon_name/@return-value nullable 1
+set-attr Gtk/StatusIcon/get_pixbuf/@return-value nullable 1
+set-attr Gtk/StatusIcon/get_stock/@return-value nullable 1
+set-attr Gtk/StatusIcon/get_tooltip_markup/@return-value nullable 1
+set-attr Gtk/StatusIcon/get_tooltip_text/@return-value nullable 1
 set-attr Gtk/StatusIcon/set_from_pixbuf/@parameters/pixbuf nullable 1
 set-attr Gtk/StatusIcon/set_tooltip_markup/@parameters/markup nullable 1
 set-attr Gtk/Style/render_icon/@parameters/widget nullable 1
@@ -636,9 +674,17 @@ set-attr Gtk/StyleContext/cancel_animations/@parameters/region_id nullable 1
 set-attr Gtk/StyleContext/get_frame_clock/@return-value nullable 1
 set-attr Gtk/StyleContext/get_parent/@return-value nullable 1
 set-attr Gtk/StyleContext/get_section/@return-value nullable 1
+set-attr Gtk/StyleContext/lookup_icon_set/@return-value nullable 1
 set-attr Gtk/StyleContext/notify_state_change/@parameters/region_id nullable 1
 set-attr Gtk/StyleContext/push_animatable_region/@parameters/region_id nullable 1
 set-attr Gtk/StyleContext/set_parent/@parameters/parent nullable 1
+set-attr Gtk/StyleProperties/register_property/@parameters/parse_func nullable 1
+set-attr Gtk/StyleProvider/get_icon_factory/@return-value nullable 1
+set-attr Gtk/StyleProvider/get_style/@return-value nullable 1
+set-attr Gtk/StyleProvider/get_icon_factory/@return-value nullable 1
+set-attr Gtk/StyleProvider/get_style/@return-value nullable 1
+set-attr Gtk/StyleProviderIface/get_style/get_style/@return-value nullable 1
+set-attr Gtk/StyleProviderIface/get_icon_factory/get_icon_factory/@return-value nullable 1
 set-attr Gtk/SymbolicColor/resolve/@parameters/props nullable 1
 set-attr Gtk/TargetList/new/@parameters/targets nullable 1
 set-attr Gtk/TextBuffer/new/@parameters/table nullable 1
@@ -676,7 +722,9 @@ set-attr Gtk/TextView/get_cursor_locations/@parameters/iter nullable 1
 set-attr Gtk/TextView/get_tabs/@return-value nullable 1
 set-attr Gtk/TextView/get_window/@return-value nullable 1
 set-attr Gtk/TextView/set_buffer/@parameters/buffer nullable 1
+set-attr Gtk/ThemingEngine/load/@return-value nullable 1
 set-attr Gtk/ThemingEngine/register_property/@parameters/parse_func nullable 1
+set-attr Gtk/ThemingEngine/get_screen/@return-value nullable 1
 set-attr Gtk/TickCallback/@parameters/user_data nullable 1
 set-attr Gtk/ToggleAction/new/@parameters/label nullable 1
 set-attr Gtk/ToggleAction/new/@parameters/tooltip nullable 1
@@ -844,6 +892,7 @@ set-attr Gtk/Widget/get_tooltip_text/@return-value nullable 1
 set-attr Gtk/Widget/get_window/@return-value nullable 1
 set-attr Gtk/Widget/input_shape_combine_region/@parameters/region nullable 1
 set-attr Gtk/Widget/insert_action_group/@parameters/group nullable 1
+set-attr Gtk/Widget/intersect/@parameters/intersection nullable 1
 set-attr Gtk/Widget/modify_base/@parameters/color nullable 1
 set-attr Gtk/Widget/modify_bg/@parameters/color nullable 1
 set-attr Gtk/Widget/modify_cursor/@parameters/primary nullable 1
@@ -857,6 +906,7 @@ set-attr Gtk/Widget/override_cursor/@parameters/cursor nullable 1
 set-attr Gtk/Widget/override_cursor/@parameters/secondary_cursor nullable 1
 set-attr Gtk/Widget/override_font/@parameters/font_desc nullable 1
 set-attr Gtk/Widget/override_symbolic_color/@parameters/color nullable 1
+set-attr Gtk/Widget/render_icon/@return-value nullable 1
 set-attr Gtk/Widget/render_icon/@parameters/detail nullable 1
 set-attr Gtk/Widget/render_icon_pixbuf/@return-value nullable 1
 set-attr Gtk/Widget/set_accel_path/@parameters/accel_path nullable 1
@@ -874,6 +924,8 @@ set-attr Gtk/Widget/parent-set/@parameters/old_parent nullable 1
 set-attr Gtk/Widget/screen-changed/@parameters/previous_screen nullable 1
 set-attr Gtk/Widget/style-set/@parameters/previous_style nullable 1
 set-attr Gtk/WidgetClass/set_connect_func/@parameters/connect_data nullable 1
+set-attr Gtk/WidgetPath/iter_get_name/@return-value nullable 1
+set-attr Gtk/WidgetPath/iter_get_object_name/@return-value nullable 1
 set-attr Gtk/WidgetPath/iter_set_object_name/@parameters/name nullable 1
 set-attr Gtk/Window/set_focus/@parameters/focus nullable 1
 set-attr Gtk/Window/get_application/@return-value nullable 1
@@ -883,6 +935,8 @@ set-attr Gtk/Window/get_focus/@return-value nullable 1
 set-attr Gtk/Window/get_group/@parameters/window nullable 1
 set-attr Gtk/Window/get_icon_name/@return-value nullable 1
 set-attr Gtk/Window/get_role/@return-value nullable 1
+set-attr Gtk/Window/get_size/@parameters/width nullable 1
+set-attr Gtk/Window/get_size/@parameters/height nullable 1
 set-attr Gtk/Window/get_title/@return-value nullable 1
 set-attr Gtk/Window/get_titlebar/@return-value nullable 1
 set-attr Gtk/Window/get_transient_for/@return-value nullable 1
@@ -967,6 +1021,7 @@ set-attr Gtk/selection_owner_set/@parameters/widget nullable 1
 set-attr Gtk/selection_owner_set_for_display/@parameters/widget nullable 1
 set-attr Gtk/show_about_dialog/@parameters/parent nullable 1
 set-attr Gtk/show_uri/@parameters/screen nullable 1
+set-attr Gtk/show_uri_on_window/@parameters/parent nullable 1
 set-attr Gtk/stock_set_translate_func/@parameters/data nullable 1
 set-attr Gtk/test_create_widget/@parameters/first_property_name nullable 1
 set-attr Gtk/test_find_widget/@return-value nullable 1
