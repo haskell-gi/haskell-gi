@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
@@ -110,12 +111,10 @@ newtype CustomStore private row = CustomStore (ManagedPtr (CustomStore private r
 instance IsTreeModel (CustomStore private row)
 
 instance GObject (CustomStore private row) where
-#if MIN_VERSION_haskell_gi_base(0,20,1)
-    boxedType _ = boxedType (undefined :: TreeModel)
-#else
+#if !MIN_VERSION_haskell_gi_base(0,20,1)
     gobjectIsInitiallyUnowned _ = False
-    gobjectType _ = gobjectType (undefined :: TreeModel)
 #endif
+    gobjectType _ = gobjectType (undefined :: TreeModel)
 
 -- | Type synonym for viewing the store as a set of columns.
 type ColumnMap row = IORef [ColumnAccess row]

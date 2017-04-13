@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-|
 A module aimed at making working with GtkBuilder easier.
 It's meant to be used like this (requires OverloadedStrings):
@@ -41,7 +42,9 @@ import           Prelude ()
 import           Prelude.Compat
 import           Control.Monad.Reader (ReaderT, runReaderT, ask, MonadIO, liftIO)
 import           Data.GI.Base (GObject, castTo)
+#if !MIN_VERSION_haskell_gi_base(0,20,1)
 import           Data.GI.Base.BasicTypes (nullToNothing)
+#endif
 import           Data.Maybe (fromJust)
 import qualified Data.Text as T
 import           Foreign.ForeignPtr (ForeignPtr)
@@ -56,5 +59,9 @@ buildWithBuilder fn builder = liftIO $ runReaderT fn builder
 getObject :: GObject a => (ManagedPtr a -> a) -> T.Text -> BuildFn a
 getObject ctor name = do
     builder <- ask
+#if MIN_VERSION_haskell_gi_base(0,20,1)
+    Just obj <- builderGetObject builder name
+#else
     Just obj <- nullToNothing $ builderGetObject builder name
+#endif
     liftIO $ fromJust <$> castTo ctor obj
