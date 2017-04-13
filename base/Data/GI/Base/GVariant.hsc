@@ -636,8 +636,13 @@ foreign import ccall "g_variant_get_child_value" g_variant_get_child_value
 gvariant_get_children :: (Ptr GVariant) -> IO [GVariant]
 gvariant_get_children vptr = do
       n_children <- g_variant_n_children vptr
-      mapM ((g_variant_get_child_value vptr) >=> wrapGVariantPtr)
-               [0..(n_children-1)]
+      -- n_children is an unsigned type (Word64 in 64 bit
+      -- architectures), so if it is 0 and we substract one we would
+      -- wrap around to 2^64-1.
+      if n_children /= 0
+        then mapM ((g_variant_get_child_value vptr) >=> wrapGVariantPtr)
+             [0..(n_children-1)]
+        else return []
 
 instance IsGVariant a => IsGVariant (Maybe a) where
     toGVariant   = gvariantFromMaybe
