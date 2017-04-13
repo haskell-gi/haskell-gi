@@ -17,6 +17,11 @@ ignore WidgetPath.iter_add_qclass
 # https://bugzilla.gnome.org/show_bug.cgi?id=693393
 set-attr Gtk/PrintOperation/create-custom-widget/@return-value transfer-ownership full
 
+# This is nullable, but not marked as such, see
+# https://github.com/haskell-gi/haskell-gi/issues/90
+# https://bugzilla.gnome.org/show_bug.cgi?id=781246
+set-attr Gtk/Widget/get_parent_window/@return-value nullable 1
+
 # Wrong introspection data in old gtk versions, see
 # https://bugzilla.gnome.org/show_bug.cgi?id=674537
 set-attr Gtk/MenuPositionFunc/@parameters/x direction inout
