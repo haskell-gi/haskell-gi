@@ -1,5 +1,6 @@
 module Data.GI.CodeGen.Signal
     ( genSignal
+    , genSignalConnector
     , genCallback
     , signalHaskellName
     ) where
@@ -360,12 +361,12 @@ signalHaskellName sn = let (w:ws) = T.split (== '-') sn
                        in w <> T.concat (map ucFirst ws)
 
 genSignal :: Signal -> Name -> ExcCodeGen ()
-genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
+genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
   let on' = upperName on
 
   line $ "-- signal " <> on' <> "::" <> sn
 
-  let sn' = signalHaskellName (sn)
+  let sn' = signalHaskellName sn
       signalConnectorName = on' <> ucFirst sn'
       cbType = signalConnectorName <> "Callback"
 
@@ -389,30 +390,36 @@ genSignal (Signal { sigName = sn, sigCallable = cb }) on = do
   -- ("on...") or after the default handler runs (after...). We
   -- provide convenient wrappers for both cases.
   group $ do
-    let signatureConstraints = "(GObject a, MonadIO m) =>"
+    -- Notice that we do not include GObject here as a constraint,
+    -- since if something provides signals it is necessarily a
+    -- GObject.
+    klass <- classConstraint on
+    let signatureConstraints = "(" <> klass <> " a, MonadIO m) =>"
         signatureArgs = "a -> " <> cbType <> " -> m SignalHandlerId"
         signature = " :: " <> signatureConstraints <> " " <> signatureArgs
         onName = "on" <> signalConnectorName
         afterName = "after" <> signalConnectorName
-    line $ onName <> signature
-    line $ onName <> " obj cb = liftIO $ connect"
-             <> signalConnectorName <> " obj cb SignalConnectBefore"
-    line $ afterName <> signature
-    line $ afterName <> " obj cb = connect"
-             <> signalConnectorName <> " obj cb SignalConnectAfter"
-    exportSignal (lcFirst sn') onName
-    exportSignal (lcFirst sn') afterName
 
-  group $ do
-    let fullName = "connect" <> signalConnectorName
-        signatureConstraints = "(GObject a, MonadIO m) =>"
-        signatureArgs = "a -> " <> cbType
-                        <> " -> SignalConnectMode -> m SignalHandlerId"
-    line $ fullName <> " :: " <> signatureConstraints
-    line $ T.replicate (4 + T.length fullName) " " <> signatureArgs
-    line $ fullName <> " obj cb after = liftIO $ do"
-    indent $ do
-        cb' <- genWrappedCallback cb "cb" cbType True
-        let cb'' = prime cb'
-        line $ cb'' <> " <- " <> callbackWrapperAllocator cbType <> " " <> cb'
-        line $ "connectSignalFunPtr obj \"" <> sn <> "\" " <> cb'' <> " after"
+    group $ do
+      line $ onName <> signature
+      line $ onName <> " obj cb = liftIO $ do"
+      indent $ genSignalConnector s cbType "SignalConnectBefore"
+      exportSignal (lcFirst sn') onName
+
+    group $ do
+      line $ afterName <> signature
+      line $ afterName <> " obj cb = liftIO $ do"
+      indent $ genSignalConnector s cbType "SignalConnectAfter"
+      exportSignal (lcFirst sn') afterName
+
+-- | Generate the code for connecting the given signal. This assumes
+-- that it lives inside a @do@ block.
+genSignalConnector :: Signal
+                   -> Text -- ^ Callback type
+                   -> Text -- ^ SignalConnectBefore or SignalConnectAfter
+                   -> CodeGen ()
+genSignalConnector (Signal {sigName = sn, sigCallable = cb}) cbType when = do
+  cb' <- genWrappedCallback cb "cb" cbType True
+  let cb'' = prime cb'
+  line $ cb'' <> " <- " <> callbackWrapperAllocator cbType <> " " <> cb'
+  line $ "connectSignalFunPtr obj \"" <> sn <> "\" " <> cb'' <> " " <> when

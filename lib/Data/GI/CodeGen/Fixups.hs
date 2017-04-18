@@ -2,6 +2,7 @@
 module Data.GI.CodeGen.Fixups
     ( dropMovedItems
     , guessPropertyNullability
+    , detectGObject
     ) where
 
 import Data.Maybe (isNothing, isJust)
@@ -112,7 +113,20 @@ guessWriteNullability methods p
 
 -- | Find the first method with the given name, if any.
 findMethod :: [Method] -> T.Text -> Maybe Method
-findMethod methods n =
-    case filter ((== n) . name . methodName) methods of
-      [m] -> Just m
-      _ -> Nothing
+findMethod methods n = case filter ((== n) . name . methodName) methods of
+                         [m] -> Just m
+                         _ -> Nothing
+
+-- | Not every interface that provides signals/properties is marked as
+-- requiring GObject, but this is necessarily the case, so fix the
+-- introspection data accordingly.
+detectGObject :: (Name, API) -> (Name, API)
+detectGObject (n, APIInterface iface) =
+  if not (null (ifProperties iface) && null (ifSignals iface))
+  then let gobject = Name "GObject" "Object"
+       in if gobject `elem` (ifPrerequisites iface)
+          then (n, APIInterface iface)
+          else (n, APIInterface (iface {ifPrerequisites =
+                                        gobject : ifPrerequisites iface}))
+  else (n, APIInterface iface)
+detectGObject api = api

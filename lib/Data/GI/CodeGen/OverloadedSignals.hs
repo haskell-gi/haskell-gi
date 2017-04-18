@@ -18,7 +18,7 @@ import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Inheritance (fullObjectSignalList, fullInterfaceSignalList)
 import Data.GI.CodeGen.GObject (apiIsGObject)
-import Data.GI.CodeGen.Signal (signalHaskellName)
+import Data.GI.CodeGen.Signal (signalHaskellName, genSignalConnector)
 import Data.GI.CodeGen.SymbolNaming (upperName, hyphensToCamelCase,
                                      qualifiedSymbol)
 import Data.GI.CodeGen.Util (lcFirst, ucFirst)
@@ -86,7 +86,8 @@ genInstance owner signal = group $ do
       let signalConnectorName = name <> sn
           cbHaskellType = signalConnectorName <> "Callback"
       line $ "type HaskellCallbackType " <> si <> " = " <> cbHaskellType
-      line $ "connectSignal _ = " <> "connect" <> name <> sn
+      line $ "connectSignal _ obj cb connectMode = do"
+      indent $ genSignalConnector signal cbHaskellType "connectMode"
   exportSignal (lcFirst sn) si
 
 -- | Signal instances for (GObject-derived) objects.

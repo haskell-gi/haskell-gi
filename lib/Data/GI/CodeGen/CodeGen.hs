@@ -22,7 +22,8 @@ import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.Constant (genConstant)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
-import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability)
+import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability,
+                               detectGObject)
 import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Haddock (deprecatedPragma, addModuleDocumentation)
 import Data.GI.CodeGen.Inheritance (instanceTree, fullObjectMethodList,
@@ -431,6 +432,9 @@ genModule' apis = do
             -- Try to guess nullability of properties when there is no
             -- nullability info in the GIR.
           $ map guessPropertyNullability
+            -- Not every interface providing signals or properties is
+            -- correctly annotated as descending from GObject, fix this.
+          $ map detectGObject
           $ M.toList
           $ apis
 
