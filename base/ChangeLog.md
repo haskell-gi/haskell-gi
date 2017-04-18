@@ -1,3 +1,7 @@
+### 0.20.2
+
++ Fix fromGVariant for empty arrays, see [#91](https://github.com/haskell-gi/haskell-gi/issues/91) for details.
+
 ### 0.20.1
 
 + Add Data.GI.Base.CallStack, abstracting (and backporting to the
