@@ -110,7 +110,6 @@ newtype CustomStore private row = CustomStore (ManagedPtr (CustomStore private r
 instance IsTreeModel (CustomStore private row)
 
 instance GObject (CustomStore private row) where
-    gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModel)
 
 -- | Type synonym for viewing the store as a set of columns.

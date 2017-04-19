@@ -109,7 +109,6 @@ mkSeqStore (CustomStore ptr) = SeqStore ptr
 instance IsTreeModel (SeqStore a)
 
 instance GObject (SeqStore a) where
-    gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModel)
 
 instance IsTypedTreeModel SeqStore

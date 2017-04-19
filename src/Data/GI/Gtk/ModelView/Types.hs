@@ -134,7 +134,6 @@ instance IsTreeSortable (TypedTreeModelSort row)
 instance IsTreeModel (TypedTreeModelSort row)
 
 instance GObject (TypedTreeModelSort row) where
-    gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModelSort)
 
 unsafeTreeModelSortToGeneric :: TreeModelSort -> TypedTreeModelSort row

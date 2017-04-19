@@ -134,7 +134,6 @@ mkForestStore (CustomStore ptr) = ForestStore ptr
 instance IsTreeModel (ForestStore a)
 
 instance GObject (ForestStore a) where
-    gobjectIsInitiallyUnowned _ = False
     gobjectType _ = gobjectType (undefined :: TreeModel)
 
 instance IsTypedTreeModel ForestStore
