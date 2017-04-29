@@ -27,6 +27,16 @@ set-attr Gtk/Widget/get_parent_window/@return-value nullable 1
 set-attr Gtk/MenuPositionFunc/@parameters/x direction inout
 set-attr Gtk/MenuPositionFunc/@parameters/y direction inout
 
+# Missing nullable annotations in the return values, see
+# https://github.com/haskell-gi/haskell-gi/issues/95
+# https://bugzilla.gnome.org/show_bug.cgi?id=781935
+# https://bugzilla.gnome.org/show_bug.cgi?id=781936
+set-attr Gtk/UIManager/get_widget/@return-value nullable 1
+set-attr Gtk/UIManager/get_action/@return-value nullable 1
+set-attr Gtk/ActionGroup/get_action/@return-value nullable 1
+set-attr Gtk/TextMark/get_name/@return-value nullable 1
+set-attr Gtk/Notebook/get_tab_label/@return-value nullable 1
+
 if osx
     # Not supported in Quartz version of Gtk
     ignore drag_set_icon_gicon
