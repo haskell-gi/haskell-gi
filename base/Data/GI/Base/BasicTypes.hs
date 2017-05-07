@@ -59,6 +59,7 @@ import Foreign.ForeignPtr (ForeignPtr)
 import GHC.TypeLits
 #endif
 
+import Data.GI.Base.CallStack (CallStack)
 import Data.GI.Base.GType
 
 -- | Thin wrapper over `ForeignPtr`, supporting the extra notion of
@@ -66,7 +67,8 @@ import Data.GI.Base.GType
 -- the foreign ptr.
 data ManagedPtr a = ManagedPtr {
       managedForeignPtr :: ForeignPtr a
-    , managedPtrIsOwned :: IORef Bool
+    , managedPtrIsDisowned :: IORef (Maybe CallStack)
+    -- ^ When disowned, the `CallStack` for the disowning call.
     }
 
 -- | A constraint ensuring that the given type is coercible to a

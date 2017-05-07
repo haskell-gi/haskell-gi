@@ -49,6 +49,7 @@ import Control.Monad (when, void)
 
 import Data.Coerce (coerce)
 import Data.IORef (newIORef, readIORef, writeIORef, IORef)
+import Data.Maybe (isNothing)
 
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
@@ -57,7 +58,8 @@ import qualified Foreign.Concurrent as FC
 import Foreign.ForeignPtr.Unsafe (unsafeForeignPtrToPtr)
 
 import Data.GI.Base.BasicTypes
-import Data.GI.Base.CallStack (HasCallStack, prettyCallStack, callStack)
+import Data.GI.Base.CallStack (CallStack, HasCallStack,
+                               prettyCallStack, callStack)
 import Data.GI.Base.Utils
 
 import System.IO (hPutStrLn, stderr)
@@ -65,15 +67,15 @@ import System.IO (hPutStrLn, stderr)
 -- | Thin wrapper over `Foreign.Concurrent.newForeignPtr`.
 newManagedPtr :: Ptr a -> IO () -> IO (ManagedPtr a)
 newManagedPtr ptr finalizer = do
-  let ownedFinalizer :: IORef Bool -> IO ()
-      ownedFinalizer boolRef = do
-        owned <- readIORef boolRef
-        when owned finalizer
-  isOwnedRef <- newIORef True
-  fPtr <- FC.newForeignPtr ptr (ownedFinalizer isOwnedRef)
+  let ownedFinalizer :: IORef (Maybe CallStack) -> IO ()
+      ownedFinalizer callStackRef = do
+        cs <- readIORef callStackRef
+        when (isNothing cs) finalizer
+  isDisownedRef <- newIORef Nothing
+  fPtr <- FC.newForeignPtr ptr (ownedFinalizer isDisownedRef)
   return $ ManagedPtr {
                managedForeignPtr = fPtr
-             , managedPtrIsOwned = isOwnedRef
+             , managedPtrIsDisowned = isDisownedRef
              }
 
 foreign import ccall "dynamic"
@@ -87,18 +89,21 @@ newManagedPtr' finalizer ptr = newManagedPtr ptr (mkFinalizer finalizer ptr)
 -- | Thin wrapper over `Foreign.Concurrent.newForeignPtr_`.
 newManagedPtr_ :: Ptr a -> IO (ManagedPtr a)
 newManagedPtr_ ptr = do
-  isOwnedRef <- newIORef True
+  isDisownedRef <- newIORef Nothing
   fPtr <- newForeignPtr_ ptr
   return $ ManagedPtr {
                managedForeignPtr = fPtr
-             , managedPtrIsOwned = isOwnedRef
+             , managedPtrIsDisowned = isDisownedRef
              }
 
--- | Do not run the finalizers upon garbage collection of the `ManagedPtr`.
+-- | Do not run the finalizers upon garbage collection of the
+-- `ManagedPtr`, for the given reason. If later code tries to access
+-- the underlying pointer the given reason will be printed as part of
+-- the error message.
 disownManagedPtr :: forall a. (HasCallStack, ManagedPtrNewtype a) => a -> IO (Ptr a)
 disownManagedPtr managed = do
   ptr <- unsafeManagedPtrGetPtr managed
-  writeIORef (managedPtrIsOwned c) False
+  writeIORef (managedPtrIsDisowned c) (Just callStack)
   return ptr
     where c = coerce managed :: ManagedPtr ()
 
@@ -115,11 +120,7 @@ withManagedPtr managed action = do
 -- `nullPtr` argument.
 maybeWithManagedPtr :: (HasCallStack, ManagedPtrNewtype a) => Maybe a -> (Ptr a -> IO c) -> IO c
 maybeWithManagedPtr Nothing action = action nullPtr
-maybeWithManagedPtr (Just managed) action = do
-  ptr <- unsafeManagedPtrGetPtr managed
-  result <- action ptr
-  touchManagedPtr managed
-  return result
+maybeWithManagedPtr (Just managed) action = withManagedPtr managed action
 
 -- | Perform an IO action taking a list of 'Ptr' on a list of managed
 -- pointers.
@@ -145,16 +146,19 @@ unsafeManagedPtrCastPtr :: forall a b. (HasCallStack, ManagedPtrNewtype a) =>
 unsafeManagedPtrCastPtr m = do
     let c = coerce m :: ManagedPtr ()
         ptr = (castPtr . unsafeForeignPtrToPtr . managedForeignPtr) c
-    owned <- readIORef (managedPtrIsOwned c)
-    when (not owned) (notOwnedWarning ptr)
-    return ptr
+    disowned <- readIORef (managedPtrIsDisowned c)
+    maybe (return ptr) (notOwnedWarning ptr) disowned
 
 -- | Print a warning when we try to access a disowned foreign ptr.
-notOwnedWarning :: HasCallStack => Ptr a -> IO ()
-notOwnedWarning ptr = do
-  hPutStrLn stderr ("Accessing a disowned pointer <" ++ show ptr
-                     ++ ">, this may lead to crashes.\n"
-                     ++ prettyCallStack callStack)
+notOwnedWarning :: HasCallStack => Ptr a -> CallStack -> IO (Ptr a)
+notOwnedWarning ptr cs = do
+  hPutStrLn stderr ("WARNING: Accessing a disowned pointer <" ++ show ptr
+                     ++ ">, this may lead to crashes.\n\n"
+                     ++ "• Callstack for the unsafe access to the pointer:\n"
+                     ++ prettyCallStack callStack ++ "\n\n"
+                     ++ "• The pointer was disowned at:\n"
+                     ++ prettyCallStack cs ++ "\n")
+  return ptr
 
 -- | Ensure that the 'Ptr' in the given managed pointer is still alive
 -- (i.e. it has not been garbage collected by the runtime) at the

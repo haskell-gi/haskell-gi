@@ -4,12 +4,13 @@
 -- functionality itself does not work there).
 module Data.GI.Base.CallStack
   ( HasCallStack
+  , CallStack
   , prettyCallStack
   , callStack
   ) where
 
 #if MIN_VERSION_base(4,9,0)
-import GHC.Stack (HasCallStack, prettyCallStack, callStack)
+import GHC.Stack (HasCallStack, prettyCallStack, callStack, CallStack)
 #elif MIN_VERSION_base(4,8,1)
 import Data.List (intercalate)
 import qualified GHC.Stack as S
