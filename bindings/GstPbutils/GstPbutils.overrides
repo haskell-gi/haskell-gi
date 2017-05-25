@@ -1,0 +1,22 @@
+namespace GstPbutils
+
+# Generated from gst 1.10.4 with xsltproc Nullable.xslt GstPbutils-1.0.gir
+set-attr GstPbutils/EncodingAudioProfile/new/@parameters/preset nullable 1
+set-attr GstPbutils/EncodingAudioProfile/new/@parameters/restriction nullable 1
+set-attr GstPbutils/EncodingContainerProfile/new/@parameters/name nullable 1
+set-attr GstPbutils/EncodingContainerProfile/new/@parameters/description nullable 1
+set-attr GstPbutils/EncodingContainerProfile/new/@parameters/preset nullable 1
+set-attr GstPbutils/EncodingProfile/find/@parameters/category nullable 1
+set-attr GstPbutils/EncodingProfile/set_preset/@parameters/preset nullable 1
+set-attr GstPbutils/EncodingTarget/load/@parameters/category nullable 1
+set-attr GstPbutils/EncodingVideoProfile/new/@parameters/preset nullable 1
+set-attr GstPbutils/EncodingVideoProfile/new/@parameters/restriction nullable 1
+set-attr GstPbutils/InstallPluginsResultFunc/@parameters/user_data nullable 1
+set-attr GstPbutils/codec_utils_opus_create_caps/@parameters/channel_mapping nullable 1
+set-attr GstPbutils/codec_utils_opus_create_caps_from_header/@parameters/comments nullable 1
+set-attr GstPbutils/codec_utils_opus_create_header/@parameters/channel_mapping nullable 1
+set-attr GstPbutils/encoding_list_all_targets/@parameters/categoryname nullable 1
+set-attr GstPbutils/install_plugins_async/@parameters/ctx nullable 1
+set-attr GstPbutils/install_plugins_async/@parameters/user_data nullable 1
+set-attr GstPbutils/install_plugins_sync/@parameters/ctx nullable 1
+set-attr GstPbutils/pb_utils_add_codec_description_to_tag_list/@parameters/codec_tag nullable 1

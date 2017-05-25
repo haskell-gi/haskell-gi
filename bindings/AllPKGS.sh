@@ -4,7 +4,7 @@ unamestr=$(uname)
 # Packages compatible with base >= 4.7
 base47PKGS="GLib GObject Atk Gio Secret Soup cairo Pango PangoCairo GdkPixbuf Gdk Gtk GtkSource GIRepository Poppler JavaScriptCore-3.0 WebKit Vte Notify OSTree"
 # Packages compatible with base >= 4.8
-base48PKGS="Gst GstBase GstAudio GstVideo GstTag"
+base48PKGS="Gst GstBase GstAudio GstVideo GstTag GstPbutils"
 
 # Only present on OS X
 osxPKGS="GtkosxApplication"
