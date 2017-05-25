@@ -1,5 +1,10 @@
 namespace GstBase
 
+# Bunch of inline functions in a header, almost certainly more efficient to
+# handle natively in Haskell
+ignore ByteReader
+ignore ByteWriter
+
 # Generated from gstreamer-base 1.8.0 with xsltproc Nullable.xslt GstBase-1.0.gir
 set-attr GstBase/Adapter/get_buffer/@return-value nullable 1
 set-attr GstBase/Adapter/get_buffer_fast/@return-value nullable 1
