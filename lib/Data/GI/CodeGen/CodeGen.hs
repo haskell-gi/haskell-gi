@@ -266,8 +266,8 @@ genGObjectCasts n cn_ parents = do
   group $ do
     let safeCast = "to" <> name'
     exportDecl safeCast
-    line $ safeCast <> " :: " <> className <> " o => o -> IO " <> name'
-    line $ safeCast <> " = unsafeCastTo " <> name'
+    line $ safeCast <> " :: (MonadIO m, " <> className <> " o) => o -> m " <> name'
+    line $ safeCast <> " = liftIO . unsafeCastTo " <> name'
 
 -- Wrap a given Object. We enforce that every Object that we wrap is a
 -- GObject. This is the case for everything except the ParamSpec* set
