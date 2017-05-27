@@ -8,8 +8,13 @@ import qualified Distribution.ModuleName as MN
 import Distribution.Simple.LocalBuildInfo
 import Distribution.Simple.Setup
 import Distribution.Simple (UserHooks(..), simpleUserHooks,
-                            defaultMainWithHooks, OptimisationLevel(..),
-                            Dependency(..), PackageName(..))
+                            defaultMainWithHooks, OptimisationLevel(..))
+#if !MIN_VERSION_Cabal(2,0,0)
+import Distribution.Simple (Dependency(..), PackageName(..), unPackageName)
+#else
+import Distribution.Types.PkgconfigDependency (PkgconfigDependency(..))
+import Distribution.Types.PkgconfigName (unPkgconfigName)
+#endif
 import Distribution.PackageDescription
 
 import Data.GI.CodeGen.API (loadGIRInfo)
@@ -37,10 +42,21 @@ import System.FilePath ((</>), (<.>))
 type ConfHook = (GenericPackageDescription, HookedBuildInfo) -> ConfigFlags
               -> IO LocalBuildInfo
 
+#if !MIN_VERSION_Cabal(2,0,0)
+#define PkgconfigDependency Dependency
+
+unPkgconfigName :: PackageName -> String
+unPkgconfigName = unPackageName
+
+unFlagName :: FlagName -> String
+unFlagName (FlagName n) = n
+#endif
+
 -- | Generate the @PkgInfo@ module, listing the build information for
 -- the module. We include in particular the versions for the
 -- `pkg-config` dependencies of the module.
-genPkgInfo :: [Dependency] -> [(FlagName, Bool)] -> FilePath -> Text -> IO ()
+genPkgInfo :: [PkgconfigDependency] -> [(FlagName, Bool)] -> FilePath -> Text
+           -> IO ()
 genPkgInfo deps flags fName modName = do
   versions <- mapM findVersion deps
   utf8WriteFile fName $ T.unlines
@@ -54,14 +70,14 @@ genPkgInfo deps flags fName modName = do
          , "flags :: [(String, Bool)]"
          , "flags = " <> tshow flags'
          ]
-    where findVersion :: Dependency -> IO (Text, Text)
-          findVersion (Dependency (PackageName n) _) =
-              tryPkgConfig (T.pack n) >>= \case
+    where findVersion :: PkgconfigDependency -> IO (Text, Text)
+          findVersion (PkgconfigDependency n _) =
+              tryPkgConfig (T.pack (unPkgconfigName n)) >>= \case
                   Just v -> return v
-                  Nothing -> error ("Could not determine version for required pkg-config module \"" <> n <> "\".")
+                  Nothing -> error ("Could not determine version for required pkg-config module \"" <> (unPkgconfigName n) <> "\".")
 
           flags' :: [(String, Bool)]
-          flags' = map (\(FlagName fn, v) -> (fn, v)) flags
+          flags' = map (\(f, v) -> (unFlagName f, v)) flags
 
 -- | Parse the set of flags given to configure into flags for the code
 -- generator.
@@ -78,7 +94,7 @@ parseFlags fs = parsed
           check s = fromMaybe True (M.lookup s flags)
 
           flags :: M.Map String Bool
-          flags = M.fromList (map (\(FlagName fn, v) -> (fn, v)) fs)
+          flags = M.fromList (map (\(f, v) -> (unFlagName f, v)) fs)
 
 -- | A convenience helper for `confHook`, such that bindings for the
 -- given module are generated in the @configure@ step of @cabal@.
