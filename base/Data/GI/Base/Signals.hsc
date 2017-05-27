@@ -71,7 +71,11 @@ instance
     => IsLabelProxy slot (SignalProxy object info) where
     fromLabelProxy _ = SignalProxy
 
-#if MIN_VERSION_base(4,9,0)
+#if MIN_VERSION_base(4,10,0)
+instance info ~ ResolveSignal slot object =>
+    IsLabel slot (SignalProxy object info) where
+    fromLabel = SignalProxy
+#elif MIN_VERSION_base(4,9,0)
 instance info ~ ResolveSignal slot object =>
     IsLabel slot (SignalProxy object info) where
     fromLabel _ = SignalProxy

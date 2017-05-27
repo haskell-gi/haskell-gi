@@ -17,6 +17,7 @@ module Data.GI.Base.ManagedPtr
     , withManagedPtr
     , maybeWithManagedPtr
     , withManagedPtrList
+    , withTransient
     , unsafeManagedPtrGetPtr
     , unsafeManagedPtrCastPtr
     , touchManagedPtr
@@ -130,6 +131,17 @@ withManagedPtrList managedList action = do
   result <- action ptrs
   mapM_ touchManagedPtr managedList
   return result
+
+-- | Perform the IO action with a transient managed pointer. The
+-- managed pointer will be valid while calling the action, but will be
+-- disowned as soon as the action finished.
+withTransient :: (HasCallStack, ManagedPtrNewtype a)
+              => (ManagedPtr a -> a) -> Ptr a -> (a -> IO b) -> IO b
+withTransient constructor ptr action = do
+  managed <- constructor <$> newManagedPtr_ ptr
+  r <- action managed
+  _ <- disownManagedPtr managed
+  return r
 
 -- | Return the 'Ptr' in a given managed pointer. As the name says,
 -- this is potentially unsafe: the given 'Ptr' may only be used

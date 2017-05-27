@@ -162,7 +162,10 @@ data AttrLabelProxy (a :: Symbol) = AttrLabelProxy
 instance a ~ x => IsLabelProxy x (AttrLabelProxy a) where
     fromLabelProxy _ = AttrLabelProxy
 
-#if MIN_VERSION_base(4,9,0)
+#if MIN_VERSION_base(4,10,0)
+instance a ~ x => IsLabel x (AttrLabelProxy a) where
+    fromLabel = AttrLabelProxy
+#elif MIN_VERSION_base(4,9,0)
 instance a ~ x => IsLabel x (AttrLabelProxy a) where
     fromLabel _ = AttrLabelProxy
 #endif
