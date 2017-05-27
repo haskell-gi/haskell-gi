@@ -12,7 +12,6 @@ import Control.Monad (forM, forM_, when, unless)
 
 import Data.Maybe (catMaybes)
 import Data.Monoid ((<>))
-import Data.Typeable (typeOf)
 import Data.Bool (bool)
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -50,10 +49,10 @@ genHaskellCallbackPrototype subsec cb htype expose = group $ do
       forM_ hInArgs $ \arg -> do
         ht <- haskellType (argType arg)
         wrapMaybe arg >>= bool
-                          (line $ tshow ht <> " ->")
-                          (line $ tshow (maybeT ht) <> " ->")
+                          (line $ typeShow ht <> " ->")
+                          (line $ typeShow (maybeT ht) <> " ->")
       ret <- hOutType cb hOutArgs
-      line $ tshow $ io ret
+      line $ typeShow $ io ret
 
     blank
 
@@ -77,14 +76,14 @@ genCCallbackPrototype subsec cb name' isSignal = group $ do
         let ht' = if direction arg /= DirectionIn
                   then ptr ht
                   else ht
-        line $ tshow ht' <> " ->"
+        line $ typeShow ht' <> " ->"
       when (callableThrows cb) $
         line "Ptr (Ptr GError) ->"
       when isSignal $ line $ withComment "Ptr () ->" "user_data"
       ret <- io <$> case returnType cb of
-                      Nothing -> return $ typeOf ()
+                      Nothing -> return $ con0 "()"
                       Just t -> foreignType t
-      line $ tshow ret
+      line $ typeShow ret
     return ctypeName
 
 -- Generator for wrappers callable from C
@@ -258,14 +257,14 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
         let ht' = if direction arg /= DirectionIn
                   then ptr ht
                   else ht
-        line $ tshow ht' <> " ->"
+        line $ typeShow ht' <> " ->"
       when (callableThrows cb) $
         line "Ptr (Ptr GError) ->"
       when isSignal $ line "Ptr () ->"
       ret <- io <$> case returnType cb of
-                      Nothing -> return $ typeOf ()
+                      Nothing -> return $ con0 "()"
                       Just t -> foreignType t
-      line $ tshow ret
+      line $ typeShow ret
 
     let cArgNames = map escapedArgName (args cb)
         allArgs = if isSignal

@@ -112,10 +112,10 @@ buildFieldReader n field = group $ do
   nullConvert <- if embedded
                  then return Nothing
                  else maybeNullConvert (fieldType field)
-  hType <- tshow <$> if isJust nullConvert
-                     then maybeT <$> isoHaskellType (fieldType field)
-                     else isoHaskellType (fieldType field)
-  fType <- tshow <$> foreignType (fieldType field)
+  hType <- typeShow <$> if isJust nullConvert
+                        then maybeT <$> isoHaskellType (fieldType field)
+                        else isoHaskellType (fieldType field)
+  fType <- typeShow <$> foreignType (fieldType field)
 
   line $ getter <> " :: MonadIO m => " <> name' <> " -> m " <>
               if T.any (== ' ') hType
@@ -154,10 +154,10 @@ buildFieldWriter n field = group $ do
 
   isPtr <- typeIsPtr (fieldType field)
 
-  fType <- tshow <$> foreignType (fieldType field)
+  fType <- typeShow <$> foreignType (fieldType field)
   hType <- if isPtr
            then return fType
-           else tshow <$> haskellType (fieldType field)
+           else typeShow <$> haskellType (fieldType field)
 
   line $ setter <> " :: MonadIO m => " <> name' <> " -> "
            <> hType <> " -> m ()"
@@ -175,7 +175,7 @@ buildFieldClear n field nullPtr = group $ do
   let name' = upperName n
   let clear = fieldClear n field
 
-  fType <- tshow <$> foreignType (fieldType field)
+  fType <- typeShow <$> foreignType (fieldType field)
 
   line $ clear <> " :: MonadIO m => " <> name' <> " -> m ()"
   line $ clear <> " s = liftIO $ withManagedPtr s $ \\ptr -> do"
@@ -211,12 +211,12 @@ genAttrInfo owner field = do
 
   embedded <- isEmbedded field
   isNullable <- typeIsNullable (fieldType field)
-  outType <- tshow <$> if not embedded && isNullable
-                       then maybeT <$> isoHaskellType (fieldType field)
-                       else isoHaskellType (fieldType field)
+  outType <- typeShow <$> if not embedded && isNullable
+                          then maybeT <$> isoHaskellType (fieldType field)
+                          else isoHaskellType (fieldType field)
   inType <- if isPtr
-            then tshow <$> foreignType (fieldType field)
-            else tshow <$> haskellType (fieldType field)
+            then typeShow <$> foreignType (fieldType field)
+            else typeShow <$> haskellType (fieldType field)
 
   line $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"

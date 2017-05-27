@@ -41,11 +41,13 @@ import Control.Applicative ((<$>), (<*>), pure, Applicative)
 import Control.Monad (when)
 import Data.Maybe (isJust)
 import Data.Monoid ((<>))
+import Data.Int
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Word
 import GHC.Exts (IsString(..))
 
-import Foreign.C.Types (CInt, CUInt)
+import Foreign.C.Types (CInt, CUInt, CLong, CULong)
 import Foreign.Storable (sizeOf)
 
 import Data.GI.CodeGen.API
@@ -279,7 +281,7 @@ hToF' t a hType fType transfer
         return $ M "packStorableArray"
     | TCArray{}  <- t = notImplementedError $
                    "Don't know how to pack C array of type " <> tshow t
-    | otherwise = case (typeShow hType, typeShow fType) of
+    | otherwise = case (tshow hType, tshow fType) of
                ("T.Text", "CString") -> return $ M "textToCString"
                ("[Char]", "CString") -> return $ M "stringToCString"
                ("Char", "CInt")      -> return "(fromIntegral . ord)"
@@ -289,8 +291,8 @@ hToF' t a hType fType transfer
                ("GType", "CGType")   -> return "gtypeToCGType"
                _                     -> notImplementedError $
                                         "Don't know how to convert "
-                                        <> typeShow hType <> " into "
-                                        <> typeShow fType <> ".\n"
+                                        <> tshow hType <> " into "
+                                        <> tshow fType <> ".\n"
                                         <> "Internal type: "
                                         <> tshow t
 
@@ -401,7 +403,7 @@ boxedForeignPtr constructor transfer = return $
 
 suForeignPtr :: Bool -> TypeRep -> Transfer -> CodeGen Constructor
 suForeignPtr isBoxed hType transfer = do
-  let constructor = typeConName hType
+  let constructor = T.pack . tyConName . typeRepTyCon $ hType
   if isBoxed then
       boxedForeignPtr constructor transfer
   else return $ M $ parenthesize $
@@ -419,7 +421,7 @@ unionForeignPtr u =
 
 fObjectToH :: Type -> TypeRep -> Transfer -> ExcCodeGen Constructor
 fObjectToH t hType transfer = do
-  let constructor = typeConName hType
+  let constructor = T.pack . tyConName . typeRepTyCon $ hType
   isGO <- isGObject t
   return $ M $ parenthesize $
     case transfer of
@@ -434,7 +436,7 @@ fObjectToH t hType transfer = do
 
 fCallbackToH :: TypeRep -> Transfer -> ExcCodeGen Constructor
 fCallbackToH hType TransferNothing = do
-  let constructor = typeConName hType
+  let constructor = T.pack . tyConName . typeRepTyCon $ hType
   return (P (callbackDynamicWrapper constructor))
 fCallbackToH _ transfer =
   notImplementedError ("ForeignCallback with unsupported transfer type `"
@@ -488,7 +490,7 @@ fToH' t a hType fType transfer
                    "Don't know how to unpack C array of type " <> tshow t
     | TByteArray <- t = return $ M "unpackGByteArray"
     | TGHash _ _ <- t = notImplementedError "Foreign Hashes not supported yet"
-    | otherwise = case (typeShow fType, typeShow hType) of
+    | otherwise = case (tshow fType, tshow hType) of
                ("CString", "T.Text") -> return $ M "cstringToText"
                ("CString", "[Char]") -> return $ M "cstringToString"
                ("CInt", "Char")      -> return "(chr . fromIntegral)"
@@ -498,8 +500,8 @@ fToH' t a hType fType transfer
                ("CGType", "GType")   -> return "GType"
                _                     ->
                    notImplementedError $ "Don't know how to convert "
-                                           <> typeShow fType <> " into "
-                                           <> typeShow hType <> ".\n"
+                                           <> tshow fType <> " into "
+                                           <> tshow hType <> ".\n"
                                            <> "Internal type: "
                                            <> tshow t
 

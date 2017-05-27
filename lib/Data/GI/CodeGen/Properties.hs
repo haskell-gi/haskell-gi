@@ -122,11 +122,11 @@ genPropertyGetter getter n docSection prop = group $ do
                          <> "\" $ getObjectProperty" <> tStr
                 else "getObjectProperty" <> tStr
   line $ getter <> " :: " <> constraints <>
-                " => o -> " <> tshow ("m" `con` [outType])
+                " => o -> " <> typeShow ("m" `con` [outType])
   line $ getter <> " obj = liftIO $ " <> getProp
            <> " obj \"" <> propName prop <> "\"" <>
            if tStr `elem` ["Object", "Boxed"]
-           then " " <> tshow constructorType -- These require the constructor.
+           then " " <> typeShow constructorType -- These require the constructor.
            else ""
   exportProperty docSection getter
 
@@ -149,7 +149,7 @@ genPropertyConstructor constructor n docSection prop = group $ do
 
 genPropertyClear :: Text -> Name -> Text -> Property -> CodeGen ()
 genPropertyClear clear n docSection prop = group $ do
-  nothingType <- tshow . maybeT <$> haskellType (propType prop)
+  nothingType <- typeShow . maybeT <$> haskellType (propType prop)
   cls <- classConstraint n
   let constraints = ["MonadIO m", cls <> " o"]
   tStr <- propTypeStr $ propType prop
@@ -257,8 +257,8 @@ genOneProperty owner prop = do
              then return "()"
              else do
                sOutType <- if isNullable && propReadNullable prop /= Just False
-                           then tshow . maybeT <$> haskellType (propType prop)
-                           else tshow <$> haskellType (propType prop)
+                           then typeShow . maybeT <$> haskellType (propType prop)
+                           else typeShow <$> haskellType (propType prop)
                return $ if T.any (== ' ') sOutType
                         then parenthesize sOutType
                         else sOutType
@@ -270,7 +270,7 @@ genOneProperty owner prop = do
     inConstraint <- if writable || constructOnly
                     then do
                       inIsGO <- isGObject (propType prop)
-                      hInType <- tshow <$> haskellType (propType prop)
+                      hInType <- typeShow <$> haskellType (propType prop)
                       if inIsGO
                          then typeConstraint (propType prop)
                          else return $ "(~) " <> if T.any (== ' ') hInType

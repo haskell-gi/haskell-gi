@@ -29,7 +29,6 @@ import Data.List (nub, (\\))
 import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Tuple (swap)
-import Data.Typeable (TypeRep, typeOf)
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -55,9 +54,9 @@ data ExposeClosures = WithClosures
 hOutType :: Callable -> [Arg] -> ExcCodeGen TypeRep
 hOutType callable outArgs = do
   hReturnType <- case returnType callable of
-                   Nothing -> return $ typeOf ()
+                   Nothing -> return $ con0 "()"
                    Just r -> if skipRetVal callable
-                             then return $ typeOf ()
+                             then return $ con0 "()"
                              else haskellType r
   hOutArgTypes <- forM outArgs $ \outarg ->
                   wrapMaybe outarg >>= bool
@@ -69,7 +68,7 @@ hOutType callable outArgs = do
                             && nullableReturnType
                          then maybeT hReturnType
                          else hReturnType
-  return $ case (outArgs, tshow maybeHReturnType) of
+  return $ case (outArgs, typeShow maybeHReturnType) of
              ([], _)   -> maybeHReturnType
              (_, "()") -> "(,)" `con` hOutArgTypes
              _         -> "(,)" `con` (maybeHReturnType : hOutArgTypes)
@@ -93,12 +92,12 @@ mkForeignImport cSymbol callable = do
         let ft' = if direction arg == DirectionIn || argCallerAllocates arg
                   then ft
                   else ptr ft
-        let start = tshow ft' <> " -> "
+        let start = typeShow ft' <> " -> "
         return $ padTo 40 start <> "-- " <> (argCName arg)
                    <> " : " <> tshow (argType arg)
-    last = tshow <$> io <$> case returnType callable of
-                             Nothing -> return $ typeOf ()
-                             Just r  -> foreignType r
+    last = typeShow <$> io <$> case returnType callable of
+                                 Nothing -> return $ con0 "()"
+                                 Just r  -> foreignType r
 
 -- | Make a wrapper for foreign `FunPtr`s of the given type. Return
 -- the name of the resulting dynamic Haskell wrapper.
@@ -332,7 +331,7 @@ prepareInCallback arg (Callback {cbCallable = cb}) = do
         _ -> terror $ "prepareInCallback : Not an interface! " <> T.pack (ppShow arg)
 
   when (scope == ScopeTypeAsync) $ do
-   ft <- tshow <$> foreignType (argType arg)
+   ft <- typeShow <$> foreignType (argType arg)
    line $ ptrName <> " <- callocMem :: IO (Ptr (" <> ft <> "))"
 
   wrapMaybe arg >>= bool
@@ -389,7 +388,7 @@ prepareInoutArg arg = do
             (do
               name'' <- genConversion (prime name') $
                         literal $ M $ allocator <> " " <> tshow n <>
-                                    " :: " <> tshow (io ft)
+                                    " :: " <> typeShow (io ft)
               line $ "memcpy " <> name'' <> " " <> name' <> " " <> tshow n
               return name'')
              -- The semantics of this case are somewhat undefined.
@@ -399,7 +398,7 @@ prepareInoutArg arg = do
       then return name'
       else do
         name'' <- genConversion (prime name') $
-                  literal $ M $ "allocMem :: " <> tshow (io $ ptr ft)
+                  literal $ M $ "allocMem :: " <> typeShow (io $ ptr ft)
         line $ "poke " <> name'' <> " " <> name'
         return name''
 
@@ -416,13 +415,12 @@ prepareOutArg arg = do
                           then "callocBoxedBytes"
                           else "callocBytes"
           genConversion name $ literal $ M $ allocator <> " " <> tshow n <>
-                            " :: " <> tshow (io ft)
+                            " :: " <> typeShow (io ft)
       Nothing ->
           notImplementedError $ ("Don't know how to allocate \""
                                  <> argCName arg <> "\" of type "
                                  <> tshow (argType arg))
-  else genConversion name $
-                        literal $ M $ "allocMem :: " <> tshow (io $ ptr ft)
+  else genConversion name $ literal $ M $ "allocMem :: " <> typeShow (io $ ptr ft)
 
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
@@ -604,7 +602,7 @@ callableSignature callable symbol = do
   return $ Signature {
       signatureCallable = callable,
       signatureConstraints = constraints,
-      signatureReturnType = tshow ("m" `con` [outType]),
+      signatureReturnType = typeShow ("m" `con` [outType]),
       signatureArgTypes = case symbol of
           KnownForeignSymbol _ -> zip (map Just hInArgs) types
           DynamicForeignSymbol w -> zip (Nothing : map Just hInArgs)

@@ -56,14 +56,14 @@ genConstant (Name _ name) c = group $ do
 -- can be assigned to the corresponding Haskell type.
 assignValue :: Text -> Type -> Text -> ExcCodeGen ()
 assignValue name t@(TBasicType TPtr) value = do
-  ht <- tshow <$> haskellType t
+  ht <- typeShow <$> haskellType t
   writePattern name (ExplicitSynonym "ptrToIntPtr" "intPtrToPtr" value ht)
 assignValue name t@(TBasicType b) value = do
-  ht <- tshow <$> haskellType t
+  ht <- typeShow <$> haskellType t
   hv <- showBasicType b value
   writePattern name (SimpleSynonym hv ht)
 assignValue name t@(TInterface _) value = do
-  ht <- tshow <$> haskellType t
+  ht <- typeShow <$> haskellType t
   api <- findAPI t
   case api of
     Just (APIEnum _) ->

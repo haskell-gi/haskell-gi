@@ -36,7 +36,11 @@ genMethodResolver n = do
     line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
           <> "O.MethodInfo info " <> n <> " p) => O.IsLabel t ("
           <> n <> " -> p) where"
+    line $ "#if MIN_VERSION_base(4,10,0)"
+    indent $ line $ "fromLabel = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
+    line $ "#else"
     indent $ line $ "fromLabel _ = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
+    line $ "#endif"
     line $ "#endif"
 
 -- | Generate the `MethodList` instance given the list of methods for
