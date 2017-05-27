@@ -257,7 +257,7 @@ genGObjectCasts n cn_ parents = do
              <> name' <> " a) =>"
     line $ "    " <> className <> " a"
     line $ "#endif"
-    line $ "instance " <> className <> " " <> name'
+    bline $ "instance " <> className <> " " <> name'
     forM_ parents $ \parent -> do
         pcls <- classConstraint parent
         line $ "instance " <> pcls <> " " <> name'
