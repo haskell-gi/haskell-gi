@@ -1,3 +1,7 @@
+### 0.20.2
+
++ Fixes for GHC 8.2.1.
+
 ### 0.20.1
 
 + gtk-doc parser and haddock generator: while by no means perfect,
