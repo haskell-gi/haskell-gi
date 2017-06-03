@@ -55,10 +55,6 @@ import Data.Typeable (Typeable)
 import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr)
 
-#if MIN_VERSION_base(4,9,0)
-import GHC.TypeLits
-#endif
-
 import Data.GI.Base.CallStack (CallStack)
 import Data.GI.Base.GType
 
@@ -112,21 +108,6 @@ class ManagedPtrNewtype a => WrappedPtr a where
 class ManagedPtrNewtype a => GObject a where
     -- | The `GType` for this object.
     gobjectType :: a -> IO GType
-
--- Raise a more understandable type error whenever the `GObject a`
--- constraint is imposed on a type which has no such instance. This
--- helps in the common case where one passes a wrong type (such as
--- `Maybe Widget`) into a function with a `IsWidget a`
--- constraint. Without this type error, the resulting type error is
--- much less understandable, since GHC complains (at length) about a
--- missing type family instance for `ParentTypes`.
-#if MIN_VERSION_base(4,9,0)
-instance {-# OVERLAPPABLE #-}
-    (TypeError ('Text "Type ‘" ':<>: 'ShowType a ':<>:
-                'Text "’ does not descend from GObject."), ManagedPtrNewtype a)
-    => GObject a where
-    gobjectType = undefined
-#endif
 
 -- | A common omission in the introspection data is missing (nullable)
 -- annotations for return types, when they clearly are nullable. (A
