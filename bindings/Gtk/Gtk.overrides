@@ -13,6 +13,11 @@ ignore Overlay.get-child-position
 # upstream issue: https://bugzilla.gnome.org/show_bug.cgi?id=761339
 ignore WidgetPath.iter_add_qclass
 
+# Wrong introspection annotation, leading to crashes. See
+# https://bugzilla.gnome.org/show_bug.cgi?id=783381
+# https://github.com/haskell-gi/haskell-gi/issues/104
+set-attr Gtk/Builder/add_callback_symbol/@parameters/callback_symbol scope notified
+
 # Wrong introspection annotation, see
 # https://bugzilla.gnome.org/show_bug.cgi?id=693393
 set-attr Gtk/PrintOperation/create-custom-widget/@return-value transfer-ownership full
