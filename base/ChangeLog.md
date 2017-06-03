@@ -1,3 +1,7 @@
+### 0.20.3
+
++ Fixes for GHC 8.2.1 (and the corresponding `base-4.10.0`).
+
 ### 0.20.2
 
 + Fix fromGVariant for empty arrays, see [#91](https://github.com/haskell-gi/haskell-gi/issues/91) for details.
