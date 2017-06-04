@@ -74,7 +74,7 @@ Finally, for signals you want to use the `onTypeSignalName` functions, for examp
 
     onButtonClicked b $ do ...
 
-This is the basic dictionary. Note that all the resulting symbols can be conveniently searched in [hoogle](https://hoogle.haskell.org).
+This is the basic dictionary. Note that all the resulting symbols can be conveniently searched in [hoogle](http://hoogle.haskell.org).
 
 There is also support for the `OverloadedLabels` extension in GHC 8.0 or higher. So the examples above can be shortened (by omitting the type that introduces the signal/property/method) to
 
