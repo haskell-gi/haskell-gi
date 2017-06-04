@@ -102,7 +102,7 @@ data SignalConnectMode = SignalConnectBefore  -- ^ Run before the default handle
 -- | Same as `connectSignal`, specifying from the beginning that the
 -- handler is to be run before the default handler.
 --
--- > on = connectSignal SignalConnectBefore
+-- > on object signal handler = liftIO $ connectSignal signal object handler SignalConnectBefore
 on :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
       object -> SignalProxy object info
@@ -111,7 +111,7 @@ on o p c = liftIO $ connectSignal p o c SignalConnectBefore
 
 -- | Connect a signal to a handler, running the handler after the default one.
 --
--- > after = connectSignal SignalConnectAfter
+-- > after object signal handler = liftIO $ connectSignal signal object handler SignalConnectAfter
 after :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
       object -> SignalProxy object info
