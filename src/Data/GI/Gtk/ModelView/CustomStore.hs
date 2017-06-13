@@ -340,9 +340,15 @@ foreign export ccall "gtk2hs_store_get_flags_impl"
 
 tempManagedPtr :: Ptr a -> IO (ManagedPtr a)
 tempManagedPtr p = do
+#if MIN_VERSION_haskell_gi_base(0,20,3)
+  isDisowned <- newIORef Nothing
+  fPtr <- newForeignPtr_ p
+  return $ ManagedPtr fPtr isDisowned
+#else
   isOwned <- newIORef True
   fPtr <- newForeignPtr_ p
   return $ ManagedPtr fPtr isOwned
+#endif
 
 treeModelIfaceGetIter_static :: StablePtr (CustomStoreImplementation model row) -> Ptr TreeIter -> Ptr TreePath -> IO CInt
 treeModelIfaceGetIter_static storePtr iterPtr pathPtr = do
