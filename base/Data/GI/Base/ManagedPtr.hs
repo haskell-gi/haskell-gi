@@ -218,19 +218,35 @@ foreign import ccall "&dbg_g_object_unref"
 foreign import ccall "g_object_ref_sink" g_object_ref_sink ::
     Ptr a -> IO (Ptr a)
 
+-- | Print a warning when receiving a null pointer in a function that
+-- did not expect one, for easier debugging.
+nullPtrWarning :: String -> CallStack -> IO ()
+nullPtrWarning fn cs =
+  hPutStrLn stderr ("WARNING: Trying to wrap a null pointer in " ++ quotedFn
+                     ++ ", this may lead to crashes.\n\n"
+                     ++ "• Callstack for the unsafe call to "
+                     ++ quotedFn ++ ":\n"
+                     ++ prettyCallStack cs ++ "\n\n"
+                     ++ "This is probably a bug in the introspection data,\n"
+                     ++ "please report it at https://github.com/haskell-gi/haskell-gi/issues")
+  where quotedFn = "‘" ++ fn ++ "’"
+
 -- | Construct a Haskell wrapper for a 'GObject', increasing its
 -- reference count, or taking ownership of the floating reference if
 -- there is one.
-newObject :: (GObject a, GObject b) => (ManagedPtr a -> a) -> Ptr b -> IO a
+newObject :: (HasCallStack, GObject a, GObject b) =>
+             (ManagedPtr a -> a) -> Ptr b -> IO a
 newObject constructor ptr = do
+  when (ptr == nullPtr) (nullPtrWarning "newObject" callStack)
   void $ g_object_ref_sink ptr
   fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
 -- | Same as 'newObject', but we steal ownership of the object.
-wrapObject :: forall a b. (GObject a, GObject b) =>
+wrapObject :: forall a b. (HasCallStack, GObject a, GObject b) =>
               (ManagedPtr a -> a) -> Ptr b -> IO a
 wrapObject constructor ptr = do
+  when (ptr == nullPtr) (nullPtrWarning "wrapObject" callStack)
   fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
