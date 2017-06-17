@@ -4,3 +4,9 @@ ignore RepoFileEnumeratorClass
 ignore LzmaDecompressorClass
 ignore LzmaCompressorClass
 ignore LibarchiveInputStreamClass
+
+# This is using the deprecated allow-none annotations, which are ambiguous.
+# See https://github.com/haskell-gi/haskell-gi/issues/106
+set-attr OSTree/Repo/load_file/@parameters/out_input nullable 1
+set-attr OSTree/Repo/load_file/@parameters/out_file_info nullable 1
+set-attr OSTree/Repo/load_file/@parameters/out_xattrs nullable 1
