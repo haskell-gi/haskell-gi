@@ -3,7 +3,7 @@ module Main where
 #if !MIN_VERSION_base(4,8,0)
 import Data.Traversable (traverse)
 #endif
-import Control.Monad (forM_, when, (>=>))
+import Control.Monad (forM_, forM, when, (>=>))
 import Control.Exception (handle)
 import Control.Applicative ((<|>))
 
@@ -28,17 +28,17 @@ import Data.GI.Base.GError
 import Text.Show.Pretty (ppShow)
 
 import Data.GI.CodeGen.API (loadGIRInfo, loadRawGIRInfo, GIRInfo(girAPIs, girNSName), Name, API)
-import Data.GI.CodeGen.Cabal (cabalConfig, setupHs, genCabalProject)
-import Data.GI.CodeGen.Code (genCode, evalCodeGen, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText, minBaseVersion)
+import Data.GI.CodeGen.Cabal (cabalConfig, setupHs, genCabalProject, tryPkgConfig)
+import Data.GI.CodeGen.Code (genCode, transitiveModuleDeps, writeModuleTree, moduleCode, codeToText, minBaseVersion)
 import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
 import Data.GI.CodeGen.OverloadedSignals (genOverloadedSignalConnectors)
-import Data.GI.CodeGen.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups)
+import Data.GI.CodeGen.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups, pkgConfigMap)
 import Data.GI.CodeGen.ProjectInfo (licenseText)
-import Data.GI.CodeGen.Util (ucFirst, utf8ReadFile, utf8WriteFile)
+import Data.GI.CodeGen.Util (ucFirst, utf8ReadFile, utf8WriteFile, terror)
 
 data Mode = GenerateCode | Dump | Labels | Signals | Help
 
@@ -153,8 +153,8 @@ genLabels options ovs modules extraPaths = do
                     cgFlags = genFlags options
                    }
   putStrLn $ "\t* Generating GI.OverloadedLabels"
-  m <- genCode cfg allAPIs  "OverloadedLabels"
-       (genOverloadedLabels (M.toList allAPIs))
+  let m = genCode cfg allAPIs  "OverloadedLabels"
+        (genOverloadedLabels (M.toList allAPIs))
   _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
   return ()
 
@@ -169,7 +169,7 @@ genGenericConnectors options ovs modules extraPaths = do
                     cgFlags = genFlags options
                    }
   putStrLn $ "\t* Generating GI.Signals"
-  m <- genCode cfg allAPIs "Signals" (genOverloadedSignalConnectors (M.toList allAPIs))
+  let m = genCode cfg allAPIs "Signals" (genOverloadedSignalConnectors (M.toList allAPIs))
   _ <- writeModuleTree (optVerbose options) (optOutputDir options) m
   return ()
 
@@ -192,9 +192,9 @@ processMod options ovs extraPaths name = do
                     (girFixups ovs)
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
+      m = genCode cfg allAPIs (toModulePath nm) (genModule apis)
+      modDeps = transitiveModuleDeps m
 
-  m <- genCode cfg allAPIs (toModulePath nm) (genModule apis)
-  let modDeps = transitiveModuleDeps m
   moduleList <- writeModuleTree (optVerbose options) (optOutputDir options) m
 
   when (optCabal options) $ do
@@ -204,6 +204,13 @@ processMod options ovs extraPaths name = do
                   (putStrLn (cabal ++ " exists, writing "
                              ++ cabal ++ ".new instead") >>
                    return (cabal ++ ".new"))
+
+    let pkMap = pkgConfigMap (overrides cfg)
+
+    pkgInfo <- tryPkgConfig gir (verbose cfg) pkMap >>= \case
+        Left err -> terror err
+        Right info -> return info
+
     -- The module is not a dep of itself
     let usedDeps = S.delete nameWithoutVersion modDeps
         -- We only list as dependencies in the cabal file the
@@ -211,20 +218,23 @@ processMod options ovs extraPaths name = do
         actualDeps = filter ((`S.member` usedDeps) . girNSName) girDeps
         baseVersion = minBaseVersion m
         p = \n -> joinPath [fromMaybe "" (optOutputDir options), n]
-    (err, m) <- evalCodeGen cfg allAPIs (error "undefined module path")
-                (genCabalProject gir actualDeps moduleList baseVersion)
-    case err of
-      Nothing -> do
-               putStrLn $ "\t\t+ " ++ fname
-               utf8WriteFile (p fname) (codeToText (moduleCode m))
-               putStrLn "\t\t+ cabal.config"
-               utf8WriteFile (p "cabal.config") cabalConfig
-               putStrLn "\t\t+ Setup.hs"
-               utf8WriteFile (p "Setup.hs") setupHs
-               putStrLn "\t\t+ LICENSE"
-               utf8WriteFile (p "LICENSE") licenseText
-      Just msg -> putStrLn $ "ERROR: could not generate " ++ fname
-                  ++ "\nError was: " ++ T.unpack msg
+
+    resolvedDeps <- forM actualDeps $ \dep -> do
+      tryPkgConfig dep (verbose cfg) pkMap >>= \case
+        Left err -> terror err
+        Right info -> return (dep, info)
+
+    let m = genCode cfg allAPIs (error "undefined module path")
+            (genCabalProject (gir, pkgInfo) resolvedDeps moduleList baseVersion)
+
+    putStrLn $ "\t\t+ " ++ fname
+    utf8WriteFile (p fname) (codeToText (moduleCode m))
+    putStrLn "\t\t+ cabal.config"
+    utf8WriteFile (p "cabal.config") cabalConfig
+    putStrLn "\t\t+ Setup.hs"
+    utf8WriteFile (p "Setup.hs") setupHs
+    putStrLn "\t\t+ LICENSE"
+    utf8WriteFile (p "LICENSE") licenseText
 
 dump :: Options -> Overrides -> Text -> IO ()
 dump options ovs name = do

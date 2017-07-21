@@ -28,7 +28,7 @@ import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
 import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
 import Data.GI.CodeGen.Util (ucFirst, tshow, utf8ReadFile, utf8WriteFile)
 
-import Control.Monad (when)
+import Control.Monad (when, void)
 
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
@@ -125,26 +125,24 @@ confCodeGenHook name version verbosity overrides outputDir
                     overrides = ovs,
                     cgFlags = parseFlags (configConfigurationsFlags flags)}
 
-  m <- genCode cfg allAPIs (toModulePath name) (genModule apis)
-  alreadyDone <- doesFileExist (fromMaybe "" outputDir
-                                </> "GI" </> T.unpack (ucFirst name) <.> "hs")
-  moduleList <- if not alreadyDone
-                then writeModuleTree verbosity outputDir m
-                else return (listModuleTree m)
+  let m = genCode cfg allAPIs (toModulePath name) (genModule apis)
 
   let pkgInfoMod = "GI." <> ucFirst name <> ".PkgInfo"
-      em' = map (MN.fromString . T.unpack) (pkgInfoMod : moduleList)
+      em' = map (MN.fromString . T.unpack) (pkgInfoMod : listModuleTree m)
       ctd' = ((condTreeData . fromJust . condLibrary) gpd) {exposedModules = em'}
       cL' = ((fromJust . condLibrary) gpd) {condTreeData = ctd'}
       gpd' = gpd {condLibrary = Just cL'}
 
-  when (not alreadyDone) $
-       genPkgInfo ((pkgconfigDepends . libBuildInfo . condTreeData .
-                    fromJust . condLibrary) gpd)
-                  (configConfigurationsFlags flags)
-                  (fromMaybe "" outputDir
+  alreadyDone <- doesFileExist (fromMaybe "" outputDir
+                                </> "GI" </> T.unpack (ucFirst name) <.> "hs")
+  when (not alreadyDone) $ do
+    void $ writeModuleTree verbosity outputDir m
+    genPkgInfo ((pkgconfigDepends . libBuildInfo . condTreeData .
+                  fromJust . condLibrary) gpd)
+               (configConfigurationsFlags flags)
+               (fromMaybe "" outputDir
                    </> "GI" </> T.unpack (ucFirst name) </> "PkgInfo.hs")
-                  pkgInfoMod
+               pkgInfoMod
 
   lbi <- defaultConfHook (gpd', hbi) flags
 

@@ -196,7 +196,7 @@ data CGError = CGErrorNotImplemented Text
                deriving (Show)
 
 type BaseCodeGen excType a =
-    ReaderT CodeGenConfig (StateT ModuleInfo (ExceptT excType IO)) a
+    ReaderT CodeGenConfig (StateT ModuleInfo (Except excType)) a
 
 -- | The code generator monad, for generators that cannot throw
 -- errors. The fact that they cannot throw errors is encoded in the
@@ -214,8 +214,8 @@ type ExcCodeGen a = BaseCodeGen CGError a
 -- returning either the resulting exception, or the result and final
 -- state of the codegen.
 runCodeGen :: BaseCodeGen e a -> CodeGenConfig -> ModuleInfo ->
-              IO (Either e (a, ModuleInfo))
-runCodeGen cg cfg state = runExceptT (runStateT (runReaderT cg cfg) state)
+              (Either e (a, ModuleInfo))
+runCodeGen cg cfg state = runExcept (runStateT (runReaderT cg cfg) state)
 
 -- | This is useful when we plan run a subgenerator, and `mconcat` the
 -- result to the original structure later.
@@ -234,7 +234,7 @@ recurseCG cg = do
   oldInfo <- get
   -- Start the subgenerator with no code and no submodules.
   let info = cleanInfo oldInfo
-  liftIO (runCodeGen cg cfg info) >>= \case
+  case runCodeGen cg cfg info of
      Left e -> throwError e
      Right (r, new) -> put (mergeInfoState oldInfo new) >>
                        return (r, moduleCode new)
@@ -249,9 +249,9 @@ recurseWithAPIs apis cg = do
   let info = cleanInfo oldInfo
       cfg' = cfg {loadedAPIs = apis,
                   c2hMap = cToHaskellMap (M.toList apis)}
-  liftIO (runCodeGen cg cfg' info) >>= \case
-     Left e -> throwError e
-     Right (_, new) -> put (mergeInfo oldInfo new)
+  case runCodeGen cg cfg' info of
+    Left e -> throwError e
+    Right (_, new) -> put (mergeInfo oldInfo new)
 
 -- | Merge everything but the generated code for the two given `ModuleInfo`.
 mergeInfoState :: ModuleInfo -> ModuleInfo -> ModuleInfo
@@ -293,12 +293,12 @@ submodule' modName cg = do
   cfg <- ask
   oldInfo <- get
   let info = emptyModule (modulePath oldInfo /. modName)
-  liftIO (runCodeGen cg cfg info) >>= \case
-         Left e -> throwError e
-         Right (_, smInfo) -> if moduleCode smInfo == NoCode &&
-                                 M.null (submodules smInfo)
-                              then return ()
-                              else modify' (addSubmodule modName smInfo)
+  case runCodeGen cg cfg info of
+    Left e -> throwError e
+    Right (_, smInfo) -> if moduleCode smInfo == NoCode &&
+                            M.null (submodules smInfo)
+                         then return ()
+                         else modify' (addSubmodule modName smInfo)
 
 -- | Run the given CodeGen in order to generate a submodule (specified
 -- an an ordered list) of the current module.
@@ -314,11 +314,11 @@ handleCGExc fallback
     cfg <- ask
     oldInfo <- get
     let info = cleanInfo oldInfo
-    liftIO (runCodeGen action cfg info) >>= \case
-        Left e -> fallback e
-        Right (r, newInfo) -> do
-            put (mergeInfo oldInfo newInfo)
-            return r
+    case runCodeGen action cfg info of
+      Left e -> fallback e
+      Right (r, newInfo) -> do
+        put (mergeInfo oldInfo newInfo)
+        return r
 
 -- | Return the currently loaded set of dependencies.
 getDeps :: CodeGen Deps
@@ -343,32 +343,31 @@ getC2HMap :: CodeGen (M.Map CRef Hyperlink)
 getC2HMap = c2hMap <$> ask
 
 -- | Due to the `forall` in the definition of `CodeGen`, if we want to
--- run the monad transformer stack until we get an `IO` action, our
--- only option is ignoring the possible error code from
--- `runExceptT`. This is perfectly safe, since there is no way to
--- construct a computation in the `CodeGen` monad that throws an
--- exception, due to the higher rank type.
-unwrapCodeGen :: CodeGen a -> CodeGenConfig -> ModuleInfo ->
-                 IO (a, ModuleInfo)
+-- run the monad transformer stack until we get a result, our only
+-- option is ignoring the possible error code from `runExcept`. This
+-- is perfectly safe, since there is no way to construct a computation
+-- in the `CodeGen` monad that throws an exception, due to the higher
+-- rank type.
+unwrapCodeGen :: CodeGen a -> CodeGenConfig -> ModuleInfo -> (a, ModuleInfo)
 unwrapCodeGen cg cfg info =
-    runCodeGen cg cfg info >>= \case
-        Left _ -> error "unwrapCodeGen:: The impossible happened!"
-        Right (r, newInfo) -> return (r, newInfo)
+    case runCodeGen cg cfg info of
+      Left _ -> error "unwrapCodeGen:: The impossible happened!"
+      Right (r, newInfo) -> (r, newInfo)
 
 -- | Like `evalCodeGen`, but discard the resulting output value.
 genCode :: Config -> M.Map Name API ->
-           ModulePath -> CodeGen () -> IO ModuleInfo
-genCode cfg apis mPath cg = snd <$> evalCodeGen cfg apis mPath cg
+           ModulePath -> CodeGen () -> ModuleInfo
+genCode cfg apis mPath cg = snd $ evalCodeGen cfg apis mPath cg
 
 -- | Run a code generator, and return the information for the
 -- generated module together with the return value of the generator.
 evalCodeGen :: Config -> M.Map Name API ->
-               ModulePath -> CodeGen a -> IO (a, ModuleInfo)
-evalCodeGen cfg apis mPath cg = do
+               ModulePath -> CodeGen a -> (a, ModuleInfo)
+evalCodeGen cfg apis mPath cg =
   let initialInfo = emptyModule mPath
       cfg' = CodeGenConfig {hConfig = cfg, loadedAPIs = apis,
                             c2hMap = cToHaskellMap (M.toList apis)}
-  unwrapCodeGen cg cfg' initialInfo
+  in unwrapCodeGen cg cfg' initialInfo
 
 -- | Mark the given dependency as used by the module.
 registerNSDependency :: Text -> CodeGen ()
