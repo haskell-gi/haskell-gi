@@ -20,7 +20,7 @@ import Distribution.PackageDescription
 import Data.GI.CodeGen.API (loadGIRInfo)
 import Data.GI.CodeGen.Code (genCode, writeModuleTree, listModuleTree)
 import Data.GI.CodeGen.CodeGen (genModule)
-import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
+import Data.GI.CodeGen.Config (Config(..))
 import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
@@ -79,23 +79,6 @@ genPkgInfo deps flags fName modName = do
           flags' :: [(String, Bool)]
           flags' = map (\(f, v) -> (unFlagName f, v)) flags
 
--- | Parse the set of flags given to configure into flags for the code
--- generator.
-parseFlags :: [(FlagName, Bool)] -> CodeGenFlags
-parseFlags fs = parsed
-    where parsed :: CodeGenFlags
-          parsed = CodeGenFlags {
-                    cgOverloadedProperties = check "overloaded-properties"
-                  , cgOverloadedSignals = check "overloaded-signals"
-                  , cgOverloadedMethods = check "overloaded-methods"
-                  }
-
-          check :: String -> Bool
-          check s = fromMaybe True (M.lookup s flags)
-
-          flags :: M.Map String Bool
-          flags = M.fromList (map (\(f, v) -> (unFlagName f, v)) fs)
-
 -- | A convenience helper for `confHook`, such that bindings for the
 -- given module are generated in the @configure@ step of @cabal@.
 confCodeGenHook :: Text -- ^ name
@@ -122,8 +105,7 @@ confCodeGenHook name version verbosity overrides outputDir
       allAPIs = M.union apis deps
       cfg = Config {modName = name,
                     verbose = verbosity,
-                    overrides = ovs,
-                    cgFlags = parseFlags (configConfigurationsFlags flags)}
+                    overrides = ovs}
 
   let m = genCode cfg allAPIs (toModulePath name) (genModule apis)
 

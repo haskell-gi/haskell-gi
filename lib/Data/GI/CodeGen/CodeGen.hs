@@ -18,7 +18,6 @@ import Data.Text (Text)
 
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Callable (genCCallableWrapper)
-import Data.GI.CodeGen.Config (Config(..), CodeGenFlags(..))
 import Data.GI.CodeGen.Constant (genConstant)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
@@ -109,8 +108,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
        else return Nothing
 
    -- Overloaded methods
-   cfg <- config
-   when (cgOverloadedMethods (cgFlags cfg)) $
+   cppIf CPPOverloading $
         genMethodList n (catMaybes methods)
 
 -- | Generated wrapper for unions.
@@ -152,8 +150,7 @@ genUnion n u = do
       else return Nothing
 
   -- Overloaded methods
-  cfg <- config
-  when (cgOverloadedMethods (cgFlags cfg)) $
+  cppIf CPPOverloading $
        genMethodList n (catMaybes methods)
 
 -- | When parsing the GIR file we add the implicit object argument to
@@ -230,8 +227,7 @@ genMethod cn m@(Method {
     genCCallableWrapper mn' sym c''
     exportMethod (lowerName mn) (lowerName mn')
 
-    cfg <- config
-    when (cgOverloadedMethods (cgFlags cfg)) $
+    cppIf CPPOverloading $
          genMethodInfo cn (m {methodCallable = c''})
 
 -- Type casting with type checking
@@ -293,8 +289,7 @@ genObject n o = do
 
     noName name'
 
-    cfg <- config
-    when (cgOverloadedMethods (cgFlags cfg)) $
+    cppIf CPPOverloading $
          fullObjectMethodList n o >>= genMethodList n
 
     forM_ (objSignals o) $ \s ->
@@ -305,9 +300,9 @@ genObject n o = do
      (genSignal s n)
 
     genObjectProperties n o
-    when (cgOverloadedProperties (cgFlags cfg)) $
+    cppIf CPPOverloading $
          genNamespacedPropLabels n (objProperties o) (objMethods o)
-    when (cgOverloadedSignals (cgFlags cfg)) $
+    cppIf CPPOverloading $
          genObjectSignals n o
 
     -- Methods
@@ -316,7 +311,7 @@ genObject n o = do
       handleCGExc (\e -> line ("-- XXX Could not generate method "
                               <> name' <> "::" <> name mn <> "\n"
                               <> "-- Error was : " <> describeCGError e)
-                  >> (when (cgOverloadedMethods (cgFlags cfg)) $
+                  >> (cppIf CPPOverloading $
                            genUnsupportedMethodInfo n f))
                   (genMethod n f)
 
@@ -333,15 +328,13 @@ genInterface n iface = do
 
   noName name'
 
-  cfg <- config
-
   forM_ (ifSignals iface) $ \s -> handleCGExc
      (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
                      , sigName s
                      , "\n", "-- Error was : "] <>) . describeCGError)
      (genSignal s n)
 
-  when (cgOverloadedSignals (cgFlags cfg)) $
+  cppIf CPPOverloading $
      genInterfaceSignals n iface
 
   isGO <- apiIsGObject n (APIInterface iface)
@@ -354,7 +347,7 @@ genInterface n iface = do
     genGObjectCasts n cn_ uniqueParents
 
     genInterfaceProperties n iface
-    when (cgOverloadedProperties (cgFlags cfg)) $
+    cppIf CPPOverloading $
        genNamespacedPropLabels n (ifProperties iface) (ifMethods iface)
 
   else group $ do
@@ -368,7 +361,7 @@ genInterface n iface = do
        line $ "-- XXX Skipping property generation for non-GObject interface"
 
   -- Methods
-  when (cgOverloadedMethods (cgFlags cfg)) $
+  cppIf CPPOverloading $
        fullInterfaceMethodList n iface >>= genMethodList n
 
   forM_ (ifMethods iface) $ \f -> do
@@ -379,7 +372,7 @@ genInterface n iface = do
              (\e -> line ("-- XXX Could not generate method "
                           <> name' <> "::" <> name mn <> "\n"
                           <> "-- Error was : " <> describeCGError e)
-             >> (when (cgOverloadedMethods (cgFlags cfg)) $
+             >> (cppIf CPPOverloading $
                       genUnsupportedMethodInfo n f))
              (genMethod n f)
 

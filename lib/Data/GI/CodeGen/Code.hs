@@ -1,6 +1,6 @@
 module Data.GI.CodeGen.Code
-    ( Code(..)
-    , ModuleInfo(..)
+    ( Code
+    , ModuleInfo(moduleCode, moduleDoc)
     , ModuleFlag(..)
     , BaseCodeGen
     , CodeGen
@@ -33,6 +33,8 @@ module Data.GI.CodeGen.Code
     , line
     , blank
     , group
+    , cppIf
+    , CPPGuard(..)
     , hsBoot
     , submodule
     , setLanguagePragmas
@@ -90,6 +92,7 @@ import Data.GI.CodeGen.ProjectInfo (authors, license, maintainers)
 data Code
     = NoCode              -- ^ No code
     | Line Text           -- ^ A single line, indented to current indentation
+    | RootLine Text       -- ^ A single line, unindented
     | Indent Code         -- ^ Indented region
     | Sequence (Seq Code) -- ^ The basic sequence of code
     | Group Code          -- ^ A grouped set of lines
@@ -491,6 +494,23 @@ group cg = do
   blank
   return x
 
+-- | Guard a block of code with @#ifndef@.
+cppIfndef :: Text -> BaseCodeGen e a -> BaseCodeGen e a
+cppIfndef cond cg = do
+  tellCode . RootLine $ "#ifndef " <> cond
+  x <- cg
+  tellCode . RootLine $ "#endif"
+  blank
+  return x
+
+-- | Possible features to test via CPP.
+data CPPGuard = CPPOverloading -- ^ Enable overloading
+
+-- | Guard a code block with CPP code, such that it is included only
+-- if the specified feature is enabled.
+cppIf :: CPPGuard -> BaseCodeGen e a -> BaseCodeGen e a
+cppIf CPPOverloading = cppIfndef "DISABLE_OVERLOADING"
+
 -- | Write the given code into the .hs-boot file for the current module.
 hsBoot :: BaseCodeGen e a -> BaseCodeGen e a
 hsBoot cg = do
@@ -554,6 +574,7 @@ codeToText c = T.concat $ str 0 c []
       str :: Int -> Code -> [Text] -> [Text]
       str _ NoCode cont = cont
       str n (Line s) cont =  paddedLine n s : cont
+      str _ (RootLine s) cont = s <> "\n" : cont
       str n (Indent c) cont = str (n + 1) c cont
       str n (Sequence s) cont = deseq n (S.viewl s) cont
       str n (Group c) cont = str n c cont

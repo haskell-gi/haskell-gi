@@ -17,8 +17,6 @@ import Foreign.C.Types (CInt, CUInt)
 import Foreign.Storable (sizeOf)
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Config (Config(cgFlags),
-                               CodeGenFlags(cgOverloadedProperties))
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.GObject
@@ -263,9 +261,8 @@ genOneProperty owner prop = do
                         then parenthesize sOutType
                         else sOutType
 
-  -- Polymorphic _label style lens
-  cfg <- config
-  when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
+  -- Polymorphic #label style lens
+  cppIf CPPOverloading $ do
     cls <- classConstraint owner
     inConstraint <- if writable || constructOnly
                     then do
@@ -334,19 +331,15 @@ genProperties :: Name -> [Property] -> [Text] -> CodeGen ()
 genProperties n ownedProps allProps = do
   let name = upperName n
 
-  cfg <- config
   forM_ ownedProps $ \prop -> do
       handleCGExc (\err -> do
                      line $ "-- XXX Generation of property \""
                               <> propName prop <> "\" of object \""
                               <> name <> "\" failed: " <> describeCGError err
-                     (when (cgOverloadedProperties (cgFlags cfg)) $
-                           genPlaceholderProperty n prop))
+                     cppIf CPPOverloading (genPlaceholderProperty n prop))
                   (genOneProperty n prop)
 
-  cfg <- config
-
-  when (cgOverloadedProperties (cgFlags cfg)) $ group $ do
+  cppIf CPPOverloading $ do
     let propListType = name <> "AttributeList"
     line $ "instance O.HasAttributeList " <> name
     line $ "type instance O.AttributeList " <> name <> " = " <> propListType
