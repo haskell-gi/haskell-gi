@@ -279,6 +279,6 @@ addModuleDocumentation doc =
     Just raw -> do
       c2h <- getC2HMap
       docBase <- getDocBase
-      modify' $ \s -> s{moduleDoc = moduleDoc s <>
-                                    Just (formatHaddock c2h docBase
-                                           (parseGtkDoc raw))}
+      modify' $ \(cgs, s) -> (cgs, s{moduleDoc = moduleDoc s <>
+                                      Just (formatHaddock c2h docBase
+                                            (parseGtkDoc raw))})

@@ -174,10 +174,6 @@ genCabalProject (gir, PkgInfo {pkgName = pcName, pkgMajor = major,
                    <> " && < " <> tshow (haskellGIAPIVersion + 1) <> ","
           forM_ deps $ \(dep, PkgInfo _ depMajor depMinor) -> do
               let depName = girNSName dep
---                  depVersion = girNSVersion dep
---                  depPackages = girPCPackages dep
---              eitherDepInfo <- tryPkgConfig depName depVersion
---                                         depPackages (verbose cfg) pkMap
               line $ "gi-" <> T.toLower depName <> " >= "
                 <> giModuleVersion depMajor depMinor
                 <> " && < "

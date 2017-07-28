@@ -55,17 +55,18 @@ writeCabal fname info =
        , "                     Cabal >= 1.24,"
        , "                     haskell-gi >= 0.20.1 && < 1"
        , ""
-       , "Flag disable-overloading"
-       , "      Description: Disable support for overloaded labels."
-       , "      Default: False"
+       , "Flag enable-overloading"
+       , "      Description: Enable support for overloaded labels."
+       , "      Default: True"
        , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
        , "      default-extensions: " <> T.intercalate ", " PI.defaultExtensions
        , "      other-extensions: " <> T.intercalate ", " PI.otherExtensions
        , "      ghc-options: " <> T.intercalate " " PI.ghcOptions
-       , "      if flag(disable-overloading)"
-       , "         cpp-options: -DDISABLE_OVERLOADING"
+       , "      if flag(enable-overloading)"
+       , "         cpp-options: -DENABLE_OVERLOADING"
+       , "         build-depends: haskell-gi-overloading == 1.0.*"
        , ""
        , "      pkgconfig-depends: " <> pkgconfigDepends info
        , "      build-depends: " <>

@@ -89,13 +89,18 @@ import Data.GI.CodeGen.Type (Type(..))
 import Data.GI.CodeGen.Util (tshow, terror, padTo, utf8WriteFile)
 import Data.GI.CodeGen.ProjectInfo (authors, license, maintainers)
 
+-- | Set of CPP conditionals understood by the code generator.
+data CPPConditional = CPPIfdef Text -- ^ #ifdef Foo
+  deriving (Eq, Show, Ord)
+
 data Code
     = NoCode              -- ^ No code
     | Line Text           -- ^ A single line, indented to current indentation
-    | RootLine Text       -- ^ A single line, unindented
     | Indent Code         -- ^ Indented region
     | Sequence (Seq Code) -- ^ The basic sequence of code
     | Group Code          -- ^ A grouped set of lines
+    | CPPBlock CPPConditional Code -- ^ A block of code guarded by the
+                                   -- given CPP conditional
     deriving (Eq, Show)
 
 instance Monoid Code where
@@ -125,6 +130,8 @@ type SymbolName = Text
 data Export = Export {
       exportType    :: ExportType       -- ^ Which kind of export.
     , exportSymbol  :: SymbolName       -- ^ Actual symbol to export.
+    , exportGuards  :: [CPPConditional] -- ^ Protect the export by the
+                                        -- given CPP export guards.
     } deriving (Show, Eq, Ord)
 
 -- | Possible types of exports.
@@ -140,12 +147,12 @@ data ExportType = ExportTypeDecl -- ^ A type declaration.
 data ModuleInfo = ModuleInfo {
       modulePath :: ModulePath -- ^ Full module name: ["Gtk", "Label"].
     , moduleCode :: Code       -- ^ Generated code for the module.
-    , bootCode   :: Code       -- ^ Interface going into the .hs-boot file.
+    , bootCode   :: Code       -- ^ Interfaces going into the .hs-boot file.
     , submodules :: M.Map Text ModuleInfo -- ^ Indexed by the relative
                                           -- module name.
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
     , moduleExports :: Seq Export -- ^ Exports for the module.
-    , qualifiedImports :: Set.Set ModulePath -- ^ Qualified (source) imports
+    , qualifiedImports :: Set.Set ModulePath -- ^ Qualified (source) imports.
     , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
     , moduleGHCOpts :: Set.Set Text -- ^ GHC options for compiling the module.
     , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
@@ -193,13 +200,26 @@ data CodeGenConfig = CodeGenConfig {
                                           -- to Haskell symbols.
     }
 
+-- | Set of errors for the code generator.
 data CGError = CGErrorNotImplemented Text
              | CGErrorBadIntrospectionInfo Text
              | CGErrorMissingInfo Text
                deriving (Show)
 
+-- | Temporaty state for the code generator.
+data CGState = CGState {
+  cgsCPPConditionals :: [CPPConditional] -- ^ Active CPP conditionals,
+                                         -- outermost condition first.
+  }
+
+-- | Clean slate for `CGState`.
+emptyCGState = CGState {
+  cgsCPPConditionals = []
+  }
+
+-- | The base type for the code generator monad.
 type BaseCodeGen excType a =
-    ReaderT CodeGenConfig (StateT ModuleInfo (Except excType)) a
+  ReaderT CodeGenConfig (StateT (CGState, ModuleInfo) (Except excType)) a
 
 -- | The code generator monad, for generators that cannot throw
 -- errors. The fact that they cannot throw errors is encoded in the
@@ -213,12 +233,14 @@ type CodeGen a = forall e. BaseCodeGen e a
 -- | Code generators that can throw errors.
 type ExcCodeGen a = BaseCodeGen CGError a
 
--- | Run a `CodeGen` with given `Config` and initial `ModuleInfo`,
--- returning either the resulting exception, or the result and final
--- state of the codegen.
-runCodeGen :: BaseCodeGen e a -> CodeGenConfig -> ModuleInfo ->
+-- | Run a `CodeGen` with given `Config` and initial state, returning
+-- either the resulting exception, or the result and final module info.
+runCodeGen :: BaseCodeGen e a -> CodeGenConfig -> (CGState, ModuleInfo) ->
               (Either e (a, ModuleInfo))
-runCodeGen cg cfg state = runExcept (runStateT (runReaderT cg cfg) state)
+runCodeGen cg cfg state =
+  dropCGState <$> runExcept (runStateT (runReaderT cg cfg) state)
+  where dropCGState :: (a, (CGState, ModuleInfo)) -> (a, ModuleInfo)
+        dropCGState (x, (_, m)) = (x, m)
 
 -- | This is useful when we plan run a subgenerator, and `mconcat` the
 -- result to the original structure later.
@@ -232,29 +254,35 @@ cleanInfo info = info { moduleCode = NoCode, submodules = M.empty,
 -- ambient CodeGen, but without adding the generated code to
 -- `moduleCode`, instead returning it explicitly.
 recurseCG :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
-recurseCG cg = do
+recurseCG = recurseWithState id
+
+-- | Like `recurseCG`, but we allow for explicitly setting the state
+-- of the inner code generator.
+recurseWithState :: (CGState -> CGState) -> BaseCodeGen e a
+                 -> BaseCodeGen e (a, Code)
+recurseWithState cgsSet cg = do
   cfg <- ask
-  oldInfo <- get
+  (cgs, oldInfo) <- get
   -- Start the subgenerator with no code and no submodules.
   let info = cleanInfo oldInfo
-  case runCodeGen cg cfg info of
+  case runCodeGen cg cfg (cgsSet cgs, info) of
      Left e -> throwError e
-     Right (r, new) -> put (mergeInfoState oldInfo new) >>
+     Right (r, new) -> put (cgs, mergeInfoState oldInfo new) >>
                        return (r, moduleCode new)
 
--- | Like `recurse`, giving explicitly the set of loaded APIs and C to
+-- | Like `recurseCG`, giving explicitly the set of loaded APIs and C to
 -- Haskell map for the subgenerator.
 recurseWithAPIs :: M.Map Name API -> CodeGen () -> CodeGen ()
 recurseWithAPIs apis cg = do
   cfg <- ask
-  oldInfo <- get
+  (cgs, oldInfo) <- get
   -- Start the subgenerator with no code and no submodules.
   let info = cleanInfo oldInfo
       cfg' = cfg {loadedAPIs = apis,
                   c2hMap = cToHaskellMap (M.toList apis)}
-  case runCodeGen cg cfg' info of
+  case runCodeGen cg cfg' (cgs, info) of
     Left e -> throwError e
-    Right (_, new) -> put (mergeInfo oldInfo new)
+    Right (_, new) -> put (cgs, mergeInfo oldInfo new)
 
 -- | Merge everything but the generated code for the two given `ModuleInfo`.
 mergeInfoState :: ModuleInfo -> ModuleInfo -> ModuleInfo
@@ -284,8 +312,10 @@ mergeInfo oldInfo newInfo =
 
 -- | Add the given submodule to the list of submodules of the current
 -- module.
-addSubmodule :: Text -> ModuleInfo -> ModuleInfo -> ModuleInfo
-addSubmodule modName submodule current = current { submodules = M.insertWith mergeInfo modName submodule (submodules current)}
+addSubmodule :: Text -> ModuleInfo -> (CGState, ModuleInfo)
+             -> (CGState, ModuleInfo)
+addSubmodule modName submodule (cgs, current) =
+  (cgs, current { submodules = M.insertWith mergeInfo modName submodule (submodules current)})
 
 -- | Run the given CodeGen in order to generate a single submodule of the
 -- current module. Note that we do not generate the submodule if the
@@ -294,9 +324,9 @@ addSubmodule modName submodule current = current { submodules = M.insertWith mer
 submodule' :: Text -> BaseCodeGen e () -> BaseCodeGen e ()
 submodule' modName cg = do
   cfg <- ask
-  oldInfo <- get
+  (_, oldInfo) <- get
   let info = emptyModule (modulePath oldInfo /. modName)
-  case runCodeGen cg cfg info of
+  case runCodeGen cg cfg (emptyCGState, info) of
     Left e -> throwError e
     Right (_, smInfo) -> if moduleCode smInfo == NoCode &&
                             M.null (submodules smInfo)
@@ -315,17 +345,17 @@ handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
 handleCGExc fallback
  action = do
     cfg <- ask
-    oldInfo <- get
+    (cgs, oldInfo) <- get
     let info = cleanInfo oldInfo
-    case runCodeGen action cfg info of
+    case runCodeGen action cfg (cgs, info) of
       Left e -> fallback e
       Right (r, newInfo) -> do
-        put (mergeInfo oldInfo newInfo)
+        put (cgs, mergeInfo oldInfo newInfo)
         return r
 
 -- | Return the currently loaded set of dependencies.
 getDeps :: CodeGen Deps
-getDeps = moduleDeps <$> get
+getDeps = moduleDeps . snd <$> get
 
 -- | Return the ambient configuration for the code generator.
 config :: CodeGen Config
@@ -334,7 +364,7 @@ config = hConfig <$> ask
 -- | Return the name of the current module.
 currentModule :: CodeGen Text
 currentModule = do
-  s <- get
+  (_, s) <- get
   return (dotWithPrefix (modulePath s))
 
 -- | Return the list of APIs available to the generator.
@@ -351,16 +381,12 @@ getC2HMap = c2hMap <$> ask
 -- is perfectly safe, since there is no way to construct a computation
 -- in the `CodeGen` monad that throws an exception, due to the higher
 -- rank type.
-unwrapCodeGen :: CodeGen a -> CodeGenConfig -> ModuleInfo -> (a, ModuleInfo)
+unwrapCodeGen :: CodeGen a -> CodeGenConfig -> (CGState, ModuleInfo)
+              -> (a, ModuleInfo)
 unwrapCodeGen cg cfg info =
     case runCodeGen cg cfg info of
       Left _ -> error "unwrapCodeGen:: The impossible happened!"
       Right (r, newInfo) -> (r, newInfo)
-
--- | Like `evalCodeGen`, but discard the resulting output value.
-genCode :: Config -> M.Map Name API ->
-           ModulePath -> CodeGen () -> ModuleInfo
-genCode cfg apis mPath cg = snd $ evalCodeGen cfg apis mPath cg
 
 -- | Run a code generator, and return the information for the
 -- generated module together with the return value of the generator.
@@ -370,7 +396,12 @@ evalCodeGen cfg apis mPath cg =
   let initialInfo = emptyModule mPath
       cfg' = CodeGenConfig {hConfig = cfg, loadedAPIs = apis,
                             c2hMap = cToHaskellMap (M.toList apis)}
-  in unwrapCodeGen cg cfg' initialInfo
+  in unwrapCodeGen cg cfg' (emptyCGState, initialInfo)
+
+-- | Like `evalCodeGen`, but discard the resulting output value.
+genCode :: Config -> M.Map Name API ->
+           ModulePath -> CodeGen () -> ModuleInfo
+genCode cfg apis mPath cg = snd $ evalCodeGen cfg apis mPath cg
 
 -- | Mark the given dependency as used by the module.
 registerNSDependency :: Text -> CodeGen ()
@@ -378,7 +409,7 @@ registerNSDependency name = do
     deps <- getDeps
     unless (Set.member name deps) $ do
         let newDeps = Set.insert name deps
-        modify' $ \s -> s {moduleDeps = newDeps}
+        modify' $ \(cgs, s) -> (cgs, s {moduleDeps = newDeps})
 
 -- | Return the transitive set of dependencies, i.e. the union of
 -- those of the module and (transitively) its submodules.
@@ -395,7 +426,7 @@ qualified mp (Name ns s) = do
   -- Make sure the module is listed as a dependency.
   when (modName cfg /= ns) $
     registerNSDependency ns
-  minfo <- get
+  (_, minfo) <- get
   if mp == modulePath minfo
   then return s
   else do
@@ -407,7 +438,7 @@ qualified mp (Name ns s) = do
 -- under which the module was imported.
 qualifiedImport :: ModulePath -> CodeGen Text
 qualifiedImport mp = do
-  modify' $ \s -> s {qualifiedImports = Set.insert mp (qualifiedImports s)}
+  modify' $ \(cgs, s) -> (cgs, s {qualifiedImports = Set.insert mp (qualifiedImports s)})
   return (qualifiedModuleName mp)
 
 -- | Construct a simplified version of the module name, suitable for a
@@ -464,7 +495,7 @@ findAPIByName n@(Name ns _) = do
 
 -- | Add some code to the current generator.
 tellCode :: Code -> CodeGen ()
-tellCode c = modify' (\s -> s {moduleCode = moduleCode s <> c})
+tellCode c = modify' (\(cgs, s) -> (cgs, s {moduleCode = moduleCode s <> c}))
 
 -- | Print out a (newline-terminated) line.
 line :: Text -> CodeGen ()
@@ -494,14 +525,16 @@ group cg = do
   blank
   return x
 
--- | Guard a block of code with @#ifndef@.
-cppIfndef :: Text -> BaseCodeGen e a -> BaseCodeGen e a
-cppIfndef cond cg = do
-  tellCode . RootLine $ "#ifndef " <> cond
-  x <- cg
-  tellCode . RootLine $ "#endif"
+-- | Guard a block of code with @#ifdef@.
+cppIfdef :: Text -> BaseCodeGen e a -> BaseCodeGen e a
+cppIfdef cond cg = do
+  (x, code) <- recurseWithState addConditional cg
+  tellCode (CPPBlock (CPPIfdef cond) code)
   blank
   return x
+    where addConditional :: CGState -> CGState
+          addConditional cgs = CGState {cgsCPPConditionals = CPPIfdef cond :
+                                          cgsCPPConditionals cgs}
 
 -- | Possible features to test via CPP.
 data CPPGuard = CPPOverloading -- ^ Enable overloading
@@ -509,19 +542,25 @@ data CPPGuard = CPPOverloading -- ^ Enable overloading
 -- | Guard a code block with CPP code, such that it is included only
 -- if the specified feature is enabled.
 cppIf :: CPPGuard -> BaseCodeGen e a -> BaseCodeGen e a
-cppIf CPPOverloading = cppIfndef "DISABLE_OVERLOADING"
+cppIf CPPOverloading = cppIfdef "ENABLE_OVERLOADING"
 
 -- | Write the given code into the .hs-boot file for the current module.
 hsBoot :: BaseCodeGen e a -> BaseCodeGen e a
 hsBoot cg = do
   (x, code) <- recurseCG cg
-  modify' (\s -> s{bootCode = bootCode s <> code})
+  modify' (\(cgs, s) -> (cgs, s{bootCode = bootCode s <>
+                               addGuards (cgsCPPConditionals cgs) code}))
   return x
+  where addGuards :: [CPPConditional] -> Code -> Code
+        addGuards [] c = c
+        addGuards (cond : conds) c = CPPBlock cond (addGuards conds c)
 
 -- | Add a export to the current module.
-export :: Export -> CodeGen ()
-export e =
-    modify' $ \s -> s{moduleExports = moduleExports s |> e}
+export :: ([CPPConditional] -> Export) -> CodeGen ()
+export partial =
+    modify' $ \(cgs, s) -> (cgs,
+                            let e = partial $ cgsCPPConditionals cgs
+                            in s{moduleExports = moduleExports s |> e})
 
 -- | Reexport a whole module.
 exportModule :: SymbolName -> CodeGen ()
@@ -550,22 +589,26 @@ exportSignal s n = export (Export (ExportSignal s) n)
 -- | Set the language pragmas for the current module.
 setLanguagePragmas :: [Text] -> CodeGen ()
 setLanguagePragmas ps =
-    modify' $ \s -> s{modulePragmas = Set.fromList ps}
+    modify' $ \(cgs, s) -> (cgs, s{modulePragmas = Set.fromList ps})
 
 -- | Set the GHC options for compiling this module (in a OPTIONS_GHC pragma).
 setGHCOptions :: [Text] -> CodeGen ()
 setGHCOptions opts =
-    modify' $ \s -> s{moduleGHCOpts = Set.fromList opts}
+    modify' $ \(cgs, s) -> (cgs, s{moduleGHCOpts = Set.fromList opts})
 
 -- | Set the given flags for the module.
 setModuleFlags :: [ModuleFlag] -> CodeGen ()
 setModuleFlags flags =
-    modify' $ \s -> s{moduleFlags = Set.fromList flags}
+    modify' $ \(cgs, s) -> (cgs, s{moduleFlags = Set.fromList flags})
 
 -- | Set the minimum base version supported by the current module.
 setModuleMinBase :: BaseVersion -> CodeGen ()
 setModuleMinBase v =
-    modify' $ \s -> s{moduleMinBase = max v (moduleMinBase s)}
+    modify' $ \(cgs, s) -> (cgs, s{moduleMinBase = max v (moduleMinBase s)})
+
+-- | Format a CPP conditional.
+cppCondFormat :: CPPConditional -> (Text, Text)
+cppCondFormat (CPPIfdef c) = ("#ifdef " <> c <> "\n", "#endif\n")
 
 -- | Return a text representation of the `Code`.
 codeToText :: Code -> Text
@@ -574,10 +617,12 @@ codeToText c = T.concat $ str 0 c []
       str :: Int -> Code -> [Text] -> [Text]
       str _ NoCode cont = cont
       str n (Line s) cont =  paddedLine n s : cont
-      str _ (RootLine s) cont = s <> "\n" : cont
       str n (Indent c) cont = str (n + 1) c cont
       str n (Sequence s) cont = deseq n (S.viewl s) cont
       str n (Group c) cont = str n c cont
+      str n (CPPBlock cond c) cont =
+        let (condBegin, condEnd) = cppCondFormat cond
+        in condBegin : (str n c [] ++ [condEnd] ++ cont)
 
       deseq _ S.EmptyL cont = cont
       deseq n (c :< cs) cont = str n c (deseq n (S.viewl cs) cont)
@@ -591,21 +636,26 @@ paddedLine n s = T.replicate (n * 4) " " <> s <> "\n"
 comma :: Text -> Text
 comma s = padTo 40 s <> ","
 
+-- | Format the given export symbol.
+formatExport :: (Export -> Text) -> Export -> Text
+formatExport formatName export = go (exportGuards export)
+  where go :: [CPPConditional] -> Text
+        go [] = (paddedLine 1 . comma . formatName) export
+        go (c:cs) = let (begin, end) = cppCondFormat c
+                    in begin <> go cs <> end
+
 -- | Format the list of exported modules.
 formatExportedModules :: [Export] -> Maybe Text
 formatExportedModules [] = Nothing
 formatExportedModules exports =
-    Just . T.concat . map ( paddedLine 1
-                           . comma
-                           . ("module " <>)
-                           . exportSymbol)
+    Just . T.concat . map (formatExport (("module " <>) . exportSymbol))
           . filter ((== ExportModule) . exportType) $ exports
 
 -- | Format the toplevel exported symbols.
 formatToplevel :: [Export] -> Maybe Text
 formatToplevel [] = Nothing
 formatToplevel exports =
-    Just . T.concat . map (paddedLine 1 . comma . exportSymbol)
+    Just . T.concat . map (formatExport exportSymbol)
          . filter ((== ExportToplevel) . exportType) $ exports
 
 -- | Format the type declarations section.
@@ -615,9 +665,7 @@ formatTypeDecls exports =
     in if exportedTypes == []
        then Nothing
        else Just . T.unlines $ [ "-- * Exported types"
-                               , T.concat . map ( paddedLine 1
-                                                . comma
-                                                . exportSymbol )
+                               , T.concat . map ( formatExport exportSymbol )
                                       $ exportedTypes ]
 
 -- | A subsection name, with an optional anchor name.
@@ -631,7 +679,7 @@ subsecWithPrefix prefix title =
              , subsectionAnchor = Just (prefix <> ":" <> title) }
 
 -- | Format a given section made of subsections.
-formatSection :: Text -> (Export -> Maybe (Subsection, SymbolName)) ->
+formatSection :: Text -> (Export -> Maybe (Subsection, Export)) ->
                  [Export] -> Maybe Text
 formatSection section filter exports =
     if M.null exportedSubsections
@@ -642,49 +690,49 @@ formatSection section filter exports =
                               . M.toList ) exportedSubsections]
 
     where
-      filteredExports :: [(Subsection, SymbolName)]
+      filteredExports :: [(Subsection, Export)]
       filteredExports = catMaybes (map filter exports)
 
-      exportedSubsections :: M.Map Subsection (Set.Set SymbolName)
+      exportedSubsections :: M.Map Subsection (Set.Set Export)
       exportedSubsections = foldr extract M.empty filteredExports
 
-      extract :: (Subsection, SymbolName) -> M.Map Subsection (Set.Set Text)
-              -> M.Map Subsection (Set.Set Text)
+      extract :: (Subsection, Export) -> M.Map Subsection (Set.Set Export)
+              -> M.Map Subsection (Set.Set Export)
       extract (subsec, m) secs =
           M.insertWith Set.union subsec (Set.singleton m) secs
 
-      formatSubsection :: (Subsection, Set.Set SymbolName) -> Text
+      formatSubsection :: (Subsection, Set.Set Export) -> Text
       formatSubsection (subsec, symbols) =
           T.unlines [ "-- ** " <> case subsectionAnchor subsec of
                                     Just anchor -> subsectionTitle subsec <>
                                                    " #" <> anchor <> "#"
                                     Nothing -> subsectionTitle subsec
                     , ( T.concat
-                      . map (paddedLine 1 . comma)
+                      . map (formatExport exportSymbol)
                       . Set.toList ) symbols]
 
 -- | Format the list of methods.
 formatMethods :: [Export] -> Maybe Text
 formatMethods = formatSection "Methods" toMethod
-    where toMethod :: Export -> Maybe (Subsection, SymbolName)
-          toMethod (Export (ExportMethod s) m) =
-            Just (subsecWithPrefix "method" s, m)
+    where toMethod :: Export -> Maybe (Subsection, Export)
+          toMethod e@(Export (ExportMethod s) _ _) =
+            Just (subsecWithPrefix "method" s, e)
           toMethod _ = Nothing
 
 -- | Format the list of properties.
 formatProperties :: [Export] -> Maybe Text
 formatProperties = formatSection "Properties" toProperty
-    where toProperty :: Export -> Maybe (Subsection, SymbolName)
-          toProperty (Export (ExportProperty s) m) =
-            Just (subsecWithPrefix "attr" s, m)
+    where toProperty :: Export -> Maybe (Subsection, Export)
+          toProperty e@(Export (ExportProperty s) _ _) =
+            Just (subsecWithPrefix "attr" s, e)
           toProperty _ = Nothing
 
 -- | Format the list of signals.
 formatSignals :: [Export] -> Maybe Text
 formatSignals = formatSection "Signals" toSignal
-    where toSignal :: Export -> Maybe (Subsection, SymbolName)
-          toSignal (Export (ExportSignal s) m) =
-            Just (subsecWithPrefix "signal" s, m)
+    where toSignal :: Export -> Maybe (Subsection, Export)
+          toSignal e@(Export (ExportSignal s) _ _) =
+            Just (subsecWithPrefix "signal" s, e)
           toSignal _ = Nothing
 
 -- | Format the given export list. This is just the inside of the
@@ -729,12 +777,12 @@ modulePrelude name exports [] =
     <> "    ) where\n"
 modulePrelude name [] reexportedModules =
     "module " <> name <> "\n    ( "
-    <> formatExportList (map (Export ExportModule) reexportedModules)
+    <> formatExportList (map (\m -> Export ExportModule m []) reexportedModules)
     <> "    ) where\n\n"
     <> T.unlines (map ("import " <>) reexportedModules)
 modulePrelude name exports reexportedModules =
     "module " <> name <> "\n    ( "
-    <> formatExportList (map (Export ExportModule) reexportedModules)
+    <> formatExportList (map (\m -> Export ExportModule m []) reexportedModules)
     <> "\n"
     <> formatExportList exports
     <> "    ) where\n\n"
