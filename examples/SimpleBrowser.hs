@@ -1,5 +1,3 @@
-import BasicPrelude hiding (on, error)
-
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.GLib as GLib
@@ -10,13 +8,14 @@ import GI.Signals
 
 import System.Mem (performGC)
 
-import Data.Text (pack)
-import System.Environment (getProgName)
+import Data.Monoid ((<>))
+import qualified Data.Text as T
+import System.Environment (getProgName, getArgs)
 
 main :: IO ()
 main = do
-  progName <- pack <$> getProgName
-  args <- getArgs
+  progName <- T.pack <$> getProgName
+  args <- map T.pack <$> getArgs
 
   -- We periodically perform a GC, in order to test that the
   -- finalizers are not pointing to invalid regions. This is only for
@@ -63,7 +62,7 @@ main = do
 
   on view LoadFailed $ \_ uri error -> do
     errMsg <- gerrorMessage error
-    putStrLn $ "Error when reading \"" <> uri <> "\": " <> errMsg
+    putStrLn . T.unpack $ "Error when reading \"" <> uri <> "\": " <> errMsg
     -- Keep processing, so WebKit shows the error page
     return False
 

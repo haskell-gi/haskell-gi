@@ -18,14 +18,13 @@ source-repository head
 executable SimpleBrowser
   main-is:             SimpleBrowser.hs
   build-depends:       base >= 4.7 && < 5,
-                       basic-prelude >= 0.5 && <0.6,
                        haskell-gi-base >= 0.20 && < 1,
                        gi-glib == 2.0.*,
                        gi-gtk == 3.0.*,
                        gi-webkit2 == 4.0.*,
                        text >= 1.0
 
-  extensions:          OverloadedStrings, NoImplicitPrelude
+  extensions:          OverloadedStrings
   ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing
   other-modules:       GI.OverloadedLabels,
                        GI.Signals
