@@ -10,6 +10,7 @@ module Data.GI.CodeGen.Conversions
 
     , hToF
     , fToH
+    , transientToH
     , haskellType
     , isoHaskellType
     , foreignType
@@ -88,6 +89,7 @@ instance IsString Constructor where
     fromString = P . T.pack
 
 data FExpr next = Apply Constructor next
+                | LambdaConvert Text next
                 | MapC Map Constructor next
                 | Literal Constructor next
                   deriving (Show, Functor)
@@ -125,6 +127,9 @@ mapSecond f = liftF $ MapC MapSecond f ()
 literal :: Constructor -> Converter
 literal f = liftF $ Literal f ()
 
+lambdaConvert :: Text -> Converter
+lambdaConvert c = liftF $ LambdaConvert c ()
+
 genConversion :: Text -> Converter -> CodeGen Text
 genConversion l (Pure ()) = return l
 genConversion l (Free k) = do
@@ -145,6 +150,11 @@ genConversion l (Free k) = do
         do line $ l' <> " <- " <> monadicMapName m <> " " <> f <> " " <> l
            genConversion l' next
     MapC _ Id next -> genConversion l next
+
+    LambdaConvert conv next ->
+        do line $ conv <> " " <> l <> " $ \\" <> l' <> " -> do"
+           increaseIndent
+           genConversion l' next
 
     Literal (P f) next ->
         do line $ "let " <> l <> " = " <> f
@@ -563,6 +573,51 @@ fToH t transfer = do
   fType <- foreignType t
   constructor <- fToH' t a hType fType transfer
   return $ apply constructor
+
+-- | Somewhat like `fToH`, but with slightly different borrowing
+-- semantics: in the case of `TransferNothing` we wrap incoming
+-- pointers to boxed structs into transient `ManagedPtr`s (every other
+-- case behaves as `fToH`). These are `ManagedPtr`s for which we do
+-- not make a copy, and which will be disowned when the function
+-- exists, instead of making a copy that the GC will collect
+-- eventually.
+--
+-- This is necessary in order to get the semantics of callbacks and
+-- signals right: in some cases making a copy of the object does not
+-- simply increase the refcount, but rather makes a full copy. In this
+-- cases modification of the original object is not possible, but this
+-- is sometimes useful, see for example
+--
+-- https://github.com/haskell-gi/haskell-gi/issues/97
+--
+-- Another situation where making a copy of incoming arguments is
+-- problematic is when the underlying library is not thread-safe. When
+-- running under the threaded GHC runtime it can happen that the GC
+-- runs on a different OS thread than the thread where the object was
+-- created, and this leads to rather mysterious bugs, see for example
+--
+-- https://github.com/haskell-gi/haskell-gi/issues/96
+--
+-- This case is particularly nasty, since it affects `onWidgetDraw`,
+-- which is very common.
+transientToH :: Type -> Transfer -> ExcCodeGen Converter
+transientToH t@(TInterface _) TransferNothing = do
+  a <- findAPI t
+  case a of
+    Just (APIStruct s) -> if structIsBoxed s
+                          then wrapTransient t
+                          else fToH t TransferNothing
+    Just (APIUnion u) -> if unionIsBoxed u
+                         then wrapTransient t
+                         else fToH t TransferNothing
+    _ -> fToH t TransferNothing
+transientToH t transfer = fToH t transfer
+
+-- | Wrap the given transient.
+wrapTransient :: Type -> CodeGen Converter
+wrapTransient t = do
+  hCon <- typeConName <$> haskellType t
+  return $ lambdaConvert $ "B.ManagedPtr.withTransient " <> hCon
 
 unpackCArray :: Text -> Type -> Transfer -> ExcCodeGen Converter
 unpackCArray length (TCArray False _ _ t) transfer =

@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.GI.CodeGen.Code
     ( Code
     , ModuleInfo(moduleCode, moduleDoc)
@@ -29,6 +30,7 @@ module Data.GI.CodeGen.Code
     , missingInfoError
 
     , indent
+    , increaseIndent
     , bline
     , line
     , blank
@@ -68,13 +70,15 @@ import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified Data.Foldable as F
 import Data.Maybe (fromMaybe, catMaybes)
-import Data.Monoid ((<>))
-import Data.Sequence (Seq, ViewL ((:<)), (><), (|>), (<|))
+import Data.Monoid ((<>), mempty)
 import qualified Data.Map.Strict as M
-import qualified Data.Sequence as S
+import Data.Sequence (ViewL ((:<)), viewl, (|>))
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy.Builder as B
+import qualified Data.Text.Lazy as LT
 
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (joinPath, takeDirectory)
@@ -93,26 +97,32 @@ import Data.GI.CodeGen.ProjectInfo (authors, license, maintainers)
 data CPPConditional = CPPIfdef Text -- ^ #ifdef Foo
   deriving (Eq, Show, Ord)
 
-data Code
-    = NoCode              -- ^ No code
-    | Line Text           -- ^ A single line, indented to current indentation
-    | Indent Code         -- ^ Indented region
-    | Sequence (Seq Code) -- ^ The basic sequence of code
+-- | The generated `Code` is a sequence of `CodeToken`s.
+newtype Code = Code (Seq.Seq CodeToken)
+  deriving (Monoid, Eq, Show, Ord)
+
+-- | Initializes a code block to the empty sequence.
+emptyCode :: Code
+emptyCode = Code Seq.empty
+
+-- | Checks whether the given code block is empty.
+isCodeEmpty :: Code -> Bool
+isCodeEmpty (Code seq) = Seq.null seq
+
+-- | A block of code consisting of a single token.
+codeSingleton :: CodeToken -> Code
+codeSingleton t = Code (Seq.singleton t)
+
+-- | Possible code tokens.
+data CodeToken
+    = Line Text           -- ^ A single line, indented to current indentation.
+    | Indent Code         -- ^ Indented region.
     | Group Code          -- ^ A grouped set of lines
+    | IncreaseIndent      -- ^ Increase the indentation for the rest
+                          -- of the lines in the group.
     | CPPBlock CPPConditional Code -- ^ A block of code guarded by the
                                    -- given CPP conditional
-    deriving (Eq, Show)
-
-instance Monoid Code where
-    mempty = NoCode
-
-    NoCode `mappend` NoCode = NoCode
-    x `mappend` NoCode = x
-    NoCode `mappend` x = x
-    (Sequence a) `mappend` (Sequence b) = Sequence (a >< b)
-    (Sequence a) `mappend` b = Sequence (a |> b)
-    a `mappend` (Sequence b) = Sequence (a <| b)
-    a `mappend` b = Sequence (a <| b <| S.empty)
+    deriving (Eq, Ord, Show)
 
 type Deps = Set.Set Text
 
@@ -151,7 +161,7 @@ data ModuleInfo = ModuleInfo {
     , submodules :: M.Map Text ModuleInfo -- ^ Indexed by the relative
                                           -- module name.
     , moduleDeps :: Deps -- ^ Set of dependencies for this module.
-    , moduleExports :: Seq Export -- ^ Exports for the module.
+    , moduleExports :: Seq.Seq Export -- ^ Exports for the module.
     , qualifiedImports :: Set.Set ModulePath -- ^ Qualified (source) imports.
     , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
     , moduleGHCOpts :: Set.Set Text -- ^ GHC options for compiling the module.
@@ -179,11 +189,11 @@ showBaseVersion Base48 = "4.8"
 -- | Generate the empty module.
 emptyModule :: ModulePath -> ModuleInfo
 emptyModule m = ModuleInfo { modulePath = m
-                           , moduleCode = NoCode
-                           , bootCode = NoCode
+                           , moduleCode = emptyCode
+                           , bootCode = emptyCode
                            , submodules = M.empty
                            , moduleDeps = Set.empty
-                           , moduleExports = S.empty
+                           , moduleExports = Seq.empty
                            , qualifiedImports = Set.empty
                            , modulePragmas = Set.empty
                            , moduleGHCOpts = Set.empty
@@ -245,8 +255,8 @@ runCodeGen cg cfg state =
 -- | This is useful when we plan run a subgenerator, and `mconcat` the
 -- result to the original structure later.
 cleanInfo :: ModuleInfo -> ModuleInfo
-cleanInfo info = info { moduleCode = NoCode, submodules = M.empty,
-                        bootCode = NoCode, moduleExports = S.empty,
+cleanInfo info = info { moduleCode = emptyCode, submodules = M.empty,
+                        bootCode = emptyCode, moduleExports = Seq.empty,
                         qualifiedImports = Set.empty,
                         moduleDoc = Nothing, moduleMinBase = Base47 }
 
@@ -328,7 +338,7 @@ submodule' modName cg = do
   let info = emptyModule (modulePath oldInfo /. modName)
   case runCodeGen cg cfg (emptyCGState, info) of
     Left e -> throwError e
-    Right (_, smInfo) -> if moduleCode smInfo == NoCode &&
+    Right (_, smInfo) -> if isCodeEmpty (moduleCode smInfo) &&
                             M.null (submodules smInfo)
                          then return ()
                          else modify' (addSubmodule modName smInfo)
@@ -494,8 +504,9 @@ findAPIByName n@(Name ns _) = do
             terror $ "couldn't find API description for " <> ns <> "." <> name n
 
 -- | Add some code to the current generator.
-tellCode :: Code -> CodeGen ()
-tellCode c = modify' (\(cgs, s) -> (cgs, s {moduleCode = moduleCode s <> c}))
+tellCode :: CodeToken -> CodeGen ()
+tellCode c = modify' (\(cgs, s) -> (cgs, s {moduleCode = moduleCode s <>
+                                                         codeSingleton c}))
 
 -- | Print out a (newline-terminated) line.
 line :: Text -> CodeGen ()
@@ -517,6 +528,11 @@ indent cg = do
   tellCode (Indent code)
   return x
 
+-- | Increase the indentation level for the rest of the lines in the
+-- current group.
+increaseIndent :: CodeGen ()
+increaseIndent = tellCode IncreaseIndent
+
 -- | Group a set of related code.
 group :: BaseCodeGen e a -> BaseCodeGen e a
 group cg = do
@@ -534,7 +550,7 @@ cppIfdef cond cg = do
   return x
     where addConditional :: CGState -> CGState
           addConditional cgs = CGState {cgsCPPConditionals = CPPIfdef cond :
-                                          cgsCPPConditionals cgs}
+                                         cgsCPPConditionals cgs}
 
 -- | Possible features to test via CPP.
 data CPPGuard = CPPOverloading -- ^ Enable overloading
@@ -553,7 +569,7 @@ hsBoot cg = do
   return x
   where addGuards :: [CPPConditional] -> Code -> Code
         addGuards [] c = c
-        addGuards (cond : conds) c = CPPBlock cond (addGuards conds c)
+        addGuards (cond : conds) c = codeSingleton $ CPPBlock cond (addGuards conds c)
 
 -- | Add a export to the current module.
 export :: ([CPPConditional] -> Export) -> CodeGen ()
@@ -612,20 +628,20 @@ cppCondFormat (CPPIfdef c) = ("#ifdef " <> c <> "\n", "#endif\n")
 
 -- | Return a text representation of the `Code`.
 codeToText :: Code -> Text
-codeToText c = T.concat $ str 0 c []
-    where
-      str :: Int -> Code -> [Text] -> [Text]
-      str _ NoCode cont = cont
-      str n (Line s) cont =  paddedLine n s : cont
-      str n (Indent c) cont = str (n + 1) c cont
-      str n (Sequence s) cont = deseq n (S.viewl s) cont
-      str n (Group c) cont = str n c cont
-      str n (CPPBlock cond c) cont =
-        let (condBegin, condEnd) = cppCondFormat cond
-        in condBegin : (str n c [] ++ [condEnd] ++ cont)
-
-      deseq _ S.EmptyL cont = cont
-      deseq n (c :< cs) cont = str n c (deseq n (S.viewl cs) cont)
+codeToText (Code seq) = LT.toStrict . B.toLazyText $ genCode 0 (viewl seq)
+  where genCode :: Int -> ViewL CodeToken -> B.Builder
+        genCode _ Seq.EmptyL = mempty
+        genCode n (Line s :< rest) = B.fromText (paddedLine n s) <>
+                                      genCode n (viewl rest)
+        genCode n (Indent (Code seq) :< rest) = genCode (n+1) (viewl seq) <>
+                                      genCode n (viewl rest)
+        genCode n (Group (Code seq) :< rest) = genCode n (viewl seq) <>
+                                               genCode n (viewl rest)
+        genCode n (CPPBlock cond (Code seq) :< rest) =
+          let (condBegin, condEnd) = cppCondFormat cond
+          in B.fromText condBegin <> genCode n (viewl seq) <>
+             B.fromText condEnd <> genCode n (viewl rest)
+        genCode n (IncreaseIndent :< rest) = genCode (n+1) (viewl rest)
 
 -- | Pad a line to the given number of leading spaces, and add a
 -- newline at the end.
@@ -856,7 +872,7 @@ writeModuleInfo verbose dirPrefix minfo = do
   createDirectoryIfMissing True dirname
   utf8WriteFile fname (T.unlines [pragmas, optionsGHC, haddock,
                                  prelude, imports, deps, code])
-  when (bootCode minfo /= NoCode) $ do
+  when (not . isCodeEmpty $ bootCode minfo) $ do
     let bootFName = modulePathToFilePath dirPrefix (modulePath minfo) ".hs-boot"
     utf8WriteFile bootFName (genHsBoot minfo)
 

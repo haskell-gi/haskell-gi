@@ -177,7 +177,7 @@ prepareInArg cb arg = do
   case argType arg of
     t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
     _ -> do
-      let c = convert name $ fToH (argType arg) (transfer arg)
+      let c = convert name $ transientToH (argType arg) (transfer arg)
       wrapMaybe arg >>= bool c (convertNullable name c)
 
 prepareInoutArg :: Arg -> ExcCodeGen Text
@@ -224,7 +224,7 @@ genDropClosures subsec cb name' = group $ do
   line $ dropper <> " _f " <> T.unwords argNames <> " = _f "
            <> T.unwords (catMaybes (map passOrIgnore inWithClosures))
 
--- | The wrapper itself, marshalling to and from Haskell. The first
+-- | The wrapper itself, marshalling to and from Haskell. The `Callable`
 -- argument is possibly a pointer to a FunPtr to free (via
 -- freeHaskellFunPtr) once the callback is run once, or Nothing if the
 -- FunPtr will be freed by someone else (the function registering the
