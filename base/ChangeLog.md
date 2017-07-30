@@ -1,3 +1,7 @@
+### 0.20.4
+
++ Better error diagnostics for [wrapObject](https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-ManagedPtr.html#v:wrapObject) and [newObject](https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-ManagedPtr.html#v:newObject).
+
 ### 0.20.3
 
 + Fixes for GHC 8.2.1 (and the corresponding `base-4.10.0`).
