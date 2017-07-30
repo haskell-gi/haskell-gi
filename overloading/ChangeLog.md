@@ -1,5 +1,9 @@
-# Revision history for overloading
+# Variants of `haskell-gi-overloading`
 
-## 0.0  -- YYYY-mm-dd
+## 1.0
 
-* First version. Released on an unsuspecting world.
+* Enable support for overloading.
+
+## 0.0
+
+* Disable support for overloading.
