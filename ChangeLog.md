@@ -1,3 +1,9 @@
+### 0.20.3
+
++ Make the overloading code protected by a CPP conditional, depending on ENABLE_OVERLOADING being defined. See [issue 107](https://github.com/haskell-gi/haskell-gi/issues/107).
+
++ Wrap boxed structs/unions as transient [ManagedPtr](https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-BasicTypes.html#t:ManagedPtr)s in callbacks. This is needed to fix a number of issues, including [issue 96](https://github.com/haskell-gi/haskell-gi/issues/96) and [issue 97](https://github.com/haskell-gi/haskell-gi/issues/97).
+
 ### 0.20.2
 
 + Fixes for GHC 8.2.1.
