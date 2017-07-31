@@ -64,9 +64,12 @@ writeCabal fname info =
        , "      default-extensions: " <> T.intercalate ", " PI.defaultExtensions
        , "      other-extensions: " <> T.intercalate ", " PI.otherExtensions
        , "      ghc-options: " <> T.intercalate " " PI.ghcOptions
+       , ""
        , "      if flag(enable-overloading)"
        , "         cpp-options: -DENABLE_OVERLOADING"
        , "         build-depends: haskell-gi-overloading == 1.0.*"
+       , "      else"
+       , "         build-depends: haskell-gi-overloading == 0.0"
        , ""
        , "      pkgconfig-depends: " <> pkgconfigDepends info
        , "      build-depends: " <>
