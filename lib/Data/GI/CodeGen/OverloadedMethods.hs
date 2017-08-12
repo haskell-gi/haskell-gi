@@ -110,4 +110,4 @@ genUnsupportedMethodInfo n m = do
            <> lowerName (methodName m) <> "\" " <> name n
            <> ") => O.MethodInfo " <> infoName <> " o p where"
   indent $ line $ "overloadedMethod _ = undefined"
-  exportMethod "Unsupported methods" infoName
+  exportToplevel infoName
