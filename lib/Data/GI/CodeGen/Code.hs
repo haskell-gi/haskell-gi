@@ -94,7 +94,7 @@ import Data.GI.CodeGen.Util (tshow, terror, padTo, utf8WriteFile)
 import Data.GI.CodeGen.ProjectInfo (authors, license, maintainers)
 
 -- | Set of CPP conditionals understood by the code generator.
-data CPPConditional = CPPIfdef Text -- ^ #ifdef Foo
+data CPPConditional = CPPIf Text -- ^ #if Foo
   deriving (Eq, Show, Ord)
 
 -- | The generated `Code` is a sequence of `CodeToken`s.
@@ -541,15 +541,15 @@ group cg = do
   blank
   return x
 
--- | Guard a block of code with @#ifdef@.
-cppIfdef :: Text -> BaseCodeGen e a -> BaseCodeGen e a
-cppIfdef cond cg = do
+-- | Guard a block of code with @#if@.
+cppIfBlock :: Text -> BaseCodeGen e a -> BaseCodeGen e a
+cppIfBlock cond cg = do
   (x, code) <- recurseWithState addConditional cg
-  tellCode (CPPBlock (CPPIfdef cond) code)
+  tellCode (CPPBlock (CPPIf cond) code)
   blank
   return x
     where addConditional :: CGState -> CGState
-          addConditional cgs = CGState {cgsCPPConditionals = CPPIfdef cond :
+          addConditional cgs = CGState {cgsCPPConditionals = CPPIf cond :
                                          cgsCPPConditionals cgs}
 
 -- | Possible features to test via CPP.
@@ -558,7 +558,7 @@ data CPPGuard = CPPOverloading -- ^ Enable overloading
 -- | Guard a code block with CPP code, such that it is included only
 -- if the specified feature is enabled.
 cppIf :: CPPGuard -> BaseCodeGen e a -> BaseCodeGen e a
-cppIf CPPOverloading = cppIfdef "ENABLE_OVERLOADING"
+cppIf CPPOverloading = cppIfBlock "defined(ENABLE_OVERLOADING) && !defined(__HADDOCK_VERSION__)" -- Do not generate docs for the overloading machinery.
 
 -- | Write the given code into the .hs-boot file for the current module.
 hsBoot :: BaseCodeGen e a -> BaseCodeGen e a
@@ -624,7 +624,7 @@ setModuleMinBase v =
 
 -- | Format a CPP conditional.
 cppCondFormat :: CPPConditional -> (Text, Text)
-cppCondFormat (CPPIfdef c) = ("#ifdef " <> c <> "\n", "#endif\n")
+cppCondFormat (CPPIf c) = ("#if " <> c <> "\n", "#endif\n")
 
 -- | Return a text representation of the `Code`.
 codeToText :: Code -> Text
