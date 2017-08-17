@@ -1,5 +1,5 @@
 name:                gi-gtk-hs
-version:             0.3.5.0
+version:             0.3.6.0
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 homepage:            https://github.com/haskell-gi/gi-gtk-hs
@@ -18,6 +18,7 @@ extra-source-files:  cbits/Gtk2HsStore.h
 library
   exposed-modules:     Data.GI.Gtk,
                        Data.GI.Gtk.BuildFn
+                       Data.GI.Gtk.Threading
                        Data.GI.Gtk.ModelView.Types
                        Data.GI.Gtk.ModelView.CellLayout
                        Data.GI.Gtk.ModelView.CustomStore
