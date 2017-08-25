@@ -63,3 +63,15 @@ executable GstHelloWorld
                         text
   other-extensions:     OverloadedStrings, OverloadedLabels
   ghc-options:         -Wall
+
+executable GstGtkX11
+  main-is:              GstGtkX11.hs
+  build-depends:        base >= 4.7 && < 5
+                      , gi-gst == 1.0.*
+                      , gi-gtk == 3.0.*
+                      , gi-xlib
+                      , gi-gstvideo
+                      , gi-gdkx11
+                      , haskell-gi-base == 0.20.*
+  other-extensions:     OverloadedStrings
+  ghc-options:          -O -threaded -with-rtsopts=-N -Wall
