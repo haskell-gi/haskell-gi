@@ -74,4 +74,4 @@ executable GstGtkX11
                       , gi-gdkx11
                       , haskell-gi-base == 0.20.*
   other-extensions:     OverloadedStrings
-  ghc-options:          -O3 -threaded -with-rtsopts=-N -Wall
+  ghc-options:          -O -threaded -with-rtsopts=-N -Wall
