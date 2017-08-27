@@ -11,7 +11,7 @@
         "gi-gobject == 2.0.*",
         "gi-gdk == 3.0.*",
         "gi-gio == 2.0.*",
-        "gi-xlib == 0.1.6.20",
+        "gi-xlib == 0.1.6.20"
     ],
     "pkgconfigDepends": "gdk-x11-3.0 >= 3.22"
 }
