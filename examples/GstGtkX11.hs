@@ -47,10 +47,11 @@ import GI.Gst
 import GI.GstVideo
 import GI.GdkX11
 
--- Declare Element a type instance of IsVideoOverlay
--- Our Gstreamer element is playbin
--- Playbin implements the Gstreamer VideoOverlay interface
-instance GI.GstVideo.IsVideoOverlay GI.Gst.Element
+-- Playbin implements the Gstreamer VideoOverlay interface, but there
+-- is no Playbin type in the introspection data, so we create a
+-- newtype and make it an instance of IsVideoOverlay.
+newtype GstPlaybin = GstPlaybin GI.Gst.Element
+instance GI.GstVideo.IsVideoOverlay GstPlaybin
 
 main :: IO ()
 main = do
@@ -84,7 +85,7 @@ main = do
     let xid' = fromIntegral xid :: CUIntPtr
 
     -- Tell Gstreamer where it can render the output of playbin
-    GI.GstVideo.videoOverlaySetWindowHandle playbin xid'
+    GI.GstVideo.videoOverlaySetWindowHandle (GstPlaybin playbin) xid'
 
     -- Tell Gstreamer to begin playing the video
     _ <- GI.Gst.elementSetState playbin GI.Gst.StatePlaying
