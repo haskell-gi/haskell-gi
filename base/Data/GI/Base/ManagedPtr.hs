@@ -98,9 +98,7 @@ newManagedPtr_ ptr = do
              }
 
 -- | Do not run the finalizers upon garbage collection of the
--- `ManagedPtr`, for the given reason. If later code tries to access
--- the underlying pointer the given reason will be printed as part of
--- the error message.
+-- `ManagedPtr`.
 disownManagedPtr :: forall a. (HasCallStack, ManagedPtrNewtype a) => a -> IO (Ptr a)
 disownManagedPtr managed = do
   ptr <- unsafeManagedPtrGetPtr managed
@@ -312,18 +310,18 @@ copyBoxedPtr ptr = do
 foreign import ccall "g_boxed_free" g_boxed_free ::
     CGType -> Ptr a -> IO ()
 
--- | Free the memory associated with a boxed object
+-- | Free the memory associated with a boxed object. Note that this
+-- disowns the associated `ManagedPtr` via `disownManagedPtr`.
 freeBoxed :: forall a. (HasCallStack, BoxedObject a) => a -> IO ()
 freeBoxed boxed = do
   GType gtype <- boxedType (undefined :: a)
-  ptr <- unsafeManagedPtrGetPtr boxed
+  ptr <- disownManagedPtr boxed
   g_boxed_free gtype ptr
-  touchManagedPtr boxed
 
 -- | Disown a boxed object, that is, do not free the associated
 -- foreign GBoxed when the Haskell object gets garbage
 -- collected. Returns the pointer to the underlying `BoxedObject`.
-disownBoxed :: BoxedObject a => a -> IO (Ptr a)
+disownBoxed :: (HasCallStack, BoxedObject a) => a -> IO (Ptr a)
 disownBoxed = disownManagedPtr
 
 -- | Wrap a pointer, taking ownership of it.

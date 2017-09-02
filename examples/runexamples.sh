@@ -4,8 +4,8 @@ set -e
 set -x
 
 cabal clean
-haskell-gi -l Gtk WebKit2 Gst GstBase GstAudio GstVideo
-haskell-gi -c Gtk WebKit2 Gst GstBase GstAudio GstVideo
+haskell-gi -l Gtk WebKit2 Gst GstBase GstAudio GstVideo GdkX11 xlib
+haskell-gi -c Gtk WebKit2 Gst GstBase GstAudio GstVideo GdkX11 xlib
 cabal configure
 time cabal build
 
