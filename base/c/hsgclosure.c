@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include <glib-object.h>
+#include <glib.h>
 
 int check_object_type(void *instance, GType type)
 {
@@ -36,7 +37,9 @@ static int print_debug_info ()
 void boxed_free_helper (GType gtype, void *boxed)
 {
   if (print_debug_info()) {
-    fprintf(stderr, "Freeing a boxed object at %p\n", boxed);
+    GThread *self;
+
+    fprintf(stderr, "Freeing a boxed object at %p [thread: %p]\n", boxed, self);
     fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
   }
 
@@ -52,7 +55,8 @@ void dbg_g_object_disown (GObject *obj)
   GType gtype;
 
   if (print_debug_info()) {
-    fprintf(stderr, "Disowning a GObject at %p\n", obj);
+    GThread *self = g_thread_self();
+    fprintf(stderr, "Disowning a GObject at %p [thread: %p]\n", obj, self);
     gtype = G_TYPE_FROM_INSTANCE (obj);
     fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
     fprintf(stderr, "\tIts refcount before disowning is %d\n",
@@ -65,7 +69,8 @@ void dbg_g_object_unref (GObject *obj)
   GType gtype;
 
   if (print_debug_info()) {
-    fprintf(stderr, "Freeing a GObject at %p\n", obj);
+    GThread *self = g_thread_self();
+    fprintf(stderr, "Freeing a GObject at %p [thread: %p]\n", obj, self);
     gtype = G_TYPE_FROM_INSTANCE (obj);
     fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
     fprintf(stderr, "\tIts refcount before unref is %d\n",
@@ -98,8 +103,10 @@ gpointer dbg_g_object_newv (GType gtype, guint n_params, GParameter *params)
   gpointer result;
 
   if (print_debug_info()) {
-    fprintf(stderr, "Creating a new GObject of type %s\n",
-            g_type_name(gtype));
+    GThread *self = g_thread_self();
+
+    fprintf(stderr, "Creating a new GObject of type %s [thread: %p]\n",
+            g_type_name(gtype), self);
   }
 
   result = g_object_newv (gtype, n_params, params);
