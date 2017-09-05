@@ -11,15 +11,15 @@
 --
 -- For convenience, generated code also includes specialized variants
 -- of 'catchGErrorJust' \/ 'handleGErrorJust' for each error type. For
--- example, for errors of type 'GI.GdkPixbuf.Enums.PixbufError' one could
--- invoke 'GI.GdkPixbuf.Enums.catchPixbufError' \/
--- 'GI.GdkPixbuf.Enums.handlePixbufError'. The definition is simply
+-- example, for errors of type <https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Enums.html#t:PixbufError PixbufError> one could
+-- invoke <https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Enums.html#v:catchPixbufError catchPixbufError> \/
+-- <https://hackage.haskell.org/package/gi-gdkpixbuf-2.0.14/docs/GI-GdkPixbuf-Enums.html#v:handlePixbufError handlePixbufError>. The definition is simply
 --
 -- > catchPixbufError :: IO a -> (PixbufError -> GErrorMessage -> IO a) -> IO a
 -- > catchPixbufError = catchGErrorJustDomain
 --
 -- Notice that the type is suitably specialized, so only
--- errors of type 'GI.GdkPixbuf.Enums.PixbufError' will be caught.
+-- errors of type <https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Enums.html#t:PixbufError PixbufError> will be caught.
 module Data.GI.Base.GError
     (
     -- * Unpacking GError
@@ -149,7 +149,7 @@ gerrorMessage gerror =
 --   class. This class helps to hide the raw error and domain codes from the
 --   user.
 --
--- Example for 'GI.GdkPixbuf.PixbufError':
+-- Example for <https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Enums.html#t:PixbufError PixbufError>:
 --
 -- > instance GErrorClass PixbufError where
 -- >   gerrorClassDomain _ = "gdk-pixbuf-error-quark"
