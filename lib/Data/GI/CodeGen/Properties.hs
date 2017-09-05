@@ -20,6 +20,7 @@ import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.GObject
+import Data.GI.CodeGen.Haddock (addSectionDocumentation)
 import Data.GI.CodeGen.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
 import Data.GI.CodeGen.SymbolNaming (lowerName, upperName,
                                      classConstraint, typeConstraint,
@@ -88,7 +89,7 @@ attrType prop = do
   (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
   return (constraints, t)
 
-genPropertySetter :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertySetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertySetter setter n docSection prop = group $ do
   (constraints, t) <- attrType prop
   isNullable <- typeIsNullable (propType prop)
@@ -102,9 +103,9 @@ genPropertySetter setter n docSection prop = group $ do
            <> if isNullable
               then "\" (Just val)"
               else "\" val"
-  exportProperty docSection setter
+  export docSection setter
 
-genPropertyGetter :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertyGetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyGetter getter n docSection prop = group $ do
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
@@ -126,9 +127,9 @@ genPropertyGetter getter n docSection prop = group $ do
            if tStr `elem` ["Object", "Boxed"]
            then " " <> typeShow constructorType -- These require the constructor.
            else ""
-  exportProperty docSection getter
+  export docSection getter
 
-genPropertyConstructor :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertyConstructor :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyConstructor constructor n docSection prop = group $ do
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
@@ -143,9 +144,9 @@ genPropertyConstructor constructor n docSection prop = group $ do
            <> if isNullable
               then "\" (Just val)"
               else "\" val"
-  exportProperty docSection constructor
+  export docSection constructor
 
-genPropertyClear :: Text -> Name -> Text -> Property -> CodeGen ()
+genPropertyClear :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyClear clear n docSection prop = group $ do
   nothingType <- typeShow . maybeT <$> haskellType (propType prop)
   cls <- classConstraint n
@@ -156,7 +157,7 @@ genPropertyClear clear n docSection prop = group $ do
   line $ clear <> " obj = liftIO $ setObjectProperty" <> tStr
            <> " obj \"" <> propName prop <> "\" (Nothing :: "
            <> nothingType <> ")"
-  exportProperty docSection clear
+  export docSection clear
 
 -- | The property name as a lexically valid Haskell identifier. Note
 -- that this is not escaped, since it is assumed that it will be used
@@ -207,13 +208,15 @@ genOneProperty :: Name -> Property -> ExcCodeGen ()
 genOneProperty owner prop = do
   let name = upperName owner
       cName = (hyphensToCamelCase . propName) prop
-      docSection = lcFirst cName
+      docSection = PropertySection (lcFirst cName)
       pName = name <> cName
       flags = propFlags prop
       writable = PropertyWritable `elem` flags &&
                  (PropertyConstructOnly `notElem` flags)
       readable = PropertyReadable `elem` flags
       constructOnly = PropertyConstructOnly `elem` flags
+
+  addSectionDocumentation docSection (propDoc prop)
 
   -- For properties the meaning of having transfer /= TransferNothing
   -- is not clear (what are the right semantics for GValue setters?),
@@ -287,7 +290,7 @@ genOneProperty owner prop = do
                          then ["'AttrClear"]
                          else [])
     it <- infoType owner prop
-    exportProperty docSection it
+    export docSection it
     bline $ "data " <> it
     line $ "instance AttrInfo " <> it <> " where"
     indent $ do
@@ -311,8 +314,8 @@ genPlaceholderProperty owner prop = do
   line $ "-- XXX Placeholder"
   it <- infoType owner prop
   let cName = (hyphensToCamelCase . propName) prop
-      docSection = lcFirst cName
-  exportProperty docSection it
+      docSection = PropertySection (lcFirst cName)
+  export docSection it
   line $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"
   indent $ do
@@ -367,9 +370,9 @@ genNamespacedAttrLabels owner attrNames methods = do
   forM_ filteredAttrs $ \attr -> group $ do
     let cName = ucFirst attr
         labelProxy = lcFirst name <> cName
-        docSection = lcFirst cName
+        docSection = PropertySection (lcFirst cName)
 
     line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst cName <> "\""
     line $ labelProxy <> " = AttrLabelProxy"
 
-    exportProperty docSection labelProxy
+    export docSection labelProxy

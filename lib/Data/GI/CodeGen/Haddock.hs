@@ -7,14 +7,13 @@ module Data.GI.CodeGen.Haddock
   , writeHaddock
   , writeArgDocumentation
   , writeReturnDocumentation
-  , addModuleDocumentation
+  , addSectionDocumentation
   ) where
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
 import Control.Monad (mapM_, unless)
-import Control.Monad.State.Strict (modify')
 import qualified Data.Map as M
 import Data.Monoid ((<>))
 import qualified Data.Text as T
@@ -25,8 +24,8 @@ import Data.GI.GIR.Callable (Callable(..))
 import Data.GI.GIR.Deprecation (DeprecationInfo(..))
 import Data.GI.GIR.Documentation (Documentation(..))
 
-import Data.GI.CodeGen.Code (CodeGen, config, line, blank,
-                             getC2HMap, ModuleInfo(moduleDoc))
+import Data.GI.CodeGen.Code (CodeGen, config, line, HaddockSection,
+                             getC2HMap, addSectionFormattedDocs)
 import Data.GI.CodeGen.Config (modName, overrides)
 import Data.GI.CodeGen.CtoHaskellMap (Hyperlink(..))
 import Data.GI.CodeGen.GtkDoc (GtkDoc(..), Token(..), CRef(..), Language(..),
@@ -207,23 +206,27 @@ deprecatedPragma name (Just info) = do
                        Nothing -> []
                        Just v -> ["(Since version " <> v <> ")"]
 
--- | Write the given documentation into a Haddock comment.
-writeDocumentation :: RelativeDocPosition -> Documentation -> CodeGen ()
-writeDocumentation pos doc = do
-  c2h <- getC2HMap
-  docBase <- getDocBase
+-- | Format the given documentation into a set of lines. Note that
+-- this does include the opening or ending comment delimiters.
+formatDocumentation :: M.Map CRef Hyperlink -> Text -> Documentation -> Text
+formatDocumentation c2h docBase doc = do
   let description = case rawDocText doc of
         Just raw -> formatHaddock c2h docBase (parseGtkDoc raw)
         Nothing -> "/No description available in the introspection data./"
+  description <> case sinceVersion doc of
+                   Nothing -> ""
+                   Just ver -> "\n\n@since " <> ver
+
+-- | Write the given documentation into generated code.
+writeDocumentation :: RelativeDocPosition -> Documentation -> CodeGen ()
+writeDocumentation pos doc = do
   line $ case pos of
            DocBeforeSymbol -> "{- |"
            DocAfterSymbol ->  "{- ^"
-  mapM_ line (T.lines description)
-  case sinceVersion doc of
-    Nothing -> return ()
-    Just ver -> do
-      blank
-      line $ "@since " <> ver
+  c2h <- getC2HMap
+  docBase <- getDocBase
+  let haddock = formatDocumentation c2h docBase doc
+  mapM_ line (T.lines haddock)
   line "-}"
 
 -- | Like `writeDocumentation`, but allows us to pass explicitly the
@@ -270,15 +273,10 @@ writeReturnDocumentation callable skip = do
   unless (T.null fullInfo) $
     line $ "{- ^ " <>  fullInfo <> " -}"
 
--- | Add the given text to the module-level documentation for the
--- module being generated.
-addModuleDocumentation :: Documentation -> CodeGen ()
-addModuleDocumentation doc =
-  case rawDocText doc of
-    Nothing -> return ()
-    Just raw -> do
-      c2h <- getC2HMap
-      docBase <- getDocBase
-      modify' $ \(cgs, s) -> (cgs, s{moduleDoc = moduleDoc s <>
-                                      Just (formatHaddock c2h docBase
-                                            (parseGtkDoc raw))})
+-- | Add the given text to the documentation for the section being generated.
+addSectionDocumentation :: HaddockSection -> Documentation -> CodeGen ()
+addSectionDocumentation section doc = do
+  c2h <- getC2HMap
+  docBase <- getDocBase
+  let formatted = formatDocumentation c2h docBase doc
+  addSectionFormattedDocs section formatted

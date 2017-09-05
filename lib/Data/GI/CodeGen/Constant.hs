@@ -50,7 +50,7 @@ genConstant (Name _ name) c = group $ do
   handleCGExc (\e -> line $ "-- XXX: Could not generate constant: " <> describeCGError e)
     (do writeDocumentation DocBeforeSymbol (constantDocumentation c)
         assignValue name (constantType c) (constantValue c)
-        exportToplevel ("pattern " <> name))
+        export ToplevelSection ("pattern " <> name))
 
 -- | Assign to the given name the given constant value, in a way that
 -- can be assigned to the corresponding Haskell type.

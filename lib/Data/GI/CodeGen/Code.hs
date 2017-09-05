@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.GI.CodeGen.Code
     ( Code
-    , ModuleInfo(moduleCode, moduleDoc)
+    , ModuleInfo(moduleCode, sectionDocs)
     , ModuleFlag(..)
     , BaseCodeGen
     , CodeGen
@@ -44,12 +44,12 @@ module Data.GI.CodeGen.Code
     , setModuleFlags
     , setModuleMinBase
 
-    , exportToplevel
     , exportModule
     , exportDecl
-    , exportMethod
-    , exportProperty
-    , exportSignal
+    , export
+    , HaddockSection(..)
+
+    , addSectionFormattedDocs
 
     , findAPI
     , getAPI
@@ -127,8 +127,12 @@ data CodeToken
 type Deps = Set.Set Text
 
 -- | Subsection of the haddock documentation where the export should
--- be located.
-type HaddockSection = Text
+-- be located, or alternatively the toplevel section.
+data HaddockSection = ToplevelSection
+                    | MethodSection Text
+                    | PropertySection Text
+                    | SignalSection Text
+  deriving (Show, Eq, Ord)
 
 -- | Symbol to export.
 type SymbolName = Text
@@ -145,11 +149,9 @@ data Export = Export {
     } deriving (Show, Eq, Ord)
 
 -- | Possible types of exports.
-data ExportType = ExportTypeDecl -- ^ A type declaration.
-                | ExportToplevel -- ^ An export in no specific section.
-                | ExportMethod HaddockSection -- ^ A method for a struct/union, etc.
-                | ExportProperty HaddockSection -- ^ A property for an object/interface.
-                | ExportSignal HaddockSection  -- ^ A signal for an object/interface.
+data ExportType = ExportSymbol HaddockSection -- ^ An export in the
+                  -- given haddock section.
+                | ExportTypeDecl -- ^ A type declaration.
                 | ExportModule   -- ^ Reexport of a whole module.
                   deriving (Show, Eq, Ord)
 
@@ -166,7 +168,9 @@ data ModuleInfo = ModuleInfo {
     , modulePragmas :: Set.Set Text -- ^ Set of language pragmas for the module.
     , moduleGHCOpts :: Set.Set Text -- ^ GHC options for compiling the module.
     , moduleFlags   :: Set.Set ModuleFlag -- ^ Flags for the module.
-    , moduleDoc     :: Maybe Text -- ^ Documentation for the module.
+    , sectionDocs   :: M.Map HaddockSection Text -- ^ Documentation
+                                     -- for the different sections in
+                                     -- the module.
     , moduleMinBase :: BaseVersion -- ^ Minimal version of base the
                                    -- module will work on.
     }
@@ -198,7 +202,7 @@ emptyModule m = ModuleInfo { modulePath = m
                            , modulePragmas = Set.empty
                            , moduleGHCOpts = Set.empty
                            , moduleFlags = Set.empty
-                           , moduleDoc = Nothing
+                           , sectionDocs = M.empty
                            , moduleMinBase = Base47
                            }
 
@@ -258,7 +262,7 @@ cleanInfo :: ModuleInfo -> ModuleInfo
 cleanInfo info = info { moduleCode = emptyCode, submodules = M.empty,
                         bootCode = emptyCode, moduleExports = Seq.empty,
                         qualifiedImports = Set.empty,
-                        moduleDoc = Nothing, moduleMinBase = Base47 }
+                        sectionDocs = M.empty, moduleMinBase = Base47 }
 
 -- | Run the given code generator using the state and config of an
 -- ambient CodeGen, but without adding the generated code to
@@ -305,13 +309,13 @@ mergeInfoState oldState newState =
         newGHCOpts = Set.union (moduleGHCOpts oldState) (moduleGHCOpts newState)
         newFlags = Set.union (moduleFlags oldState) (moduleFlags newState)
         newBoot = bootCode oldState <> bootCode newState
-        newDoc = moduleDoc oldState <> moduleDoc newState
+        newDocs = sectionDocs oldState <> sectionDocs newState
         newMinBase = max (moduleMinBase oldState) (moduleMinBase newState)
     in oldState {moduleDeps = newDeps, submodules = newSubmodules,
                  moduleExports = newExports, qualifiedImports = newImports,
                  modulePragmas = newPragmas,
                  moduleGHCOpts = newGHCOpts, moduleFlags = newFlags,
-                 bootCode = newBoot, moduleDoc = newDoc,
+                 bootCode = newBoot, sectionDocs = newDocs,
                  moduleMinBase = newMinBase }
 
 -- | Merge the infos, including code too.
@@ -572,35 +576,23 @@ hsBoot cg = do
         addGuards (cond : conds) c = codeSingleton $ CPPBlock cond (addGuards conds c)
 
 -- | Add a export to the current module.
-export :: ([CPPConditional] -> Export) -> CodeGen ()
-export partial =
+exportPartial :: ([CPPConditional] -> Export) -> CodeGen ()
+exportPartial partial =
     modify' $ \(cgs, s) -> (cgs,
                             let e = partial $ cgsCPPConditionals cgs
                             in s{moduleExports = moduleExports s |> e})
 
 -- | Reexport a whole module.
 exportModule :: SymbolName -> CodeGen ()
-exportModule m = export (Export ExportModule m)
-
--- | Export a toplevel (i.e. belonging to no section) symbol.
-exportToplevel :: SymbolName -> CodeGen ()
-exportToplevel t = export (Export ExportToplevel t)
+exportModule m = exportPartial (Export ExportModule m)
 
 -- | Add a type declaration-related export.
 exportDecl :: SymbolName -> CodeGen ()
-exportDecl d = export (Export ExportTypeDecl d)
+exportDecl d = exportPartial (Export ExportTypeDecl d)
 
--- | Add a method export under the given section.
-exportMethod :: HaddockSection -> SymbolName -> CodeGen ()
-exportMethod s n = export (Export (ExportMethod s) n)
-
--- | Add a property-related export under the given section.
-exportProperty :: HaddockSection -> SymbolName -> CodeGen ()
-exportProperty s n = export (Export (ExportProperty s) n)
-
--- | Add a signal-related export under the given section.
-exportSignal :: HaddockSection -> SymbolName -> CodeGen ()
-exportSignal s n = export (Export (ExportSignal s) n)
+-- | Export a symbol in the given haddock section.
+export :: HaddockSection -> SymbolName -> CodeGen ()
+export s n = exportPartial (Export (ExportSymbol s) n)
 
 -- | Set the language pragmas for the current module.
 setLanguagePragmas :: [Text] -> CodeGen ()
@@ -621,6 +613,12 @@ setModuleFlags flags =
 setModuleMinBase :: BaseVersion -> CodeGen ()
 setModuleMinBase v =
     modify' $ \(cgs, s) -> (cgs, s{moduleMinBase = max v (moduleMinBase s)})
+
+-- | Add documentation for a given section.
+addSectionFormattedDocs :: HaddockSection -> Text -> CodeGen ()
+addSectionFormattedDocs section docs =
+    modify' $ \(cgs, s) -> (cgs, s{sectionDocs = M.insertWith (<>)
+                                                 section docs (sectionDocs s)})
 
 -- | Format a CPP conditional.
 cppCondFormat :: CPPConditional -> (Text, Text)
@@ -672,7 +670,7 @@ formatToplevel :: [Export] -> Maybe Text
 formatToplevel [] = Nothing
 formatToplevel exports =
     Just . T.concat . map (formatExport exportSymbol)
-         . filter ((== ExportToplevel) . exportType) $ exports
+         . filter ((== ExportSymbol ToplevelSection) . exportType) $ exports
 
 -- | Format the type declarations section.
 formatTypeDecls :: [Export] -> Maybe Text
@@ -687,12 +685,16 @@ formatTypeDecls exports =
 -- | A subsection name, with an optional anchor name.
 data Subsection = Subsection { subsectionTitle  :: Text
                              , subsectionAnchor :: Maybe Text
+                             , subsectionDoc    :: Maybe Text
                              } deriving (Eq, Show, Ord)
 
--- | A subsection with an anchor given by the title and @prefix:title@ anchor.
-subsecWithPrefix prefix title =
+-- | A subsection with an anchor given by the title and @prefix:title@
+-- anchor, and the given documentation.
+subsecWithPrefix :: Text -> Text -> Maybe Text -> Subsection
+subsecWithPrefix prefix title doc =
   Subsection { subsectionTitle = title
-             , subsectionAnchor = Just (prefix <> ":" <> title) }
+             , subsectionAnchor = Just (prefix <> ":" <> title)
+             , subsectionDoc = doc }
 
 -- | Format a given section made of subsections.
 formatSection :: Text -> (Export -> Maybe (Subsection, Export)) ->
@@ -723,44 +725,47 @@ formatSection section filter exports =
                                     Just anchor -> subsectionTitle subsec <>
                                                    " #" <> anchor <> "#"
                                     Nothing -> subsectionTitle subsec
+                    , case subsectionDoc subsec of
+                        Just text -> "{- | " <> text  <> "\n-}"
+                        Nothing -> ""
                     , ( T.concat
                       . map (formatExport exportSymbol)
                       . Set.toList ) symbols]
 
 -- | Format the list of methods.
-formatMethods :: [Export] -> Maybe Text
-formatMethods = formatSection "Methods" toMethod
+formatMethods :: M.Map HaddockSection Text -> [Export] -> Maybe Text
+formatMethods docs = formatSection "Methods" toMethod
     where toMethod :: Export -> Maybe (Subsection, Export)
-          toMethod e@(Export (ExportMethod s) _ _) =
-            Just (subsecWithPrefix "method" s, e)
+          toMethod e@(Export (ExportSymbol ds@(MethodSection s)) _ _) =
+            Just (subsecWithPrefix "method" s (M.lookup ds docs), e)
           toMethod _ = Nothing
 
 -- | Format the list of properties.
-formatProperties :: [Export] -> Maybe Text
-formatProperties = formatSection "Properties" toProperty
+formatProperties :: M.Map HaddockSection Text -> [Export] -> Maybe Text
+formatProperties docs = formatSection "Properties" toProperty
     where toProperty :: Export -> Maybe (Subsection, Export)
-          toProperty e@(Export (ExportProperty s) _ _) =
-            Just (subsecWithPrefix "attr" s, e)
+          toProperty e@(Export (ExportSymbol ds@(PropertySection s)) _ _) =
+            Just (subsecWithPrefix "attr" s (M.lookup ds docs), e)
           toProperty _ = Nothing
 
 -- | Format the list of signals.
-formatSignals :: [Export] -> Maybe Text
-formatSignals = formatSection "Signals" toSignal
+formatSignals :: M.Map HaddockSection Text -> [Export] -> Maybe Text
+formatSignals docs = formatSection "Signals" toSignal
     where toSignal :: Export -> Maybe (Subsection, Export)
-          toSignal e@(Export (ExportSignal s) _ _) =
-            Just (subsecWithPrefix "signal" s, e)
+          toSignal e@(Export (ExportSymbol ds@(SignalSection s)) _ _) =
+            Just (subsecWithPrefix "signal" s (M.lookup ds docs), e)
           toSignal _ = Nothing
 
 -- | Format the given export list. This is just the inside of the
 -- parenthesis.
-formatExportList :: [Export] -> Text
-formatExportList exports =
+formatExportList :: M.Map HaddockSection Text -> [Export] -> Text
+formatExportList docs exports =
     T.unlines . catMaybes $ [ formatExportedModules exports
                             , formatToplevel exports
                             , formatTypeDecls exports
-                            , formatMethods exports
-                            , formatProperties exports
-                            , formatSignals exports ]
+                            , formatMethods docs exports
+                            , formatProperties docs exports
+                            , formatSignals docs exports ]
 
 -- | Write down the list of language pragmas.
 languagePragmas :: [Text] -> Text
@@ -785,22 +790,22 @@ moduleHaddock (Just description) = T.unlines ["{- |", standardFields,
                                               description, "-}"]
 
 -- | Generic module prelude. We reexport all of the submodules.
-modulePrelude :: Text -> [Export] -> [Text] -> Text
-modulePrelude name [] [] = "module " <> name <> " () where\n"
-modulePrelude name exports [] =
+modulePrelude :: M.Map HaddockSection Text -> Text -> [Export] -> [Text] -> Text
+modulePrelude _ name [] [] = "module " <> name <> " () where\n"
+modulePrelude docs name exports [] =
     "module " <> name <> "\n    ( "
-    <> formatExportList exports
+    <> formatExportList docs exports
     <> "    ) where\n"
-modulePrelude name [] reexportedModules =
+modulePrelude docs name [] reexportedModules =
     "module " <> name <> "\n    ( "
-    <> formatExportList (map (\m -> Export ExportModule m []) reexportedModules)
+    <> formatExportList docs (map (\m -> Export ExportModule m []) reexportedModules)
     <> "    ) where\n\n"
     <> T.unlines (map ("import " <>) reexportedModules)
-modulePrelude name exports reexportedModules =
+modulePrelude docs name exports reexportedModules =
     "module " <> name <> "\n    ( "
-    <> formatExportList (map (\m -> Export ExportModule m []) reexportedModules)
+    <> formatExportList docs (map (\m -> Export ExportModule m []) reexportedModules)
     <> "\n"
-    <> formatExportList exports
+    <> formatExportList docs exports
     <> "    ) where\n\n"
     <> T.unlines (map ("import " <>) reexportedModules)
 
@@ -857,7 +862,8 @@ writeModuleInfo verbose dirPrefix minfo = do
       code = codeToText (moduleCode minfo)
       pragmas = languagePragmas (Set.toList $ modulePragmas minfo)
       optionsGHC = ghcOptions (Set.toList $ moduleGHCOpts minfo)
-      prelude = modulePrelude (dotWithPrefix $ modulePath minfo)
+      prelude = modulePrelude (sectionDocs minfo)
+                (dotWithPrefix $ modulePath minfo)
                 (F.toList (moduleExports minfo))
                 submoduleExports
       imports = if ImplicitPrelude `Set.member` moduleFlags minfo
@@ -865,7 +871,7 @@ writeModuleInfo verbose dirPrefix minfo = do
                 else moduleImports
       pkgRoot = ModulePath (take 1 (modulePathToList $ modulePath minfo))
       deps = importDeps pkgRoot (Set.toList $ qualifiedImports minfo)
-      haddock = moduleHaddock (moduleDoc minfo)
+      haddock = moduleHaddock (M.lookup ToplevelSection (sectionDocs minfo))
 
   when verbose $ putStrLn ((T.unpack . dotWithPrefix . modulePath) minfo
                            ++ " -> " ++ fname)

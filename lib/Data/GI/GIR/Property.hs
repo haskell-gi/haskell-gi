@@ -25,6 +25,7 @@ data Property = Property {
         propReadNullable :: Maybe Bool,
         propWriteNullable :: Maybe Bool,
         propTransfer :: Transfer,
+        propDoc :: Documentation,
         propDeprecated :: Maybe DeprecationInfo
     } deriving (Show, Eq)
 
@@ -42,12 +43,14 @@ parseProperty = do
               <> (if writable then [PropertyWritable] else [])
               <> (if construct then [PropertyConstruct] else [])
               <> (if constructOnly then [PropertyConstructOnly] else [])
+  doc <- parseDocumentation
   return $ Property {
                   propName = name
                 , propType = t
                 , propFlags = flags
                 , propTransfer = transfer
                 , propDeprecated = deprecated
+                , propDoc = doc
                 -- No support in the GIR for nullability info
                 , propReadNullable = Nothing
                 , propWriteNullable = Nothing

@@ -25,7 +25,7 @@ import Data.GI.CodeGen.Callable (hOutType, wrapMaybe,
                                  callableHInArgs, callableHOutArgs)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Conversions
-import Data.GI.CodeGen.Haddock (deprecatedPragma)
+import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation)
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Transfer (freeContainerType)
 import Data.GI.CodeGen.Type
@@ -43,7 +43,7 @@ genHaskellCallbackPrototype subsec cb htype expose = group $ do
         (hInArgs, _) = callableHInArgs cb expose
         hOutArgs = callableHOutArgs cb
 
-    exportSignal subsec name'
+    export (SignalSection subsec) name'
     line $ "type " <> name' <> " ="
     indent $ do
       forM_ hInArgs $ \arg -> do
@@ -57,7 +57,7 @@ genHaskellCallbackPrototype subsec cb htype expose = group $ do
     blank
 
     -- For optional parameters, in case we want to pass Nothing.
-    exportSignal subsec ("no" <> name')
+    export (SignalSection subsec) ("no" <> name')
     line $ "no" <> name' <> " :: Maybe " <> name'
     line $ "no" <> name' <> " = Nothing"
 
@@ -66,7 +66,7 @@ genHaskellCallbackPrototype subsec cb htype expose = group $ do
 genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen Text
 genCCallbackPrototype subsec cb name' isSignal = group $ do
     let ctypeName = callbackCType name'
-    exportSignal subsec ctypeName
+    export (SignalSection subsec) ctypeName
 
     line $ "type " <> ctypeName <> " ="
     indent $ do
@@ -93,7 +93,7 @@ genCallbackWrapperFactory subsec name' = group $ do
     line "foreign import ccall \"wrapper\""
     indent $ line $ factoryName <> " :: " <> callbackCType name'
                <> " -> IO (FunPtr " <> callbackCType name' <> ")"
-    exportSignal subsec factoryName
+    export (SignalSection subsec) factoryName
 
 -- | Wrap the Haskell `cb` callback into a foreign function of the
 -- right type. Returns the name of the wrapped value.
@@ -116,7 +116,7 @@ genWrappedCallback cb cbArg callback isSignal = do
 genClosure :: Text -> Callable -> Text -> Text -> Bool -> CodeGen ()
 genClosure subsec cb callback name isSignal = group $ do
   let closure = callbackClosureGenerator name
-  exportSignal subsec closure
+  export (SignalSection subsec) closure
   group $ do
       line $ closure <> " :: " <> callback <> " -> IO Closure"
       line $ closure <> " cb = do"
@@ -218,7 +218,7 @@ genDropClosures subsec cb name' = group $ do
                              else Nothing
       argNames = map (maybe "_" id . passOrIgnore) inWithClosures
 
-  exportSignal subsec dropper
+  export (SignalSection subsec) dropper
 
   line $ dropper <> " :: " <> name' <> " -> " <> callbackHTypeWithClosures name'
   line $ dropper <> " _f " <> T.unwords argNames <> " = _f "
@@ -236,7 +236,7 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
       (hInArgs, _) = callableHInArgs cb WithClosures
       hOutArgs = callableHOutArgs cb
 
-  exportSignal subsec wrapperName
+  export (SignalSection subsec) wrapperName
 
   group $ do
     line $ wrapperName <> " ::"
@@ -322,7 +322,7 @@ genCallback n (Callback {cbCallable = cb}) = do
                              "\n-- Error was : " <> describeCGError e)) $ do
       typeSynonym <- genCCallbackPrototype name' cb' name' False
       dynamic <- genDynamicCallableWrapper n typeSynonym cb
-      exportSignal name' dynamic
+      export (SignalSection name') dynamic
       genCallbackWrapperFactory name' name'
       deprecatedPragma name' (callableDeprecated cb')
       genHaskellCallbackPrototype name' cb' name' WithoutClosures
@@ -368,6 +368,9 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
   let sn' = signalHaskellName sn
       signalConnectorName = on' <> ucFirst sn'
       cbType = signalConnectorName <> "Callback"
+      docSection = SignalSection $ lcFirst sn'
+
+  addSectionDocumentation docSection (sigDoc s)
 
   deprecatedPragma cbType (callableDeprecated cb)
   genHaskellCallbackPrototype (lcFirst sn') cb cbType WithoutClosures
@@ -403,13 +406,13 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
       line $ onName <> signature
       line $ onName <> " obj cb = liftIO $ do"
       indent $ genSignalConnector s cbType "SignalConnectBefore"
-      exportSignal (lcFirst sn') onName
+      export docSection onName
 
     group $ do
       line $ afterName <> signature
       line $ afterName <> " obj cb = liftIO $ do"
       indent $ genSignalConnector s cbType "SignalConnectAfter"
-      exportSignal (lcFirst sn') afterName
+      export docSection afterName
 
 -- | Generate the code for connecting the given signal. This assumes
 -- that it lives inside a @do@ block.

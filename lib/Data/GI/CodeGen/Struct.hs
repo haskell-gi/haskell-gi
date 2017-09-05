@@ -250,7 +250,7 @@ genAttrInfo owner field = do
     line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst (fName field) <> "\""
     line $ labelProxy <> " = AttrLabelProxy"
 
-    exportProperty (lcFirst $ fName field) labelProxy
+    export (PropertySection $ lcFirst $ fName field) labelProxy
 
   return $ "'(\"" <> (lcFirst  . fName) field <> "\", " <> it <> ")"
 
@@ -264,16 +264,16 @@ buildFieldAttributes n field
      embedded <- isEmbedded field
 
      buildFieldReader n field
-     exportProperty (lcFirst $ fName field) (fieldGetter n field)
+     export (PropertySection $ lcFirst $ fName field) (fieldGetter n field)
 
      when (not embedded) $ do
          buildFieldWriter n field
-         exportProperty (lcFirst $ fName field) (fieldSetter n field)
+         export (PropertySection $ lcFirst $ fName field) (fieldSetter n field)
 
          case nullPtr of
            Just null -> do
               buildFieldClear n field null
-              exportProperty (lcFirst $ fName field) (fieldClear n field)
+              export (PropertySection $ lcFirst $ fName field) (fieldClear n field)
            Nothing -> return ()
 
      Just <$> cppIf CPPOverloading (genAttrInfo n field)

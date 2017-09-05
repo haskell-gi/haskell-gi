@@ -24,7 +24,7 @@ import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
 import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability,
                                detectGObject)
 import Data.GI.CodeGen.GObject
-import Data.GI.CodeGen.Haddock (deprecatedPragma, addModuleDocumentation)
+import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation)
 import Data.GI.CodeGen.Inheritance (instanceTree, fullObjectMethodList,
                        fullInterfaceMethodList)
 import Data.GI.CodeGen.Properties (genInterfaceProperties, genObjectProperties,
@@ -52,7 +52,7 @@ genFunction n (Function symbol fnMovedTo callable) =
                            <> "\n-- Error was : " <> describeCGError e))
                         (do
                           genCCallableWrapper n symbol callable
-                          exportMethod (lowerName n) (lowerName n)
+                          export (MethodSection $ lowerName n) (lowerName n)
                         )
 
 genBoxedObject :: Name -> Text -> CodeGen ()
@@ -78,7 +78,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
    hsBoot decl
    decl
 
-   addModuleDocumentation (structDocumentation s)
+   addSectionDocumentation ToplevelSection (structDocumentation s)
 
    if structIsBoxed s
    then genBoxedObject n (fromJust $ structTypeInit s)
@@ -120,7 +120,7 @@ genUnion n u = do
   hsBoot decl
   decl
 
-  addModuleDocumentation (unionDocumentation u)
+  addSectionDocumentation ToplevelSection (unionDocumentation u)
 
   if unionIsBoxed u
   then genBoxedObject n (fromJust $ unionTypeInit u)
@@ -225,7 +225,7 @@ genMethod cn m@(Method {
               then fixMethodArgs c'
               else c'
     genCCallableWrapper mn' sym c''
-    exportMethod (lowerName mn) (lowerName mn')
+    export (MethodSection $ lowerName mn) (lowerName mn')
 
     cppIf CPPOverloading $
          genMethodInfo cn (m {methodCallable = c''})
@@ -281,7 +281,7 @@ genObject n o = do
     bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
     exportDecl (name' <> "(..)")
 
-    addModuleDocumentation (objDocumentation o)
+    addSectionDocumentation ToplevelSection (objDocumentation o)
 
     -- Type safe casting to parent objects, and implemented interfaces.
     parents <- instanceTree n
@@ -324,7 +324,7 @@ genInterface n iface = do
   bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   exportDecl (name' <> "(..)")
 
-  addModuleDocumentation (ifDocumentation iface)
+  addSectionDocumentation ToplevelSection (ifDocumentation iface)
 
   noName name'
 

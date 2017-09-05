@@ -147,5 +147,5 @@ genErrorDomain name' domain = do
             line   "IO a ->"
             line   "IO a"
     line $ handler <> " = handleGErrorJustDomain"
-  exportToplevel ("catch" <> name')
-  exportToplevel ("handle" <> name')
+  export ToplevelSection ("catch" <> name')
+  export ToplevelSection ("handle" <> name')

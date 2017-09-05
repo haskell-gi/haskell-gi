@@ -78,7 +78,7 @@ genOverloadedLabel l = group $ do
   line $ "_" <> l <> " :: IsLabelProxy \"" <> l <> "\" a => a"
   line $ "_" <> l <> " = fromLabelProxy (Proxy :: Proxy \""
            <> l <> "\")"
-  exportToplevel ("_" <> l)
+  export ToplevelSection ("_" <> l)
 
 genOverloadedLabels :: [(Name, API)] -> CodeGen ()
 genOverloadedLabels allAPIs = do
