@@ -33,21 +33,43 @@ static int print_debug_info ()
   return __print_debug_info;
 }
 
-/* Auxiliary function for freeing boxed types */
-void boxed_free_helper (GType gtype, void *boxed)
-{
-  if (print_debug_info()) {
-    GThread *self;
+/* Information about a boxed type to free */
+typedef struct {
+  GType gtype;
+  gpointer boxed;
+} BoxedFreeInfo;
 
-    fprintf(stderr, "Freeing a boxed object at %p [thread: %p]\n", boxed, self);
-    fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
+/* Auxiliary function for freeing boxed types in the main loop. See
+   the annotation in g_object_unref_in_main_loop() below. */
+static gboolean main_loop_boxed_free_helper (gpointer _info)
+{
+  BoxedFreeInfo *info = (BoxedFreeInfo*)_info;
+
+  if (print_debug_info()) {
+    GThread *self = g_thread_self ();
+
+    fprintf(stderr, "Freeing a boxed object at %p from idle callback [thread: %p]\n",
+            info->boxed, self);
+    fprintf(stderr, "\tIt is of type %s\n", g_type_name(info->gtype));
   }
 
-  g_boxed_free (gtype, boxed);
+  g_boxed_free (info->gtype, info->boxed);
 
   if (print_debug_info()) {
     fprintf(stderr, "\tdone\n");
   }
+
+  g_free(info);
+}
+
+void boxed_free_helper (GType gtype, void *boxed)
+{
+  BoxedFreeInfo *info = g_malloc(sizeof(BoxedFreeInfo));
+
+  info->gtype = gtype;
+  info->boxed = boxed;
+
+  g_idle_add (main_loop_boxed_free_helper, info);
 }
 
 void dbg_g_object_disown (GObject *obj)
@@ -64,24 +86,43 @@ void dbg_g_object_disown (GObject *obj)
   }
 }
 
-void dbg_g_object_unref (GObject *obj)
+static void print_object_dbg_info (GObject *obj)
 {
+  GThread *self = g_thread_self();
   GType gtype;
 
+  fprintf(stderr, "Unref of %p from idle callback [thread: %p]\n", obj, self);
+  gtype = G_TYPE_FROM_INSTANCE (obj);
+  fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
+  fprintf(stderr, "\tIts refcount before unref is %d\n",
+          (int)obj->ref_count);
+}
+
+/*
+  We schedule all GObject deletions to happen in the main loop. The
+  reason is that for some types the destructor is not thread safe, and
+  assumes that it is being run from the same thread as the main loop
+  that created the object.
+ */
+static gboolean
+g_object_unref_in_main_loop (gpointer obj)
+{
   if (print_debug_info()) {
-    GThread *self = g_thread_self();
-    fprintf(stderr, "Freeing a GObject at %p [thread: %p]\n", obj, self);
-    gtype = G_TYPE_FROM_INSTANCE (obj);
-    fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
-    fprintf(stderr, "\tIts refcount before unref is %d\n",
-            (int)obj->ref_count);
+    print_object_dbg_info ((GObject*)obj);
   }
 
-  g_object_unref(obj);
+  g_object_unref (obj);
 
   if (print_debug_info()) {
-    fprintf(stderr, "\tdone\n");
+    fprintf(stderr, "\tUnref done\n");
   }
+
+  return FALSE; /* Do not invoke again */
+}
+
+void dbg_g_object_unref (GObject *obj)
+{
+  g_idle_add(g_object_unref_in_main_loop, obj);
 }
 
 /**
