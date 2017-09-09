@@ -20,7 +20,8 @@ import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.GObject
-import Data.GI.CodeGen.Haddock (addSectionDocumentation)
+import Data.GI.CodeGen.Haddock (addSectionDocumentation, writeHaddock,
+                                RelativeDocPosition(DocBeforeSymbol))
 import Data.GI.CodeGen.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
 import Data.GI.CodeGen.SymbolNaming (lowerName, upperName,
                                      classConstraint, typeConstraint,
@@ -89,6 +90,17 @@ attrType prop = do
   (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
   return (constraints, t)
 
+-- | Generate documentation for the given setter.
+setterDoc :: Name -> Property -> Text
+setterDoc n prop = T.unlines [
+    "Set the value of the “@" <> propName prop <> "@” property."
+  , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+  , ""
+  , "@"
+  , "'Data.GI.Base.Attributes.set' " <> lowerName n <> " [ #" <> hPropName prop
+    <> " 'Data.GI.Base.Attributes.:=' value ]"
+  , "@"]
+
 genPropertySetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertySetter setter n docSection prop = group $ do
   (constraints, t) <- attrType prop
@@ -96,6 +108,7 @@ genPropertySetter setter n docSection prop = group $ do
   cls <- classConstraint n
   let constraints' = "MonadIO m":(cls <> " o"):constraints
   tStr <- propTypeStr $ propType prop
+  writeHaddock DocBeforeSymbol (setterDoc n prop)
   line $ setter <> " :: (" <> T.intercalate ", " constraints'
            <> ") => o -> " <> t <> " -> m ()"
   line $ setter <> " obj val = liftIO $ setObjectProperty" <> tStr
@@ -104,6 +117,16 @@ genPropertySetter setter n docSection prop = group $ do
               then "\" (Just val)"
               else "\" val"
   export docSection setter
+
+-- | Generate documentation for the given getter.
+getterDoc :: Name -> Property -> Text
+getterDoc n prop = T.unlines [
+    "Get the value of the “@" <> propName prop <> "@” property."
+  , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+  , ""
+  , "@"
+  , "'Data.GI.Base.Attributes.get' " <> lowerName n <> " #" <> hPropName prop
+  , "@"]
 
 genPropertyGetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyGetter getter n docSection prop = group $ do
@@ -120,6 +143,7 @@ genPropertyGetter getter n docSection prop = group $ do
                 then "checkUnexpectedNothing \"" <> getter
                          <> "\" $ getObjectProperty" <> tStr
                 else "getObjectProperty" <> tStr
+  writeHaddock DocBeforeSymbol (getterDoc n prop)
   line $ getter <> " :: " <> constraints <>
                 " => o -> " <> typeShow ("m" `con` [outType])
   line $ getter <> " obj = liftIO $ " <> getProp
@@ -129,6 +153,12 @@ genPropertyGetter getter n docSection prop = group $ do
            else ""
   export docSection getter
 
+-- | Generate documentation for the given constructor.
+constructorDoc :: Property -> Text
+constructorDoc prop = T.unlines [
+    "Construct a `GValueConstruct` with valid value for the “@" <> propName prop <> "@” property. This is rarely needed directly, but it is used by `Data.GI.Base.Constructible.new`."
+    ]
+
 genPropertyConstructor :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyConstructor constructor n docSection prop = group $ do
   (constraints, t) <- attrType prop
@@ -137,6 +167,7 @@ genPropertyConstructor constructor n docSection prop = group $ do
   cls <- classConstraint n
   let constraints' = (cls <> " o") : constraints
       pconstraints = parenthesize (T.intercalate ", " constraints') <> " => "
+  writeHaddock DocBeforeSymbol (constructorDoc prop)
   line $ constructor <> " :: " <> pconstraints
            <> t <> " -> IO (GValueConstruct o)"
   line $ constructor <> " val = constructObjectProperty" <> tStr
@@ -146,12 +177,23 @@ genPropertyConstructor constructor n docSection prop = group $ do
               else "\" val"
   export docSection constructor
 
+-- | Generate documentation for the given setter.
+clearDoc :: Property -> Text
+clearDoc prop = T.unlines [
+    "Set the value of the “@" <> propName prop <> "@” property to `Nothing`."
+  , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+  , ""
+  , "@"
+  , "'Data.GI.Base.Attributes.clear'" <> " #" <> hPropName prop
+  , "@"]
+
 genPropertyClear :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyClear clear n docSection prop = group $ do
   nothingType <- typeShow . maybeT <$> haskellType (propType prop)
   cls <- classConstraint n
   let constraints = ["MonadIO m", cls <> " o"]
   tStr <- propTypeStr $ propType prop
+  writeHaddock DocBeforeSymbol (clearDoc prop)
   line $ clear <> " :: (" <> T.intercalate ", " constraints
            <> ") => o -> m ()"
   line $ clear <> " obj = liftIO $ setObjectProperty" <> tStr
