@@ -248,8 +248,10 @@ wrapObject constructor ptr = do
   fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
 
-
-foreign import ccall "dbg_g_object_unref"
+-- It is fine to use unsafe here, since all this does is schedule an
+-- idle callback. The scheduling itself will never block for a long
+-- time, or call back into Haskell.
+foreign import ccall unsafe "dbg_g_object_unref"
         dbg_g_object_unref :: Ptr a -> IO ()
 
 -- | Decrease the reference count of the given 'GObject'. The memory
@@ -271,7 +273,10 @@ disownObject obj = withManagedPtr obj $ \ptr -> do
                      dbg_g_object_disown ptr
                      castPtr <$> disownManagedPtr obj
 
-foreign import ccall "boxed_free_helper" boxed_free_helper ::
+-- It is fine to use unsafe here, since all this does is schedule an
+-- idle callback. The scheduling itself will never block for a long
+-- time, or call back into Haskell.
+foreign import ccall unsafe "boxed_free_helper" boxed_free_helper ::
     CGType -> Ptr a -> IO ()
 
 foreign import ccall "g_boxed_copy" g_boxed_copy ::
