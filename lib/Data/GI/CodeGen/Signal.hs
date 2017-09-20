@@ -25,48 +25,69 @@ import Data.GI.CodeGen.Callable (hOutType, wrapMaybe,
                                  callableHInArgs, callableHOutArgs)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Conversions
-import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation)
+import Data.GI.CodeGen.Haddock (deprecatedPragma,
+                                RelativeDocPosition(..), writeHaddock,
+                                writeDocumentation,
+                                writeArgDocumentation, writeReturnDocumentation)
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Transfer (freeContainerType)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (parenthesize, withComment, tshow, terror,
                              lcFirst, ucFirst, prime)
+import Data.GI.GIR.Documentation (Documentation)
 
 -- | The prototype of the callback on the Haskell side (what users of
 -- the binding will see)
 genHaskellCallbackPrototype :: Text -> Callable -> Text -> ExposeClosures ->
-                               ExcCodeGen ()
-genHaskellCallbackPrototype subsec cb htype expose = group $ do
+                               Documentation -> ExcCodeGen ()
+genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
     let name' = case expose of
                   WithClosures -> callbackHTypeWithClosures htype
                   WithoutClosures -> htype
         (hInArgs, _) = callableHInArgs cb expose
+        inArgsWithArrows = zip ("" : repeat "-> ") hInArgs
         hOutArgs = callableHOutArgs cb
 
     export (SignalSection subsec) name'
+    writeDocumentation DocBeforeSymbol doc
     line $ "type " <> name' <> " ="
     indent $ do
-      forM_ hInArgs $ \arg -> do
+      forM_ inArgsWithArrows $ \(arrow, arg) -> do
         ht <- haskellType (argType arg)
-        wrapMaybe arg >>= bool
-                          (line $ typeShow ht <> " ->")
-                          (line $ typeShow (maybeT ht) <> " ->")
+        isMaybe <- wrapMaybe arg
+        let formattedType = if isMaybe
+                            then typeShow (maybeT ht)
+                            else typeShow ht
+        line $ arrow <> formattedType
+        writeArgDocumentation arg
       ret <- hOutType cb hOutArgs
-      line $ typeShow $ io ret
+      let returnArrow = if null hInArgs
+                        then ""
+                        else "-> "
+      line $ returnArrow <> typeShow (io ret)
+      writeReturnDocumentation cb False
 
     blank
 
     -- For optional parameters, in case we want to pass Nothing.
     export (SignalSection subsec) ("no" <> name')
+    writeHaddock DocBeforeSymbol (noCallbackDoc name')
     line $ "no" <> name' <> " :: Maybe " <> name'
     line $ "no" <> name' <> " = Nothing"
+
+  where noCallbackDoc :: Text -> Text
+        noCallbackDoc typeName =
+          "A convenience synonym for @`Nothing` :: `Maybe` `" <> typeName <>
+          "`@."
 
 -- | Generate the type synonym for the prototype of the callback on
 -- the C side. Returns the name given to the type synonym.
 genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen Text
 genCCallbackPrototype subsec cb name' isSignal = group $ do
     let ctypeName = callbackCType name'
+
     export (SignalSection subsec) ctypeName
+    writeHaddock DocBeforeSymbol ccallbackDoc
 
     line $ "type " <> ctypeName <> " ="
     indent $ do
@@ -86,14 +107,23 @@ genCCallbackPrototype subsec cb name' isSignal = group $ do
       line $ typeShow ret
     return ctypeName
 
--- Generator for wrappers callable from C
+  where
+    ccallbackDoc :: Text
+    ccallbackDoc = "Type for the callback on the (unwrapped) C side."
+
+-- | Generator for wrappers callable from C
 genCallbackWrapperFactory :: Text -> Text -> CodeGen ()
 genCallbackWrapperFactory subsec name' = group $ do
     let factoryName = callbackWrapperAllocator name'
+    writeHaddock DocBeforeSymbol factoryDoc
     line "foreign import ccall \"wrapper\""
     indent $ line $ factoryName <> " :: " <> callbackCType name'
                <> " -> IO (FunPtr " <> callbackCType name' <> ")"
     export (SignalSection subsec) factoryName
+
+  where factoryDoc :: Text
+        factoryDoc = "Generate a function pointer callable from C code, from a `"
+                     <> callbackCType name' <> "`."
 
 -- | Wrap the Haskell `cb` callback into a foreign function of the
 -- right type. Returns the name of the wrapped value.
@@ -117,6 +147,7 @@ genClosure :: Text -> Callable -> Text -> Text -> Bool -> CodeGen ()
 genClosure subsec cb callback name isSignal = group $ do
   let closure = callbackClosureGenerator name
   export (SignalSection subsec) closure
+  writeHaddock DocBeforeSymbol closureDoc
   group $ do
       line $ closure <> " :: " <> callback <> " -> IO Closure"
       line $ closure <> " cb = do"
@@ -124,6 +155,9 @@ genClosure subsec cb callback name isSignal = group $ do
             wrapped <- genWrappedCallback cb "cb" callback isSignal
             line $ callbackWrapperAllocator callback <> " " <> wrapped
                      <> " >>= newCClosure"
+  where
+    closureDoc :: Text
+    closureDoc = "Wrap the callback into a `Closure`."
 
 -- Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.
@@ -219,10 +253,14 @@ genDropClosures subsec cb name' = group $ do
       argNames = map (maybe "_" id . passOrIgnore) inWithClosures
 
   export (SignalSection subsec) dropper
+  writeHaddock DocBeforeSymbol dropperDoc
 
   line $ dropper <> " :: " <> name' <> " -> " <> callbackHTypeWithClosures name'
   line $ dropper <> " _f " <> T.unwords argNames <> " = _f "
            <> T.unwords (catMaybes (map passOrIgnore inWithClosures))
+
+  where dropperDoc :: Text
+        dropperDoc = "A simple wrapper that ignores the closure arguments."
 
 -- | The wrapper itself, marshalling to and from Haskell. The `Callable`
 -- argument is possibly a pointer to a FunPtr to free (via
@@ -235,8 +273,11 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
   let wrapperName = callbackHaskellToForeign name'
       (hInArgs, _) = callableHInArgs cb WithClosures
       hOutArgs = callableHOutArgs cb
+      wrapperDoc = "Wrap a `" <> name' <> "` into a `" <>
+                   callbackCType name' <> "`."
 
   export (SignalSection subsec) wrapperName
+  writeHaddock DocBeforeSymbol wrapperDoc
 
   group $ do
     line $ wrapperName <> " ::"
@@ -244,7 +285,6 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
       if isSignal
       then do
         line $ name' <> " ->"
-        line "Ptr () ->"
       else do
            line $ "Maybe (Ptr (FunPtr " <> callbackCType name' <> ")) ->"
            let hType = if callableHasClosures cb
@@ -252,19 +292,7 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
                        else name'
            line $ hType <> " ->"
 
-      forM_ (args cb) $ \arg -> do
-        ht <- foreignType $ argType arg
-        let ht' = if direction arg /= DirectionIn
-                  then ptr ht
-                  else ht
-        line $ typeShow ht' <> " ->"
-      when (callableThrows cb) $
-        line "Ptr (Ptr GError) ->"
-      when isSignal $ line "Ptr () ->"
-      ret <- io <$> case returnType cb of
-                      Nothing -> return $ con0 "()"
-                      Just t -> foreignType t
-      line $ typeShow ret
+      line $ callbackCType name'
 
     let cArgNames = map escapedArgName (args cb)
         allArgs = if isSignal
@@ -304,7 +332,7 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
                line $ "return " <> result'
 
 genCallback :: Name -> Callback -> CodeGen ()
-genCallback n (Callback {cbCallable = cb}) = do
+genCallback n (Callback {cbCallable = cb, cbDocumentation = cbDoc }) = do
   let name' = upperName n
   line $ "-- callback " <> name'
   line $ "--          -> " <> tshow (fixupCallerAllocates cb)
@@ -325,9 +353,9 @@ genCallback n (Callback {cbCallable = cb}) = do
       export (SignalSection name') dynamic
       genCallbackWrapperFactory name' name'
       deprecatedPragma name' (callableDeprecated cb')
-      genHaskellCallbackPrototype name' cb' name' WithoutClosures
+      genHaskellCallbackPrototype name' cb' name' WithoutClosures cbDoc
       when (callableHasClosures cb') $ do
-           genHaskellCallbackPrototype name' cb' name' WithClosures
+           genHaskellCallbackPrototype name' cb' name' WithClosures cbDoc
            genDropClosures name' cb' name'
       if callableThrows cb'
       then do
@@ -370,10 +398,9 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
       cbType = signalConnectorName <> "Callback"
       docSection = SignalSection $ lcFirst sn'
 
-  addSectionDocumentation docSection (sigDoc s)
-
   deprecatedPragma cbType (callableDeprecated cb)
-  genHaskellCallbackPrototype (lcFirst sn') cb cbType WithoutClosures
+
+  genHaskellCallbackPrototype (lcFirst sn') cb cbType WithoutClosures (sigDoc s)
 
   _ <- genCCallbackPrototype (lcFirst sn') cb cbType True
 
@@ -403,16 +430,41 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
         afterName = "after" <> signalConnectorName
 
     group $ do
+      writeHaddock DocBeforeSymbol onDoc
       line $ onName <> signature
       line $ onName <> " obj cb = liftIO $ do"
       indent $ genSignalConnector s cbType "SignalConnectBefore"
       export docSection onName
 
     group $ do
+      writeHaddock DocBeforeSymbol afterDoc
       line $ afterName <> signature
       line $ afterName <> " obj cb = liftIO $ do"
       indent $ genSignalConnector s cbType "SignalConnectAfter"
       export docSection afterName
+
+  where
+    onDoc :: Text
+    onDoc = T.unlines [
+      "Connect a signal handler for the “@" <> sn <>
+        "@” signal, to be run before the default handler."
+      , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+      , ""
+      , "@"
+      , "'Data.GI.Base.Signals.on' " <> lowerName on <> " #"
+        <> lcFirst (hyphensToCamelCase sn) <> " callback"
+      , "@" ]
+
+    afterDoc :: Text
+    afterDoc = T.unlines [
+      "Connect a signal handler for the “@" <> sn <>
+        "@” signal, to be run after the default handler."
+      , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+      , ""
+      , "@"
+      , "'Data.GI.Base.Signals.after' " <> lowerName on <> " #"
+        <> lcFirst (hyphensToCamelCase sn) <> " callback"
+      , "@" ]
 
 -- | Generate the code for connecting the given signal. This assumes
 -- that it lives inside a @do@ block.

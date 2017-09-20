@@ -36,7 +36,7 @@ import Data.Text (Text)
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Conversions
-import Data.GI.CodeGen.Haddock (deprecatedPragma,
+import Data.GI.CodeGen.Haddock (deprecatedPragma, writeHaddock,
                                 writeDocumentation, RelativeDocPosition(..),
                                 writeArgDocumentation, writeReturnDocumentation)
 import Data.GI.CodeGen.SymbolNaming
@@ -925,6 +925,12 @@ genDynamicCallableWrapper n typeSynonym callable = do
 
   blank
 
+  writeHaddock DocBeforeSymbol dynamicDoc
+
   let dyn = DynamicWrapper { dynamicWrapper = wrapper
                            , dynamicType    = typeSynonym }
   genHaskellWrapper n (DynamicForeignSymbol dyn) callable' WithClosures
+
+  where
+    dynamicDoc :: Text
+    dynamicDoc = "Given a pointer to a foreign C function, wrap it into a function callable from Haskell."

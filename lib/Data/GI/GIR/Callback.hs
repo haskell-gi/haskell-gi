@@ -12,6 +12,7 @@ import Data.GI.GIR.Type (queryCType)
 
 data Callback = Callback { cbCallable :: Callable
                          , cbCType    :: Maybe Text
+                         , cbDocumentation :: Documentation
                          }
     deriving Show
 
@@ -20,5 +21,7 @@ parseCallback = do
   name <- parseName
   callable <- parseCallable
   ctype <- queryCType
+  doc <- parseDocumentation
   return (name, Callback { cbCallable = callable
-                         , cbCType = ctype })
+                         , cbCType = ctype
+                         , cbDocumentation = doc })
