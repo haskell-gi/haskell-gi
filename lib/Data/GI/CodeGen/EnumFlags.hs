@@ -133,14 +133,17 @@ genErrorDomain name' domain = do
   -- it's clearer to read).
   group $ do
     let catcher = "catch" <> name'
+    writeHaddock DocBeforeSymbol catcherDoc
     line $ catcher <> " ::"
     indent $ do
             line   "IO a ->"
             line $ "(" <> name' <> " -> GErrorMessage -> IO a) ->"
             line   "IO a"
     line $ catcher <> " = catchGErrorJustDomain"
+
   group $ do
     let handler = "handle" <> name'
+    writeHaddock DocBeforeSymbol handleDoc
     line $ handler <> " ::"
     indent $ do
             line $ "(" <> name' <> " -> GErrorMessage -> IO a) ->"
@@ -149,3 +152,10 @@ genErrorDomain name' domain = do
     line $ handler <> " = handleGErrorJustDomain"
   export ToplevelSection ("catch" <> name')
   export ToplevelSection ("handle" <> name')
+
+  where
+    catcherDoc :: Text
+    catcherDoc = "Catch exceptions of type `" <> name' <> "`. This is a specialized version of `Data.GI.Base.GError.catchGErrorJustDomain`."
+
+    handleDoc :: Text
+    handleDoc = "Handle exceptions of type `" <> name' <> "`. This is a specialized version of `Data.GI.Base.GError.handleGErrorJustDomain`."

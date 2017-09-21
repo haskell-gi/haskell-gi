@@ -159,9 +159,12 @@ qualifiedSymbol s n@(Name ns _) = do
 -- want to pass Nothing.
 noName :: Text -> CodeGen ()
 noName name' = group $ do
-                 line $ "no" <> name' <> " :: Maybe " <> name'
-                 line $ "no" <> name' <> " = Nothing"
-                 exportDecl ("no" <> name')
+  -- We should use `writeHaddock` here, but it would give rise to a
+  -- cyclic import.
+  line $ "-- | A convenience alias for `Nothing` :: `Maybe` `" <> name' <> "`."
+  line $ "no" <> name' <> " :: Maybe " <> name'
+  line $ "no" <> name' <> " = Nothing"
+  exportDecl ("no" <> name')
 
 -- | Turn a hyphen-separated identifier into camel case.
 --

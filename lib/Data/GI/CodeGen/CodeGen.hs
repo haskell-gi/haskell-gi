@@ -24,7 +24,9 @@ import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
 import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability,
                                detectGObject)
 import Data.GI.CodeGen.GObject
-import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation)
+import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation,
+                                writeHaddock,
+                                RelativeDocPosition(DocBeforeSymbol))
 import Data.GI.CodeGen.Inheritance (instanceTree, fullObjectMethodList,
                        fullInterfaceMethodList)
 import Data.GI.CodeGen.Properties (genInterfaceProperties, genObjectProperties,
@@ -74,6 +76,7 @@ genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
    let name' = upperName n
 
+   writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
    let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
    hsBoot decl
    decl
@@ -116,6 +119,7 @@ genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
   let name' = upperName n
 
+  writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
   let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   hsBoot decl
   decl
@@ -247,6 +251,8 @@ genGObjectCasts n cn_ parents = do
   className <- classConstraint n
   group $ do
     exportDecl className
+    writeHaddock DocBeforeSymbol (classDoc name')
+
     bline $ "class GObject o => " <> className <> " o"
     line $ "#if MIN_VERSION_base(4,9,0)"
     line $ "instance {-# OVERLAPPABLE #-} (GObject a, O.UnknownAncestorError "
@@ -262,10 +268,20 @@ genGObjectCasts n cn_ parents = do
   group $ do
     let safeCast = "to" <> name'
     exportDecl safeCast
+    writeHaddock DocBeforeSymbol (castDoc name')
     line $ safeCast <> " :: (MonadIO m, " <> className <> " o) => o -> m " <> name'
     line $ safeCast <> " = liftIO . unsafeCastTo " <> name'
 
--- Wrap a given Object. We enforce that every Object that we wrap is a
+  where castDoc :: Text -> Text
+        castDoc name' = "Cast to `" <> name' <>
+                        "`, for types for which this is known to be safe. " <>
+                        "For general casts, use `Data.GI.Base.ManagedPtr.castTo`."
+
+        classDoc :: Text -> Text
+        classDoc name' = "Type class for types which can be safely cast to `"
+                         <> name' <> "`, for instance with `to" <> name' <> "`."
+
+-- | Wrap a given Object. We enforce that every Object that we wrap is a
 -- GObject. This is the case for everything except the ParamSpec* set
 -- of objects, we deal with these separately.
 genObject :: Name -> Object -> CodeGen ()
@@ -278,6 +294,7 @@ genObject n o = do
   then line $ "-- APIObject \"" <> name' <>
                 "\" does not descend from GObject, it will be ignored."
   else do
+    writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
     bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
     exportDecl (name' <> "(..)")
 
@@ -320,6 +337,7 @@ genInterface n iface = do
   let name' = upperName n
 
   line $ "-- interface " <> name' <> " "
+  writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
   deprecatedPragma name' $ ifDeprecated iface
   bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   exportDecl (name' <> "(..)")
@@ -353,6 +371,9 @@ genInterface n iface = do
   else group $ do
     cls <- classConstraint n
     exportDecl cls
+    writeHaddock DocBeforeSymbol ("Type class for types which implement `"
+                                  <> name' <> "`.")
+
     bline $ "class ManagedPtrNewtype a => " <> cls <> " a"
     line $ "instance " <> cls <> " " <> name'
     genWrappedPtr n (ifAllocationInfo iface) 0

@@ -357,7 +357,10 @@ genZeroSU n size isBoxed = group $ do
       let name = upperName n
       let builder = "newZero" <> name
           tsize = tshow size
-      line $ "-- | Construct a `" <> name <> "` struct initialized to zero."
+
+      writeHaddock DocBeforeSymbol ("Construct a `" <> name <>
+                                     "` struct initialized to zero.")
+
       line $ builder <> " :: MonadIO m => m " <> name
       line $ builder <> " = liftIO $ " <>
            if isBoxed

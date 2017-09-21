@@ -60,13 +60,16 @@ genPkgInfo :: [PkgconfigDependency] -> [(FlagName, Bool)] -> FilePath -> Text
 genPkgInfo deps flags fName modName = do
   versions <- mapM findVersion deps
   utf8WriteFile fName $ T.unlines
-         [ "module " <> modName <> " (pkgConfigVersions, flags) where"
+         [ "-- | Build configuration for the binding."
+         , "module " <> modName <> " (pkgConfigVersions, flags) where"
          , ""
          , "import Prelude (String, Bool(..))"
          , ""
+         , "-- | Versions of the pkg-config dependencies."
          , "pkgConfigVersions :: [(String, String)]"
          , "pkgConfigVersions = " <> tshow versions
          , ""
+         , "-- | Cabal flags set when building the module."
          , "flags :: [(String, Bool)]"
          , "flags = " <> tshow flags'
          ]
