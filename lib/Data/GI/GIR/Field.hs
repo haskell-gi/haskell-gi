@@ -22,6 +22,7 @@ data Field = Field {
       fieldCallback :: Maybe Callback,
       fieldOffset :: Int,
       fieldFlags :: [FieldInfoFlag],
+      fieldDocumentation :: Documentation,
       fieldDeprecated :: Maybe DeprecationInfo }
     deriving Show
 
@@ -42,6 +43,7 @@ parseField = do
              <> if writable then [FieldIsWritable] else []
   introspectable <- optionalAttr "introspectable" True parseBool
   private <- optionalAttr "private" False parseBool
+  doc <- parseDocumentation
   (t, isPtr, callback) <-
       if introspectable
       then do
@@ -76,6 +78,7 @@ parseField = do
              , fieldCallback = callback
              , fieldOffset = error ("unfixed field offset " ++ show name)
              , fieldFlags = flags
+             , fieldDocumentation = doc
              , fieldDeprecated = deprecated
           }
 

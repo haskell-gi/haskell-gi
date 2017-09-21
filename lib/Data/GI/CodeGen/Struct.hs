@@ -21,6 +21,8 @@ import qualified Data.Text as T
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
+import Data.GI.CodeGen.Haddock (addSectionDocumentation, writeHaddock,
+                                RelativeDocPosition(DocBeforeSymbol))
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
@@ -95,6 +97,20 @@ isEmbedded field = do
       Nothing -> badIntroError "Cannot determine whether the field is embedded."
       Just isPtr -> return (not isPtr)
 
+-- | Name for the getter function
+fieldGetter :: Name -> Field -> Text
+fieldGetter name' field = "get" <> upperName name' <> fName field
+
+-- | Generate documentation for the given getter.
+getterDoc :: Name -> Field -> Text
+getterDoc n field = T.unlines [
+    "Get the value of the “@" <> fieldName field <> "@” field."
+  , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+  , ""
+  , "@"
+  , "'Data.GI.Base.Attributes.get' " <> lowerName n <> " #" <> labelName field
+  , "@"]
+
 -- Notice that when reading the field we return a copy of any embedded
 -- structs, so modifications of the returned struct will not affect
 -- the original struct. This is on purpose, in order to increase
@@ -115,6 +131,8 @@ buildFieldReader n field = group $ do
                         then maybeT <$> isoHaskellType (fieldType field)
                         else isoHaskellType (fieldType field)
   fType <- typeShow <$> foreignType (fieldType field)
+
+  writeHaddock DocBeforeSymbol (getterDoc n field)
 
   line $ getter <> " :: MonadIO m => " <> name' <> " -> m " <>
               if T.any (== ' ') hType
@@ -140,6 +158,21 @@ buildFieldReader n field = group $ do
                 return "result"
     line $ "return " <> result
 
+-- | Name for the setter function
+fieldSetter :: Name -> Field -> Text
+fieldSetter name' field = "set" <> upperName name' <> fName field
+
+-- | Generate documentation for the given setter.
+setterDoc :: Name -> Field -> Text
+setterDoc n field = T.unlines [
+    "Set the value of the “@" <> fieldName field <> "@” field."
+  , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+  , ""
+  , "@"
+  , "'Data.GI.Base.Attributes.set' " <> lowerName n <> " [ #" <> labelName field
+    <> " 'Data.GI.Base.Attributes.:=' value ]"
+  , "@"]
+
 -- | Write a field into a struct. Note that, since we cannot know for
 -- sure who will be deallocating the fields in the struct, we leave
 -- any conversions that involve pointers to the caller. What this
@@ -158,6 +191,8 @@ buildFieldWriter n field = group $ do
            then return fType
            else typeShow <$> haskellType (fieldType field)
 
+  writeHaddock DocBeforeSymbol (setterDoc n field)
+
   line $ setter <> " :: MonadIO m => " <> name' <> " -> "
            <> hType <> " -> m ()"
   line $ setter <> " s val = liftIO $ withManagedPtr s $ \\ptr -> do"
@@ -168,6 +203,20 @@ buildFieldWriter n field = group $ do
     line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
          <> ") (" <> converted <> " :: " <> fType <> ")"
 
+-- | Name for the clear function
+fieldClear :: Name -> Field -> Text
+fieldClear name' field = "clear" <> upperName name' <> fName field
+
+-- | Documentation for the @clear@ method.
+clearDoc :: Field -> Text
+clearDoc field = T.unlines [
+  "Set the value of the “@" <> fieldName field <> "@” field to `Nothing`."
+  , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
+  , ""
+  , "@"
+  , "'Data.GI.Base.Attributes.clear'" <> " #" <> labelName field
+  , "@"]
+
 -- | Write a @NULL@ into a field of a struct of type `Ptr`.
 buildFieldClear :: Name -> Field -> Text -> ExcCodeGen ()
 buildFieldClear n field nullPtr = group $ do
@@ -176,27 +225,21 @@ buildFieldClear n field nullPtr = group $ do
 
   fType <- typeShow <$> foreignType (fieldType field)
 
+  writeHaddock DocBeforeSymbol (clearDoc field)
+
   line $ clear <> " :: MonadIO m => " <> name' <> " -> m ()"
   line $ clear <> " s = liftIO $ withManagedPtr s $ \\ptr -> do"
   indent $
     line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
          <> ") ("  <> nullPtr <> " :: " <> fType <> ")"
 
--- | Name for the getter function
-fieldGetter :: Name -> Field -> Text
-fieldGetter name' field = "get" <> upperName name' <> fName field
-
--- | Name for the setter function
-fieldSetter :: Name -> Field -> Text
-fieldSetter name' field = "set" <> upperName name' <> fName field
-
--- | Name for the clear function
-fieldClear :: Name -> Field -> Text
-fieldClear name' field = "clear" <> upperName name' <> fName field
-
 -- | Haskell name for the field
 fName :: Field -> Text
 fName = underscoresToCamelCase . fieldName
+
+-- | Label associated to the field.
+labelName :: Field -> Text
+labelName = lcFirst  . fName
 
 -- | Support for modifying fields as attributes. Returns a tuple with
 -- the name of the overloaded label to be used for the field, and the
@@ -252,28 +295,31 @@ genAttrInfo owner field = do
 
     export (PropertySection $ lcFirst $ fName field) labelProxy
 
-  return $ "'(\"" <> (lcFirst  . fName) field <> "\", " <> it <> ")"
+  return $ "'(\"" <> labelName field <> "\", " <> it <> ")"
 
 buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe Text)
 buildFieldAttributes n field
     | not (fieldVisible field) = return Nothing
     | privateType (fieldType field) = return Nothing
     | otherwise = group $ do
+
      nullPtr <- nullPtrForType (fieldType field)
 
      embedded <- isEmbedded field
 
+     addSectionDocumentation docSection (fieldDocumentation field)
+
      buildFieldReader n field
-     export (PropertySection $ lcFirst $ fName field) (fieldGetter n field)
+     export docSection (fieldGetter n field)
 
      when (not embedded) $ do
          buildFieldWriter n field
-         export (PropertySection $ lcFirst $ fName field) (fieldSetter n field)
+         export docSection (fieldSetter n field)
 
          case nullPtr of
            Just null -> do
               buildFieldClear n field null
-              export (PropertySection $ lcFirst $ fName field) (fieldClear n field)
+              export docSection (fieldClear n field)
            Nothing -> return ()
 
      Just <$> cppIf CPPOverloading (genAttrInfo n field)
@@ -281,6 +327,8 @@ buildFieldAttributes n field
     where privateType :: Type -> Bool
           privateType (TInterface n) = "Private" `T.isSuffixOf` name n
           privateType _ = False
+
+          docSection = PropertySection $ lcFirst $ fName field
 
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do
