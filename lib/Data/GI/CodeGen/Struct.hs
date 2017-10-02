@@ -293,7 +293,7 @@ genAttrInfo owner field = do
     line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst (fName field) <> "\""
     line $ labelProxy <> " = AttrLabelProxy"
 
-    export (PropertySection $ lcFirst $ fName field) labelProxy
+    export (NamedSubsection PropertySection $ lcFirst $ fName field) labelProxy
 
   return $ "'(\"" <> labelName field <> "\", " <> it <> ")"
 
@@ -328,7 +328,7 @@ buildFieldAttributes n field
           privateType (TInterface n) = "Private" `T.isSuffixOf` name n
           privateType _ = False
 
-          docSection = PropertySection $ lcFirst $ fName field
+          docSection = NamedSubsection PropertySection $ lcFirst $ fName field
 
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do

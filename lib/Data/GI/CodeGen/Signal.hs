@@ -48,7 +48,7 @@ genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
         inArgsWithArrows = zip ("" : repeat "-> ") hInArgs
         hOutArgs = callableHOutArgs cb
 
-    export (SignalSection subsec) name'
+    export (NamedSubsection SignalSection subsec) name'
     writeDocumentation DocBeforeSymbol doc
     line $ "type " <> name' <> " ="
     indent $ do
@@ -70,7 +70,7 @@ genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
     blank
 
     -- For optional parameters, in case we want to pass Nothing.
-    export (SignalSection subsec) ("no" <> name')
+    export (NamedSubsection SignalSection subsec) ("no" <> name')
     writeHaddock DocBeforeSymbol (noCallbackDoc name')
     line $ "no" <> name' <> " :: Maybe " <> name'
     line $ "no" <> name' <> " = Nothing"
@@ -86,7 +86,7 @@ genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen Text
 genCCallbackPrototype subsec cb name' isSignal = group $ do
     let ctypeName = callbackCType name'
 
-    export (SignalSection subsec) ctypeName
+    export (NamedSubsection SignalSection subsec) ctypeName
     writeHaddock DocBeforeSymbol ccallbackDoc
 
     line $ "type " <> ctypeName <> " ="
@@ -119,7 +119,7 @@ genCallbackWrapperFactory subsec name' = group $ do
     line "foreign import ccall \"wrapper\""
     indent $ line $ factoryName <> " :: " <> callbackCType name'
                <> " -> IO (FunPtr " <> callbackCType name' <> ")"
-    export (SignalSection subsec) factoryName
+    export (NamedSubsection SignalSection subsec) factoryName
 
   where factoryDoc :: Text
         factoryDoc = "Generate a function pointer callable from C code, from a `"
@@ -146,7 +146,7 @@ genWrappedCallback cb cbArg callback isSignal = do
 genClosure :: Text -> Callable -> Text -> Text -> Bool -> CodeGen ()
 genClosure subsec cb callback name isSignal = group $ do
   let closure = callbackClosureGenerator name
-  export (SignalSection subsec) closure
+  export (NamedSubsection SignalSection subsec) closure
   writeHaddock DocBeforeSymbol closureDoc
   group $ do
       line $ closure <> " :: " <> callback <> " -> IO Closure"
@@ -252,7 +252,7 @@ genDropClosures subsec cb name' = group $ do
                              else Nothing
       argNames = map (maybe "_" id . passOrIgnore) inWithClosures
 
-  export (SignalSection subsec) dropper
+  export (NamedSubsection SignalSection subsec) dropper
   writeHaddock DocBeforeSymbol dropperDoc
 
   line $ dropper <> " :: " <> name' <> " -> " <> callbackHTypeWithClosures name'
@@ -276,7 +276,7 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
       wrapperDoc = "Wrap a `" <> name' <> "` into a `" <>
                    callbackCType name' <> "`."
 
-  export (SignalSection subsec) wrapperName
+  export (NamedSubsection SignalSection subsec) wrapperName
   writeHaddock DocBeforeSymbol wrapperDoc
 
   group $ do
@@ -350,7 +350,7 @@ genCallback n (Callback {cbCallable = cb, cbDocumentation = cbDoc }) = do
                              "\n-- Error was : " <> describeCGError e)) $ do
       typeSynonym <- genCCallbackPrototype name' cb' name' False
       dynamic <- genDynamicCallableWrapper n typeSynonym cb
-      export (SignalSection name') dynamic
+      export (NamedSubsection SignalSection name') dynamic
       genCallbackWrapperFactory name' name'
       deprecatedPragma name' (callableDeprecated cb')
       genHaskellCallbackPrototype name' cb' name' WithoutClosures cbDoc
@@ -396,7 +396,7 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
   let sn' = signalHaskellName sn
       signalConnectorName = on' <> ucFirst sn'
       cbType = signalConnectorName <> "Callback"
-      docSection = SignalSection $ lcFirst sn'
+      docSection = NamedSubsection SignalSection $ lcFirst sn'
 
   deprecatedPragma cbType (callableDeprecated cb)
 

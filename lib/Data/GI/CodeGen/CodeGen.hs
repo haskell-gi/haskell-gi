@@ -54,7 +54,7 @@ genFunction n (Function symbol fnMovedTo callable) =
                            <> "\n-- Error was : " <> describeCGError e))
                         (do
                           genCCallableWrapper n symbol callable
-                          export (MethodSection $ lowerName n) (lowerName n)
+                          export (NamedSubsection MethodSection $ lowerName n) (lowerName n)
                         )
 
 genBoxedObject :: Name -> Text -> CodeGen ()
@@ -229,7 +229,7 @@ genMethod cn m@(Method {
               then fixMethodArgs c'
               else c'
     genCCallableWrapper mn' sym c''
-    export (MethodSection $ lowerName mn) (lowerName mn')
+    export (NamedSubsection MethodSection $ lowerName mn) (lowerName mn')
 
     cppIf CPPOverloading $
          genMethodInfo cn (m {methodCallable = c''})

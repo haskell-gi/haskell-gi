@@ -18,8 +18,8 @@ import Data.GI.CodeGen.Haddock (deprecatedPragma, writeDocumentation,
 import Data.GI.CodeGen.SymbolNaming (upperName)
 import Data.GI.CodeGen.Util (tshow)
 
-genEnumOrFlags :: Name -> Enumeration -> ExcCodeGen ()
-genEnumOrFlags n@(Name ns name) e = do
+genEnumOrFlags :: HaddockSection -> Name -> Enumeration -> ExcCodeGen ()
+genEnumOrFlags docSection n@(Name ns name) e = do
   -- Conversion functions expect enums and flags to map to CUInt,
   -- which we assume to be of 32 bits. Fail early, instead of giving
   -- strange errors at runtime.
@@ -36,7 +36,7 @@ genEnumOrFlags n@(Name ns name) e = do
   deprecatedPragma name' (enumDeprecated e)
 
   group $ do
-    exportDecl (name' <> "(..)")
+    export docSection (name' <> "(..)")
     hsBoot . line $ "data " <> name'
     writeDocumentation DocBeforeSymbol (enumDocumentation e)
     line $ "data " <> name' <> " = "
@@ -69,7 +69,7 @@ genEnumOrFlags n@(Name ns name) e = do
     line $ "instance P.Ord " <> name' <> " where"
     indent $ line "compare a b = P.compare (P.fromEnum a) (P.fromEnum b)"
 
-  maybe (return ()) (genErrorDomain name') (enumErrorDomain e)
+  maybe (return ()) (genErrorDomain docSection name') (enumErrorDomain e)
 
 genBoxedEnum :: Name -> Text -> CodeGen ()
 genBoxedEnum n typeInit = do
@@ -87,8 +87,9 @@ genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name _ name) enum = do
   line $ "-- Enum " <> name
 
+  let docSection = NamedSubsection EnumSection (upperName n)
   handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
-              (do genEnumOrFlags n enum
+              (do genEnumOrFlags docSection n enum
                   case enumTypeInit enum of
                     Nothing -> return ()
                     Just ti -> genBoxedEnum n ti)
@@ -111,9 +112,10 @@ genFlags :: Name -> Flags -> CodeGen ()
 genFlags n@(Name _ name) (Flags enum) = do
   line $ "-- Flags " <> name
 
+  let docSection = NamedSubsection FlagSection (upperName n)
   handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
               (do
-                genEnumOrFlags n enum
+                genEnumOrFlags docSection n enum
 
                 case enumTypeInit enum of
                   Nothing -> return ()
@@ -123,8 +125,8 @@ genFlags n@(Name _ name) (Flags enum) = do
                 group $ bline $ "instance IsGFlag " <> name')
 
 -- | Support for enums encapsulating error codes.
-genErrorDomain :: Text -> Text -> CodeGen ()
-genErrorDomain name' domain = do
+genErrorDomain :: HaddockSection -> Text -> Text -> CodeGen ()
+genErrorDomain docSection name' domain = do
   group $ do
     line $ "instance GErrorClass " <> name' <> " where"
     indent $ line $
@@ -150,8 +152,8 @@ genErrorDomain name' domain = do
             line   "IO a ->"
             line   "IO a"
     line $ handler <> " = handleGErrorJustDomain"
-  export ToplevelSection ("catch" <> name')
-  export ToplevelSection ("handle" <> name')
+  export docSection ("catch" <> name')
+  export docSection ("handle" <> name')
 
   where
     catcherDoc :: Text

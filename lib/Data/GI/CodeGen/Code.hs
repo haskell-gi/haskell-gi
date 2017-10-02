@@ -48,6 +48,7 @@ module Data.GI.CodeGen.Code
     , exportDecl
     , export
     , HaddockSection(..)
+    , NamedSection(..)
 
     , addSectionFormattedDocs
 
@@ -129,9 +130,16 @@ type Deps = Set.Set Text
 -- | Subsection of the haddock documentation where the export should
 -- be located, or alternatively the toplevel section.
 data HaddockSection = ToplevelSection
-                    | MethodSection Text
-                    | PropertySection Text
-                    | SignalSection Text
+                    | NamedSubsection NamedSection Text
+  deriving (Show, Eq, Ord)
+
+-- | Known subsections. The ordering here is the ordering in which
+-- they will appear in the haddocks.
+data NamedSection = MethodSection
+                  | PropertySection
+                  | SignalSection
+                  | EnumSection
+                  | FlagSection
   deriving (Show, Eq, Ord)
 
 -- | Symbol to export.
@@ -590,7 +598,7 @@ exportModule m = exportPartial (Export ExportModule m)
 exportDecl :: SymbolName -> CodeGen ()
 exportDecl d = exportPartial (Export ExportTypeDecl d)
 
--- | Export a symbol in the given haddock section.
+-- | Export a symbol in the given haddock subsection.
 export :: HaddockSection -> SymbolName -> CodeGen ()
 export s n = exportPartial (Export (ExportSymbol s) n)
 
@@ -617,8 +625,8 @@ setModuleMinBase v =
 -- | Add documentation for a given section.
 addSectionFormattedDocs :: HaddockSection -> Text -> CodeGen ()
 addSectionFormattedDocs section docs =
-    modify' $ \(cgs, s) -> (cgs, s{sectionDocs = M.insertWith (<>)
-                                                 section docs (sectionDocs s)})
+    modify' $ \(cgs, s) -> (cgs, s{sectionDocs = M.insertWith (<>) section
+                                                 docs (sectionDocs s)})
 
 -- | Format a CPP conditional.
 cppCondFormat :: CPPConditional -> (Text, Text)
@@ -690,29 +698,39 @@ data Subsection = Subsection { subsectionTitle  :: Text
 
 -- | A subsection with an anchor given by the title and @prefix:title@
 -- anchor, and the given documentation.
-subsecWithPrefix :: Text -> Text -> Maybe Text -> Subsection
-subsecWithPrefix prefix title doc =
+subsecWithPrefix :: NamedSection -> Text -> Maybe Text -> Subsection
+subsecWithPrefix mainSection title doc =
   Subsection { subsectionTitle = title
              , subsectionAnchor = Just (prefix <> ":" <> title)
              , subsectionDoc = doc }
+  where prefix = case mainSection of
+          MethodSection -> "method"
+          PropertySection -> "attr"
+          SignalSection -> "signal"
+          EnumSection -> "enum"
+          FlagSection -> "flag"
+
+-- | User-facing name in the Haddocks for the given main section.
+mainSectionName :: NamedSection -> Text
+mainSectionName MethodSection = "Methods"
+mainSectionName PropertySection = "Properties"
+mainSectionName SignalSection = "Signals"
+mainSectionName EnumSection = "Enumerations"
+mainSectionName FlagSection = "Flags"
 
 -- | Format a given section made of subsections.
-formatSection :: Text -> (Export -> Maybe (Subsection, Export)) ->
-                 [Export] -> Maybe Text
-formatSection section filter exports =
-    if M.null exportedSubsections
+formatSection :: NamedSection -> [(Subsection, Export)] -> Maybe Text
+formatSection section exports =
+    if null exports
     then Nothing
-    else Just . T.unlines $ [" -- * " <> section
+    else Just . T.unlines $ [" -- * " <> mainSectionName section
                             , ( T.unlines
                               . map formatSubsection
                               . M.toList ) exportedSubsections]
 
     where
-      filteredExports :: [(Subsection, Export)]
-      filteredExports = catMaybes (map filter exports)
-
       exportedSubsections :: M.Map Subsection (Set.Set Export)
-      exportedSubsections = foldr extract M.empty filteredExports
+      exportedSubsections = foldr extract M.empty exports
 
       extract :: (Subsection, Export) -> M.Map Subsection (Set.Set Export)
               -> M.Map Subsection (Set.Set Export)
@@ -732,40 +750,30 @@ formatSection section filter exports =
                       . map (formatExport exportSymbol)
                       . Set.toList ) symbols]
 
--- | Format the list of methods.
-formatMethods :: M.Map HaddockSection Text -> [Export] -> Maybe Text
-formatMethods docs = formatSection "Methods" toMethod
-    where toMethod :: Export -> Maybe (Subsection, Export)
-          toMethod e@(Export (ExportSymbol ds@(MethodSection s)) _ _) =
-            Just (subsecWithPrefix "method" s (M.lookup ds docs), e)
-          toMethod _ = Nothing
+-- | Format the list of exports into grouped sections.
+formatSubsectionExports :: M.Map HaddockSection Text -> [Export] -> [Maybe Text]
+formatSubsectionExports docs exports = map (uncurry formatSection)
+                                       (M.toAscList collectedExports)
+  where collectedExports :: M.Map NamedSection [(Subsection, Export)]
+        collectedExports = foldl classifyExport M.empty exports
 
--- | Format the list of properties.
-formatProperties :: M.Map HaddockSection Text -> [Export] -> Maybe Text
-formatProperties docs = formatSection "Properties" toProperty
-    where toProperty :: Export -> Maybe (Subsection, Export)
-          toProperty e@(Export (ExportSymbol ds@(PropertySection s)) _ _) =
-            Just (subsecWithPrefix "attr" s (M.lookup ds docs), e)
-          toProperty _ = Nothing
-
--- | Format the list of signals.
-formatSignals :: M.Map HaddockSection Text -> [Export] -> Maybe Text
-formatSignals docs = formatSection "Signals" toSignal
-    where toSignal :: Export -> Maybe (Subsection, Export)
-          toSignal e@(Export (ExportSymbol ds@(SignalSection s)) _ _) =
-            Just (subsecWithPrefix "signal" s (M.lookup ds docs), e)
-          toSignal _ = Nothing
+        classifyExport :: M.Map NamedSection [(Subsection, Export)] ->
+                          Export -> M.Map NamedSection [(Subsection, Export)]
+        classifyExport m export =
+          case exportType export of
+            ExportSymbol hs@(NamedSubsection ms n) ->
+              let subsec = subsecWithPrefix ms n (M.lookup hs docs)
+              in M.insertWith (++) ms [(subsec, export)] m
+            _ -> m
 
 -- | Format the given export list. This is just the inside of the
 -- parenthesis.
 formatExportList :: M.Map HaddockSection Text -> [Export] -> Text
 formatExportList docs exports =
-    T.unlines . catMaybes $ [ formatExportedModules exports
-                            , formatToplevel exports
-                            , formatTypeDecls exports
-                            , formatMethods docs exports
-                            , formatProperties docs exports
-                            , formatSignals docs exports ]
+    T.unlines . catMaybes $ formatExportedModules exports
+                            : formatToplevel exports
+                            : formatTypeDecls exports
+                            : formatSubsectionExports docs exports
 
 -- | Write down the list of language pragmas.
 languagePragmas :: [Text] -> Text

@@ -250,7 +250,7 @@ genOneProperty :: Name -> Property -> ExcCodeGen ()
 genOneProperty owner prop = do
   let name = upperName owner
       cName = (hyphensToCamelCase . propName) prop
-      docSection = PropertySection (lcFirst cName)
+      docSection = NamedSubsection PropertySection (lcFirst cName)
       pName = name <> cName
       flags = propFlags prop
       writable = PropertyWritable `elem` flags &&
@@ -356,7 +356,7 @@ genPlaceholderProperty owner prop = do
   line $ "-- XXX Placeholder"
   it <- infoType owner prop
   let cName = (hyphensToCamelCase . propName) prop
-      docSection = PropertySection (lcFirst cName)
+      docSection = NamedSubsection PropertySection (lcFirst cName)
   export docSection it
   line $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"
@@ -412,7 +412,7 @@ genNamespacedAttrLabels owner attrNames methods = do
   forM_ filteredAttrs $ \attr -> group $ do
     let cName = ucFirst attr
         labelProxy = lcFirst name <> cName
-        docSection = PropertySection (lcFirst cName)
+        docSection = NamedSubsection PropertySection (lcFirst cName)
 
     line $ labelProxy <> " :: AttrLabelProxy \"" <> lcFirst cName <> "\""
     line $ labelProxy <> " = AttrLabelProxy"
