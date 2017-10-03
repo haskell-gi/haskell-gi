@@ -85,7 +85,9 @@ mkForeignImport cSymbol callable = do
         line =<< last
     return hSymbol
     where
-    hSymbol = cSymbol
+    hSymbol = if T.any (== '_') cSymbol
+              then lcFirst cSymbol
+              else "_" <> cSymbol
     first = "foreign import ccall \"" <> cSymbol <> "\" " <> hSymbol <> " :: "
     fArgStr arg = do
         ft <- foreignType $ argType arg
