@@ -163,6 +163,7 @@ set-attr Gtk/BuilderConnectFunc/@parameters/connect_object nullable 1
 set-attr Gtk/BuilderConnectFunc/@parameters/user_data nullable 1
 set-attr Gtk/Button/new_from_icon_name/@parameters/icon_name nullable 1
 set-attr Gtk/Button/get_image/@return-value nullable 1
+set-attr Gtk/Button/set_image/@parameters/image nullable 1
 set-attr Gtk/Calendar/set_detail_func/@parameters/data nullable 1
 set-attr Gtk/CalendarDetailFunc/@return-value nullable 1
 set-attr Gtk/CalendarDetailFunc/@parameters/user_data nullable 1
