@@ -1,3 +1,7 @@
+### 3.0.18
+
++ Fix introspection info for [buttonSetImage](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Button.html#v:buttonSetImage). Image parameter can be null.
+
 ### 3.0.15
 
 + Fix introspection info for [uIManagerGetAction](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-UIManager.html#v:uIManagerGetAction), [uIManagerGetWidget](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-UIManager.html#v:uIManagerGetWidget), [actionGroupGetAction](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-ActionGroup.html#v:actionGroupGetAction), [textMarkGetName](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-TextMark.html#v:textMarkGetName) and [notebookGetTabLabel](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Notebook.html#v:notebookGetTabLabel). In all these cases the function can return NULL, but it was not marked as such in the introspection data.
