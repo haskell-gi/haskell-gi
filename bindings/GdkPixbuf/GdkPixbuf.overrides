@@ -14,9 +14,11 @@ if windows
 endif
 
 # Missing from the introspection data, see
-# https://bugzilla.gnome.org/show_bug.cgi?id=789934
 # https://github.com/haskell-gi/haskell-gi/issues/127
+set-attr GdkPixbuf/Pixbuf/new/@return-value nullable 1
+set-attr GdkPixbuf/Pixbuf/copy/@return-value nullable 1
 set-attr GdkPixbuf/Pixbuf/scale_simple/@return-value nullable 1
+set-attr GdkPixbuf/Pixbuf/composite_color_simple/@return-value nullable 1
 
 # Generated from gdk-pixbuf 2.34.0 with xsltproc Nullable.xslt GdkPixbuf-2.0.gir
 set-attr GdkPixbuf/Pixbuf/new_from_data/@parameters/destroy_fn nullable 1
