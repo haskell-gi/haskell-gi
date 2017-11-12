@@ -1,3 +1,10 @@
+### 0.20.5
+
++ Run object finalizers in the main loop. The reason is that for
+some types the destructor is not thread safe, and assumes that it
+is being run from the same thread as the thread that created the object,
+which can lead to crashes when using the threaded runtime.
+
 ### 0.20.4
 
 + Better error diagnostics for [wrapObject](https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-ManagedPtr.html#v:wrapObject) and [newObject](https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-ManagedPtr.html#v:newObject).
