@@ -1,3 +1,7 @@
+### 0.20.7
+
++ Fix a memory leak in doConstructGObject.
+
 ### 0.20.6
 
 + Use g_object_new_with_properties instead of g_object_newv in
