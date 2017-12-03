@@ -53,6 +53,7 @@ doConstructGObject constructor props = liftIO $ do
   result <- g_object_new gtype (fromIntegral nprops) names values
   freeStrings nprops names
   free values
+  free names
   -- Make sure that the GValues defining the GProperties are still
   -- alive at this point (so, in particular, they are still alive when
   -- g_object_new is called). Without this the GHC garbage collector
