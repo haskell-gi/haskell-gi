@@ -4,6 +4,7 @@
 #include <Rts.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <glib-object.h>
 #include <glib.h>
@@ -128,8 +129,9 @@ void dbg_g_object_unref (GObject *obj)
 /**
  * dbg_g_object_new:
  * @gtype: #GType for the object to construct.
- * @n_params: Number of parameters for g_object_newv().
- * @params: (array length=n_params) Parameters for g_object_newv().
+ * @n_props: Number of parameters for g_object_new_with_properties().
+ * @names: Names of the properties to be set.
+ * @values: Parameters for g_object_new_with_properties().
  *
  * Allocate a #GObject of #GType @gtype, with the given @params. The
  * returned object is never floating, and we always own a reference to
@@ -139,7 +141,8 @@ void dbg_g_object_unref (GObject *obj)
  *
  * Returns: A new #GObject.
  */
-gpointer dbg_g_object_newv (GType gtype, guint n_params, GParameter *params)
+gpointer dbg_g_object_new (GType gtype, guint n_props,
+                           const char *names[], const GValue values[])
 {
   gpointer result;
 
@@ -150,7 +153,20 @@ gpointer dbg_g_object_newv (GType gtype, guint n_params, GParameter *params)
             g_type_name(gtype), self);
   }
 
-  result = g_object_newv (gtype, n_params, params);
+#if GLIB_CHECK_VERSION(2,54,0)
+  result = g_object_new_with_properties (gtype, n_props, names, values);
+#else
+  { GParameter params[n_props];
+    int i;
+
+    for (i=0; i<n_props; i++) {
+      memcpy (&params[i].value, &values[i], sizeof(GValue));
+      params[i].name = names[i];
+    }
+
+    result = g_object_newv (gtype, n_props, params);
+  }
+#endif
 
   /*
     Initially unowned GObjects can be either floating or not after

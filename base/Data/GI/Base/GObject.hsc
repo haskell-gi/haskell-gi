@@ -20,8 +20,8 @@ import Data.GI.Base.Overloading (ResolveAttribute)
 
 #include <glib-object.h>
 
-foreign import ccall "dbg_g_object_newv" g_object_newv ::
-    GType -> CUInt -> Ptr a -> IO (Ptr b)
+foreign import ccall "dbg_g_object_new" g_object_new ::
+    GType -> CUInt -> Ptr CString -> Ptr a -> IO (Ptr b)
 
 -- | Construct a GObject given the constructor and a list of settable
 -- attributes.
@@ -46,18 +46,19 @@ doConstructGObject :: forall o m. (GObject o, MonadIO m)
                       => (ManagedPtr o -> o) -> [GValueConstruct o] -> m o
 doConstructGObject constructor props = liftIO $ do
   let nprops = length props
-  params <- mallocBytes (nprops*gparameterSize)
-  fill params props
+  names <- mallocBytes (nprops * sizeOf nullPtr)
+  values <- mallocBytes (nprops * gvalueSize)
+  fill names values props
   gtype <- gobjectType (undefined :: o)
-  result <- g_object_newv gtype (fromIntegral nprops) params
-  freeStrings nprops params
-  free params
+  result <- g_object_new gtype (fromIntegral nprops) names values
+  freeStrings nprops names
+  free values
   -- Make sure that the GValues defining the GProperties are still
   -- alive at this point (so, in particular, they are still alive when
-  -- g_object_newv is called). Without this the GHC garbage collector
-  -- may free the GValues before g_object_newv is called, which will
+  -- g_object_new is called). Without this the GHC garbage collector
+  -- may free the GValues before g_object_new is called, which will
   -- unref the referred to objects, which may drop the last reference
-  -- to the contained objects. g_object_newv then tries to access the
+  -- to the contained objects. g_object_new then tries to access the
   -- (now invalid) contents of the GValue, and mayhem ensues.
   mapM_ (touchManagedPtr . deconstructGValue) props
   wrapObject constructor (result :: Ptr o)
@@ -67,27 +68,25 @@ doConstructGObject constructor props = liftIO $ do
     deconstructGValue (GValueConstruct _ v) = v
 
     gvalueSize = #size GValue
-    gparameterSize = #size GParameter
 
-    -- Fill the given memory address with the contents of the array of
-    -- GParameters.
-    fill :: Ptr () -> [GValueConstruct o] -> IO ()
-    fill _ [] = return ()
-    fill dataPtr ((GValueConstruct str gvalue):xs) =
+    -- Fill in the memory associated with the parameters.
+    fill :: Ptr CString -> Ptr GValue -> [GValueConstruct o] -> IO ()
+    fill _ _ [] = return ()
+    fill namePtr dataPtr ((GValueConstruct str gvalue):xs) =
         do cstr <- newCString str
-           poke (castPtr dataPtr) cstr
+           poke namePtr cstr
            withManagedPtr gvalue $ \gvalueptr ->
-               copyBytes (dataPtr `plusPtr` sizeOf nullPtr) gvalueptr gvalueSize
-           fill (dataPtr `plusPtr` gparameterSize) xs
+                                     copyBytes dataPtr gvalueptr gvalueSize
+           fill (namePtr `plusPtr` sizeOf nullPtr)
+                (dataPtr `plusPtr` gvalueSize) xs
 
     -- Free the strings in the GParameter array (the GValues will be
     -- freed separately).
-    freeStrings :: Int -> Ptr () -> IO ()
+    freeStrings :: Int -> Ptr CString -> IO ()
     freeStrings 0 _ = return ()
-    freeStrings n dataPtr =
-        do cstr <- peek (castPtr dataPtr) :: IO CString
-           free cstr
-           freeStrings (n-1) (dataPtr `plusPtr` gparameterSize)
+    freeStrings n namePtr =
+        do peek namePtr >>= free
+           freeStrings (n-1) (namePtr `plusPtr` sizeOf nullPtr)
 
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.
