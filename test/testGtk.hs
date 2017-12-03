@@ -262,8 +262,8 @@ testOutStructs = do
       then do
         GLib.timeValAdd timeval (60*1000000)
         timevalStr <- GLib.timeValToIso8601 timeval
-        when (timevalStr /= "2013-12-15T11:12:07Z") $
-             error $ "Time conversion failed, got " ++ timevalStr
+        when (timevalStr /= Just "2013-12-15T11:12:07Z") $
+             error $ "Time conversion failed, got " ++ show timevalStr
       else error $ "timeValFromIso8601 failed!"
   performGC
   putStrLn "+++ Out Structs test done"
