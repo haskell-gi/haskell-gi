@@ -1,3 +1,8 @@
+### 0.20.6
+
++ Use g_object_new_with_properties instead of g_object_newv in
+GLib versions 2.54 or later, to avoid a deprecation warning.
+
 ### 0.20.5
 
 + Run object finalizers in the main loop. The reason is that for
