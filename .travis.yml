@@ -69,7 +69,7 @@ script:
  - cabal sandbox delete
  - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
  - cabal install -j1 ./Gtk
- - cabal install -j3 ./GtkSource ./WebKit
+ - cabal install -j3 ./GtkSource
  - cd ../test
  - cabal install --dependencies-only
  - cabal configure
