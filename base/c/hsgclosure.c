@@ -61,6 +61,8 @@ static gboolean main_loop_boxed_free_helper (gpointer _info)
   }
 
   g_free(info);
+
+  return FALSE; /* Do not invoke again */
 }
 
 void boxed_free_helper (GType gtype, void *boxed)
