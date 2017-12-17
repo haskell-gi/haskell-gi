@@ -1,3 +1,7 @@
+### 0.20.8
+
++ Fix a bug which could lead to crashes when releasing boxed objects, see [issue #130](https://github.com/haskell-gi/haskell-gi/issues/130).
+
 ### 0.20.7
 
 + Fix a memory leak in doConstructGObject.
