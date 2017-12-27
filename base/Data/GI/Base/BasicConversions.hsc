@@ -533,6 +533,9 @@ mapZeroTerminatedCArray f dataPtr
              _ <- f ptr
              mapZeroTerminatedCArray f (dataPtr `plusPtr` sizeOf ptr)
 
+-- | Given a set of pointers to blocks of memory of the specified
+-- size, copy the contents of these blocks to a freshly-allocated
+-- (with `allocBytes`) continuous area of memory.
 packBlockArray :: Int -> [Ptr a] -> IO (Ptr a)
 packBlockArray size items = do
   let nitems = length items
