@@ -846,6 +846,7 @@ moduleImports = T.unlines [
                 , "import qualified Data.GI.Base.ManagedPtr as B.ManagedPtr"
                 , "import qualified Data.GI.Base.GError as B.GError"
                 , "import qualified Data.GI.Base.GVariant as B.GVariant"
+                , "import qualified Data.GI.Base.GValue as B.GValue"
                 , "import qualified Data.GI.Base.GParamSpec as B.GParamSpec"
                 , "import qualified Data.GI.Base.CallStack as B.CallStack"
                 , "import qualified Data.Text as T"

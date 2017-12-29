@@ -1,14 +1,16 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Data.GI.Base.GValue
-    ( GValue(..)
+    (
+    -- * Constructing GValues
+      GValue(..)
     , IsGValue(..)
-
-    , newGValue         -- Build a new, empty, GValue of the given type
-    , buildGValue       -- Build a new GValue and initialize to the given value
-    , noGValue
-
     , GValueConstruct(..)
 
+    , newGValue
+    , buildGValue
+    , noGValue
+
+    -- * Setters and getters
     , set_string
     , get_string
     , set_pointer
@@ -67,11 +69,13 @@ import Foreign.Ptr (Ptr, nullPtr)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions (cstringToText, textToCString)
+
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Utils (callocBytes, freeMem)
 
 newtype GValue = GValue (ManagedPtr GValue)
 
+-- | A convenience alias for @`Nothing` :: `Maybe` `GValue`@.
 noGValue :: Maybe GValue
 noGValue = Nothing
 
@@ -89,20 +93,24 @@ foreign import ccall "g_value_init" g_value_init ::
 -- `GValue` (useful when constructing properties).
 data GValueConstruct o = GValueConstruct String GValue
 
+-- | Build a new, empty, `GValue` of the given type.
 newGValue :: GType -> IO GValue
 newGValue (GType gtype) = do
-  gvptr <- callocBytes #size GValue
+  gvptr <- callocBytes (#size GValue)
   _ <- g_value_init gvptr gtype
   gv <- wrapBoxed GValue gvptr
   return $! gv
 
--- Build a new GValue and set the initial value, just for convenience
+-- | A convenience function for building a new GValue and setting the
+-- initial value.
 buildGValue :: GType -> (GValue -> a -> IO ()) -> a -> IO GValue
 buildGValue gtype setter val = do
   gv <- newGValue gtype
   setter gv val
   return gv
 
+-- | A convenience class for marshaling back and forth between Haskell
+-- values and `GValue`s.
 class IsGValue a where
     toGValue :: a -> IO GValue
     fromGValue :: GValue -> IO a

@@ -254,7 +254,8 @@ freeInArgs' freeFn callable nameMap = concat <$> actions
           Just name -> freeFn arg name $
                        -- Pass in the length argument in case it's needed.
                        case argType arg of
-                         TCArray False (-1) (-1) _ -> undefined
+                         TCArray False (-1) (-1) _ ->
+                           parenthesize ("length " <> escapedArgName arg)
                          TCArray False (-1) length _ ->
                              escapedArgName $ (args callable)!!length
                          _ -> undefined
@@ -656,9 +657,12 @@ convertResult n callable nameMap =
     where
       unwrappedConvertResult rname =
           case returnType callable of
-            -- Arrays without length information are just passed
-            -- along.
-            Just (TCArray False (-1) (-1) _) -> return rname
+            -- Arrays without length information cannot be converted
+            -- into Haskell values.
+            Just (t@(TCArray False (-1) (-1) _)) ->
+                badIntroError ("`" <> tshow t <>
+                "' is an array type, but contains no length information,\n"
+                <> "so it cannot be unpacked.")
             -- Not zero-terminated C arrays require knowledge of the
             -- length, so we deal with them directly.
             Just (t@(TCArray False _ _ _)) ->
@@ -679,11 +683,12 @@ convertOutArg callable nameMap arg = do
       Just name' -> return name'
       Nothing -> badIntroError $ "Parameter " <> name <> " not found!"
   case argType arg of
-      -- Passed along as a raw pointer
-      TCArray False (-1) (-1) _ ->
+      t@(TCArray False (-1) (-1) _) ->
           if argCallerAllocates arg
           then return inName
-          else genConversion inName $ apply $ M "peek"
+          else  badIntroError ("`" <> tshow t <>
+                "' is an array type, but contains no length information,\n"
+                <> "so it cannot be unpacked.")
       t@(TCArray False _ _ _) -> do
           aname' <- if argCallerAllocates arg
                     then return inName

@@ -164,7 +164,7 @@ genConversion l (Free k) = do
            genConversion l next
     Literal Id next -> genConversion l next
 
--- Given an array, together with its type, return the code for reading
+-- | Given an array, together with its type, return the code for reading
 -- its length.
 computeArrayLength :: Text -> Type -> ExcCodeGen Text
 computeArrayLength array (TCArray _ _ _ t) = do
@@ -371,8 +371,6 @@ hToF (TGSList t) transfer = do
 hToF (TGArray t) transfer = hToF_PackedType t "packGArray" transfer
 hToF (TPtrArray t) transfer = hToF_PackedType t "packGPtrArray" transfer
 hToF (TGHash ta tb) _ = hToF_PackGHashTable ta tb
--- Arrays without length info are just passed along.
-hToF (TCArray False (-1) (-1) _) _ = return $ Pure ()
 hToF (TCArray zt _ _ t@(TCArray{})) transfer = do
   let packer = if zt
                then "packZeroTerminated"
@@ -453,14 +451,14 @@ fCallbackToH _ transfer =
 fVariantToH :: Transfer -> CodeGen Constructor
 fVariantToH transfer =
   return $ M $ case transfer of
-                  TransferEverything -> "wrapGVariantPtr"
-                  _ -> "newGVariantFromPtr"
+                  TransferEverything -> "B.GVariant.wrapGVariantPtr"
+                  _ -> "B.GVariant.newGVariantFromPtr"
 
 fParamSpecToH :: Transfer -> CodeGen Constructor
 fParamSpecToH transfer =
   return $ M $ case transfer of
-                  TransferEverything -> "wrapGParamSpecPtr"
-                  _ -> "newGParamSpecFromPtr"
+                  TransferEverything -> "B.GParamSpec.wrapGParamSpecPtr"
+                  _ -> "B.GParamSpec.newGParamSpecFromPtr"
 
 fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
          -> ExcCodeGen Constructor
@@ -545,20 +543,22 @@ fToH :: Type -> Transfer -> ExcCodeGen Converter
 fToH (TGList t) transfer = do
   isPtr <- typeIsPtr t
   when (not isPtr) $
-       badIntroError ("'" <> tshow t <>
+       badIntroError ("`" <> tshow t <>
                       "' is not a pointer type, cannot unpack from a GList.")
   fToH_PackedType t "unpackGList" transfer
 fToH (TGSList t) transfer = do
   isPtr <- typeIsPtr t
   when (not isPtr) $
-       badIntroError ("'" <> tshow t <>
+       badIntroError ("`" <> tshow t <>
                       "' is not a pointer type, cannot unpack from a GSList.")
   fToH_PackedType t "unpackGSList" transfer
 fToH (TGArray t) transfer = fToH_PackedType t "unpackGArray" transfer
 fToH (TPtrArray t) transfer = fToH_PackedType t "unpackGPtrArray" transfer
 fToH (TGHash a b) transfer = fToH_UnpackGHashTable a b transfer
--- Arrays without length info are just passed along.
-fToH (TCArray False (-1) (-1) _) _ = return $ Pure ()
+-- We cannot unpack arrays without any kind of length info.
+fToH t@(TCArray False (-1) (-1) _) _ =
+  badIntroError ("`" <> tshow t <>
+                  "' is an array type, but contains no length information.")
 fToH (TCArray True _ _ t@(TCArray{})) transfer =
   fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
 fToH (TCArray True _ _ t@(TInterface _)) transfer = do
@@ -662,7 +662,7 @@ unpackCArray length (TCArray False _ _ t) transfer =
 
 unpackCArray _ _ _ = notImplementedError "unpackCArray : unexpected array type."
 
--- Given a type find the typeclasses the type belongs to, and return
+-- | Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
 -- list of typeclass constraints for the type.
 argumentType :: [Char] -> Type -> CodeGen ([Char], Text, [Text])
@@ -731,15 +731,15 @@ haskellBasicType TFileName = con0 "[Char]"
 haskellBasicType TIntPtr   = con0 "CIntPtr"
 haskellBasicType TUIntPtr  = con0 "CUIntPtr"
 
--- This translates GI types to the types used for generated Haskell code.
+-- | This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen TypeRep
 haskellType (TBasicType bt) = return $ haskellBasicType bt
--- We cannot really do anything sensible for a foreign array with no
--- length info, so just pass the pointer along.
-haskellType (TCArray False (-1) (-1) t) =
-    ptr <$> foreignType t
+-- There is no great choice in this case, so we simply pass the
+-- pointer along. This is useful for GdkPixbufNotify, for example.
+haskellType t@(TCArray False (-1) (-1) (TBasicType TUInt8)) =
+  foreignType t
 haskellType (TCArray _ _ _ (TBasicType TUInt8)) =
-    return $ "ByteString" `con` []
+  return $ "ByteString" `con` []
 haskellType (TCArray _ _ _ a) = do
   inner <- haskellType a
   return $ "[]" `con` [inner]
@@ -763,8 +763,8 @@ haskellType (TGHash a b) = do
 haskellType TError = return $ "GError" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
 haskellType TParamSpec = return $ "GParamSpec" `con` []
-haskellType (TInterface (Name "GObject" "Value")) = return $ "GValue" `con` []
 haskellType (TInterface (Name "GObject" "Closure")) = return $ "Closure" `con` []
+haskellType (TInterface (Name "GObject" "Value")) = return $ "GValue" `con` []
 haskellType t@(TInterface n) = do
   api <- getAPI t
   tname <- qualifiedAPI n
@@ -807,8 +807,6 @@ foreignBasicType t         = haskellBasicType t
 -- This translates GI types to the types used in foreign function calls.
 foreignType :: Type -> CodeGen TypeRep
 foreignType (TBasicType t) = return $ foreignBasicType t
-foreignType (TCArray False (-1) (-1) t) =
-    ptr <$> foreignType t
 foreignType (TCArray zt _ _ t) = do
   api <- findAPI t
   let size = case api of
@@ -838,9 +836,10 @@ foreignType (TGHash a b) = do
 foreignType t@TError = ptr <$> haskellType t
 foreignType t@TVariant = ptr <$> haskellType t
 foreignType t@TParamSpec = ptr <$> haskellType t
-foreignType (TInterface (Name "GObject" "Value")) = return $ ptr $ "GValue" `con` []
 foreignType (TInterface (Name "GObject" "Closure")) =
     return $ ptr $ "Closure" `con` []
+foreignType (TInterface (Name "GObject" "Value")) =
+  return $ ptr $ "GValue" `con` []
 foreignType t@(TInterface n) = do
   isScalar <- getIsScalar t
   if isScalar
@@ -955,11 +954,9 @@ nullPtrForType t = do
 typeIsNullable :: Type -> CodeGen Bool
 typeIsNullable t = isJust <$> maybeNullConvert t
 
--- If the given type maps to a list in Haskell, return the type of the
+-- | If the given type maps to a list in Haskell, return the type of the
 -- elements, and the function that maps over them.
 elementTypeAndMap :: Type -> Text -> Maybe (Type, Text)
--- Passed along as a raw pointer.
-elementTypeAndMap (TCArray False (-1) (-1) _) _ = Nothing
 -- ByteString
 elementTypeAndMap (TCArray _ _ _ (TBasicType TUInt8)) _ = Nothing
 elementTypeAndMap (TCArray True _ _ t) _ = Just (t, "mapZeroTerminatedCArray")
