@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.GLib as GLib

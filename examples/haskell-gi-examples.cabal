@@ -9,7 +9,7 @@ maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
 stability:           Experimental
 category:            Development
 build-type:          Simple
-cabal-version:       >=1.8
+cabal-version:       >=1.10
 
 source-repository head
   type: git
@@ -23,8 +23,8 @@ executable SimpleBrowser
                        gi-gtk == 3.0.*,
                        gi-webkit2 == 4.0.*,
                        text >= 1.0
-
-  extensions:          OverloadedStrings
+  default-language:    Haskell2010
+  other-extensions:    OverloadedStrings
   ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -threaded -with-rtsopts=-N
   other-modules:       GI.OverloadedLabels,
                        GI.Signals
@@ -41,6 +41,7 @@ executable Cairo
                         cairo == 0.13.*,
                         old-time == 1.1.*,
                         transformers == 0.5.*
+  default-language:     Haskell2010
   other-extensions:     OverloadedStrings, OverloadedLabels
   ghc-options:         -Wall -fwarn-incomplete-patterns -fno-warn-unused-do-bind -fno-warn-name-shadowing -fno-warn-missing-signatures -threaded -with-rtsopts=-N
 
@@ -51,6 +52,7 @@ executable DBusServer
                         gi-glib == 2.0.*,
                         gi-gio == 2.0.*,
                         text == 1.2.*
+  default-language:     Haskell2010
   other-extensions:     OverloadedStrings, OverloadedLabels, LambdaCase
   ghc-options:         -Wall -fwarn-incomplete-patterns -threaded -with-rtsopts=-N
 
@@ -61,6 +63,7 @@ executable GstHelloWorld
                         gi-glib,
                         gi-gst,
                         text
+  default-language:     Haskell2010
   other-extensions:     OverloadedStrings, OverloadedLabels
   ghc-options:         -Wall -threaded -with-rtsopts=-N
 
@@ -73,6 +76,7 @@ executable GstGtkX11
                       , gi-gstvideo
                       , gi-gdkx11
                       , haskell-gi-base == 0.20.*
+  default-language:     Haskell2010
   other-extensions:     OverloadedStrings
   ghc-options:          -O -threaded -with-rtsopts=-N -Wall
 
@@ -84,4 +88,4 @@ executable gtk-emit-signal
                       , gi-glib
                       , gi-gtk
   default-language:   Haskell2010
-  ghc-options:        -Wall -threaded
+  ghc-options:        -Wall -threaded -with-rtsopts=-N -Wall
