@@ -75,3 +75,13 @@ executable GstGtkX11
                       , haskell-gi-base == 0.20.*
   other-extensions:     OverloadedStrings
   ghc-options:          -O -threaded -with-rtsopts=-N -Wall
+
+executable gtk-emit-signal
+  main-is:            GtkEmitSignal.hs
+  build-depends:        base >= 4.7 && < 4.10
+                      , haskell-gi-base
+                      , gi-gobject
+                      , gi-glib
+                      , gi-gtk
+  default-language:   Haskell2010
+  ghc-options:        -Wall -threaded
