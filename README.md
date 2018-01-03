@@ -73,7 +73,9 @@ main = do
 ```
 This program uses the new `OverloadedLabels` extension in GHC 8.0, so make sure you have a recent enough version of GHC installed. To run this program, copy it to a file (`hello.hs`, say), and then
 ```
-$ ghc -o hello hello.hs
+$ cabal sandbox init
+$ cabal install gi-gtk
+$ cabal exec -- ghc hello.hs
 $ ./hello
 ```
 For a more involved example, see for instance [this WebKit example](https://github.com/haskell-gi/haskell-gi/tree/master/examples). Further documentation can be found in [the Wiki](https://github.com/haskell-gi/haskell-gi/wiki).
