@@ -24,3 +24,16 @@ executable genBuildInfo
                         aeson-pretty
 
   ghc-options:         -Wall
+
+executable bumpMinor
+  main-is:              bumpMinor.hs
+
+  build-depends:        base >= 4.7 && < 5,
+                        bytestring >= 0.10 && < 1,
+                        text >= 1.2,
+                        filepath >= 1.4 && < 2,
+                        aeson,
+                        aeson-pretty
+
+  ghc-options:         -Wall
+
