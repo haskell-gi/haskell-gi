@@ -53,11 +53,7 @@ writeCabal fname info =
        , "custom-setup"
        , "      setup-depends: base >= 4.7 && < 5,"
        , "                     Cabal >= 1.24,"
-       , "                     haskell-gi >= 0.20.1 && < 1"
-       , ""
-       , "Flag enable-overloading"
-       , "      Description: Enable support for overloaded labels."
-       , "      Default: True"
+       , "                     haskell-gi >= 0.20.4 && < 1"
        , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
@@ -65,19 +61,16 @@ writeCabal fname info =
        , "      other-extensions: " <> T.intercalate ", " PI.otherExtensions
        , "      ghc-options: " <> T.intercalate " " PI.ghcOptions
        , ""
-       , "      if flag(enable-overloading)"
-       , "         cpp-options: -DENABLE_OVERLOADING"
-       , "         build-depends: haskell-gi-overloading == 1.0.*"
-       , "      else"
-       , "         build-depends: haskell-gi-overloading == 0.0"
-       , ""
        , "      pkgconfig-depends: " <> pkgconfigDepends info
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([ baseVersion info
                , "haskell-gi-base >= 0.20 && < 1"
                  -- Workaround for https://github.com/commercialhaskell/stack/issues/2094
-               , "haskell-gi >= 0.20.1 && < 1" ]
+               , "haskell-gi >= 0.20.4 && < 1"
+               -- See https://github.com/haskell-gi/haskell-gi/issues/124
+               -- for the reasoning behind this.
+               , "haskell-gi-overloading < 1.1" ]
                <> giDepends info <> PI.standardDeps)
        ]
 

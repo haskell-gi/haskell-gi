@@ -570,7 +570,7 @@ data CPPGuard = CPPOverloading -- ^ Enable overloading
 -- | Guard a code block with CPP code, such that it is included only
 -- if the specified feature is enabled.
 cppIf :: CPPGuard -> BaseCodeGen e a -> BaseCodeGen e a
-cppIf CPPOverloading = cppIfBlock "defined(ENABLE_OVERLOADING) && !defined(__HADDOCK_VERSION__)" -- Do not generate docs for the overloading machinery.
+cppIf CPPOverloading = cppIfBlock "ENABLE_OVERLOADING"
 
 -- | Write the given code into the .hs-boot file for the current module.
 hsBoot :: BaseCodeGen e a -> BaseCodeGen e a
@@ -785,6 +785,15 @@ ghcOptions :: [Text] -> Text
 ghcOptions [] = ""
 ghcOptions opts = "{-# OPTIONS_GHC " <> T.intercalate ", " opts <> " #-}\n"
 
+-- | Generate some convenience CPP macros.
+cppMacros :: Text
+cppMacros = T.unlines ["#define ENABLE_OVERLOADING (MIN_VERSION_haskell_gi_overloading(1,0,0) \\"
+                      -- Haddocks look better without overloading
+                      , "       && !defined(__HADDOCK_VERSION__) \\"
+                      -- GHC 8.2.x is broken, see
+                      -- https://github.com/haskell-gi/haskell-gi/issues/113
+                      , "       && !(MIN_TOOL_VERSION_ghc(8,2,0) && !MIN_TOOL_VERSION_ghc(8,4,0)))\n"]
+
 -- | Standard fields for every module.
 standardFields :: Text
 standardFields = T.unlines [ "Copyright  : " <> authors
@@ -885,7 +894,7 @@ writeModuleInfo verbose dirPrefix minfo = do
   when verbose $ putStrLn ((T.unpack . dotWithPrefix . modulePath) minfo
                            ++ " -> " ++ fname)
   createDirectoryIfMissing True dirname
-  utf8WriteFile fname (T.unlines [pragmas, optionsGHC, haddock,
+  utf8WriteFile fname (T.unlines [pragmas, optionsGHC, haddock, cppMacros,
                                  prelude, imports, deps, code])
   when (not . isCodeEmpty $ bootCode minfo) $ do
     let bootFName = modulePathToFilePath dirPrefix (modulePath minfo) ".hs-boot"
@@ -894,6 +903,7 @@ writeModuleInfo verbose dirPrefix minfo = do
 -- | Generate the .hs-boot file for the given module.
 genHsBoot :: ModuleInfo -> Text
 genHsBoot minfo =
+    cppMacros <>
     "module " <> (dotWithPrefix . modulePath) minfo <> " where\n\n" <>
     moduleImports <> "\n" <>
     codeToText (bootCode minfo)

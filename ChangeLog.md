@@ -1,3 +1,9 @@
+### 0.20.4
+
++ Improve marshaling of array arguments with no specified size. This improves the generated bindings for various functions, for instance [`GObject.signalEmitv`](https://hackage.haskell.org/package/gi-gobject/docs/GI-GObject-Functions.html#v:signalEmitv).
+
++ Replace the enable-overloading flags with a explicit CPP check of the version of `haskell-gi-overloading` we are being compiled against, see [issue 124](https://github.com/haskell-gi/haskell-gi/issues/124) for the rationale.
+
 ### 0.20.3
 
 + Make the overloading code protected by a CPP conditional, depending on ENABLE_OVERLOADING being defined. See [issue 107](https://github.com/haskell-gi/haskell-gi/issues/107).
