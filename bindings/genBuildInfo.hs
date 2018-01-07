@@ -53,7 +53,7 @@ writeCabal fname info =
        , "custom-setup"
        , "      setup-depends: base >= 4.7 && < 5,"
        , "                     Cabal >= 1.24,"
-       , "                     haskell-gi >= 0.20.4 && < 1"
+       , "                     haskell-gi == 0.21.*"
        , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
@@ -65,9 +65,7 @@ writeCabal fname info =
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([ baseVersion info
-               , "haskell-gi-base >= 0.20 && < 1"
-                 -- Workaround for https://github.com/commercialhaskell/stack/issues/2094
-               , "haskell-gi >= 0.20.4 && < 1"
+               , "haskell-gi-base == 0.21.*"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
@@ -100,9 +98,7 @@ writeStackYaml fname =
     B.writeFile fname $ TE.encodeUtf8 $ T.unlines
          [ "packages:"
          , "- '.'"
-         , "explicit-setup-deps:"
-         , "  ! '*': true"
-         , "resolver: nightly-2016-12-05"
+         , "resolver: lts-9.21"
          ]
 
 writeReadme :: FilePath -> ProjectInfo -> IO ()

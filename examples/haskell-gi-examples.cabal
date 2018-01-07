@@ -18,7 +18,7 @@ source-repository head
 executable SimpleBrowser
   main-is:             SimpleBrowser.hs
   build-depends:       base >= 4.7 && < 5,
-                       haskell-gi-base >= 0.20 && < 1,
+                       haskell-gi-base == 0.21.*,
                        gi-glib == 2.0.*,
                        gi-gtk == 3.0.*,
                        gi-webkit2 == 4.0.*,
@@ -32,7 +32,7 @@ executable SimpleBrowser
 executable Cairo
   main-is:              Cairo.hs
   build-depends:        base >= 4.7 && < 5,
-                        haskell-gi-base >= 0.20 && < 1,
+                        haskell-gi-base == 0.21.*,
                         gi-glib == 2.0.*,
                         gi-cairo == 1.0.*,
                         gi-gdk == 3.0.*,
@@ -48,7 +48,7 @@ executable Cairo
 executable DBusServer
   main-is:              DBusServer.hs
   build-depends:        base >= 4.7 && < 5,
-                        haskell-gi-base >= 0.20 && < 1,
+                        haskell-gi-base == 0.21.*,
                         gi-glib == 2.0.*,
                         gi-gio == 2.0.*,
                         text == 1.2.*
@@ -59,7 +59,7 @@ executable DBusServer
 executable GstHelloWorld
   main-is:              GstHelloWorld.hs
   build-depends:        base >= 4.7 && < 5,
-                        haskell-gi-base,
+                        haskell-gi-base == 0.21.*,
                         gi-glib,
                         gi-gst,
                         text
@@ -75,7 +75,7 @@ executable GstGtkX11
                       , gi-xlib
                       , gi-gstvideo
                       , gi-gdkx11
-                      , haskell-gi-base == 0.20.*
+                      , haskell-gi-base == 0.21.*
   default-language:     Haskell2010
   other-extensions:     OverloadedStrings
   ghc-options:          -O -threaded -with-rtsopts=-N -Wall
@@ -83,7 +83,7 @@ executable GstGtkX11
 executable gtk-emit-signal
   main-is:            GtkEmitSignal.hs
   build-depends:        base >= 4.7 && < 4.10
-                      , haskell-gi-base
+                      , haskell-gi-base == 0.21.*
                       , gi-gobject
                       , gi-glib
                       , gi-gtk

@@ -1,3 +1,7 @@
+### 0.21.0
+
++ New release to keep major version parity with the `haskell-gi` package, no changes otherwise.
+
 ### 0.20.8
 
 + Fix a bug which could lead to crashes when releasing boxed objects, see [issue #130](https://github.com/haskell-gi/haskell-gi/issues/130).
