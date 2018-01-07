@@ -82,7 +82,7 @@ genOverloadedLabel l = group $ do
 
 genOverloadedLabels :: [(Name, API)] -> CodeGen ()
 genOverloadedLabels allAPIs = do
-  setLanguagePragmas ["DataKinds", "FlexibleContexts"]
+  setLanguagePragmas ["DataKinds", "FlexibleContexts", "CPP"]
   setModuleFlags [ImplicitPrelude]
 
   line $ "import Data.Proxy (Proxy(..))"
