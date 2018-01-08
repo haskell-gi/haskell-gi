@@ -43,6 +43,9 @@ Library
                        regex-tdfa >= 1.2,
                        text >= 1.0
 
+  if !impl(ghc >= 8.0)
+    build-depends: semigroups == 0.18.*
+
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
   ghc-options:         -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
   c-sources:           lib/c/enumStorage.c

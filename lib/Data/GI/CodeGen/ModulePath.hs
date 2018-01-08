@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- | Abstract representation for paths into modules.
 module Data.GI.CodeGen.ModulePath
   ( ModulePath(..)
@@ -9,22 +10,18 @@ module Data.GI.CodeGen.ModulePath
 import Data.Monoid (Monoid(..), (<>))
 import Data.String (IsString(..))
 import qualified Data.Text as T
+import qualified Data.Semigroup as Sem
 import Data.Text (Text)
 
 import Data.GI.CodeGen.Util (ucFirst)
 
 -- | A path to a module.
 newtype ModulePath = ModulePath { modulePathToList :: [Text] }
-  deriving (Eq, Show, Ord)
+  deriving (Sem.Semigroup, Monoid, Eq, Show, Ord)
 
 -- | Construct a `ModulePath` from a `String`.
 instance IsString ModulePath where
   fromString = toModulePath . T.pack
-
--- | `ModulePath`s are `Monoid`s.
-instance Monoid ModulePath where
-  mempty = ModulePath []
-  mappend (ModulePath as) (ModulePath bs) = ModulePath (as <> bs)
 
 -- | Construct a path into the given GIR namespace. The given `Text`
 -- will be split along ".".

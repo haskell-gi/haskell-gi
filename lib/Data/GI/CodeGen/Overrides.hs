@@ -13,10 +13,11 @@ import Data.Traversable (traverse)
 
 import Control.Monad.Except
 import Control.Monad.State
-import Control.Monad.Writer
+import Control.Monad.Writer (WriterT, execWriterT, tell)
 
 import Data.Maybe (isJust)
 import qualified Data.Map as M
+import Data.Semigroup as Sem
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -72,8 +73,18 @@ defaultOverrides = Overrides {
 -- encode this so that we can view the parser as a writer monad of
 -- configs.
 instance Monoid Overrides where
-    mempty = defaultOverrides
-    mappend a b = Overrides {
+  mempty = defaultOverrides
+#if !MIN_VERSION_base(4,11,0)
+  mappend = concatOverrides
+#endif
+
+-- | There is a sensible notion of zero and addition of Overridess,
+-- encode this so that we can view the parser as a writer monad of
+-- configs.
+instance Sem.Semigroup Overrides where
+  (<>) = concatOverrides
+
+concatOverrides a b = Overrides {
       ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
       sealedStructs = sealedStructs a <> sealedStructs b,
       allocInfo = allocInfo a <> allocInfo b,

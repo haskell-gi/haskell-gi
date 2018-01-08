@@ -75,6 +75,7 @@ import Data.Monoid ((<>), mempty)
 import qualified Data.Map.Strict as M
 import Data.Sequence (ViewL ((:<)), viewl, (|>))
 import qualified Data.Sequence as Seq
+import qualified Data.Semigroup as Sem
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -100,7 +101,7 @@ data CPPConditional = CPPIf Text -- ^ #if Foo
 
 -- | The generated `Code` is a sequence of `CodeToken`s.
 newtype Code = Code (Seq.Seq CodeToken)
-  deriving (Monoid, Eq, Show, Ord)
+  deriving (Sem.Semigroup, Monoid, Eq, Show, Ord)
 
 -- | Initializes a code block to the empty sequence.
 emptyCode :: Code
