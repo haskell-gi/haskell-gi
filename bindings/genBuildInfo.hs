@@ -66,10 +66,21 @@ writeCabal fname info =
          T.intercalate ",\n                     "
               ([ baseVersion info
                , "haskell-gi-base == 0.21.*"
+               -- Workaround for cabal new-build not picking up
+               -- setup-depends dependencies when constructing the
+               -- build plan.
+               , "haskell-gi == 0.21.*"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
                <> giDepends info <> PI.standardDeps)
+       , ""
+       -- GHC 8.2.x panics when building the overloaded bindings
+       -- https://ghc.haskell.org/trac/ghc/ticket/14382
+       , "      -- Disable overloading when compiling under GHC 8.2.x"
+       , "      -- see https://ghc.haskell.org/trac/ghc/ticket/14382"
+       , "      if impl(ghc == 8.2.*)"
+       , "              build-depends: haskell-gi-overloading == 0.0"
        ]
 
 writeSetup :: FilePath -> ProjectInfo -> IO ()

@@ -790,10 +790,8 @@ ghcOptions opts = "{-# OPTIONS_GHC " <> T.intercalate ", " opts <> " #-}\n"
 cppMacros :: Text
 cppMacros = T.unlines ["#define ENABLE_OVERLOADING (MIN_VERSION_haskell_gi_overloading(1,0,0) \\"
                       -- Haddocks look better without overloading
-                      , "       && !defined(__HADDOCK_VERSION__) \\"
-                      -- GHC 8.2.x is broken, see
-                      -- https://github.com/haskell-gi/haskell-gi/issues/113
-                      , "       && !(MIN_TOOL_VERSION_ghc(8,2,0) && !MIN_TOOL_VERSION_ghc(8,4,0)))\n"]
+                      , "       && !defined(__HADDOCK_VERSION__))"
+                      ]
 
 -- | Standard fields for every module.
 standardFields :: Text
