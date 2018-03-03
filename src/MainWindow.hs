@@ -21,11 +21,13 @@ run option = do
 
 keyPressHandler:: EventM EKey Bool
 keyPressHandler = tryEvent $ 
-  do let escText :: IO Text
-         escText = return $ pack "Escape"
-     escText <- eventKeyName
-     liftIO mainQuit 
+  do
+    keyName <- eventKeyName
+    liftIO $
+      case unpack keyName of 
+        "Escape" -> mainQuit
   
+ 
           
 
 
