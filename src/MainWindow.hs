@@ -12,10 +12,14 @@ data CmdOptions = CmdOptions
 run :: CmdOptions -> IO()
 run option = do 
   initGUI
-  window <- windowNew
+  window <- windowNew 
+  canvas <- drawingAreaNew
+  containerAdd window canvas
   windowFullscreen window
   on window objectDestroy mainQuit 
   on window keyPressEvent keyPressHandler 
+  on canvas configureEvent sizeChangeHandler
+  on canvas exposeEvent drawCanvasHandler
   widgetShowAll window
   mainGUI
 
@@ -28,6 +32,11 @@ keyPressHandler = tryEvent $
         "Escape" -> mainQuit
   
  
+sizeChangeHandler :: EventM EConfigure Bool
+sizeChangeHandler = return True 
+
+drawCanvasHandler :: EventM EExpose Bool
+drawCanvasHandler = return True  
           
 
 
