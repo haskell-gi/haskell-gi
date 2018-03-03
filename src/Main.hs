@@ -2,9 +2,7 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-
-data CmdOptions = CmdOptions 
-  { cmdBoxSize :: Int }
+import MainWindow
 
 allowedBoxSizes :: [String]
 allowedBoxSizes = ["16", "32", "64", "128"] 
@@ -15,9 +13,6 @@ main = run =<< execParser opts
     opts = info (cmdParser <**> helper)
       ( fullDesc
       <> progDesc "A simple labyrinth game" ) 
-
-run :: CmdOptions -> IO()
-run option = print $ cmdBoxSize option 
 
 cmdParser :: Parser CmdOptions
 cmdParser = CmdOptions
@@ -36,9 +31,8 @@ parseBoxSize = str >>= \s ->
                     False -> readerError ( "Accepted box sizes are " ++ ( printList allowedBoxSizes ) )
 
 printList :: [String] -> String
-printList list = let foldfunc x y = case y of 
-                                      [] -> x
-                                      otherwise -> x ++ ", " ++ y
+printList list = let foldfunc x [] = x
+                     foldfunc x y = x ++ ", " ++ y
                  in "[" ++ ( foldr foldfunc "" list ) ++ "]"
 
 
