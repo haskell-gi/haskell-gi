@@ -1,4 +1,4 @@
-module Labyrinth(Labyrinth, labyConstruct) where
+module Labyrinth(Labyrinth(..), labyConstruct) where
 
 import Control.Concurrent.STM(STM)
 import Control.Concurrent.STM.TArray(TArray)

@@ -5,8 +5,10 @@ import qualified Graphics.UI.Gtk as GTK
 import System.Exit(exitSuccess)
 import Control.Monad.Trans(liftIO)
 import qualified Control.Concurrent.STM as STM
+
 import Rectangle
 import Labyrinth
+import Grid
 
 data CmdOptions = CmdOptions 
   { cmdBoxSize :: Int } 
@@ -51,10 +53,16 @@ drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EExpose Bool
 drawCanvasHandler state = 
   do 
     GTK.Rectangle x y width height <- GTK.eventArea 
-    let rectangle = Rectangle { rTopLeftX = x,
-                                rTopLeftY = y,
-                                rWidth = width,
-                                rHeight = height }
+    let redrawArea = Rectangle { rTopLeftX = x,
+                                 rTopLeftY = y,
+                                 rWidth = width,
+                                 rHeight = height } 
+    intersection <- liftIO $ STM.atomically $ 
+      do labyrinth <- STM.readTVar state
+         case labyrinth of 
+           Just l -> let screenRectangle = grRectangle $ labyGrid l
+                     in return $ rIntersect redrawArea screenRectangle
+           Nothing -> return Nothing
     return True  
 
 motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
