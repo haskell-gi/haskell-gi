@@ -5,6 +5,7 @@ import Graphics.UI.Gtk
 import System.Exit(exitSuccess)
 import Control.Monad
 import Control.Monad.Trans
+import Labyrinth
 
 data CmdOptions = CmdOptions 
   { cmdBoxSize :: Int } 

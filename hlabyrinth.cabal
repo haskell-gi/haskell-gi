@@ -17,13 +17,14 @@ cabal-version:       >=1.10
 
 executable hlabyrinth
   main-is:             Main.hs
-  other-modules:       MainWindow, Labyrinth
+  other-modules:       MainWindow, Labyrinth, Rectangle
   ghc-options:         -threaded -rtsopts
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
                        optparse-applicative >=0.14.2 && <0.15,
                        gtk >=0.14.7 && <0.15,
                        text >=1.2.3.0 && <1.3,
-                       mtl >=2.2.1 && <2.3
+                       mtl >=2.2.1 && <2.3,
+                       array >=0.5.1 && <0.6
   hs-source-dirs:      src
   default-language:    Haskell2010
