@@ -5,8 +5,7 @@ import Graphics.UI.Gtk
 import System.Exit(exitSuccess)
 import Control.Monad
 import Control.Monad.Trans
-import GHC.ST
-import Data.STRef
+import Control.Concurrent.STM
 import Labyrinth
 
 data CmdOptions = CmdOptions 
@@ -17,24 +16,25 @@ run option = do
   initGUI
   window <- windowNew 
   canvas <- drawingAreaNew
+  state <- createStateVar
   widgetAddEvents canvas [ButtonPressMask, 
                           PointerMotionMask, 
                           PointerMotionHintMask]
   containerAdd window canvas
   windowFullscreen window
   on window objectDestroy mainQuit 
-  on window keyPressEvent keyPressHandler 
-  on canvas configureEvent sizeChangeHandler
-  on canvas exposeEvent drawCanvasHandler
-  on canvas motionNotifyEvent motionNotifyHandler
+  on window keyPressEvent ( keyPressHandler state )
+  on canvas configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
+  on canvas exposeEvent ( drawCanvasHandler state )
+  on canvas motionNotifyEvent ( motionNotifyHandler state )
   widgetShowAll window
   mainGUI
 
-createStateVar :: ST s (STRef s (Maybe (Labyrinth s)))
-createStateVar = newSTRef Nothing
+createStateVar :: IO (TVar (Maybe Labyrinth))
+createStateVar = atomically (newTVar Nothing)
 
-keyPressHandler:: EventM EKey Bool
-keyPressHandler = tryEvent $ 
+keyPressHandler:: TVar (Maybe Labyrinth) -> EventM EKey Bool
+keyPressHandler _ = tryEvent $ 
   do
     keyName <- eventKeyName
     liftIO $
@@ -42,24 +42,23 @@ keyPressHandler = tryEvent $
         "Escape" -> mainQuit
   
  
-sizeChangeHandler :: EventM EConfigure Bool
-sizeChangeHandler =  
+sizeChangeHandler :: Int -> TVar (Maybe Labyrinth) -> EventM EConfigure Bool
+sizeChangeHandler boxSize state =  
   do
     region <- eventSize
-    liftIO ( putStrLn ("SizeChange: " ++ (show region)))
+    liftIO $ atomically $ 
+      do labyrinth <- labyConstruct boxSize region 
+         writeTVar state ( Just labyrinth ) 
     return True 
 
-drawCanvasHandler :: EventM EExpose Bool
-drawCanvasHandler = return True  
+drawCanvasHandler :: TVar (Maybe Labyrinth) -> EventM EExpose Bool
+drawCanvasHandler _ = return True  
 
-motionNotifyHandler :: EventM EMotion Bool
-motionNotifyHandler = 
+motionNotifyHandler :: TVar (Maybe Labyrinth) -> EventM EMotion Bool
+motionNotifyHandler _ = 
   do 
     coordinates <- eventCoordinates
     modifier <- eventModifierMouse
     liftIO ( putStrLn ("Move: " ++ ( show coordinates ) ++ ( show modifier )))
     eventRequestMotions
     return False
-          
-
-

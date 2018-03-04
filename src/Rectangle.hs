@@ -1,4 +1,10 @@
-module Rectangle(Rectangle) where
+module Rectangle(
+  Rectangle(..), 
+  rBottomRightX, 
+  rBottomRightY, 
+  rIntersect
+) 
+where
 
 data Num a => Rectangle a = Rectangle {
   rTopLeftX :: a,
