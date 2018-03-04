@@ -5,7 +5,7 @@ name:                hlabyrinth
 version:             0.1.0.0
 -- synopsis:            
 -- description:         
-license:             BSD3
+license:             GPL3
 license-file:        LICENSE
 author:              Kilian Kilger
 maintainer:          kkilger@gmail.com
@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 executable hlabyrinth
   main-is:             Main.hs
-  other-modules:       MainWindow 
+  other-modules:       MainWindow, Labyrinth
   ghc-options:         -threaded -rtsopts
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
