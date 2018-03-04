@@ -14,12 +14,14 @@ run option = do
   initGUI
   window <- windowNew 
   canvas <- drawingAreaNew
+  widgetAddEvents canvas [ButtonMotionMask]
   containerAdd window canvas
   windowFullscreen window
   on window objectDestroy mainQuit 
   on window keyPressEvent keyPressHandler 
   on canvas configureEvent sizeChangeHandler
   on canvas exposeEvent drawCanvasHandler
+  on canvas motionNotifyEvent motionNotifyHandler
   widgetShowAll window
   mainGUI
 
@@ -33,10 +35,17 @@ keyPressHandler = tryEvent $
   
  
 sizeChangeHandler :: EventM EConfigure Bool
-sizeChangeHandler = return True 
+sizeChangeHandler =  
+  do
+    region <- eventSize
+    liftIO $ putStrLn $ show region
+    return True 
 
 drawCanvasHandler :: EventM EExpose Bool
 drawCanvasHandler = return True  
+
+motionNotifyHandler :: EventM EMotion Bool
+motionNotifyHandler = return True   
           
 
 
