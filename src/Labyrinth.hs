@@ -1,10 +1,12 @@
 module Labyrinth(Labyrinth) where
 
 import Data.Array.ST
-import Rectangle
+import Grid
 
-data Labyrinth s = Labyrinth {
-  labyrinthBoxState :: STUArray s (Int, Int) Int
+data Labyrinth a = Labyrinth {
+  labyBoxState :: Maybe (STUArray a (Int, Int) Int),
+  labyGrid :: Maybe (Grid Int)
 }
 
+type MaybeLabyrinth a = Maybe (Labyrinth a)
 

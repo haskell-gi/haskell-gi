@@ -5,6 +5,8 @@ import Graphics.UI.Gtk
 import System.Exit(exitSuccess)
 import Control.Monad
 import Control.Monad.Trans
+import GHC.ST
+import Data.STRef
 import Labyrinth
 
 data CmdOptions = CmdOptions 
@@ -27,6 +29,9 @@ run option = do
   on canvas motionNotifyEvent motionNotifyHandler
   widgetShowAll window
   mainGUI
+
+createStateVar :: ST s (STRef s (Maybe (Labyrinth s)))
+createStateVar = newSTRef Nothing
 
 keyPressHandler:: EventM EKey Bool
 keyPressHandler = tryEvent $ 

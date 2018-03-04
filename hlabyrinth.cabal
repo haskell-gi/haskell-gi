@@ -17,7 +17,7 @@ cabal-version:       >=1.10
 
 executable hlabyrinth
   main-is:             Main.hs
-  other-modules:       MainWindow, Labyrinth, Rectangle
+  other-modules:       MainWindow, Labyrinth, Rectangle, Grid
   ghc-options:         -threaded -rtsopts
   -- other-extensions:    
   build-depends:       base >=4.9 && <4.10,
