@@ -1,11 +1,11 @@
 module MainWindow(CmdOptions(CmdOptions), run) where
 
-import Data.Text
-import Graphics.UI.Gtk
+import qualified Data.Text as Text
+import qualified Graphics.UI.Gtk as GTK
 import System.Exit(exitSuccess)
-import Control.Monad
-import Control.Monad.Trans
-import Control.Concurrent.STM
+import Control.Monad.Trans(liftIO)
+import qualified Control.Concurrent.STM as STM
+import Rectangle
 import Labyrinth
 
 data CmdOptions = CmdOptions 
@@ -13,52 +13,55 @@ data CmdOptions = CmdOptions
 
 run :: CmdOptions -> IO()
 run option = do 
-  initGUI
-  window <- windowNew 
-  canvas <- drawingAreaNew
-  state <- createStateVar
-  widgetAddEvents canvas [ButtonPressMask, 
-                          PointerMotionMask, 
-                          PointerMotionHintMask]
-  containerAdd window canvas
-  windowFullscreen window
-  on window objectDestroy mainQuit 
-  on window keyPressEvent ( keyPressHandler state )
-  on canvas configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
-  on canvas exposeEvent ( drawCanvasHandler state )
-  on canvas motionNotifyEvent ( motionNotifyHandler state )
-  widgetShowAll window
-  mainGUI
+  GTK.initGUI
+  window <- GTK.windowNew 
+  canvas <- GTK.drawingAreaNew
+  state <- STM.atomically $ STM.newTVar Nothing
+  GTK.widgetAddEvents canvas [GTK.ButtonPressMask, 
+                              GTK.PointerMotionMask, 
+                              GTK.PointerMotionHintMask]
+  GTK.containerAdd window canvas
+  GTK.windowFullscreen window
+  GTK.on window GTK.objectDestroy GTK.mainQuit 
+  GTK.on window GTK.keyPressEvent ( keyPressHandler state )
+  GTK.on canvas GTK.configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
+  GTK.on canvas GTK.exposeEvent ( drawCanvasHandler state )
+  GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
+  GTK.widgetShowAll window
+  GTK.mainGUI
 
-createStateVar :: IO (TVar (Maybe Labyrinth))
-createStateVar = atomically (newTVar Nothing)
-
-keyPressHandler:: TVar (Maybe Labyrinth) -> EventM EKey Bool
-keyPressHandler _ = tryEvent $ 
+keyPressHandler:: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EKey Bool
+keyPressHandler _ = GTK.tryEvent $ 
   do
-    keyName <- eventKeyName
+    keyName <- GTK.eventKeyName
     liftIO $
-      case unpack keyName of 
-        "Escape" -> mainQuit
+      case Text.unpack keyName of 
+        "Escape" -> GTK.mainQuit
   
- 
-sizeChangeHandler :: Int -> TVar (Maybe Labyrinth) -> EventM EConfigure Bool
+sizeChangeHandler :: Int -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
 sizeChangeHandler boxSize state =  
   do
-    region <- eventSize
-    liftIO $ atomically $ 
+    region <- GTK.eventSize
+    liftIO $ STM.atomically $ 
       do labyrinth <- labyConstruct boxSize region 
-         writeTVar state ( Just labyrinth ) 
+         STM.writeTVar state ( Just labyrinth ) 
     return True 
 
-drawCanvasHandler :: TVar (Maybe Labyrinth) -> EventM EExpose Bool
-drawCanvasHandler _ = return True  
+drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EExpose Bool
+drawCanvasHandler state = 
+  do 
+    GTK.Rectangle x y width height <- GTK.eventArea 
+    let rectangle = Rectangle { rTopLeftX = x,
+                                rTopLeftY = y,
+                                rWidth = width,
+                                rHeight = height }
+    return True  
 
-motionNotifyHandler :: TVar (Maybe Labyrinth) -> EventM EMotion Bool
+motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
 motionNotifyHandler _ = 
   do 
-    coordinates <- eventCoordinates
-    modifier <- eventModifierMouse
+    coordinates <- GTK.eventCoordinates
+    modifier <- GTK.eventModifierMouse
     liftIO ( putStrLn ("Move: " ++ ( show coordinates ) ++ ( show modifier )))
-    eventRequestMotions
+    GTK.eventRequestMotions
     return False

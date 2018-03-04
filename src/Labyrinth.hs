@@ -1,7 +1,7 @@
 module Labyrinth(Labyrinth, labyConstruct) where
 
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TArray
+import Control.Concurrent.STM(STM)
+import Control.Concurrent.STM.TArray(TArray)
 import Data.Array.MArray(newArray)
 import Rectangle 
 import Grid
