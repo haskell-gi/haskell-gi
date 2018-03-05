@@ -6,8 +6,10 @@ import Data.Array.MArray(newArray)
 import Rectangle 
 import Grid
 
+data BoxState = Empty | Border | Start | End
+
 data Labyrinth = Labyrinth {
-  labyBoxState :: TArray (Int, Int) Int,
+  labyBoxState :: TArray (Int, Int) BoxState,
   labyGrid :: Grid Int
 }
 
@@ -23,7 +25,7 @@ labyConstruct boxSize (totalWidth, totalHeight) =
          xBoxCnt = quot width boxSize
          yBoxCnt = quot height boxSize
          arrayDimension = ((0,0),(xBoxCnt-1, yBoxCnt-1))
-     array <- newArray arrayDimension 0
+     array <- newArray arrayDimension Empty
      return Labyrinth {
         labyBoxState = array,
         labyGrid = Grid {
@@ -37,3 +39,5 @@ labyConstruct boxSize (totalWidth, totalHeight) =
           grYBoxCnt = yBoxCnt
         }
      }
+
+-- labyBoxes :: Labyrinth -> Rectangle Int -> STM [(Rectangle Int, BoxState)]

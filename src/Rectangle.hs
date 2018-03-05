@@ -1,11 +1,15 @@
 module Rectangle(
   Rectangle(..), 
+  Point(..),
   IsARectangle(..),
-  rIntersect
+  rIntersect,
+  rIsInside
 ) 
 where
 
 import qualified Graphics.UI.Gtk as GTK (Rectangle(..)) 
+
+data Num a => Point a = Point (a,a)
 
 data Num a => Rectangle a = Rectangle a a a a; 
 
@@ -51,3 +55,6 @@ rIntersect :: (Ord a, Num a, IsARectangle r1 a, IsARectangle r2 a) => r1 -> r2 -
 rIntersect r1 r2 = case rDoIntersect r1 r2 of 
                      True -> Just $ rComputeIntersection r1 r2 
                      False -> Nothing
+
+rIsInside :: (Ord a, Num a, IsARectangle r a)  => r -> Point a -> Bool
+rIsInside rectangle (Point (x,y)) = rDoIntersect rectangle ( Rectangle x y 0 0 )
