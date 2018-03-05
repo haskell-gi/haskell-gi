@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/cohomology/hlabyrinth.svg?branch=master)](https://travis-ci.org/cohomology/hlabyrinth)
 
 # hlabyrinth
-Learning of the Haskell programming language
+
+The is a simple labyrinth game in Haskell. It is mainly a clone of [Rustirinth](https://github.com/cohomology/rustirinth) to compare the Haskell and Rust implementation. 
