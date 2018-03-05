@@ -53,12 +53,7 @@ drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EExpose Bool
 drawCanvasHandler state = 
   do 
     redrawArea <- GTK.eventArea 
-    intersection <- liftIO $ STM.atomically $ 
-      do labyrinth <- STM.readTVar state
-         case labyrinth of 
-           Just l -> let screenRectangle = grRectangle $ labyGrid l
-                     in return $ rIntersect redrawArea screenRectangle
-           Nothing -> return Nothing
+    intersection <- liftIO $ getLabyrinthState state ( (rIntersect redrawArea) . grRectangle . labyGrid ) 
     return True  
 
 motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
@@ -69,3 +64,11 @@ motionNotifyHandler _ =
     liftIO ( putStrLn ("Move: " ++ ( show coordinates ) ++ ( show modifier )))
     GTK.eventRequestMotions
     return False
+
+getLabyrinthState :: STM.TVar (Maybe Labyrinth) -> ( Labyrinth -> a ) -> IO (Maybe a)
+getLabyrinthState state f = 
+  do STM.atomically $ 
+      do labyrinth <- STM.readTVar state
+         return $ maybe Nothing (Just . f) labyrinth
+         
+
