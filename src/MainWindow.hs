@@ -52,11 +52,7 @@ sizeChangeHandler boxSize state =
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EExpose Bool
 drawCanvasHandler state = 
   do 
-    GTK.Rectangle x y width height <- GTK.eventArea 
-    let redrawArea = Rectangle { rTopLeftX = x,
-                                 rTopLeftY = y,
-                                 rWidth = width,
-                                 rHeight = height } 
+    redrawArea <- GTK.eventArea 
     intersection <- liftIO $ STM.atomically $ 
       do labyrinth <- STM.readTVar state
          case labyrinth of 

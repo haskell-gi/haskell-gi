@@ -28,12 +28,10 @@ labyConstruct boxSize (totalWidth, totalHeight) =
         labyBoxState = array,
         labyGrid = Grid {
           grScreenSize = (totalWidth, totalHeight),
-          grRectangle = Rectangle { 
-            rTopLeftX = quot totalWidth 2 - quot width 2,
-            rTopLeftY = quot totalHeight 2 - quot height 2,
-            rWidth = width + 1,
-            rHeight = height + 1 
-          },
+          grRectangle = Rectangle  (quot totalWidth 2 - quot width 2)
+                                   (quot totalHeight 2 - quot height 2)
+                                   (width + 1)
+                                   (height + 1),
           grBoxSize = boxSize,
           grXBoxCnt = xBoxCnt,
           grYBoxCnt = yBoxCnt
