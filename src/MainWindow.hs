@@ -2,6 +2,7 @@ module MainWindow(CmdOptions(CmdOptions), run) where
 
 import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
+import qualified Graphics.Rendering.Cairo as Cairo
 import System.Exit(exitSuccess)
 import Control.Monad.Trans(liftIO)
 import qualified Control.Concurrent.STM as STM
@@ -27,7 +28,7 @@ run option = do
   GTK.on window GTK.objectDestroy GTK.mainQuit 
   GTK.on window GTK.keyPressEvent ( keyPressHandler state )
   GTK.on canvas GTK.configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
-  GTK.on canvas GTK.exposeEvent ( drawCanvasHandler state )
+  GTK.on canvas GTK.draw ( drawCanvasHandler state )
   GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
   GTK.widgetShowAll window
   GTK.mainGUI
@@ -49,12 +50,9 @@ sizeChangeHandler boxSize state =
          STM.writeTVar state ( Just labyrinth ) 
     return True 
 
-drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EExpose Bool
+drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
-  do 
-    redrawArea <- GTK.eventArea 
-    intersection <- liftIO $ getLabyrinthState state ( (rIntersect redrawArea) . grRectangle . labyGrid ) 
-    return True  
+    return ()  
 
 motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
 motionNotifyHandler _ = 

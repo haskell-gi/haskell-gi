@@ -21,11 +21,11 @@ grPixelToBox grid PtScreen { grPtScreen = Point (x,y) } = let rectangle = grRect
                                                               boxSize = grBoxSize grid
                                                               maxX = grXBoxCnt grid - 1
                                                               maxY = grYBoxCnt grid - 1
-                                                          in case rIsInside rectangle (Point (x,y)) of 
-                                                                True -> let grX = min (quot (x - rTopLeftX rectangle ) boxSize) maxX
-                                                                            grY = min (quot (y - rTopLeftY rectangle ) boxSize) maxY
-                                                                        in Just PtGrid { grPtGrid = Point ( grX, grY ) }
-                                                                False -> Nothing
+                                                          in (if rIsInside rectangle (Point (x,y)) then (
+                                                                 let grX = min (quot (x - rTopLeftX rectangle ) boxSize) maxX
+                                                                     grY = min (quot (y - rTopLeftY rectangle ) boxSize) maxY
+                                                                 in Just PtGrid { grPtGrid = Point ( grX, grY ) } )
+                                                               else Nothing)
                                                                   
 
 
