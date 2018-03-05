@@ -5,7 +5,6 @@ addons:
   apt:
     packages:
       - libgtk-3-dev
-      - libgtk2hs-buildtools
       - libgmp-dev
 
 before_install:
