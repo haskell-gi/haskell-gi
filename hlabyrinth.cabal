@@ -29,7 +29,7 @@ executable hlabyrinth
                        array >=0.5.1 && <0.6,
                        stm >=2.4.4.1 && <2.5
   hs-source-dirs:      src
-  default-extensions:  MultiParamTypeClasses, 
+  other-extensions:    MultiParamTypeClasses, 
                        FlexibleInstances,
                        FunctionalDependencies
   default-language:    Haskell2010

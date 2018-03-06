@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies  #-}
 module Rectangle(
   Rectangle(..), 
   Point(..),
@@ -18,7 +19,6 @@ class Num a => IsARectangle r a | r -> a where
   rTopLeftY :: r -> a
   rWidth :: r -> a
   rHeight :: r -> a 
-  rTo :: r -> Rectangle a 
   rBottomRightX :: r -> a
   rBottomRightX r = rTopLeftX r + rWidth r 
   rBottomRightY :: r -> a 
@@ -29,14 +29,18 @@ instance Num a => IsARectangle (Rectangle a) a where
   rTopLeftY (Rectangle _ y _ _) = y 
   rWidth    (Rectangle _ _ width _) = width   
   rHeight   (Rectangle _ _ _ height) = height    
-  rTo       r = r
 
 instance IsARectangle GTK.Rectangle Int where
   rTopLeftX (GTK.Rectangle x _ _ _) = x
   rTopLeftY (GTK.Rectangle _ y _ _) = y 
   rWidth    (GTK.Rectangle _ _ width _) = width   
   rHeight   (GTK.Rectangle _ _ _ height) = height     
-  rTo       (GTK.Rectangle x y width height) = Rectangle x y width height
+
+instance IsARectangle (Double, Double, Double, Double) Int where
+  rTopLeftX (x,_,_,_) = round x
+  rTopLeftY (_,y,_,_) = round y 
+  rWidth    (_,_,width,_) = round width   
+  rHeight   (_,_,_,height) = round height     
 
 rNotAbove :: (Ord a, Num a, IsARectangle r1 a, IsARectangle r2 a) => r1 -> r2 -> Bool
 rNotAbove r1 r2 =  (&&) (rBottomRightX r1 >= rTopLeftX r2) (rBottomRightY r1 >= rTopLeftY r2)   

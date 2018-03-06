@@ -29,7 +29,7 @@ run option = do
   GTK.on window GTK.keyPressEvent ( keyPressHandler state )
   GTK.on canvas GTK.configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
   GTK.on canvas GTK.draw ( drawCanvasHandler state )
-  GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
+  -- GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
   GTK.widgetShowAll window
   GTK.mainGUI
 
@@ -52,21 +52,48 @@ sizeChangeHandler boxSize state =
 
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
-    return ()  
+  do
+    extents <- Cairo.clipExtents
+    grid <- liftIO $ getLabyrinthState state ( (rIntersect extents) . grRectangle . labyGrid )
+    case grid of 
+      Just (Just intersection, grid) -> drawLabyrinth intersection grid
+      _ -> return ()
 
-motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
-motionNotifyHandler _ = 
-  do 
-    coordinates <- GTK.eventCoordinates
-    modifier <- GTK.eventModifierMouse
-    liftIO ( putStrLn ("Move: " ++ ( show coordinates ) ++ ( show modifier )))
-    GTK.eventRequestMotions
-    return False
+drawLabyrinth :: Rectangle Int -> Grid Int -> Cairo.Render ()
+drawLabyrinth area grid = 
+  do
+    Cairo.setAntialias Cairo.AntialiasSubpixel
+    drawAxes area grid
 
-getLabyrinthState :: STM.TVar (Maybe Labyrinth) -> ( Labyrinth -> a ) -> IO (Maybe a)
+drawAxes :: Rectangle Int -> Grid Int -> Cairo.Render ()
+drawAxes area grid =
+  do
+    Cairo.save
+    Cairo.setSourceRGB 0 0 0
+    grDrawAxes drawLine area grid
+    Cairo.stroke
+    Cairo.restore 
+
+drawLine :: Rectangle Int -> Cairo.Render ()
+drawLine rectangle = do let convertTuple (x,y) = (fromIntegral x, fromIntegral y)
+                            (x1,y1) = convertTuple (rTopLeftX rectangle, rTopLeftY rectangle)
+                            (x2,y2) = convertTuple (rBottomRightX rectangle, rBottomRightY rectangle)   
+                        Cairo.moveTo x1 y1
+                        Cairo.lineTo x2 y2
+
+getLabyrinthState :: STM.TVar (Maybe Labyrinth) -> ( Labyrinth -> a ) -> IO (Maybe (a, Grid Int))
 getLabyrinthState state f = 
-  do STM.atomically $ 
-      do labyrinth <- STM.readTVar state
-         return $ maybe Nothing (Just . f) labyrinth
+  STM.atomically $ 
+    do labyrinth <- STM.readTVar state
+       return $ maybe Nothing (Just . (\x -> ( f x, labyGrid x))) labyrinth
+
+-- motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
+-- motionNotifyHandler _ = 
+--   do 
+--     coordinates <- GTK.eventCoordinates
+--     modifier <- GTK.eventModifierMouse
+--     liftIO ( putStrLn ("Move: " ++ ( show coordinates ) ++ ( show modifier )))
+--     GTK.eventRequestMotions
+--     return False       
          
 
