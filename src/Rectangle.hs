@@ -4,7 +4,8 @@ module Rectangle(
   Point(..),
   IsARectangle(..),
   rIntersect,
-  rIsInside
+  rIsInside,
+  rFromBoundingBox
 ) 
 where
 
@@ -62,3 +63,7 @@ rIntersect r1 r2 = case rDoIntersect r1 r2 of
 
 rIsInside :: (Ord a, Num a, IsARectangle r a)  => r -> Point a -> Bool
 rIsInside rectangle (Point (x,y)) = rDoIntersect rectangle ( Rectangle x y 0 0 )
+
+rFromBoundingBox :: (Ord a, Num a, Num b) => (a -> b) -> (a, a, a, a) -> Rectangle b
+rFromBoundingBox f (topLeftX, topLeftY, bottomRightX, bottomRightY) = 
+  Rectangle (f topLeftX) (f topLeftY) (f (bottomRightX - topLeftX)) (f (bottomRightY - topLeftY))

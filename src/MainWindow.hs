@@ -54,7 +54,8 @@ drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
   do
     extents <- Cairo.clipExtents
-    grid <- liftIO $ getLabyrinthState state ( (rIntersect extents) . grRectangle . labyGrid )
+    let drawRectangle = rFromBoundingBox round extents
+    grid <- liftIO $ getLabyrinthState state ( (rIntersect drawRectangle) . grRectangle . labyGrid )
     case grid of 
       Just (Just intersection, grid) -> drawLabyrinth intersection grid
       _ -> return ()
@@ -70,7 +71,7 @@ drawAxes area grid =
   do
     Cairo.save
     Cairo.setSourceRGB 0 0 0
-    grDrawAxes drawLine area grid
+    sequence $ map drawLine (grAxesList area grid)
     Cairo.stroke
     Cairo.restore 
 
