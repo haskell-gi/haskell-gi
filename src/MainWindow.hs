@@ -76,9 +76,7 @@ drawAxes area grid =
     Cairo.restore 
 
 drawLine :: Rectangle Int -> Cairo.Render ()
-drawLine rectangle = do let convertTuple (x,y) = (fromIntegral x, fromIntegral y)
-                            (x1,y1) = convertTuple (rTopLeftX rectangle, rTopLeftY rectangle)
-                            (x2,y2) = convertTuple (rBottomRightX rectangle, rBottomRightY rectangle)   
+drawLine rectangle = do let (x1, y1, x2, y2) = rToBoundingBox fromIntegral rectangle
                         Cairo.moveTo x1 y1
                         Cairo.lineTo x2 y2
 
