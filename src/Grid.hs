@@ -1,7 +1,9 @@
 module Grid(
   Grid(..),
+  PointInGridCoordinates(..),
+  PointInScreenCoordinates(..),
   grPixelToBox,
-  grAxesList
+  grAxesList,
 ) where 
 
 import Rectangle

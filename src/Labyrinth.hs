@@ -1,8 +1,8 @@
-module Labyrinth(Labyrinth(..), labyConstruct) where
+module Labyrinth(Labyrinth(..), labyConstruct, BoxState(..), labyMarkBox) where
 
 import Control.Concurrent.STM(STM)
 import Control.Concurrent.STM.TArray(TArray)
-import Data.Array.MArray(newArray)
+import Data.Array.MArray(newArray,writeArray)
 import Rectangle 
 import Grid
 
@@ -40,4 +40,12 @@ labyConstruct boxSize (totalWidth, totalHeight) =
         }
      }
 
--- labyBoxes :: Labyrinth -> Rectangle Int -> STM [(Rectangle Int, BoxState)]
+labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> STM ()
+labyMarkBox _      _        Nothing          = return ()
+labyMarkBox point  boxState (Just labyrinth) = 
+  do  let grid = labyGrid labyrinth 
+          box = grPixelToBox grid point
+      case box of
+        Just PtGrid { grPtGrid = Point pt } -> writeArray (labyBoxState labyrinth) pt boxState
+        Nothing -> return ()
+      

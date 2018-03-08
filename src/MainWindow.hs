@@ -29,7 +29,8 @@ run option = do
   GTK.on window GTK.keyPressEvent ( keyPressHandler state )
   GTK.on canvas GTK.configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
   GTK.on canvas GTK.draw ( drawCanvasHandler state )
-  -- GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
+  GTK.on canvas GTK.buttonPressEvent ( buttonPressHandler state )
+  GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
   GTK.widgetShowAll window
   GTK.mainGUI
 
@@ -86,8 +87,19 @@ getLabyrinthState state f =
     do labyrinth <- STM.readTVar state
        return $ maybe Nothing (Just . (\x -> ( f x, labyGrid x))) labyrinth
 
--- motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
--- motionNotifyHandler _ = 
+buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EButton Bool
+buttonPressHandler state = 
+  GTK.tryEvent $ 
+    do
+      button <- GTK.eventButton
+      coordinates <- GTK.eventCoordinates
+      case button of 
+        GTK.LeftButton -> liftIO $ handleMarkBox state coordinates Border
+        GTK.RightButton -> liftIO $ handleMarkBox state coordinates Empty
+      return ()
+
+motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
+motionNotifyHandler _ = return True
 --   do 
 --     coordinates <- GTK.eventCoordinates
 --     modifier <- GTK.eventModifierMouse
@@ -95,4 +107,11 @@ getLabyrinthState state f =
 --     GTK.eventRequestMotions
 --     return False       
          
-
+handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Double, Double) -> BoxState -> IO ()
+handleMarkBox state (x,y) boxValue = 
+  let point = PtScreen { grPtScreen = Point ( round x, round y ) }
+  in STM.atomically $ 
+    do labyrinth <- STM.readTVar state
+       labyMarkBox point boxValue labyrinth
+       STM.writeTVar state labyrinth
+       
