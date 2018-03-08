@@ -40,12 +40,13 @@ labyConstruct boxSize (totalWidth, totalHeight) =
         }
      }
 
-labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> STM ()
-labyMarkBox _      _        Nothing          = return ()
+labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> STM (Maybe Labyrinth)
+labyMarkBox _      _        Nothing          = return Nothing
 labyMarkBox point  boxState (Just labyrinth) = 
   do  let grid = labyGrid labyrinth 
           box = grPixelToBox grid point
       case box of
         Just PtGrid { grPtGrid = Point pt } -> writeArray (labyBoxState labyrinth) pt boxState
         Nothing -> return ()
+      return $ Just labyrinth
       
