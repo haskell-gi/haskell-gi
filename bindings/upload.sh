@@ -2,8 +2,8 @@
 
 for sdist in sdists/*; do
     echo "Uploading $sdist"
-    result=$(cabal upload $sdist)
-    echo $result | grep -q "Ok$"
+    result=$(cabal upload --publish $sdist)
+    echo $result | grep -q "Package successfully published."
     if [ $? == 0 ]; then
         echo "OK"
         rm $sdist
