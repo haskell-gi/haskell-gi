@@ -20,13 +20,12 @@ cmdParser = CmdOptions
               ( long "box-size"
              <> short 's'
              <> help ( "Size of a single box in pixels "
-                  ++ ( show allowedBoxSizes ) ) 
+                  ++ show allowedBoxSizes ) 
              <> value 64
              <> metavar "SIZE" )
 
 parseBoxSize :: ReadM Int
 parseBoxSize = str >>= \s -> 
-                  case s `elem` allowedBoxSizes of
-                    True -> return ( read s :: Int )
-                    False -> readerError ( "Accepted box sizes are " ++ ( show allowedBoxSizes ) )
+                   if s `elem` allowedBoxSizes then return ( read s :: Int )
+                   else readerError ( "Accepted box sizes are " ++ show allowedBoxSizes )
        

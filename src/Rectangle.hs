@@ -12,7 +12,7 @@ where
 
 import qualified Graphics.UI.Gtk as GTK (Rectangle(..)) 
 
-data Num a => Point a = Point (a,a)
+newtype Num a => Point a = Point (a,a)
 
 data Num a => Rectangle a = Rectangle a a a a; 
 
@@ -58,9 +58,8 @@ rComputeIntersection r1 r2 =  let topLeftX = max (rTopLeftX r1) (rTopLeftX r2)
                               in Rectangle topLeftX topLeftY (btmRightX - topLeftX) (btmRightY - topLeftY)     
 
 rIntersect :: (Ord a, Num a, IsARectangle r1 a, IsARectangle r2 a) => r1 -> r2 -> Maybe (Rectangle a)
-rIntersect r1 r2 = case rDoIntersect r1 r2 of 
-                     True -> Just $ rComputeIntersection r1 r2 
-                     False -> Nothing
+rIntersect r1 r2 = if rDoIntersect r1 r2 then Just $ rComputeIntersection r1 r2 
+                   else Nothing
 
 rIsInside :: (Ord a, Num a, IsARectangle r a)  => r -> Point a -> Bool
 rIsInside rectangle (Point (x,y)) = rDoIntersect rectangle ( Rectangle x y 0 0 )
@@ -71,4 +70,4 @@ rFromBoundingBox f (topLeftX, topLeftY, bottomRightX, bottomRightY) =
 
 rToBoundingBox :: (Num a, Num b) => (a->b) -> Rectangle a -> (b, b, b, b)
 rToBoundingBox f r =
-  ((f $ rTopLeftX r), (f $ rTopLeftY r), (f $ rBottomRightX r), (f $ rBottomRightY r))
+  (f $ rTopLeftX r, f $ rTopLeftY r, f $ rBottomRightX r, f $ rBottomRightY r)

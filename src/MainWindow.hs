@@ -1,17 +1,20 @@
 module MainWindow(CmdOptions(CmdOptions), run) where
 
+
+import Control.Monad.Trans(liftIO)
+import Control.Arrow((&&&))
+import System.Exit(exitSuccess)
+
 import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
 import qualified Graphics.Rendering.Cairo as Cairo
-import System.Exit(exitSuccess)
-import Control.Monad.Trans(liftIO)
 import qualified Control.Concurrent.STM as STM
 
 import Rectangle
 import Labyrinth
 import Grid
 
-data CmdOptions = CmdOptions 
+newtype CmdOptions = CmdOptions 
   { cmdBoxSize :: Int } 
 
 run :: CmdOptions -> IO()
@@ -56,7 +59,7 @@ drawCanvasHandler state =
   do
     extents <- Cairo.clipExtents
     let drawRectangle = rFromBoundingBox round extents
-    grid <- liftIO $ getLabyrinthState state ( (rIntersect drawRectangle) . grRectangle . labyGrid )
+    grid <- liftIO $ getLabyrinthState state ( rIntersect drawRectangle . grRectangle . labyGrid )
     case grid of 
       Just (Just intersection, grid) -> drawLabyrinth intersection grid
       _ -> return ()
@@ -72,7 +75,7 @@ drawAxes area grid =
   do
     Cairo.save
     Cairo.setSourceRGB 0 0 0
-    sequence $ map drawLine (grAxesList area grid)
+    mapM_ drawLine (grAxesList area grid)
     Cairo.stroke
     Cairo.restore 
 
@@ -85,7 +88,7 @@ getLabyrinthState :: STM.TVar (Maybe Labyrinth) -> ( Labyrinth -> a ) -> IO (May
 getLabyrinthState state f = 
   STM.atomically $ 
     do labyrinth <- STM.readTVar state
-       return $ maybe Nothing (Just . (\x -> ( f x, labyGrid x))) labyrinth
+       return $ fmap (f &&& labyGrid) labyrinth
 
 buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EButton Bool
 buttonPressHandler state = 
