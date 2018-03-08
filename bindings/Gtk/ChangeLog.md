@@ -1,3 +1,7 @@
+### 3.0.20
+
++ Make the 'events' parameter to ['widgetAddEvents'](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Widget.html#v:widgetAddEvents) and ['widgetSetEvents](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Widget.html#v:widgetSetEvents) a [GdkEventMask](https://hackage.haskell.org/package/gi-gdk/docs/GI-Gdk-Flags.html#t:EventMask), see [issue 136](https://github.com/haskell-gi/haskell-gi/issues/136).
+
 ### 3.0.19
 
 + Remove enable-overloading flags, and use instead explicit CPP checks for 'haskell-gi-overloading-1.0', see [how to disable overloading](https://github.com/haskell-gi/haskell-gi/wiki/Overloading\#disabling-overloading).

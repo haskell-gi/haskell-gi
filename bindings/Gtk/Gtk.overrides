@@ -47,6 +47,13 @@ set-attr Gtk/Notebook/get_tab_label/@return-value nullable 1
 # https://github.com/haskell-gi/haskell-gi/issues/111
 set-attr Gtk/Bin/get_child/@return-value nullable 1
 
+# Marked as gint, but really GdkEventMask.
+# https://github.com/haskell-gi/haskell-gi/issues/136
+set-attr Gtk/Widget/add_events/@parameters/events/@type name Gdk.EventMask
+set-attr Gtk/Widget/add_events/@parameters/events/@type c:type GdkEventMask
+set-attr Gtk/Widget/set_events/@parameters/events/@type name Gdk.EventMask
+set-attr Gtk/Widget/set_events/@parameters/events/@type c:type GdkEventMask
+
 if osx
     # Not supported in Quartz version of Gtk
     ignore drag_set_icon_gicon
