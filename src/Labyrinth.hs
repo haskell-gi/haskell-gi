@@ -11,7 +11,7 @@ data BoxState = Empty | Border | Start | End
 data Labyrinth = Labyrinth {
   labyBoxState :: TArray (Int, Int) BoxState,
   labyGrid :: Grid Int
-}
+} 
 
 marginFactor :: Int
 marginFactor = 32
@@ -20,20 +20,20 @@ labyConstruct :: Int -> Int -> (Int, Int) -> STM Labyrinth
 labyConstruct boxSize borderSize (totalWidth, totalHeight) =  
   do let leftMargin = quot totalWidth marginFactor 
          topMargin = quot totalHeight marginFactor
-         width = quot (totalWidth - 2 * leftMargin) boxSize * boxSize
-         height = quot (totalHeight - 2 * topMargin) boxSize * boxSize
-         xBoxCnt = quot width boxSize
-         yBoxCnt = quot height boxSize
+         xBoxCnt = quot (totalWidth - 2 * leftMargin) boxSize 
+         yBoxCnt = quot (totalHeight - 2 * topMargin) boxSize 
+         width = xBoxCnt * boxSize + borderSize
+         height = yBoxCnt * boxSize + borderSize
          arrayDimension = ((0,0),(xBoxCnt-1, yBoxCnt-1))
      array <- newArray arrayDimension Empty
      return Labyrinth {
         labyBoxState = array,
         labyGrid = Grid {
           grScreenSize = (totalWidth, totalHeight),
-          grRectangle = Rectangle  (quot totalWidth 2 - quot width 2 - quot borderSize 2)
-                                   (quot totalHeight 2 - quot height 2 - quot borderSize 2)
-                                   (width + borderSize)
-                                   (height + borderSize),
+          grRectangle = Rectangle (quot (totalWidth - width) 2)
+                                  (quot (totalHeight - height) 2)
+                                  width
+                                  height,
           grBoxSize = boxSize,
           grXBoxCnt = xBoxCnt,
           grYBoxCnt = yBoxCnt,
