@@ -43,14 +43,13 @@ cmdParser = CmdOptions
           <$> option parseBoxSize
               ( long "box-size"
              <> short 's'
-             <> help ( "Size of a single box in pixels "
-                  ++ show allowedBoxSizes ++ " (default " ++ show defaultBoxSize ++ ")") 
+             <> help helpBoxSize
              <> value defaultBoxSize
              <> metavar "SIZE" )
           <*> option auto
             ( long "border-size"
              <> short 'b'
-             <> help ( "Size of the border in pixels (default " ++ show defaultBorderSize ++ ")" )
+             <> help helpBorderSize
              <> value defaultBorderSize
              <> metavar "SIZE" )
 
@@ -58,4 +57,11 @@ parseBoxSize :: ReadM Int
 parseBoxSize = str >>= \s -> 
                    if s `elem` allowedBoxSizes then return ( read s :: Int )
                    else readerError ( "Accepted box sizes are " ++ show allowedBoxSizes )
+
+helpBorderSize :: String
+helpBorderSize = "Size of the border in pixels (default " ++ show defaultBorderSize ++ ")" 
+
+helpBoxSize :: String
+helpBoxSize = "Size of a single box in pixels " ++ show allowedBoxSizes 
+               ++ " (default " ++ show defaultBoxSize ++ ")"
        
