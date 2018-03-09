@@ -13,7 +13,7 @@ defaultBoxSize :: Int
 defaultBoxSize = 64
 
 defaultBorderSize :: Int
-defaultBorderSize = 1
+defaultBorderSize = 2
 
 checkBorderSize :: CmdOptions -> IO ()
 checkBorderSize opt = checkBorderSizeDo borderSize boxSize 
@@ -44,14 +44,14 @@ cmdParser = CmdOptions
               ( long "box-size"
              <> short 's'
              <> help ( "Size of a single box in pixels "
-                  ++ show allowedBoxSizes ++ " default " ++ show defaultBoxSize) 
+                  ++ show allowedBoxSizes ++ " (default " ++ show defaultBoxSize ++ ")") 
              <> value defaultBoxSize
              <> metavar "SIZE" )
           <*> option auto
             ( long "border-size"
              <> short 'b'
-             <> help "Size of the border in pixels" 
-             <> value 1
+             <> help ( "Size of the border in pixels (default " ++ show defaultBorderSize ++ ")" )
+             <> value defaultBorderSize
              <> metavar "SIZE" )
 
 parseBoxSize :: ReadM Int

@@ -6,7 +6,7 @@ module Rectangle(
   rIntersect,
   rIsInside,
   rFromBoundingBox,
-  rToBoundingBox
+  rToTuple
 ) 
 where
 
@@ -14,7 +14,7 @@ import qualified Graphics.UI.Gtk as GTK (Rectangle(..))
 
 newtype Num a => Point a = Point (a,a)
 
-data Num a => Rectangle a = Rectangle a a a a; 
+data Num a => Rectangle a = Rectangle a a a a deriving(Show)
 
 class Num a => IsARectangle r a | r -> a where
   rTopLeftX :: r -> a
@@ -68,6 +68,6 @@ rFromBoundingBox :: (Num a, Num b) => (a -> b) -> (a, a, a, a) -> Rectangle b
 rFromBoundingBox f (topLeftX, topLeftY, bottomRightX, bottomRightY) = 
   Rectangle (f topLeftX) (f topLeftY) (f (bottomRightX - topLeftX)) (f (bottomRightY - topLeftY))
 
-rToBoundingBox :: (Num a, Num b) => (a->b) -> Rectangle a -> (b, b, b, b)
-rToBoundingBox f r =
-  (f $ rTopLeftX r, f $ rTopLeftY r, f $ rBottomRightX r, f $ rBottomRightY r)
+rToTuple :: (Num a, Num b) => (a->b) -> Rectangle a -> (b, b, b, b)
+rToTuple f r =
+  (f $ rTopLeftX r, f $ rTopLeftY r, f $ rWidth r, f $ rHeight r)

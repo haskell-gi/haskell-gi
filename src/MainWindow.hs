@@ -4,6 +4,7 @@ import Control.Monad.Trans(liftIO)
 import Control.Arrow((&&&))
 import System.Exit(exitSuccess)
 import Data.List(intersect)
+import Debug.Trace(trace)
 
 import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
@@ -20,6 +21,8 @@ data CmdOptions = CmdOptions
 
 run :: CmdOptions -> IO ()
 run option = do 
+  let boxSize = cmdBoxSize option
+      borderSize = cmdBorderSize option
   GTK.initGUI
   window <- GTK.windowNew 
   canvas <- GTK.drawingAreaNew
@@ -31,7 +34,7 @@ run option = do
   GTK.windowFullscreen window
   GTK.on window GTK.objectDestroy GTK.mainQuit 
   GTK.on window GTK.keyPressEvent ( keyPressHandler state )
-  GTK.on canvas GTK.configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
+  GTK.on canvas GTK.configureEvent ( sizeChangeHandler boxSize borderSize state )
   GTK.on canvas GTK.draw (drawCanvasHandler state)
   GTK.on canvas GTK.buttonPressEvent ( buttonPressHandler state )
   GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
@@ -46,12 +49,12 @@ keyPressHandler _ = GTK.tryEvent $
       case Text.unpack keyName of 
         "Escape" -> GTK.mainQuit
   
-sizeChangeHandler :: Int -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
-sizeChangeHandler boxSize state =  
+sizeChangeHandler :: Int -> Int -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
+sizeChangeHandler boxSize borderSize state =  
   do
     region <- GTK.eventSize
     liftIO $ STM.atomically $ 
-      do labyrinth <- labyConstruct boxSize region 
+      do labyrinth <- labyConstruct boxSize borderSize region 
          STM.writeTVar state ( Just labyrinth ) 
     return True 
 
@@ -81,9 +84,9 @@ drawAxes area grid =
     Cairo.restore 
 
 drawLine :: Rectangle Int -> Cairo.Render ()
-drawLine rectangle = do let (x1, y1, x2, y2) = rToBoundingBox fromIntegral rectangle
-                        Cairo.moveTo x1 y1
-                        Cairo.lineTo x2 y2
+drawLine rectangle = do let (x1, y1, x2, y2) = rToTuple fromIntegral rectangle
+                        Cairo.rectangle x1 y1 x2 y2
+                        Cairo.fill
 
 getLabyrinthState :: STM.TVar (Maybe Labyrinth) -> ( Labyrinth -> a ) -> IO (Maybe (a, Grid Int))
 getLabyrinthState state f = 

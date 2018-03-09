@@ -16,8 +16,8 @@ data Labyrinth = Labyrinth {
 marginFactor :: Int
 marginFactor = 32
 
-labyConstruct :: Int -> (Int, Int) -> STM Labyrinth
-labyConstruct boxSize (totalWidth, totalHeight) =  
+labyConstruct :: Int -> Int -> (Int, Int) -> STM Labyrinth
+labyConstruct boxSize borderSize (totalWidth, totalHeight) =  
   do let leftMargin = quot totalWidth marginFactor 
          topMargin = quot totalHeight marginFactor
          width = quot (totalWidth - 2 * leftMargin) boxSize * boxSize
@@ -30,13 +30,14 @@ labyConstruct boxSize (totalWidth, totalHeight) =
         labyBoxState = array,
         labyGrid = Grid {
           grScreenSize = (totalWidth, totalHeight),
-          grRectangle = Rectangle  (quot totalWidth 2 - quot width 2)
-                                   (quot totalHeight 2 - quot height 2)
-                                   (width + 1)
-                                   (height + 1),
+          grRectangle = Rectangle  (quot totalWidth 2 - quot width 2 - quot borderSize 2)
+                                   (quot totalHeight 2 - quot height 2 - quot borderSize 2)
+                                   (width + borderSize)
+                                   (height + borderSize),
           grBoxSize = boxSize,
           grXBoxCnt = xBoxCnt,
-          grYBoxCnt = yBoxCnt
+          grYBoxCnt = yBoxCnt,
+          grBorderSize = borderSize
         }
      }
 
