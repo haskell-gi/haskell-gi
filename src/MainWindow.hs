@@ -1,5 +1,4 @@
-module MainWindow(CmdOptions(CmdOptions), run) where
-
+module MainWindow(CmdOptions(..), run) where
 
 import Control.Monad.Trans(liftIO)
 import Control.Arrow((&&&))
@@ -15,10 +14,11 @@ import Rectangle
 import Labyrinth
 import Grid
 
-newtype CmdOptions = CmdOptions 
-  { cmdBoxSize :: Int } 
+data CmdOptions = CmdOptions 
+  { cmdBoxSize :: Int ,
+    cmdBorderSize :: Int }
 
-run :: CmdOptions -> IO()
+run :: CmdOptions -> IO ()
 run option = do 
   GTK.initGUI
   window <- GTK.windowNew 
@@ -32,7 +32,7 @@ run option = do
   GTK.on window GTK.objectDestroy GTK.mainQuit 
   GTK.on window GTK.keyPressEvent ( keyPressHandler state )
   GTK.on canvas GTK.configureEvent ( sizeChangeHandler (cmdBoxSize option) state )
-  GTK.on canvas GTK.draw ( drawCanvasHandler state )
+  GTK.on canvas GTK.draw (drawCanvasHandler state)
   GTK.on canvas GTK.buttonPressEvent ( buttonPressHandler state )
   GTK.on canvas GTK.motionNotifyEvent ( motionNotifyHandler state )
   GTK.widgetShowAll window
@@ -114,7 +114,7 @@ motionNotifyHandler state =
         [GTK.Button3] -> liftIO $ handleMarkBox state coordinates Empty
       GTK.eventRequestMotions
       return ()       
-         
+
 handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Double, Double) -> BoxState -> IO ()
 handleMarkBox state (x,y) boxValue = 
   let point = PtScreen { grPtScreen = Point ( round x, round y ) }
