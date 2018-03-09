@@ -39,7 +39,7 @@ script:
  - cabal build
  - cabal install
  - popd
- - cabal install --dependencies-only
+ - cabal install --dependencies-only --force-reinstalls
  - cabal configure
  - cabal build
  # For building the test program later, doing it now avoids a recompilation
