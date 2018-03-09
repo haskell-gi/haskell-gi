@@ -4,6 +4,7 @@ module MainWindow(CmdOptions(CmdOptions), run) where
 import Control.Monad.Trans(liftIO)
 import Control.Arrow((&&&))
 import System.Exit(exitSuccess)
+import Data.List(intersect)
 
 import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
@@ -102,13 +103,17 @@ buttonPressHandler state =
       return ()
 
 motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EMotion Bool
-motionNotifyHandler _ = return True
---   do 
---     coordinates <- GTK.eventCoordinates
---     modifier <- GTK.eventModifierMouse
---     liftIO ( putStrLn ("Move: " ++ ( show coordinates ) ++ ( show modifier )))
---     GTK.eventRequestMotions
---     return False       
+motionNotifyHandler state = 
+  GTK.tryEvent $
+    do 
+      coordinates <- GTK.eventCoordinates
+      modifier <- GTK.eventModifierMouse
+      let mouseModifiers = intersect modifier [GTK.Button1, GTK.Button2]
+      case mouseModifiers of 
+        [GTK.Button1] -> liftIO $ handleMarkBox state coordinates Border
+        [GTK.Button3] -> liftIO $ handleMarkBox state coordinates Empty
+      GTK.eventRequestMotions
+      return ()       
          
 handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Double, Double) -> BoxState -> IO ()
 handleMarkBox state (x,y) boxValue = 
