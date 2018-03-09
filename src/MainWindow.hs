@@ -114,7 +114,6 @@ handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Double, Double) -> BoxState -> I
 handleMarkBox state (x,y) boxValue = 
   let point = PtScreen { grPtScreen = Point ( round x, round y ) }
   in STM.atomically $ 
-    do old <- STM.readTVar state 
-       new <- labyMarkBox point boxValue old
-       STM.writeTVar state new
+    do labyrinth <- STM.readTVar state 
+       STM.writeTVar state  =<< labyMarkBox point boxValue labyrinth
        
