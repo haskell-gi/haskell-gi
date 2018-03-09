@@ -1,2 +1,3 @@
 - ignore: {name: Use infix}
+- ignore: {name: Reduce duplication}
 
