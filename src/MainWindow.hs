@@ -4,7 +4,6 @@ import Control.Monad.Trans(liftIO)
 import Control.Arrow((&&&))
 import System.Exit(exitSuccess)
 import Data.List(intersect)
-import Debug.Trace(trace)
 
 import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
