@@ -51,7 +51,7 @@ labyMarkBox point boxState (Just labyrinth) = do
   let grid = labyGrid labyrinth
       box  = grPixelToBox grid point
   case box of
-    Just PtGrid { grPtGrid = Point pt } ->
+    Just pt ->
       writeArray (labyBoxState labyrinth) pt boxState
     Nothing -> return ()
   return $ Just labyrinth

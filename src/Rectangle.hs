@@ -1,7 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies  #-}
 module Rectangle(
   Rectangle(..), 
-  Point(..),
+  Point,
   IsARectangle(..),
   rIntersect,
   rIsInside,
@@ -12,7 +12,7 @@ where
 
 import qualified Graphics.UI.Gtk as GTK (Rectangle(..)) 
 
-newtype Num a => Point a = Point (a,a)
+type Point a = (a,a)
 
 data Num a => Rectangle a = Rectangle a a a a deriving(Show)
 
@@ -25,6 +25,10 @@ class Num a => IsARectangle r a | r -> a where
   rBottomRightX r = rTopLeftX r + rWidth r 
   rBottomRightY :: r -> a 
   rBottomRightY r = rTopLeftY r + rHeight r  
+  rTopLeft :: r -> Point a
+  rTopLeft rectangle = (rTopLeftX rectangle, rTopLeftY rectangle)
+  rBottomRight :: r -> Point a
+  rBottomRight rectangle = (rBottomRightX rectangle, rBottomRightY rectangle)
   
 instance Num a => IsARectangle (Rectangle a) a where 
   rTopLeftX (Rectangle x _ _ _) = x
@@ -62,7 +66,7 @@ rIntersect r1 r2 = if rDoIntersect r1 r2 then Just $ rComputeIntersection r1 r2
                    else Nothing
 
 rIsInside :: (Ord a, Num a, IsARectangle r a)  => r -> Point a -> Bool
-rIsInside rectangle (Point (x,y)) = rDoIntersect rectangle ( Rectangle x y 0 0 )
+rIsInside rectangle (x,y) = rDoIntersect rectangle ( Rectangle x y 0 0 )
 
 rFromBoundingBox :: (Num a, Num b) => (a -> b) -> (a, a, a, a) -> Rectangle b
 rFromBoundingBox f (topLeftX, topLeftY, bottomRightX, bottomRightY) = 

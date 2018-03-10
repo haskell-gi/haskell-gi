@@ -114,7 +114,7 @@ motionNotifyHandler state = GTK.tryEvent $ do
 handleMarkBox
   :: STM.TVar (Maybe Labyrinth) -> (Double, Double) -> BoxState -> IO ()
 handleMarkBox state (x, y) boxValue =
-  let point = PtScreen {grPtScreen = Point (round x, round y)}
+  let point = (round x, round y)
   in  STM.atomically $ do
         labyrinth <- STM.readTVar state
         STM.writeTVar state =<< labyMarkBox point boxValue labyrinth
