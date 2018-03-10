@@ -8,7 +8,6 @@ import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
 import qualified Graphics.Rendering.Cairo as Cairo
 import qualified Control.Concurrent.STM as STM
-import Debug.Trace(trace)
 
 import Rectangle
 import Labyrinth
@@ -91,7 +90,7 @@ drawLine rectangle = do
   Cairo.fill
 
 drawBoxes :: [ (BoxState, RectangleInScreenCoordinates Int) ] -> Cairo.Render ()
-drawBoxes list = mapM_ drawBox list
+drawBoxes = mapM_ drawBox
   where drawBox :: (BoxState, RectangleInScreenCoordinates Int) -> Cairo.Render ()
         drawBox (boxState, rectangle) = let (r,g,b) = labyStateToColor boxState
                                             (x,y,width,height) = rToTuple fromIntegral rectangle
@@ -113,7 +112,7 @@ motionNotifyHandler state drawingArea = GTK.tryEvent $
   do
     coordinates <- GTK.eventCoordinates
     modifier    <- GTK.eventModifierMouse
-    let mouseModifiers = intersect modifier [GTK.Button1, GTK.Button2]
+    let mouseModifiers = intersect modifier [GTK.Button1, GTK.Button3]
     case mouseModifiers of
       [GTK.Button1] -> liftIO $ handleMarkBox drawingArea state coordinates Border
       [GTK.Button3] -> liftIO $ handleMarkBox drawingArea state coordinates Empty
