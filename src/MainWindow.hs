@@ -25,9 +25,9 @@ run option = do
   window <- GTK.windowNew
   canvas <- GTK.drawingAreaNew
   state  <- STM.atomically $ STM.newTVar Nothing
-  GTK.widgetAddEvents
-    canvas
-    [GTK.ButtonPressMask, GTK.PointerMotionMask, GTK.PointerMotionHintMask]
+  GTK.widgetAddEvents canvas [GTK.ButtonPressMask, 
+                              GTK.PointerMotionMask, 
+                              GTK.PointerMotionHintMask]
   GTK.containerAdd window canvas
   GTK.windowFullscreen window
   GTK.on window GTK.objectDestroy     GTK.mainQuit
