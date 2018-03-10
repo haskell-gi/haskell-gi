@@ -57,35 +57,35 @@ labyMarkBox point boxState (Just labyrinth) =
       Nothing -> return ()
     return $ Just labyrinth
 
--- labyGetBoxesInsideArea :: RectangleInScreenCoordinates Int -> Maybe Labyrinth 
---                                                            -> STM ( [ (BoxState, RectangleInScreenCoordinates Int)] )
--- labyGetBoxesInsideArea _    Nothing = return []                                                          
--- labyGetBoxesInsideArea area (Just labyrinth) =
---   do
---     let  grid = labyGrid labyrinth
---          boxArea = grPixelAreaToBoxArea grid area
---          array = labyBoxState labyrinth
---     case boxArea of 
---       Just boxes -> sequence $ [ boxDatum | 
---                       x <- [(rTopLeftX boxes)..(rBottomRightX boxes)],
---                       y <- [(rTopLeftY boxes)..(rBottomRightY boxes)],
---                       Just boxDatum <- [(labyGetBoxData array grid (x,y))] ] 
---       Nothing -> return []
+labyGetBoxesInsideArea :: RectangleInScreenCoordinates Int -> Maybe Labyrinth 
+                                                           -> STM [ (BoxState, RectangleInScreenCoordinates Int)]
+labyGetBoxesInsideArea _    Nothing = return []                                                          
+labyGetBoxesInsideArea area (Just labyrinth) =
+  do
+    let  grid = labyGrid labyrinth
+         boxArea = grPixelAreaToBoxArea grid area
+         array = labyBoxState labyrinth
+    case boxArea of 
+      Just boxes -> sequence [ boxDatum | 
+                      x <- [(rTopLeftX boxes)..(rBottomRightX boxes)],
+                      y <- [(rTopLeftY boxes)..(rBottomRightY boxes)],
+                      Just boxDatum <- [labyGetBoxData array grid (x,y)] ] 
+      Nothing -> return []
 
 labyGetBoxData :: LabyArray -> Grid Int 
                             -> PointInGridCoordinates Int 
-                            -> MaybeT STM (BoxState, RectangleInScreenCoordinates Int)
-labyGetBoxData array grid (x,y) =
-  do
-    let pixel = grBoxToPixel grid (x,y)
-    boxState <- lift $ readArray array (x,y)
-    case pixel of 
-      Just p -> lift $ return (boxState, p)
-      Nothing -> MaybeT $ return Nothing
+                            -> Maybe (STM (BoxState, RectangleInScreenCoordinates Int))
+labyGetBoxData array grid point =
+  let pixel = grBoxToPixel grid point
+  in case pixel of 
+    Just p -> Just $ labyGetBoxTuple array point p
+    Nothing -> Nothing
 
-  -- in do boxS
-  -- in case pixel of 
-  --     Just p -> do boxState <- readArray array (x,y)
-  --                  lift $ return (boxState, p)
-  --     Nothing -> lift $ return Nothing
+labyGetBoxTuple :: LabyArray -> PointInGridCoordinates Int 
+                             -> Rectangle Int 
+                             -> STM (BoxState, RectangleInScreenCoordinates Int)
+labyGetBoxTuple array point rectangle =
+  do
+    boxState <- readArray array point
+    return (boxState, rectangle)
 
