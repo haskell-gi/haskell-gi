@@ -24,7 +24,7 @@ data (Num a, Ord a) => Grid a = Grid {
   grXBoxCnt :: a,
   grYBoxCnt :: a,
   grBorderSize :: a
-}
+} deriving(Show)
 
 grPixelToBox :: (Integral a, Ord a) => Grid a -> PointInScreenCoordinates a -> Maybe (PointInGridCoordinates a)
 grPixelToBox grid (x,y) = let rectangle = grRectangle grid

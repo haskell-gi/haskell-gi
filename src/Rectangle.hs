@@ -6,6 +6,7 @@ module Rectangle(
   rIntersect,
   rIsInside,
   rFromBoundingBox,
+  rToBoundingBox,
   rToTuple
 ) 
 where
@@ -71,6 +72,9 @@ rIsInside rectangle (x,y) = rDoIntersect rectangle ( Rectangle x y 0 0 )
 rFromBoundingBox :: (Num a, Num b) => (a -> b) -> (a, a, a, a) -> Rectangle b
 rFromBoundingBox f (topLeftX, topLeftY, bottomRightX, bottomRightY) = 
   Rectangle (f topLeftX) (f topLeftY) (f (bottomRightX - topLeftX)) (f (bottomRightY - topLeftY))
+
+rToBoundingBox :: (Num a, Num b) => (a -> b) -> Rectangle a -> (b, b, b, b)
+rToBoundingBox f (Rectangle x y width height) = (f x, f y, f $ x + width, f $ y + height)
 
 rToTuple :: (Num a, Num b) => (a->b) -> Rectangle a -> (b, b, b, b)
 rToTuple f r =

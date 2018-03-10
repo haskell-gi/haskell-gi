@@ -4,7 +4,8 @@ module Labyrinth(
   RedrawInfo(..),
   labyConstruct, 
   labyMarkBox,
-  labyGetRedrawInfo) where
+  labyGetRedrawInfo,
+  labyStateToColor) where
 
 import Control.Concurrent.STM(STM)
 import Control.Concurrent.STM.TArray(TArray)
@@ -12,7 +13,7 @@ import Data.Array.MArray(newArray,writeArray,readArray)
 import Rectangle
 import Grid
 
-data BoxState = Empty | Border | Start | End
+data BoxState = Empty | Border | Start | End deriving(Eq, Show)
 
 type LabyArray = TArray (Int, Int) BoxState
 
@@ -25,7 +26,7 @@ data RedrawInfo = RedrawInfo {
   labyRedrIntersect :: Rectangle Int,
   labyRedrGrid :: Grid Int,
   labyRedrBoxes :: [ (BoxState, RectangleInScreenCoordinates Int) ]
-}
+} deriving(Show)
 
 marginFactor :: Int
 marginFactor = 32
@@ -110,4 +111,10 @@ labyGetBoxTuple array point rectangle =
   do
     boxState <- readArray array point
     return (boxState, rectangle)
+
+labyStateToColor :: BoxState -> (Double, Double, Double)
+labyStateToColor Empty = (255, 255, 255)
+labyStateToColor Border = (0, 0, 255)
+labyStateToColor _ = (255, 0, 0)
+
 

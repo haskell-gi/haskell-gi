@@ -9,6 +9,7 @@ import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
 import qualified Graphics.Rendering.Cairo as Cairo
 import qualified Control.Concurrent.STM as STM
+import Debug.Trace(trace)
 
 import Rectangle
 import Labyrinth
@@ -71,9 +72,10 @@ drawCanvasHandler state =
             labyGetRedrawInfo labyrinth drawRectangle
 
 drawLabyrinth :: RedrawInfo -> Cairo.Render ()
-drawLabyrinth redrawInfo = do
+drawLabyrinth info = do
   Cairo.setAntialias Cairo.AntialiasSubpixel
-  drawAxes (labyRedrIntersect redrawInfo) (labyRedrGrid redrawInfo)
+  drawAxes (labyRedrIntersect info) (labyRedrGrid info)
+  drawBoxes $ labyRedrBoxes info
 
 drawAxes :: Rectangle Int -> Grid Int -> Cairo.Render ()
 drawAxes area grid = do
@@ -85,9 +87,19 @@ drawAxes area grid = do
 
 drawLine :: Rectangle Int -> Cairo.Render ()
 drawLine rectangle = do
-  let (x1, y1, x2, y2) = rToTuple fromIntegral rectangle
-  Cairo.rectangle x1 y1 x2 y2
+  let (x, y, width, height) = rToTuple fromIntegral rectangle
+  Cairo.rectangle x y width height
   Cairo.fill
+
+drawBoxes :: [ (BoxState, RectangleInScreenCoordinates Int) ] -> Cairo.Render ()
+drawBoxes list | trace (show list) False = undefined
+drawBoxes list = mapM_ drawBox list
+  where drawBox :: (BoxState, RectangleInScreenCoordinates Int) -> Cairo.Render ()
+        drawBox (boxState, rectangle) = let (r,g,b) = labyStateToColor boxState
+                                            (x,y,width,height) = rToTuple fromIntegral rectangle
+                                        in do Cairo.setSourceRGB r g b
+                                              Cairo.rectangle x y width height
+                                              Cairo.fill
 
 buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EButton Bool
 buttonPressHandler state = GTK.tryEvent $ do
