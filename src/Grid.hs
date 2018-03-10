@@ -44,7 +44,7 @@ grBoxToPixel grid (x,y) =
   where rectangle = grRectangle grid
         topLeftX = rTopLeftX rectangle + grBoxSize grid * x + grBorderSize grid
         topLeftY = rTopLeftY rectangle + grBoxSize grid * y + grBorderSize grid
-        width = grBoxSize grid - 2 * grBorderSize grid
+        width = grBoxSize grid - grBorderSize grid
         height = width
 
 

@@ -56,17 +56,19 @@ labyConstruct boxSize borderSize (totalWidth, totalHeight) = do
       }
     }
 
-labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> STM (Maybe Labyrinth)
+labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> STM (Maybe (Labyrinth, Rectangle Int))
 labyMarkBox _     _        Nothing          = return Nothing
 labyMarkBox point boxState (Just labyrinth) = 
   do
     let grid = labyGrid labyrinth
         box  = grPixelToBox grid point
     case box of
-      Just pt ->
-        writeArray (labyBoxState labyrinth) pt boxState
-      Nothing -> return ()
-    return $ Just labyrinth
+      Just pt -> let repaintArea = grBoxToPixel grid pt
+                 in case repaintArea of
+                    Just area -> do writeArray (labyBoxState labyrinth) pt boxState
+                                    return $ Just (labyrinth, area)
+                    Nothing -> return Nothing
+      Nothing -> return Nothing
 
 labyGetRedrawInfo :: Maybe Labyrinth -> Rectangle Int -> STM (Maybe RedrawInfo)
 labyGetRedrawInfo Nothing _ = return Nothing
