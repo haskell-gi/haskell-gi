@@ -23,6 +23,7 @@ dependencies:
 - mtl >=2.2.1 && <2.3
 - array >=0.5.1 && <0.6
 - stm >=2.4.4.1 && <2.5
+- transformers >=0.5.2 && <0.6
 executables:
   hlabyrinth:
     main: Main.hs

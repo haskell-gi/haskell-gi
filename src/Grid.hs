@@ -2,8 +2,11 @@ module Grid(
   Grid(..),
   PointInGridCoordinates(..),
   PointInScreenCoordinates(..),
+  RectangleInGridCoordinates(..),
+  RectangleInScreenCoordinates(..),
   grPixelToBox,
   grBoxToPixel,
+  grPixelAreaToBoxArea,
   grAxesList,
 ) where 
 
