@@ -1,9 +1,13 @@
-module Labyrinth(Labyrinth(..), labyConstruct, BoxState(..), labyMarkBox) where
+module Labyrinth(
+  Labyrinth(..), 
+  BoxState(..), 
+  RedrawInfo(..),
+  labyConstruct, 
+  labyMarkBox,
+  labyGetRedrawInfo) where
 
 import Control.Concurrent.STM(STM)
 import Control.Concurrent.STM.TArray(TArray)
-import Control.Monad.Trans.Maybe
-import Control.Monad.Trans.Class
 import Data.Array.MArray(newArray,writeArray,readArray)
 import Rectangle
 import Grid
@@ -15,6 +19,12 @@ type LabyArray = TArray (Int, Int) BoxState
 data Labyrinth = Labyrinth {
   labyBoxState :: LabyArray,
   labyGrid :: Grid Int
+}
+
+data RedrawInfo = RedrawInfo {
+  labyRedrIntersect :: Rectangle Int,
+  labyRedrGrid :: Grid Int,
+  labyRedrBoxes :: [ (BoxState, RectangleInScreenCoordinates Int) ]
 }
 
 marginFactor :: Int
@@ -57,10 +67,22 @@ labyMarkBox point boxState (Just labyrinth) =
       Nothing -> return ()
     return $ Just labyrinth
 
-labyGetBoxesInsideArea :: RectangleInScreenCoordinates Int -> Maybe Labyrinth 
-                                                           -> STM [ (BoxState, RectangleInScreenCoordinates Int)]
-labyGetBoxesInsideArea _    Nothing = return []                                                          
-labyGetBoxesInsideArea area (Just labyrinth) =
+labyGetRedrawInfo :: Maybe Labyrinth -> Rectangle Int -> STM (Maybe RedrawInfo)
+labyGetRedrawInfo Nothing _ = return Nothing
+labyGetRedrawInfo (Just labyrinth) area =
+  let rectangle = grRectangle $ labyGrid labyrinth
+  in case rIntersect area rectangle of 
+    Just intersection -> do boxes <- labyGetBoxesInsideArea intersection labyrinth
+                            return $ Just RedrawInfo { 
+                              labyRedrIntersect = intersection,
+                              labyRedrGrid = labyGrid labyrinth,
+                              labyRedrBoxes = boxes
+                            }
+    Nothing -> return Nothing
+
+labyGetBoxesInsideArea :: RectangleInScreenCoordinates Int -> Labyrinth 
+                                                           -> STM [ (BoxState, RectangleInScreenCoordinates Int)]                                                        
+labyGetBoxesInsideArea area labyrinth =
   do
     let  grid = labyGrid labyrinth
          boxArea = grPixelAreaToBoxArea grid area

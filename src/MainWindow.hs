@@ -56,20 +56,24 @@ sizeChangeHandler boxSize borderSize state = do
   return True
 
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
-drawCanvasHandler state = do
-  extents <- Cairo.clipExtents
-  let drawRectangle = rFromBoundingBox round extents
-  grid <- liftIO $ getLabyrinthState
-    state
-    (rIntersect drawRectangle . grRectangle . labyGrid)
-  case grid of
-    Just (Just intersection, grid) -> drawLabyrinth intersection grid
-    _                              -> return ()
+drawCanvasHandler state = 
+  do
+    extents <- Cairo.clipExtents
+    let drawRectangle = rFromBoundingBox round extents
+    redrawInfo <- liftIO $ getRedrawInfo state drawRectangle
+    case redrawInfo of
+      Just info -> drawLabyrinth info
+      _         -> return ()
+  where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> IO (Maybe RedrawInfo)
+        getRedrawInfo state drawRectangle = STM.atomically $ 
+          do
+            labyrinth <- STM.readTVar state
+            labyGetRedrawInfo labyrinth drawRectangle
 
-drawLabyrinth :: Rectangle Int -> Grid Int -> Cairo.Render ()
-drawLabyrinth area grid = do
+drawLabyrinth :: RedrawInfo -> Cairo.Render ()
+drawLabyrinth redrawInfo = do
   Cairo.setAntialias Cairo.AntialiasSubpixel
-  drawAxes area grid
+  drawAxes (labyRedrIntersect redrawInfo) (labyRedrGrid redrawInfo)
 
 drawAxes :: Rectangle Int -> Grid Int -> Cairo.Render ()
 drawAxes area grid = do
@@ -84,12 +88,6 @@ drawLine rectangle = do
   let (x1, y1, x2, y2) = rToTuple fromIntegral rectangle
   Cairo.rectangle x1 y1 x2 y2
   Cairo.fill
-
-getLabyrinthState
-  :: STM.TVar (Maybe Labyrinth) -> (Labyrinth -> a) -> IO (Maybe (a, Grid Int))
-getLabyrinthState state f = STM.atomically $ do
-  labyrinth <- STM.readTVar state
-  return $ fmap (f &&& labyGrid) labyrinth
 
 buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EButton Bool
 buttonPressHandler state = GTK.tryEvent $ do
