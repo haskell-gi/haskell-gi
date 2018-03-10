@@ -31,29 +31,29 @@ grPixelToBox grid PtScreen { grPtScreen = Point (x,y) } = let rectangle = grRect
                                                                  in Just PtGrid { grPtGrid = Point ( grX, grY ) } )
                                                                else Nothing)
             
+data BuildAxesDimension = XDim | YDim
+
 grAxesList :: Rectangle Int -> Grid Int -> [Rectangle Int]                                                                 
-grAxesList area grid = grAxesListX area grid ++ grAxesListY area grid
+grAxesList area grid = xAxes ++ yAxes
+  where xAxes = grBuildAxesList XDim area grid rTopLeftX rBottomRightX rTopLeftY (grXBoxCnt grid)
+        yAxes = grBuildAxesList YDim area grid rTopLeftY rBottomRightY rTopLeftX (grYBoxCnt grid)
 
-grAxesListX :: Rectangle Int -> Grid Int -> [Rectangle Int]  
-grAxesListX area grid = 
-  let gridRectangle = grRectangle grid
-      gridBoxSize = grBoxSize grid
-      borderSize = grBorderSize grid
-      startXCnt = quot (rTopLeftX area - rTopLeftX gridRectangle + gridBoxSize - 1) gridBoxSize
-      endXCnt = quot (rBottomRightX area - rTopLeftX gridRectangle + gridBoxSize - 1) gridBoxSize
-      startY = max  (rTopLeftY area) (rTopLeftY gridRectangle)
-      getLine xCnt = Rectangle (gridBoxSize * xCnt + rTopLeftX gridRectangle) startY borderSize (rHeight gridRectangle)
-  in  [ r | cnt <- [startXCnt .. (min endXCnt (grXBoxCnt grid + 1))], Just r <- [rIntersect (getLine cnt) area]]
-
-grAxesListY :: Rectangle Int -> Grid Int -> [Rectangle Int]  
-grAxesListY area grid = 
-  let gridRectangle = grRectangle grid
-      gridBoxSize = grBoxSize grid
-      borderSize = grBorderSize grid
-      width = rWidth gridRectangle - borderSize
-      startYCnt = quot (rTopLeftY area - rTopLeftY gridRectangle + gridBoxSize - 1) gridBoxSize
-      endYCnt = quot (rBottomRightY area - rTopLeftY gridRectangle + gridBoxSize - 1) gridBoxSize
-      startX = max (rTopLeftX area) (rTopLeftX gridRectangle)
-      getLine yCnt = Rectangle startX (gridBoxSize * yCnt + rTopLeftY gridRectangle) (rWidth gridRectangle) borderSize
-  in [ r | cnt <- [startYCnt .. (min endYCnt (grYBoxCnt grid + 1))], Just r <- [rIntersect (getLine cnt) area]]
-
+grBuildAxesList :: BuildAxesDimension -> Rectangle Int 
+                                      -> Grid Int 
+                                      -> (Rectangle Int -> Int) 
+                                      -> (Rectangle Int -> Int) 
+                                      -> (Rectangle Int -> Int)
+                                      -> Int 
+                                      -> [Rectangle Int]
+grBuildAxesList dim area grid topLeftFn bottomRightFn topLeftOtherDim boxCnt =
+  [ r | cnt <- [startCnt .. (min endCnt (boxCnt + 1))], Just r <- [rIntersect (buildAxis cnt) area]]
+  where gridRectangle = grRectangle grid
+        gridBoxSize = grBoxSize grid
+        borderSize = grBorderSize grid
+        startCnt = quot (topLeftFn area - topLeftFn gridRectangle + gridBoxSize - 1) gridBoxSize
+        endCnt = quot (bottomRightFn area - topLeftFn gridRectangle + gridBoxSize - 1) gridBoxSize
+        fixCoord = max (topLeftOtherDim area) (topLeftOtherDim gridRectangle)
+        buildAxis :: Int -> Rectangle Int
+        buildAxis cnt = buildRectangle dim fixCoord (gridBoxSize * cnt + topLeftFn gridRectangle)
+        buildRectangle XDim fixCoord runCoord = Rectangle runCoord fixCoord borderSize (rHeight gridRectangle)
+        buildRectangle YDim fixCoord runCoord = Rectangle fixCoord runCoord (rWidth gridRectangle) borderSize
