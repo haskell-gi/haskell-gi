@@ -104,17 +104,16 @@ drawLabyrinth :: Rectangle Int -> Maybe RedrawInfo -> Cairo.Render ()
 drawLabyrinth drawRectangle Nothing     = return ()
 drawLabyrinth drawRectangle (Just info) = 
   do
-    drawBackground (labyRedrBackgrnd info)
+    clearArea 
     drawAxes (labyRedrIntersect info) (labyRedrGrid info)
     drawBoxes $ labyRedrBoxes info
     drawLegend (labyRedrLegend info) (grLegendRectangle $ labyRedrGrid info)
 
-drawBackground :: Bool -> Cairo.Render ()
-drawBackground False = return ()
-drawBackground _ = do Cairo.save
-                      Cairo.setSourceRGB 255.0 255.0 255.0
-                      Cairo.paint
-                      Cairo.restore
+clearArea :: Cairo.Render ()
+clearArea = do Cairo.save
+               Cairo.setSourceRGB 0.2 0.7 0.2
+               Cairo.paint
+               Cairo.restore
 
 drawAxes :: Maybe (Rectangle Int) -> Grid Int -> Cairo.Render ()
 drawAxes Nothing grid     = return ()

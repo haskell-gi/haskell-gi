@@ -31,7 +31,6 @@ data Labyrinth = Labyrinth {
 data RedrawInfo = RedrawInfo {
   labyRedrIntersect :: Maybe (Rectangle Int),  -- intersection with playing area
   labyRedrLegend :: Bool,                   
-  labyRedrBackgrnd :: Bool,
   labyRedrGrid :: Grid Int,
   labyRedrBoxes :: [ (BoxState, RectangleInScreenCoordinates Int) ]
 } deriving(Show)
@@ -91,9 +90,6 @@ labyGetRedrawInfo (Just labyrinth) area =
     let grid = labyGrid labyrinth
         rectangle = grRectangle grid
         intersection = rIntersect area rectangle
-        redrawBackground = case intersection of 
-                              Just i -> i == rectangle
-                              Nothing -> False
         redrawLegend = isJust $ rIntersect area (grLegendRectangle grid)
     boxes <- case intersection of 
       Just intersection -> labyGetBoxesInsideArea intersection labyrinth
@@ -102,7 +98,6 @@ labyGetRedrawInfo (Just labyrinth) area =
       labyRedrIntersect = intersection,
       labyRedrGrid = grid,
       labyRedrBoxes = boxes,
-      labyRedrBackgrnd = redrawBackground,
       labyRedrLegend = redrawLegend
     } 
 
@@ -136,8 +131,8 @@ labyGetBoxTuple array point rectangle =
     return (boxState, rectangle)
 
 labyStateToColor :: BoxState -> (Double, Double, Double)
-labyStateToColor Empty = (255, 255, 255)
-labyStateToColor Border = (0, 0, 255)
-labyStateToColor _ = (255, 0, 0)
+labyStateToColor Empty = (1.0, 1.0, 1.0)
+labyStateToColor Border = (0, 0, 1.0)
+labyStateToColor _ = (1.0, 0.0, 0.0)
 
 
