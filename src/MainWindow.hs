@@ -32,12 +32,18 @@ run option = do
   GTK.windowFullscreen window
   GTK.on window GTK.objectDestroy     GTK.mainQuit
   GTK.on window GTK.keyPressEvent     (keyPressHandler state)
-  GTK.on canvas GTK.configureEvent (sizeChangeHandler boxSize borderSize state)
+  GTK.on canvas GTK.configureEvent    (sizeChangeHandler boxSize borderSize state)
   GTK.on canvas GTK.draw              (drawCanvasHandler state)
-  GTK.on canvas GTK.buttonPressEvent  (buttonPressHandler state canvas)
-  GTK.on canvas GTK.motionNotifyEvent (motionNotifyHandler state canvas)
+  let redrawFn = redraw canvas
+  GTK.on canvas GTK.buttonPressEvent  (buttonPressHandler state redrawFn)
+  GTK.on canvas GTK.motionNotifyEvent (motionNotifyHandler state redrawFn)
   GTK.widgetShowAll window
   GTK.mainGUI
+
+redraw :: GTK.DrawingArea -> Maybe (Rectangle Int) -> IO()
+redraw _           Nothing           = return ()
+redraw drawingArea (Just rectangle)  = let (x,y,width,height) = rToTuple id rectangle
+                                       in GTK.widgetQueueDrawArea drawingArea x y width height
 
 keyPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EKey Bool
 keyPressHandler _ = GTK.tryEvent $ do
@@ -98,37 +104,36 @@ drawBoxes = mapM_ drawBox
                                               Cairo.rectangle x y width height
                                               Cairo.fill
 
-buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.DrawingArea -> GTK.EventM GTK.EButton Bool
-buttonPressHandler state drawingArea = GTK.tryEvent $ do
+buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
+                                                 -> GTK.EventM GTK.EButton Bool
+buttonPressHandler state redrawFn = GTK.tryEvent $ do
   button      <- GTK.eventButton
   coordinates <- GTK.eventCoordinates
   case button of
-    GTK.LeftButton  -> liftIO $ handleMarkBox drawingArea state coordinates Border
-    GTK.RightButton -> liftIO $ handleMarkBox drawingArea state coordinates Empty
+    GTK.LeftButton  -> liftIO $ handleMarkBox state redrawFn coordinates Border
+    GTK.RightButton -> liftIO $ handleMarkBox state redrawFn coordinates Empty
   return ()
 
-motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> GTK.DrawingArea -> GTK.EventM GTK.EMotion Bool
-motionNotifyHandler state drawingArea = GTK.tryEvent $ 
+motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
+                                                  -> GTK.EventM GTK.EMotion Bool
+motionNotifyHandler state redrawFn = GTK.tryEvent $ 
   do
     coordinates <- GTK.eventCoordinates
     modifier    <- GTK.eventModifierMouse
     let mouseModifiers = intersect modifier [GTK.Button1, GTK.Button3]
     case mouseModifiers of
-      [GTK.Button1] -> liftIO $ handleMarkBox drawingArea state coordinates Border
-      [GTK.Button3] -> liftIO $ handleMarkBox drawingArea state coordinates Empty
+      [GTK.Button1] -> liftIO $ handleMarkBox state redrawFn coordinates Border
+      [GTK.Button3] -> liftIO $ handleMarkBox state redrawFn coordinates Empty
     GTK.eventRequestMotions
     return ()
 
-handleMarkBox
-  :: GTK.DrawingArea -> STM.TVar (Maybe Labyrinth) -> PointInScreenCoordinates Double -> BoxState -> IO ()
-handleMarkBox drawingArea state (x, y) boxValue =
+handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
+                                            -> PointInScreenCoordinates Double -> BoxState -> IO ()
+handleMarkBox state redrawFn (x, y) boxValue =
   let point = (round x, round y)
   in do area <- getRedrawArea state point boxValue 
-        case area of 
-          Just a -> let (x,y,width,height) = rToTuple id a
-                    in GTK.widgetQueueDrawArea drawingArea x y width height
-          Nothing -> return ()
-          
+        redrawFn area
+         
 getRedrawArea :: STM.TVar (Maybe Labyrinth) -> PointInScreenCoordinates Int -> BoxState 
                                             -> IO (Maybe (RectangleInScreenCoordinates Int))
 getRedrawArea state point boxValue = STM.atomically $
