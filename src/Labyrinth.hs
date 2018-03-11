@@ -101,10 +101,8 @@ labyGetBoxData :: LabyArray -> Grid Int
                             -> PointInGridCoordinates Int 
                             -> Maybe (STM (BoxState, RectangleInScreenCoordinates Int))
 labyGetBoxData array grid point =
-  let pixel = grBoxToPixel grid point
-  in case pixel of 
-    Just p -> Just $ labyGetBoxTuple array point p
-    Nothing -> Nothing
+  do pixel <- grBoxToPixel grid point
+     return $ labyGetBoxTuple array point pixel
 
 labyGetBoxTuple :: LabyArray -> PointInGridCoordinates Int 
                              -> Rectangle Int 
