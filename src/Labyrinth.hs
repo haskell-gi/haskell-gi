@@ -7,9 +7,13 @@ module Labyrinth(
   labyGetRedrawInfo,
   labyStateToColor) where
 
+import Control.Error.Util(hoistMaybe)
+import Control.Monad.Trans(lift)
+import Control.Monad.Trans.Maybe
 import Control.Concurrent.STM(STM)
 import Control.Concurrent.STM.TArray(TArray)
 import Data.Array.MArray(newArray,writeArray,readArray)
+
 import Rectangle
 import Grid
 
@@ -56,32 +60,27 @@ labyConstruct boxSize borderSize (totalWidth, totalHeight) = do
       }
     }
 
-labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> STM (Maybe (Labyrinth, Rectangle Int))
-labyMarkBox _     _        Nothing          = return Nothing
+labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> MaybeT STM (Labyrinth, Rectangle Int)
+labyMarkBox _     _        Nothing          = MaybeT $ return Nothing
 labyMarkBox point boxState (Just labyrinth) = 
   do
     let grid = labyGrid labyrinth
-        box  = grPixelToBox grid point
-    case box of
-      Just pt -> let repaintArea = grBoxToPixel grid pt
-                 in case repaintArea of
-                    Just area -> do writeArray (labyBoxState labyrinth) pt boxState
-                                    return $ Just (labyrinth, area)
-                    Nothing -> return Nothing
-      Nothing -> return Nothing
+    box <- hoistMaybe $ grPixelToBox grid point
+    repaintArea <- hoistMaybe $ grBoxToPixel grid box
+    lift $ writeArray (labyBoxState labyrinth) box boxState
+    hoistMaybe $ Just (labyrinth, repaintArea)
 
-labyGetRedrawInfo :: Maybe Labyrinth -> Rectangle Int -> STM (Maybe RedrawInfo)
-labyGetRedrawInfo Nothing _ = return Nothing
+labyGetRedrawInfo :: Maybe Labyrinth -> Rectangle Int -> MaybeT STM RedrawInfo
+labyGetRedrawInfo Nothing _ = MaybeT $ return Nothing
 labyGetRedrawInfo (Just labyrinth) area =
-  let rectangle = grRectangle $ labyGrid labyrinth
-  in case rIntersect area rectangle of 
-    Just intersection -> do boxes <- labyGetBoxesInsideArea intersection labyrinth
-                            return $ Just RedrawInfo { 
-                              labyRedrIntersect = intersection,
-                              labyRedrGrid = labyGrid labyrinth,
-                              labyRedrBoxes = boxes
-                            }
-    Nothing -> return Nothing
+  do let rectangle = grRectangle $ labyGrid labyrinth
+     intersection <- hoistMaybe $ rIntersect area rectangle
+     boxes <- lift $ labyGetBoxesInsideArea intersection labyrinth
+     return RedrawInfo { 
+        labyRedrIntersect = intersection,
+        labyRedrGrid = labyGrid labyrinth,
+        labyRedrBoxes = boxes
+    } 
 
 labyGetBoxesInsideArea :: RectangleInScreenCoordinates Int -> Labyrinth 
                                                            -> STM [ (BoxState, RectangleInScreenCoordinates Int)]                                                        

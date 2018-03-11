@@ -1,5 +1,6 @@
 module MainWindow(CmdOptions(..), run) where
 
+import Control.Monad.Morph(hoist)
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe
 import System.Exit(exitSuccess)
@@ -63,18 +64,20 @@ sizeChangeHandler boxSize borderSize state = do
 
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
-  do
-    extents <- Cairo.clipExtents
-    let drawRectangle = rFromBoundingBox round extents
-    redrawInfo <- liftIO $ getRedrawInfo state drawRectangle
-    case redrawInfo of
-      Just info -> drawLabyrinth info
-      _         -> return ()
-  where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> IO (Maybe RedrawInfo)
-        getRedrawInfo state drawRectangle = STM.atomically $ 
+  do 
+    runMaybeT $ 
+      do
+        extents <- lift Cairo.clipExtents
+        let drawRectangle = rFromBoundingBox round extents
+        redrawInfo <- hoist liftIO (getRedrawInfo state drawRectangle)
+        lift $ drawLabyrinth redrawInfo
+    return ()
+  where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> MaybeT IO RedrawInfo
+        getRedrawInfo state drawRectangle = hoist STM.atomically $
           do
-            labyrinth <- STM.readTVar state
+            labyrinth <- lift $ STM.readTVar state
             labyGetRedrawInfo labyrinth drawRectangle
+
 
 drawLabyrinth :: RedrawInfo -> Cairo.Render ()
 drawLabyrinth info = do
@@ -136,7 +139,7 @@ handleMarkBox state redraw (x, y) boxValue = do redrawArea <- handleMarkBoxDo
         handleMarkBoxDo = STM.atomically $ runMaybeT $ 
           do
             old <- lift $ STM.readTVar state
-            (new, redrawArea) <- MaybeT $ labyMarkBox point boxValue old
+            (new, redrawArea) <- labyMarkBox point boxValue old
             lift $ STM.writeTVar state (Just new)
             return redrawArea
             
