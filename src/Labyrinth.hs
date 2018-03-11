@@ -9,7 +9,7 @@ module Labyrinth(
 
 import Control.Error.Util(hoistMaybe)
 import Control.Monad.Trans(lift)
-import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Maybe(MaybeT(MaybeT), runMaybeT)
 import Control.Concurrent.STM(STM)
 import Control.Concurrent.STM.TArray(TArray)
 import Data.Array.MArray(newArray,writeArray,readArray)
@@ -35,8 +35,11 @@ data RedrawInfo = RedrawInfo {
 marginFactor :: Int
 marginFactor = 32
 
-legendMargin :: Int 
-legendMargin = 5
+legendBottomMargin :: Int 
+legendBottomMargin = 5
+
+legendLeftMargin :: Int 
+legendLeftMargin = 10
 
 labyConstruct :: Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth
 labyConstruct boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = do
@@ -60,8 +63,8 @@ labyConstruct boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalH
       , grXBoxCnt    = xBoxCnt
       , grYBoxCnt    = yBoxCnt
       , grBorderSize = borderSize
-      , grLegendRectangle = Rectangle (2 * legendMargin)
-                                      (totalHeight - legendHeight - legendMargin)
+      , grLegendRectangle = Rectangle legendLeftMargin
+                                      (totalHeight - legendHeight - legendBottomMargin)
                                       legendWidth
                                       legendHeight
       }
