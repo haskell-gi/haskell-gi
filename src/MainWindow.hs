@@ -1,6 +1,7 @@
 module MainWindow(CmdOptions(..), run) where
 
-import Control.Monad.Trans(liftIO)
+import Control.Monad.Trans(lift, liftIO)
+import Control.Monad.Trans.Maybe
 import System.Exit(exitSuccess)
 import Data.List(intersect)
 
@@ -132,14 +133,10 @@ handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ())
 handleMarkBox state redraw (x, y) boxValue = do redrawArea <- handleMarkBoxDo
                                                 redraw redrawArea
   where point = (round x, round y)
-        handleMarkBoxDo :: IO (Maybe (RectangleInScreenCoordinates Int))
-        handleMarkBoxDo = STM.atomically $
+        handleMarkBoxDo = STM.atomically $ runMaybeT $ 
           do
-            old <- STM.readTVar state
-            markBox <- labyMarkBox point boxValue old
-            case markBox of 
-              Just (new, redrawArea) -> do STM.writeTVar state (Just new)
-                                           return $ Just redrawArea
-              Nothing -> return Nothing        
-        
-
+            old <- lift $ STM.readTVar state
+            (new, redrawArea) <- MaybeT $ labyMarkBox point boxValue old
+            lift $ STM.writeTVar state (Just new)
+            return redrawArea
+            
