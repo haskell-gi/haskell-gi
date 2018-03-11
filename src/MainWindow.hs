@@ -106,44 +106,40 @@ drawBoxes = mapM_ drawBox
 
 buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
                                                  -> GTK.EventM GTK.EButton Bool
-buttonPressHandler state redrawFn = GTK.tryEvent $ do
+buttonPressHandler state redraw = GTK.tryEvent $ do
   button      <- GTK.eventButton
   coordinates <- GTK.eventCoordinates
   case button of
-    GTK.LeftButton  -> liftIO $ handleMarkBox state redrawFn coordinates Border
-    GTK.RightButton -> liftIO $ handleMarkBox state redrawFn coordinates Empty
+    GTK.LeftButton  -> liftIO $ handleMarkBox state redraw coordinates Border
+    GTK.RightButton -> liftIO $ handleMarkBox state redraw coordinates Empty
   return ()
 
 motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
                                                   -> GTK.EventM GTK.EMotion Bool
-motionNotifyHandler state redrawFn = GTK.tryEvent $ 
+motionNotifyHandler state redraw = GTK.tryEvent $ 
   do
     coordinates <- GTK.eventCoordinates
     modifier    <- GTK.eventModifierMouse
     let mouseModifiers = intersect modifier [GTK.Button1, GTK.Button3]
     case mouseModifiers of
-      [GTK.Button1] -> liftIO $ handleMarkBox state redrawFn coordinates Border
-      [GTK.Button3] -> liftIO $ handleMarkBox state redrawFn coordinates Empty
+      [GTK.Button1] -> liftIO $ handleMarkBox state redraw coordinates Border
+      [GTK.Button3] -> liftIO $ handleMarkBox state redraw coordinates Empty
     GTK.eventRequestMotions
     return ()
 
 handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
                                             -> PointInScreenCoordinates Double -> BoxState -> IO ()
-handleMarkBox state redrawFn (x, y) boxValue =
-  let point = (round x, round y)
-  in do area <- getRedrawArea state point boxValue 
-        redrawFn area
-         
-getRedrawArea :: STM.TVar (Maybe Labyrinth) -> PointInScreenCoordinates Int -> BoxState 
-                                            -> IO (Maybe (RectangleInScreenCoordinates Int))
-getRedrawArea state point boxValue = STM.atomically $
-  do
-    old <- STM.readTVar state
-    markBox <- labyMarkBox point boxValue old
-    case markBox of 
-      Just (new, redrawArea) -> do STM.writeTVar state (Just new)
-                                   return $ Just redrawArea
-      Nothing -> return Nothing
-        
+handleMarkBox state redraw (x, y) boxValue = do redrawArea <- handleMarkBoxDo
+                                                redraw redrawArea
+  where point = (round x, round y)
+        handleMarkBoxDo :: IO (Maybe (RectangleInScreenCoordinates Int))
+        handleMarkBoxDo = STM.atomically $
+          do
+            old <- STM.readTVar state
+            markBox <- labyMarkBox point boxValue old
+            case markBox of 
+              Just (new, redrawArea) -> do STM.writeTVar state (Just new)
+                                           return $ Just redrawArea
+              Nothing -> return Nothing        
         
 
