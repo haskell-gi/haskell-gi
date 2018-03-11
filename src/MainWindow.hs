@@ -24,6 +24,7 @@ run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
   GTK.initGUI
+  legendDimensions <- computeLegendDimensions
   window <- GTK.windowNew
   canvas <- GTK.drawingAreaNew
   state  <- STM.atomically $ STM.newTVar Nothing
@@ -58,11 +59,26 @@ sizeChangeHandler
   :: Int -> Int -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
 sizeChangeHandler boxSize borderSize state = 
   do
-    region <- GTK.eventSize
+    region@(width, height) <- GTK.eventSize
     liftIO $ STM.atomically $ do
       labyrinth <- labyConstruct boxSize borderSize region
       STM.writeTVar state (Just labyrinth)
     return True
+
+computeLegendDimensions :: IO (Int, Int)
+computeLegendDimensions =
+    Cairo.withImageSurface Cairo.FormatRGB24 1920 1080 withSurface
+  where withSurface :: Cairo.Surface -> IO (Int, Int)
+        withSurface surface = Cairo.renderWith surface doRender
+        doRender :: Cairo.Render (Int, Int)
+        doRender = do Cairo.setAntialias Cairo.AntialiasSubpixel
+                      Cairo.setFontSize 13.0
+                      extents <- Cairo.textExtents legend
+                      return (ceiling $ Cairo.textExtentsWidth extents, 
+                              ceiling $ Cairo.textExtentsHeight extents)
+
+legend :: String 
+legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT"
 
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
@@ -83,7 +99,6 @@ drawCanvasHandler state =
 
 drawLabyrinth :: RedrawInfo -> Cairo.Render ()
 drawLabyrinth info = do
-  Cairo.setAntialias Cairo.AntialiasSubpixel
   drawAxes (labyRedrIntersect info) (labyRedrGrid info)
   drawBoxes $ labyRedrBoxes info
 
