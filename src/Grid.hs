@@ -20,6 +20,7 @@ type RectangleInScreenCoordinates a = Rectangle a
 data (Num a, Ord a) => Grid a = Grid {
   grScreenSize :: (a, a),
   grRectangle :: Rectangle a,
+  grLegendRectangle :: Rectangle a,
   grBoxSize :: a,
   grXBoxCnt :: a,
   grYBoxCnt :: a,

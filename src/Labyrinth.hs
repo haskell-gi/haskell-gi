@@ -35,8 +35,11 @@ data RedrawInfo = RedrawInfo {
 marginFactor :: Int
 marginFactor = 32
 
-labyConstruct :: Int -> Int -> (Int, Int) -> STM Labyrinth
-labyConstruct boxSize borderSize (totalWidth, totalHeight) = do
+legendMargin :: Int 
+legendMargin = 5
+
+labyConstruct :: Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth
+labyConstruct boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = do
   let leftMargin     = quot totalWidth marginFactor
       topMargin      = quot totalHeight marginFactor
       xBoxCnt        = quot (totalWidth - 2 * leftMargin) boxSize
@@ -57,6 +60,10 @@ labyConstruct boxSize borderSize (totalWidth, totalHeight) = do
       , grXBoxCnt    = xBoxCnt
       , grYBoxCnt    = yBoxCnt
       , grBorderSize = borderSize
+      , grLegendRectangle = Rectangle (2 * legendMargin)
+                                      (totalHeight - legendHeight - legendMargin)
+                                      legendWidth
+                                      legendHeight
       }
     }
 

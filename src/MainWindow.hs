@@ -1,10 +1,12 @@
 module MainWindow(CmdOptions(..), run) where
 
+import Data.List(intersect)
+import Data.Maybe(isJust)
+import System.Exit(exitSuccess)
+
 import Control.Monad.Morph(hoist)
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
-import System.Exit(exitSuccess)
-import Data.List(intersect)
 
 import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
@@ -35,7 +37,8 @@ run option = do
   GTK.windowFullscreen window
   GTK.on window GTK.objectDestroy     GTK.mainQuit
   GTK.on window GTK.keyPressEvent     (keyPressHandler state)
-  GTK.on canvas GTK.configureEvent    (sizeChangeHandler boxSize borderSize state)
+  GTK.on canvas GTK.configureEvent    (sizeChangeHandler 
+    boxSize borderSize legendDimensions state)
   GTK.on canvas GTK.draw              (drawCanvasHandler state)
   let redrawFn = redraw canvas
   GTK.on canvas GTK.buttonPressEvent  (buttonPressHandler state redrawFn)
@@ -56,12 +59,12 @@ keyPressHandler _ = GTK.tryEvent $
       "Escape" -> GTK.mainQuit
 
 sizeChangeHandler
-  :: Int -> Int -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
-sizeChangeHandler boxSize borderSize state = 
+  :: Int -> Int -> (Int, Int) -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
+sizeChangeHandler boxSize borderSize legendDimensions state = 
   do
     region@(width, height) <- GTK.eventSize
     liftIO $ STM.atomically $ do
-      labyrinth <- labyConstruct boxSize borderSize region
+      labyrinth <- labyConstruct boxSize borderSize legendDimensions region 
       STM.writeTVar state (Just labyrinth)
     return True
 
@@ -71,14 +74,18 @@ computeLegendDimensions =
   where withSurface :: Cairo.Surface -> IO (Int, Int)
         withSurface surface = Cairo.renderWith surface doRender
         doRender :: Cairo.Render (Int, Int)
-        doRender = do Cairo.setAntialias Cairo.AntialiasSubpixel
-                      Cairo.setFontSize 13.0
+        doRender = do setLegendTextStyle
                       extents <- Cairo.textExtents legend
                       return (ceiling $ Cairo.textExtentsWidth extents, 
                               ceiling $ Cairo.textExtentsHeight extents)
 
 legend :: String 
 legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT"
+
+setLegendTextStyle :: Cairo.Render()
+setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
+                        Cairo.setSourceRGB 0 0 0                        
+                        Cairo.setFontSize 13.0
 
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
@@ -88,7 +95,7 @@ drawCanvasHandler state =
         extents <- lift Cairo.clipExtents
         let drawRectangle = rFromBoundingBox round extents
         redrawInfo <- hoist liftIO (getRedrawInfo state drawRectangle)
-        lift $ drawLabyrinth redrawInfo
+        lift $ drawLabyrinth drawRectangle redrawInfo
     return ()
   where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> MaybeT IO RedrawInfo
         getRedrawInfo state drawRectangle = hoist STM.atomically $
@@ -97,10 +104,11 @@ drawCanvasHandler state =
             labyGetRedrawInfo labyrinth drawRectangle
 
 
-drawLabyrinth :: RedrawInfo -> Cairo.Render ()
-drawLabyrinth info = do
+drawLabyrinth :: Rectangle Int -> RedrawInfo -> Cairo.Render ()
+drawLabyrinth drawRectangle info = do
   drawAxes (labyRedrIntersect info) (labyRedrGrid info)
   drawBoxes $ labyRedrBoxes info
+  drawLegend drawRectangle (labyRedrGrid info)
 
 drawAxes :: Rectangle Int -> Grid Int -> Cairo.Render ()
 drawAxes area grid = do
@@ -124,6 +132,17 @@ drawBoxes = mapM_ drawBox
                                         in do Cairo.setSourceRGB r g b
                                               Cairo.rectangle x y width height
                                               Cairo.fill
+                                            
+drawLegend :: Rectangle Int -> Grid Int -> Cairo.Render ()
+drawLegend drawRectangle grid
+  | isJust $ rIntersect drawRectangle legendRectangle = drawLegendDo
+  | otherwise = return ()
+  where
+    legendRectangle = grLegendRectangle grid
+    drawLegendDo = do let (x,y) = rTopLeft legendRectangle
+                      Cairo.moveTo (fromIntegral x) (fromIntegral y)
+                      setLegendTextStyle
+                      Cairo.showText legend
 
 buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
                                                  -> GTK.EventM GTK.EButton Bool
