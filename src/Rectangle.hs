@@ -15,7 +15,7 @@ import qualified Graphics.UI.Gtk as GTK (Rectangle(..))
 
 type Point a = (a,a)
 
-data Num a => Rectangle a = Rectangle a a a a deriving(Show)
+data Num a => Rectangle a = Rectangle a a a a deriving(Eq, Show)
 
 class Num a => IsARectangle r a | r -> a where
   rTopLeftX :: r -> a

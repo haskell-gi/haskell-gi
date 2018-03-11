@@ -4,7 +4,6 @@ import Data.List(intersect)
 import Data.Maybe(isJust)
 import System.Exit(exitSuccess)
 
-import Control.Monad.Morph(hoist)
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
 
@@ -90,28 +89,36 @@ setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
   do 
-    runMaybeT $ 
-      do
-        extents <- lift Cairo.clipExtents
-        let drawRectangle = rFromBoundingBox round extents
-        redrawInfo <- hoist liftIO (getRedrawInfo state drawRectangle)
-        lift $ drawLabyrinth drawRectangle redrawInfo
-    return ()
-  where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> MaybeT IO RedrawInfo
-        getRedrawInfo state drawRectangle = hoist STM.atomically $
+    extents <- Cairo.clipExtents
+    let drawRectangle = rFromBoundingBox round extents
+    redrawInfo <- liftIO (getRedrawInfo state drawRectangle)
+    drawLabyrinth drawRectangle redrawInfo
+  where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> IO (Maybe RedrawInfo)
+        getRedrawInfo state drawRectangle = STM.atomically $
           do
-            labyrinth <- lift $ STM.readTVar state
+            labyrinth <- STM.readTVar state
             labyGetRedrawInfo labyrinth drawRectangle
 
 
-drawLabyrinth :: Rectangle Int -> RedrawInfo -> Cairo.Render ()
-drawLabyrinth drawRectangle info = do
-  drawAxes (labyRedrIntersect info) (labyRedrGrid info)
-  drawBoxes $ labyRedrBoxes info
-  drawLegend drawRectangle (labyRedrGrid info)
+drawLabyrinth :: Rectangle Int -> Maybe RedrawInfo -> Cairo.Render ()
+drawLabyrinth drawRectangle Nothing     = return ()
+drawLabyrinth drawRectangle (Just info) = 
+  do
+    drawBackground (labyRedrBackgrnd info)
+    drawAxes (labyRedrIntersect info) (labyRedrGrid info)
+    drawBoxes $ labyRedrBoxes info
+    drawLegend (labyRedrLegend info) (grLegendRectangle $ labyRedrGrid info)
 
-drawAxes :: Rectangle Int -> Grid Int -> Cairo.Render ()
-drawAxes area grid = do
+drawBackground :: Bool -> Cairo.Render ()
+drawBackground False = return ()
+drawBackground _ = do Cairo.save
+                      Cairo.setSourceRGB 255.0 255.0 255.0
+                      Cairo.paint
+                      Cairo.restore
+
+drawAxes :: Maybe (Rectangle Int) -> Grid Int -> Cairo.Render ()
+drawAxes Nothing grid     = return ()
+drawAxes (Just area) grid = do
   Cairo.save
   Cairo.setSourceRGB 0 0 0
   mapM_ drawLine (grAxesList area grid)
@@ -129,20 +136,22 @@ drawBoxes = mapM_ drawBox
   where drawBox :: (BoxState, RectangleInScreenCoordinates Int) -> Cairo.Render ()
         drawBox (boxState, rectangle) = let (r,g,b) = labyStateToColor boxState
                                             (x,y,width,height) = rToTuple fromIntegral rectangle
-                                        in do Cairo.setSourceRGB r g b
+                                        in do Cairo.save
+                                              Cairo.setSourceRGB r g b
                                               Cairo.rectangle x y width height
                                               Cairo.fill
+                                              Cairo.restore
                                             
-drawLegend :: Rectangle Int -> Grid Int -> Cairo.Render ()
-drawLegend drawRectangle grid
-  | isJust $ rIntersect drawRectangle legendRectangle = drawLegendDo
-  | otherwise = return ()
-  where
-    legendRectangle = grLegendRectangle grid
-    drawLegendDo = do let (x,y) = rTopLeft legendRectangle
-                      Cairo.moveTo (fromIntegral x) (fromIntegral y)
-                      setLegendTextStyle
-                      Cairo.showText legend
+drawLegend :: Bool -> Rectangle Int -> Cairo.Render ()
+drawLegend False _               = return ()
+drawLegend True  legendRectangle = 
+  do 
+    let (x,y) = rTopLeft legendRectangle
+    Cairo.save
+    Cairo.moveTo (fromIntegral x) (fromIntegral y)
+    setLegendTextStyle
+    Cairo.showText legend
+    Cairo.restore
 
 buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
                                                  -> GTK.EventM GTK.EButton Bool

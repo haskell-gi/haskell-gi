@@ -7,12 +7,14 @@ module Labyrinth(
   labyGetRedrawInfo,
   labyStateToColor) where
 
+import Data.Maybe(isJust)
+import Data.Array.MArray(newArray,writeArray,readArray)
+
 import Control.Error.Util(hoistMaybe)
 import Control.Monad.Trans(lift)
 import Control.Monad.Trans.Maybe(MaybeT(MaybeT), runMaybeT)
 import Control.Concurrent.STM(STM)
 import Control.Concurrent.STM.TArray(TArray)
-import Data.Array.MArray(newArray,writeArray,readArray)
 
 import Rectangle
 import Grid
@@ -27,7 +29,9 @@ data Labyrinth = Labyrinth {
 }
 
 data RedrawInfo = RedrawInfo {
-  labyRedrIntersect :: Rectangle Int,
+  labyRedrIntersect :: Maybe (Rectangle Int),  -- intersection with playing area
+  labyRedrLegend :: Bool,                   
+  labyRedrBackgrnd :: Bool,
   labyRedrGrid :: Grid Int,
   labyRedrBoxes :: [ (BoxState, RectangleInScreenCoordinates Int) ]
 } deriving(Show)
@@ -80,16 +84,26 @@ labyMarkBox point boxState (Just labyrinth) =
     lift $ writeArray (labyBoxState labyrinth) box boxState
     hoistMaybe $ Just (labyrinth, repaintArea)
 
-labyGetRedrawInfo :: Maybe Labyrinth -> Rectangle Int -> MaybeT STM RedrawInfo
-labyGetRedrawInfo Nothing _ = MaybeT $ return Nothing
+labyGetRedrawInfo :: Maybe Labyrinth -> Rectangle Int -> STM (Maybe RedrawInfo)
+labyGetRedrawInfo Nothing _             = return Nothing
 labyGetRedrawInfo (Just labyrinth) area =
-  do let rectangle = grRectangle $ labyGrid labyrinth
-     intersection <- hoistMaybe $ rIntersect area rectangle
-     boxes <- lift $ labyGetBoxesInsideArea intersection labyrinth
-     return RedrawInfo { 
-        labyRedrIntersect = intersection,
-        labyRedrGrid = labyGrid labyrinth,
-        labyRedrBoxes = boxes
+  do
+    let grid = labyGrid labyrinth
+        rectangle = grRectangle grid
+        intersection = rIntersect area rectangle
+        redrawBackground = case intersection of 
+                              Just i -> i == rectangle
+                              Nothing -> False
+        redrawLegend = isJust $ rIntersect area (grLegendRectangle grid)
+    boxes <- case intersection of 
+      Just intersection -> labyGetBoxesInsideArea intersection labyrinth
+      Nothing -> return []
+    return $ Just RedrawInfo { 
+      labyRedrIntersect = intersection,
+      labyRedrGrid = grid,
+      labyRedrBoxes = boxes,
+      labyRedrBackgrnd = redrawBackground,
+      labyRedrLegend = redrawLegend
     } 
 
 labyGetBoxesInsideArea :: RectangleInScreenCoordinates Int -> Labyrinth 
