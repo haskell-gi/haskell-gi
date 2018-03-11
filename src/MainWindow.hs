@@ -2,7 +2,7 @@ module MainWindow(CmdOptions(..), run) where
 
 import Control.Monad.Morph(hoist)
 import Control.Monad.Trans(lift, liftIO)
-import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
 import System.Exit(exitSuccess)
 import Data.List(intersect)
 
@@ -48,19 +48,21 @@ redraw drawingArea (Just rectangle)  = let (x,y,width,height) = rToTuple id rect
                                        in GTK.widgetQueueDrawArea drawingArea x y width height
 
 keyPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EKey Bool
-keyPressHandler _ = GTK.tryEvent $ do
-  keyName <- GTK.eventKeyName
-  liftIO $ case Text.unpack keyName of
-    "Escape" -> GTK.mainQuit
+keyPressHandler _ = GTK.tryEvent $ 
+  do
+    keyName <- GTK.eventKeyName
+    liftIO $ case Text.unpack keyName of
+      "Escape" -> GTK.mainQuit
 
 sizeChangeHandler
   :: Int -> Int -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
-sizeChangeHandler boxSize borderSize state = do
-  region <- GTK.eventSize
-  liftIO $ STM.atomically $ do
-    labyrinth <- labyConstruct boxSize borderSize region
-    STM.writeTVar state (Just labyrinth)
-  return True
+sizeChangeHandler boxSize borderSize state = 
+  do
+    region <- GTK.eventSize
+    liftIO $ STM.atomically $ do
+      labyrinth <- labyConstruct boxSize borderSize region
+      STM.writeTVar state (Just labyrinth)
+    return True
 
 drawCanvasHandler :: STM.TVar (Maybe Labyrinth) -> Cairo.Render ()
 drawCanvasHandler state = 
