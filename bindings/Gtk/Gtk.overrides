@@ -54,6 +54,9 @@ set-attr Gtk/Widget/add_events/@parameters/events/@type c:type GdkEventMask
 set-attr Gtk/Widget/set_events/@parameters/events/@type name Gdk.EventMask
 set-attr Gtk/Widget/set_events/@parameters/events/@type c:type GdkEventMask
 
+# https://github.com/haskell-gi/haskell-gi/issues/138
+set-attr Gtk/Widget/drag_dest_find_target/@return-value nullable 1
+
 if osx
     # Not supported in Quartz version of Gtk
     ignore drag_set_icon_gicon
