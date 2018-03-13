@@ -34,37 +34,46 @@ run option = do
                               GTK.PointerMotionHintMask]
   GTK.containerAdd window canvas
   GTK.windowFullscreen window
-  GTK.on window GTK.objectDestroy     GTK.mainQuit
-  GTK.on window GTK.keyPressEvent     (keyPressHandler state)
-  GTK.on canvas GTK.configureEvent    (sizeChangeHandler 
-    boxSize borderSize legendDimensions state)
-  GTK.on canvas GTK.draw              (drawCanvasHandler state)
   let redrawFn = redraw canvas
-  GTK.on canvas GTK.buttonPressEvent  (buttonPressHandler state redrawFn)
-  GTK.on canvas GTK.motionNotifyEvent (motionNotifyHandler state redrawFn)
+      setCursorFn = setCursor canvas
+  GTK.on window GTK.objectDestroy     GTK.mainQuit
+  GTK.on window GTK.keyPressEvent     (keyPressHandler state setCursorFn)
+  GTK.on canvas GTK.configureEvent    (sizeChangeHandler 
+    boxSize borderSize legendDimensions state setCursorFn)
+  GTK.on canvas GTK.draw              (drawCanvasHandler state)
+  GTK.on canvas GTK.buttonPressEvent  (buttonPressHandler state redrawFn setCursorFn)
+  GTK.on canvas GTK.motionNotifyEvent (motionNotifyHandler state redrawFn setCursorFn)
   GTK.widgetShowAll window
   GTK.mainGUI
 
-redraw :: GTK.DrawingArea -> Maybe (Rectangle Int) -> IO()
-redraw _           Nothing           = return ()
-redraw drawingArea (Just rectangle)  = let (x,y,width,height) = rToTuple id rectangle
-                                       in GTK.widgetQueueDrawArea drawingArea x y width height
+redraw :: GTK.DrawingArea -> Rectangle Int -> IO()
+redraw drawingArea rectangle = let (x,y,width,height) = rToTuple id rectangle
+                               in GTK.widgetQueueDrawArea drawingArea x y width height
 
-keyPressHandler :: STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EKey Bool
-keyPressHandler _ = GTK.tryEvent $ 
+setCursor :: GTK.DrawingArea -> GTK.CursorType -> IO () 
+setCursor window cursorType = do drawWindow <- GTK.widgetGetParentWindow window
+                                 cursor <- GTK.cursorNew cursorType
+                                 GTK.drawWindowSetCursor drawWindow (Just cursor)
+                                 return ()
+
+keyPressHandler :: STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> GTK.EventM GTK.EKey Bool
+keyPressHandler state changeCursor = GTK.tryEvent $ 
   do
     keyName <- GTK.eventKeyName
     liftIO $ case Text.unpack keyName of
       "Escape" -> GTK.mainQuit
+      "s" -> setNextAction state changeCursor SetStartField
+      "t" -> setNextAction state changeCursor SetTargetField
 
 sizeChangeHandler
-  :: Int -> Int -> (Int, Int) -> STM.TVar (Maybe Labyrinth) -> GTK.EventM GTK.EConfigure Bool
-sizeChangeHandler boxSize borderSize legendDimensions state = 
+  :: Int -> Int -> (Int, Int) -> STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> GTK.EventM GTK.EConfigure Bool
+sizeChangeHandler boxSize borderSize legendDimensions state setCursor = 
   do
     region@(width, height) <- GTK.eventSize
     liftIO $ STM.atomically $ do
       labyrinth <- labyConstruct boxSize borderSize legendDimensions region 
       STM.writeTVar state (Just labyrinth)
+    liftIO $ setCursor GTK.TopLeftArrow
     return True
 
 computeLegendDimensions :: IO (Int, Int)
@@ -79,7 +88,7 @@ computeLegendDimensions =
                               ceiling $ Cairo.textExtentsHeight extents)
 
 legend :: String 
-legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT"
+legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT | \"s\": PLACE START | \"t\": PLACE TARGET"
 
 setLegendTextStyle :: Cairo.Render()
 setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
@@ -99,7 +108,6 @@ drawCanvasHandler state =
             labyrinth <- STM.readTVar state
             labyGetRedrawInfo labyrinth drawRectangle
 
-
 drawLabyrinth :: Rectangle Int -> Maybe RedrawInfo -> Cairo.Render ()
 drawLabyrinth drawRectangle Nothing     = return ()
 drawLabyrinth drawRectangle (Just info) = 
@@ -111,7 +119,7 @@ drawLabyrinth drawRectangle (Just info) =
 
 clearArea :: Cairo.Render ()
 clearArea = do Cairo.save
-               Cairo.setSourceRGB 0.2 0.7 0.2
+               Cairo.setSourceRGB 0.8 0.8 0.8
                Cairo.paint
                Cairo.restore
 
@@ -152,38 +160,52 @@ drawLegend True  legendRectangle =
     Cairo.showText legend
     Cairo.restore
 
-buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
+buttonPressHandler :: STM.TVar (Maybe Labyrinth) -> (Rectangle Int -> IO ()) 
+                                                 -> (GTK.CursorType -> IO ())
                                                  -> GTK.EventM GTK.EButton Bool
-buttonPressHandler state redraw = GTK.tryEvent $ do
+buttonPressHandler state redraw changeCursor = GTK.tryEvent $ do
   button      <- GTK.eventButton
   coordinates <- GTK.eventCoordinates
   case button of
-    GTK.LeftButton  -> liftIO $ handleMarkBox state redraw coordinates Border
-    GTK.RightButton -> liftIO $ handleMarkBox state redraw coordinates Empty
+    GTK.LeftButton  -> liftIO $ handleMarkBox state redraw changeCursor coordinates SetAction
+    GTK.RightButton -> liftIO $ handleMarkBox state redraw changeCursor coordinates UnSetAction
   return ()
 
-motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
+motionNotifyHandler :: STM.TVar (Maybe Labyrinth) -> (Rectangle Int -> IO ()) 
+                                                  -> (GTK.CursorType -> IO ())
                                                   -> GTK.EventM GTK.EMotion Bool
-motionNotifyHandler state redraw = GTK.tryEvent $ 
+motionNotifyHandler state redraw changeCursor = GTK.tryEvent $ 
   do
     coordinates <- GTK.eventCoordinates
     modifier    <- GTK.eventModifierMouse
     let mouseModifiers = intersect modifier [GTK.Button1, GTK.Button3]
     case mouseModifiers of
-      [GTK.Button1] -> liftIO $ handleMarkBox state redraw coordinates Border
-      [GTK.Button3] -> liftIO $ handleMarkBox state redraw coordinates Empty
+      [GTK.Button1] -> liftIO $ handleMarkBox state redraw changeCursor coordinates SetAction
+      [GTK.Button3] -> liftIO $ handleMarkBox state redraw changeCursor coordinates UnSetAction
     GTK.eventRequestMotions
     return ()
 
-handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Maybe (Rectangle Int) -> IO ()) 
-                                            -> PointInScreenCoordinates Double -> BoxState -> IO ()
-handleMarkBox state redraw (x, y) boxValue = do redrawArea <- handleMarkBoxDo
-                                                redraw redrawArea
+handleMarkBox :: STM.TVar (Maybe Labyrinth) -> (Rectangle Int -> IO ()) 
+                                            -> (GTK.CursorType -> IO ())
+                                            -> PointInScreenCoordinates Double 
+                                            -> ActionType 
+                                            -> IO ()
+handleMarkBox state redraw changeCursor (x, y) action = do redrawAreas <- handleMarkBoxDo
+                                                           case redrawAreas of 
+                                                               Just (areas, resetCursor) -> do mapM_ redraw areas
+                                                                                               doResetCursor resetCursor
+                                                               Nothing                   -> return ()
   where point = (round x, round y)
         handleMarkBoxDo = STM.atomically $ runMaybeT $ 
           do
             old <- lift $ STM.readTVar state
-            (new, redrawArea) <- labyMarkBox point boxValue old
+            (new, redrawArea, resetCursor) <- labyMarkBox point action old
             lift $ STM.writeTVar state (Just new)
-            return redrawArea
-            
+            return (redrawArea, resetCursor)
+        doResetCursor False = return ()
+        doResetCursor True = changeCursor GTK.TopLeftArrow
+
+setNextAction :: STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> NextAction -> IO ()
+setNextAction state changeCursor action = 
+  do STM.atomically $ STM.readTVar state >>= labySetNextAction action >>= STM.writeTVar state
+     changeCursor GTK.Cross            

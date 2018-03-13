@@ -2,30 +2,38 @@ module Labyrinth(
   Labyrinth(..), 
   BoxState(..), 
   RedrawInfo(..),
+  NextAction(..),
+  ActionType(..),
   labyConstruct, 
   labyMarkBox,
   labyGetRedrawInfo,
-  labyStateToColor) where
+  labyStateToColor,
+  labySetNextAction) where
 
-import Data.Maybe(isJust)
+import Data.Maybe(isJust, catMaybes)
 import Data.Array.MArray(newArray,writeArray,readArray)
 
 import Control.Error.Util(hoistMaybe)
 import Control.Monad.Trans(lift)
 import Control.Monad.Trans.Maybe(MaybeT(MaybeT), runMaybeT)
-import Control.Concurrent.STM(STM)
+import Control.Concurrent.STM(STM,TVar,readTVar,newTVar,modifyTVar,writeTVar)
 import Control.Concurrent.STM.TArray(TArray)
 
 import Rectangle
 import Grid
 
-data BoxState = Empty | Border | Start | End deriving(Eq, Show)
+data BoxState = Empty | Border | StartField | TargetField deriving(Eq, Show)
+data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show)
+data ActionType = SetAction | UnSetAction deriving(Eq, Show)
 
 type LabyArray = TArray (Int, Int) BoxState
 
 data Labyrinth = Labyrinth {
   labyBoxState :: LabyArray,
-  labyGrid :: Grid Int
+  labyGrid :: Grid Int,
+  labyNextAction :: TVar NextAction,
+  labyStartField :: TVar (Maybe (Int, Int)),
+  labyTargetField :: TVar (Maybe (Int, Int))
 }
 
 data RedrawInfo = RedrawInfo {
@@ -52,10 +60,16 @@ labyConstruct boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalH
       yBoxCnt        = quot (totalHeight - 2 * topMargin) boxSize
       width          = xBoxCnt * boxSize + borderSize
       height         = yBoxCnt * boxSize + borderSize
-      arrayDimension = ((0, 0), (xBoxCnt - 1, yBoxCnt - 1))
+      arrayDimension = ((0,0), (xBoxCnt - 1, yBoxCnt - 1))
   array <- newArray arrayDimension Empty
+  nextAction <- newTVar SetBorder
+  startField <- newTVar Nothing
+  targetField <- newTVar Nothing
   return Labyrinth
     { labyBoxState = array
+    , labyNextAction = nextAction
+    , labyStartField = startField
+    , labyTargetField = targetField
     , labyGrid     = Grid
       { grScreenSize = (totalWidth, totalHeight)
       , grRectangle  = Rectangle (quot (totalWidth - width) 2)
@@ -73,15 +87,61 @@ labyConstruct boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalH
       }
     }
 
-labyMarkBox :: PointInScreenCoordinates Int -> BoxState -> Maybe Labyrinth -> MaybeT STM (Labyrinth, Rectangle Int)
-labyMarkBox _     _        Nothing          = MaybeT $ return Nothing
-labyMarkBox point boxState (Just labyrinth) = 
-  do
-    let grid = labyGrid labyrinth
-    box <- hoistMaybe $ grPixelToBox grid point
-    repaintArea <- hoistMaybe $ grBoxToPixel grid box
-    lift $ writeArray (labyBoxState labyrinth) box boxState
-    hoistMaybe $ Just (labyrinth, repaintArea)
+labyMarkBox :: PointInScreenCoordinates Int -> ActionType -> Maybe Labyrinth 
+                                            -> MaybeT STM (Labyrinth, [Rectangle Int], Bool)
+labyMarkBox _     _        Nothing          = hoistMaybe Nothing
+labyMarkBox point actionType (Just labyrinth) = 
+  do let grid = labyGrid labyrinth 
+     box <- hoistMaybe $ grPixelToBox grid point 
+     (boxesToBeRedrawn, resetCursor) <- lift $ labyMarkBoxDo box
+     return (labyrinth, boxesToBeRedrawn, resetCursor)
+  where
+    labyMarkBoxDo :: PointInGridCoordinates Int -> STM ([Rectangle Int], Bool)
+    labyMarkBoxDo box = do nextAction <- readTVar (labyNextAction labyrinth)
+                           currentBoxState <- readArray (labyBoxState labyrinth) box
+                           writeTVar (labyNextAction labyrinth) SetBorder
+                           let targetState = getTargetState actionType nextAction
+                           boxesToBeRedrawn <- labySetBoxState labyrinth box currentBoxState targetState 
+                           return (boxesToBeRedrawn, nextAction /= SetBorder)
+    getTargetState UnSetAction _              = Empty
+    getTargetState SetAction   SetBorder      = Border
+    getTargetState SetAction   SetStartField  = StartField
+    getTargetState SetAction   SetTargetField = TargetField
+
+labySetBoxState :: Labyrinth -> PointInGridCoordinates Int -> BoxState -> BoxState -> STM [Rectangle Int]
+labySetBoxState _         _   currentState targetState | currentState == targetState = return []
+labySetBoxState labyrinth box currentState targetState = 
+  do redrawOld <- labyEnforceOnlyOne labyrinth targetState
+     labyNewlySetBox labyrinth box currentState targetState
+     let redrawInGridCoords   = box : redrawOld
+         redrawInScreenCoords = map (grBoxToPixel $ labyGrid labyrinth) redrawInGridCoords
+     return $ catMaybes redrawInScreenCoords
+
+labyEnforceOnlyOne :: Labyrinth -> BoxState -> STM [PointInGridCoordinates Int]
+labyEnforceOnlyOne labyrinth targetState
+  | targetState `elem` [Empty, Border] = return []
+  | targetState == StartField      = labyResetStartOrTarget labyrinth ( labyStartField labyrinth )
+  | targetState == TargetField     = labyResetStartOrTarget labyrinth ( labyTargetField labyrinth )
+  
+labyNewlySetBox :: Labyrinth -> PointInGridCoordinates Int -> BoxState -> BoxState -> STM ()                                  
+labyNewlySetBox labyrinth box currentState targetState =
+  do unsetPrevious currentState
+     writeArray (labyBoxState labyrinth) box targetState
+     setStartOrTarget targetState
+  where unsetPrevious StartField  = labyResetStartOrTarget labyrinth ( labyStartField labyrinth )
+        unsetPrevious TargetField = labyResetStartOrTarget labyrinth ( labyTargetField labyrinth )
+        unsetPrevious _           = return []
+        setStartOrTarget StartField  = modifyTVar (labyStartField labyrinth) (const $ Just box)
+        setStartOrTarget TargetField = modifyTVar (labyTargetField labyrinth) (const $ Just box)
+        setStartOrTarget _           = return ()
+
+labyResetStartOrTarget :: Labyrinth -> TVar (Maybe (Int, Int)) -> STM [PointInGridCoordinates Int]
+labyResetStartOrTarget labyrinth tvar = do old <- readTVar tvar 
+                                           case old of 
+                                               Just field -> do modifyTVar tvar (const Nothing)
+                                                                writeArray (labyBoxState labyrinth) field Empty
+                                                                return [field]
+                                               Nothing    -> return []
 
 labyGetRedrawInfo :: Maybe Labyrinth -> Rectangle Int -> STM (Maybe RedrawInfo)
 labyGetRedrawInfo Nothing _             = return Nothing
@@ -130,9 +190,16 @@ labyGetBoxTuple array point rectangle =
     boxState <- readArray array point
     return (boxState, rectangle)
 
+labySetNextAction :: NextAction -> Maybe Labyrinth -> STM (Maybe Labyrinth)
+labySetNextAction _ Nothing = return Nothing
+labySetNextAction action (Just labyrinth) = 
+  do modifyTVar (labyNextAction labyrinth) (const action) 
+     return $ Just labyrinth
+
 labyStateToColor :: BoxState -> (Double, Double, Double)
 labyStateToColor Empty = (1.0, 1.0, 1.0)
 labyStateToColor Border = (0, 0, 1.0)
-labyStateToColor _ = (1.0, 0.0, 0.0)
+labyStateToColor StartField = (0.0, 1.0, 0.0)
+labyStateToColor TargetField = (1.0, 0.0, 0.0) 
 
 
