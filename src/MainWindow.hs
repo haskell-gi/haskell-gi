@@ -10,6 +10,8 @@ import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
 import qualified Data.Text as Text
 import qualified Graphics.UI.Gtk as GTK
 import qualified Graphics.Rendering.Cairo as Cairo
+import qualified System.Glib as Glib
+import qualified Graphics.Rendering.Pango.Layout as Pango
 import qualified Control.Concurrent.STM as STM
 
 import Rectangle
@@ -145,9 +147,40 @@ drawBoxes = mapM_ drawBox
                                             (x,y,width,height) = rToTuple fromIntegral rectangle
                                         in do Cairo.save
                                               Cairo.setSourceRGB r g b
-                                              Cairo.rectangle x y width height
+                                              Cairo.rectangle x y width height                                              
                                               Cairo.fill
+                                              createBoxText boxState x y width height
                                               Cairo.restore
+
+createBoxText :: BoxState -> Double -> Double -> Double -> Double -> Cairo.Render ()
+createBoxText boxState x y width height 
+  | boxState `elem` [Empty, Border] = return ()
+  | boxState == StartField          = createBoxTextDo "S"
+  | boxState == TargetField         = createBoxTextDo "T"
+  where
+    pixelToPoint :: Double -> GTK.FontMap -> IO (Double)
+    pixelToPoint px fontMap = do resolution <- GTK.cairoFontMapGetResolution fontMap
+                                 return $ px * 72 / resolution
+    getMarkUp :: String -> Double -> String                                 
+    getMarkUp text pt = "<span font=\"" ++ (show $ round pt) ++ "\">" ++ text ++ "</span>"
+    setMarkUp :: Pango.PangoLayout -> String -> IO String 
+    setMarkUp layout string = do result <- Pango.layoutSetMarkup layout (Glib.stringToGlib string)
+                                 return $ Glib.glibToString result
+    createBoxTextDo :: String -> Cairo.Render ()
+    createBoxTextDo text =
+      do fontMap <- liftIO $ GTK.cairoFontMapGetDefault
+         context <- liftIO $ GTK.cairoCreateContext (Just fontMap)
+         layout <- liftIO $ GTK.layoutEmpty context
+         fontSize <- liftIO $ pixelToPoint width fontMap
+         let markup = getMarkUp text fontSize 
+         liftIO $ setMarkUp layout markup
+         (_, GTK.Rectangle _ _ lw lh) <- liftIO $ Pango.layoutGetPixelExtents layout
+         let lx = x + (width - fromIntegral lw) / 2
+             ly = y + (height - fromIntegral lh) / 2
+         Cairo.moveTo lx ly
+         GTK.updateLayout layout
+         Cairo.setSourceRGB 0 0 0
+         GTK.showLayout layout
                                             
 drawLegend :: Bool -> Rectangle Int -> Cairo.Render ()
 drawLegend False _               = return ()
