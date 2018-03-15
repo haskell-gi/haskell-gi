@@ -158,17 +158,17 @@ createBoxText boxState x y width height
   | boxState == StartField          = createBoxTextDo "S"
   | boxState == TargetField         = createBoxTextDo "T"
   where
-    pixelToPoint :: Double -> GTK.FontMap -> IO (Double)
+    pixelToPoint :: Double -> GTK.FontMap -> IO Double
     pixelToPoint px fontMap = do resolution <- GTK.cairoFontMapGetResolution fontMap
                                  return $ px * 72 / resolution
     getMarkUp :: String -> Double -> String                                 
-    getMarkUp text pt = "<span font=\"" ++ (show $ round pt) ++ "\">" ++ text ++ "</span>"
+    getMarkUp text pt = "<span font=\"" ++ show (round pt) ++ "\">" ++ text ++ "</span>"
     setMarkUp :: Pango.PangoLayout -> String -> IO String 
     setMarkUp layout string = do result <- Pango.layoutSetMarkup layout (Glib.stringToGlib string)
                                  return $ Glib.glibToString result
     createBoxTextDo :: String -> Cairo.Render ()
     createBoxTextDo text =
-      do fontMap <- liftIO $ GTK.cairoFontMapGetDefault
+      do fontMap <- liftIO GTK.cairoFontMapGetDefault
          context <- liftIO $ GTK.cairoCreateContext (Just fontMap)
          layout <- liftIO $ GTK.layoutEmpty context
          fontSize <- liftIO $ pixelToPoint width fontMap
