@@ -149,11 +149,11 @@ drawBoxes = mapM_ drawBox
                                               Cairo.setSourceRGB r g b
                                               Cairo.rectangle x y width height                                              
                                               Cairo.fill
-                                              createBoxText boxState x y width height
+                                              createBoxText boxState (x,y,width,height)
                                               Cairo.restore
 
-createBoxText :: BoxState -> Double -> Double -> Double -> Double -> Cairo.Render ()
-createBoxText boxState x y width height 
+createBoxText :: BoxState -> (Double, Double, Double, Double) -> Cairo.Render ()
+createBoxText boxState (x, y, width, height)
   | boxState `elem` [Empty, Border] = return ()
   | boxState == StartField          = createBoxTextDo "S"
   | boxState == TargetField         = createBoxTextDo "T"
