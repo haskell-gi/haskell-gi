@@ -39,7 +39,7 @@ run option = do
   let redrawFn = redraw canvas
       setCursorFn = setCursor canvas
   GTK.on window GTK.objectDestroy     GTK.mainQuit
-  GTK.on window GTK.keyPressEvent     (keyPressHandler state setCursorFn)
+  GTK.on window GTK.keyPressEvent     (keyPressHandler state setCursorFn redrawFn)
   GTK.on canvas GTK.configureEvent    (sizeChangeHandler 
     boxSize borderSize legendDimensions state setCursorFn)
   GTK.on canvas GTK.draw              (drawCanvasHandler state)
@@ -58,14 +58,17 @@ setCursor window cursorType = do drawWindow <- GTK.widgetGetParentWindow window
                                  GTK.drawWindowSetCursor drawWindow (Just cursor)
                                  return ()
 
-keyPressHandler :: STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> GTK.EventM GTK.EKey Bool
-keyPressHandler state changeCursor = GTK.tryEvent $ 
+keyPressHandler :: STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) 
+                                              -> (Rectangle Int -> IO ())  
+                                              -> GTK.EventM GTK.EKey Bool
+keyPressHandler state changeCursor redraw = GTK.tryEvent $ 
   do
     keyName <- GTK.eventKeyName
     liftIO $ case Text.unpack keyName of
       "Escape" -> GTK.mainQuit
       "s" -> setNextAction state changeCursor SetStartField
       "t" -> setNextAction state changeCursor SetTargetField
+      "c" -> clearLabyrinth state redraw
 
 sizeChangeHandler
   :: Int -> Int -> (Int, Int) -> STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> GTK.EventM GTK.EConfigure Bool
@@ -90,7 +93,7 @@ computeLegendDimensions =
                               ceiling $ Cairo.textExtentsHeight extents)
 
 legend :: String 
-legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT | \"s\": PLACE START | \"t\": PLACE TARGET"
+legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT | \"s\": PLACE START | \"t\": PLACE TARGET | \"c\": CLEAR LABYRINTH"
 
 setLegendTextStyle :: Cairo.Render()
 setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
@@ -242,3 +245,18 @@ setNextAction :: STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> Next
 setNextAction state changeCursor action = 
   do STM.atomically $ STM.readTVar state >>= labySetNextAction action >>= STM.writeTVar state
      changeCursor GTK.Cross            
+
+clearLabyrinth :: STM.TVar (Maybe Labyrinth) -> (Rectangle Int -> IO ()) ->  IO ()
+clearLabyrinth state redraw = 
+  do
+    labyrinth <- STM.atomically $ 
+      do old <- STM.readTVar state 
+         new <- labyClear old
+         STM.writeTVar state new 
+         return new
+    case labyrinth of 
+      Just l -> let grid = labyGrid l 
+                    (w,h) = grScreenSize grid
+                in  redraw (Rectangle 0 0 w h)   
+      Nothing -> return ()
+      
