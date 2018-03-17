@@ -13,6 +13,10 @@ ignore io_modules_load_all_in_directory_with_scope
 # Properly marked as filename in recent Gio versions.
 set-attr Gio/AppInfo/get_executable/@return-value/@type name filename
 
+# Return value is nullable, but not marked as such.
+# https://github.com/haskell-gi/haskell-gi/issues/139
+set-attr Gio/Volume/get_mount/@return-value nullable 1
+
 # Not supported on Windows.
 if windows
    ignore DBusMessage.get_unix_fd_list
