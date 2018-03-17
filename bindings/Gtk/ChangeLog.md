@@ -1,3 +1,7 @@
+### 3.0.21
+
++ The return value of [`widgetDragDestFindTarget`](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Widget.html#v:widgetDragDestFindTarget) is nullable, but was not marked as such.
+
 ### 3.0.20
 
 + Make the `events` parameter to [`widgetAddEvents`](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Widget.html#v:widgetAddEvents) and [`widgetSetEvents`](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Widget.html#v:widgetSetEvents) a [`GdkEventMask`](https://hackage.haskell.org/package/gi-gdk/docs/GI-Gdk-Flags.html#t:EventMask), see [issue 136](https://github.com/haskell-gi/haskell-gi/issues/136).
