@@ -20,6 +20,8 @@ import Control.Monad.Trans.Maybe(MaybeT(MaybeT), runMaybeT)
 import Control.Concurrent.STM(STM,TVar,readTVar,newTVar,modifyTVar,writeTVar)
 import Control.Concurrent.STM.TArray(TArray)
 
+import Debug.Trace(trace)
+
 import Rectangle
 import Grid
 
@@ -53,12 +55,16 @@ legendBottomMargin = 5
 legendLeftMargin :: Int 
 legendLeftMargin = 10
 
-labyNewArray :: Int -> Int -> STM LabyArray
-labyNewArray xBoxCnt yBoxCnt = let arrayDimension = ((0,0), (xBoxCnt - 1, yBoxCnt - 1)) 
-                               in newArray arrayDimension Empty
-
-labyConstruct :: Maybe Labyrinth -> Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth
+labyConstruct :: Maybe Labyrinth -> Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth 
 labyConstruct Nothing boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
+  labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
+labyConstruct (Just labyrinth) boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
+  do isEmpty <- labyIsEmpty labyrinth 
+     if isEmpty then labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
+     else labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
+  
+labyConstructNew :: Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth 
+labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
   do let leftMargin     = quot totalWidth marginFactor
          topMargin      = quot totalHeight marginFactor
          xBoxCnt        = quot (totalWidth - 2 * leftMargin) boxSize
@@ -90,19 +96,28 @@ labyConstruct Nothing boxSize borderSize (legendWidth, legendHeight) (totalWidth
                                          legendHeight
          }
        }
-labyConstruct (Just labyrinth) boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) =
+
+labyConstructFrom :: Labyrinth -> Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth  
+labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) =
   do let oldGrid        = labyGrid labyrinth 
          (ow, oh)       = grScreenSize oldGrid
-         scaleX         = fromIntegral totalWidth / fromIntegral ow
-         scaleY         = fromIntegral totalHeight / fromIntegral oh
+         scaleX         = fromIntegral totalWidth / fromIntegral ow :: Double
+         scaleY         = fromIntegral totalHeight / fromIntegral oh  :: Double
          scaleFactor    = min scaleX scaleY
          xBoxCnt        = grXBoxCnt oldGrid
          yBoxCnt        = grYBoxCnt oldGrid 
-         newBoxSize     = min boxSize (scaleFactor * ( grBoxSize oldGrid ) )
+         leftMargin     = quot totalWidth marginFactor
+         topMargin      = quot totalHeight marginFactor 
+         newBorderSize  = round $ fromIntegral borderSize * scaleFactor 
+         maxWidth       = totalWidth - 2 * leftMargin - newBorderSize
+         maxHeight      = totalHeight - 2 * topMargin - newBorderSize
+         newBoxSize     = min (quot maxWidth xBoxCnt) (quot maxHeight yBoxCnt)
+         width          = newBoxSize * xBoxCnt + newBorderSize
+         height         = newBoxSize * yBoxCnt + newBorderSize
      return Labyrinth
        { labyBoxState = labyBoxState labyrinth
        , labyNextAction = labyNextAction labyrinth
-       , labyStartField = labyNextField labyrinth
+       , labyStartField = labyStartField labyrinth
        , labyTargetField = labyTargetField labyrinth
        , labyGrid     = Grid
          { grScreenSize = (totalWidth, totalHeight)
@@ -110,16 +125,20 @@ labyConstruct (Just labyrinth) boxSize borderSize (legendWidth, legendHeight) (t
                                    (quot (totalHeight - height) 2)
                                    width
                                    height
-         , grBoxSize    = boxSize
+         , grBoxSize    = newBoxSize
          , grXBoxCnt    = xBoxCnt
          , grYBoxCnt    = yBoxCnt
-         , grBorderSize = borderSize
+         , grBorderSize = newBorderSize
          , grLegendRectangle = Rectangle legendLeftMargin
                                          (totalHeight - legendHeight - legendBottomMargin)
                                          legendWidth
                                          legendHeight
          }
        }   
+
+labyNewArray :: Int -> Int -> STM LabyArray
+labyNewArray xBoxCnt yBoxCnt = let arrayDimension = ((0,0), (xBoxCnt - 1, yBoxCnt - 1)) 
+                               in newArray arrayDimension Empty 
 
 labyMarkBox :: PointInScreenCoordinates Int -> ActionType -> Maybe Labyrinth 
                                             -> MaybeT STM (Labyrinth, [Rectangle Int], Bool)
@@ -241,8 +260,15 @@ labyClear Nothing = return Nothing
 labyClear (Just labyrinth) = 
   do let grid = labyGrid labyrinth
      let Rectangle _ _ lw lh = grLegendRectangle grid
-     new <- labyConstruct (grBoxSize grid)
+     new <- labyConstruct Nothing
+                          (grBoxSize grid)
                           (grBorderSize grid)  
                           (lw, lh)
                           (grScreenSize grid)
      return $ Just new
+     
+labyIsEmpty :: Labyrinth -> STM Bool
+labyIsEmpty labyrinth = 
+  do elems <- getElems (labyBoxState labyrinth)
+     let listEmpty = null [ e | e <- elems, e /= Empty ]
+     return listEmpty

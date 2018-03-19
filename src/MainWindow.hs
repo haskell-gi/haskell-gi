@@ -76,8 +76,9 @@ sizeChangeHandler boxSize borderSize legendDimensions state setCursor =
   do
     region@(width, height) <- GTK.eventSize
     liftIO $ STM.atomically $ do
-      labyrinth <- labyConstruct boxSize borderSize legendDimensions region 
-      STM.writeTVar state (Just labyrinth)
+      old <- STM.readTVar state
+      new <- labyConstruct old boxSize borderSize legendDimensions region 
+      STM.writeTVar state (Just new)
     liftIO $ setCursor GTK.TopLeftArrow
     return True
 
