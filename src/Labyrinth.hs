@@ -54,8 +54,8 @@ data FrozenLabyrinth = FrozenLabyrinth {
   frLabyBoxState :: FrozenLabyArray,
   frLabyGrid :: Grid Int,
   frLabyNextAction :: NextAction,
-  frLabyStartField :: (Maybe (Int, Int)),
-  frLabyTargetField :: (Maybe (Int, Int))
+  frLabyStartField :: Maybe (Int, Int),
+  frLabyTargetField :: Maybe (Int, Int)
 } deriving (Generic)
 
 instance Binary FrozenLabyrinth
@@ -129,8 +129,9 @@ labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (tota
          maxWidth       = totalWidth - 2 * leftMargin - borderSize
          maxHeight      = totalHeight - 2 * topMargin - borderSize
          newBoxSize     = min (quot maxWidth xBoxCnt) (quot maxHeight yBoxCnt)
-         width          = newBoxSize * xBoxCnt + borderSize
-         height         = newBoxSize * yBoxCnt + borderSize
+         newBorderSize  = min borderSize (newBoxSize - 1)
+         width          = newBoxSize * xBoxCnt + newBorderSize
+         height         = newBoxSize * yBoxCnt + newBorderSize
      return Labyrinth
        { labyBoxState = labyBoxState labyrinth
        , labyNextAction = labyNextAction labyrinth
@@ -145,7 +146,7 @@ labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (tota
          , grBoxSize    = newBoxSize
          , grXBoxCnt    = xBoxCnt
          , grYBoxCnt    = yBoxCnt
-         , grBorderSize = borderSize
+         , grBorderSize = newBorderSize
          , grLegendRectangle = Rectangle legendLeftMargin
                                          (totalHeight - legendHeight - legendBottomMargin)
                                          legendWidth
@@ -312,7 +313,7 @@ labyUnFreeze labyrinth =
      targetField <- newTVar (frLabyTargetField labyrinth)
      return Labyrinth {
         labyBoxState = array,
-        labyGrid = (frLabyGrid labyrinth),
+        labyGrid = frLabyGrid labyrinth,
         labyNextAction = nextAction,
         labyStartField = startField,
         labyTargetField = targetField

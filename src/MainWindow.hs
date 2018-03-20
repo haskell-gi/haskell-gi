@@ -268,7 +268,7 @@ clearLabyrinth state redraw =
 
 saveAndQuit :: STM.TVar (Maybe Labyrinth) -> IO ()
 saveAndQuit state = 
-  do labyrinth <- STM.atomically $ (STM.readTVar state >>= labyFreeze )
+  do labyrinth <- STM.atomically $ STM.readTVar state >>= labyFreeze
      saveLabyrinth labyrinth
      GTK.mainQuit
 
