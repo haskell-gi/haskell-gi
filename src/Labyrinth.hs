@@ -122,19 +122,15 @@ labyConstructFrom :: Labyrinth -> Int -> Int -> (Int, Int) -> (Int, Int) -> STM 
 labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) =
   do let oldGrid        = labyGrid labyrinth 
          (ow, oh)       = grScreenSize oldGrid
-         scaleX         = fromIntegral totalWidth / fromIntegral ow :: Double
-         scaleY         = fromIntegral totalHeight / fromIntegral oh  :: Double
-         scaleFactor    = min scaleX scaleY
          xBoxCnt        = grXBoxCnt oldGrid
          yBoxCnt        = grYBoxCnt oldGrid 
          leftMargin     = quot totalWidth marginFactor
          topMargin      = quot totalHeight marginFactor 
-         newBorderSize  = round $ fromIntegral borderSize * scaleFactor 
-         maxWidth       = totalWidth - 2 * leftMargin - newBorderSize
-         maxHeight      = totalHeight - 2 * topMargin - newBorderSize
+         maxWidth       = totalWidth - 2 * leftMargin - borderSize
+         maxHeight      = totalHeight - 2 * topMargin - borderSize
          newBoxSize     = min (quot maxWidth xBoxCnt) (quot maxHeight yBoxCnt)
-         width          = newBoxSize * xBoxCnt + newBorderSize
-         height         = newBoxSize * yBoxCnt + newBorderSize
+         width          = newBoxSize * xBoxCnt + borderSize
+         height         = newBoxSize * yBoxCnt + borderSize
      return Labyrinth
        { labyBoxState = labyBoxState labyrinth
        , labyNextAction = labyNextAction labyrinth
@@ -149,7 +145,7 @@ labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (tota
          , grBoxSize    = newBoxSize
          , grXBoxCnt    = xBoxCnt
          , grYBoxCnt    = yBoxCnt
-         , grBorderSize = newBorderSize
+         , grBorderSize = borderSize
          , grLegendRectangle = Rectangle legendLeftMargin
                                          (totalHeight - legendHeight - legendBottomMargin)
                                          legendWidth
@@ -298,13 +294,12 @@ labyFreeze :: Maybe Labyrinth -> STM (Maybe FrozenLabyrinth)
 labyFreeze Nothing   = return Nothing
 labyFreeze (Just labyrinth) = 
   do array <- freeze (labyBoxState labyrinth)
-     nextAction <- readTVar (labyNextAction labyrinth)
      startField <- readTVar (labyStartField labyrinth)
      targetField <- readTVar (labyTargetField labyrinth)
      return $ Just FrozenLabyrinth {
         frLabyBoxState = array,
         frLabyGrid = labyGrid labyrinth,
-        frLabyNextAction = nextAction,
+        frLabyNextAction = SetBorder,
         frLabyStartField = startField,
         frLabyTargetField = targetField
     }
