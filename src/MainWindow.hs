@@ -3,6 +3,7 @@ module MainWindow(CmdOptions(..), run) where
 import Data.List(intersect)
 import Data.Maybe(isJust)
 import System.Exit(exitSuccess)
+import System.FilePath((</>))
 
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
@@ -13,6 +14,9 @@ import qualified Graphics.Rendering.Cairo as Cairo
 import qualified System.Glib as Glib
 import qualified Graphics.Rendering.Pango.Layout as Pango
 import qualified Control.Concurrent.STM as STM
+import qualified System.Directory as Directory
+import qualified System.IO as IO
+import qualified Data.Binary as Binary
 
 import Rectangle
 import Labyrinth
@@ -65,7 +69,7 @@ keyPressHandler state changeCursor redraw = GTK.tryEvent $
   do
     keyName <- GTK.eventKeyName
     liftIO $ case Text.unpack keyName of
-      "Escape" -> GTK.mainQuit
+      "Escape" -> saveAndQuit state
       "s" -> setNextAction state changeCursor SetStartField
       "t" -> setNextAction state changeCursor SetTargetField
       "c" -> clearLabyrinth state redraw
@@ -260,4 +264,19 @@ clearLabyrinth state redraw =
                     (w,h) = grScreenSize grid
                 in  redraw (Rectangle 0 0 w h)   
       Nothing -> return ()
+
+saveAndQuit :: STM.TVar (Maybe Labyrinth) -> IO ()
+saveAndQuit state = 
+  do labyrinth <- STM.atomically $ STM.readTVar state  
+     saveLabyrinth labyrinth
+     GTK.mainQuit
+
+saveLabyrinth :: Maybe Labyrinth -> IO () 
+saveLabyrinth Nothing = return ()
+saveLabyrinth (Just labyrinth) =
+  do directory <- Directory.getXdgDirectory Directory.XdgData "hlabyrinth"
+     Directory.createDirectoryIfMissing False directory
+     -- Binary.encodeFile (directory </> "last.game") labyrinth
+
+
       

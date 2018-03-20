@@ -11,6 +11,8 @@ module Labyrinth(
   labyStateToColor,
   labyClear) where
 
+import Data.Binary
+
 import Data.Maybe(isJust, catMaybes)
 import Data.Array.MArray(newArray,writeArray,readArray,mapArray,getElems)
 
@@ -19,8 +21,6 @@ import Control.Monad.Trans(lift)
 import Control.Monad.Trans.Maybe(MaybeT(MaybeT), runMaybeT)
 import Control.Concurrent.STM(STM,TVar,readTVar,newTVar,modifyTVar,writeTVar)
 import Control.Concurrent.STM.TArray(TArray)
-
-import Debug.Trace(trace)
 
 import Rectangle
 import Grid
@@ -37,7 +37,7 @@ data Labyrinth = Labyrinth {
   labyNextAction :: TVar NextAction,
   labyStartField :: TVar (Maybe (Int, Int)),
   labyTargetField :: TVar (Maybe (Int, Int))
-}
+} 
 
 data RedrawInfo = RedrawInfo {
   labyRedrIntersect :: Maybe (Rectangle Int),  -- intersection with playing area
