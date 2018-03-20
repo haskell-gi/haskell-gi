@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric, FlexibleInstances #-}
 module Labyrinth(
   Labyrinth(..), 
   BoxState(..), 
@@ -11,10 +12,12 @@ module Labyrinth(
   labyStateToColor,
   labyClear) where
 
-import Data.Binary
+import GHC.Generics
+import Data.Binary(Binary)
 
 import Data.Maybe(isJust, catMaybes)
 import Data.Array.MArray(newArray,writeArray,readArray,mapArray,getElems)
+import Data.Array.Unboxed(UArray)
 
 import Control.Error.Util(hoistMaybe)
 import Control.Monad.Trans(lift)
@@ -25,11 +28,12 @@ import Control.Concurrent.STM.TArray(TArray)
 import Rectangle
 import Grid
 
-data BoxState = Empty | Border | StartField | TargetField deriving(Eq, Show)
-data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show)
-data ActionType = SetAction | UnSetAction deriving(Eq, Show)
+data BoxState = Empty | Border | StartField | TargetField deriving(Eq, Show, Generic)
+data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, Generic)
+data ActionType = SetAction | UnSetAction deriving(Eq, Show, Generic)
 
 type LabyArray = TArray (Int, Int) BoxState 
+type FrozenLabyArray = UArray (Int, Int) BoxState 
 
 data Labyrinth = Labyrinth {
   labyBoxState :: LabyArray,
@@ -37,7 +41,21 @@ data Labyrinth = Labyrinth {
   labyNextAction :: TVar NextAction,
   labyStartField :: TVar (Maybe (Int, Int)),
   labyTargetField :: TVar (Maybe (Int, Int))
-} 
+}  
+
+instance Binary NextAction 
+instance Binary BoxState
+instance Binary ActionType
+
+data FrozenLabyrinth = FrozenLabyrinth {
+  frLabyBoxState :: FrozenLabyArray,
+  frLabyGrid :: Grid Int,
+  frLabyNextAction :: NextAction,
+  frLabyStartField :: (Maybe (Int, Int)),
+  frLabyTargetField :: (Maybe (Int, Int))
+} deriving (Generic)
+
+instance Binary FrozenLabyrinth
 
 data RedrawInfo = RedrawInfo {
   labyRedrIntersect :: Maybe (Rectangle Int),  -- intersection with playing area

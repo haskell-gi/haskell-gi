@@ -6,6 +6,8 @@ maintainer: kkilger@gmail.com
 license: GPL-3
 extra-source-files:
 - ChangeLog.md
+default-extensions:
+- DeriveGeneric
 other-extensions:
 - MultiParamTypeClasses
 - FlexibleInstances

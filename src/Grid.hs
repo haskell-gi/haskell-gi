@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric  #-}
+
 module Grid(
   Grid(..),
   PointInGridCoordinates(..),
@@ -10,6 +12,9 @@ module Grid(
   grAxesList,
 ) where 
 
+import GHC.Generics
+import Data.Binary(Binary)
+
 import Rectangle
 
 type PointInGridCoordinates a = Point a
@@ -17,7 +22,7 @@ type PointInScreenCoordinates a = Point a
 type RectangleInGridCoordinates a = Rectangle a
 type RectangleInScreenCoordinates a = Rectangle a
 
-data (Num a, Ord a) => Grid a = Grid {
+data Grid a = Grid {
   grScreenSize :: (a, a),
   grRectangle :: Rectangle a,
   grLegendRectangle :: Rectangle a,
@@ -25,7 +30,9 @@ data (Num a, Ord a) => Grid a = Grid {
   grXBoxCnt :: a,
   grYBoxCnt :: a,
   grBorderSize :: a
-} deriving(Show)
+} deriving(Eq, Show, Generic)
+
+instance Binary a => Binary (Grid a)
 
 grPixelToBox :: (Integral a, Ord a) => Grid a -> PointInScreenCoordinates a -> Maybe (PointInGridCoordinates a)
 grPixelToBox grid (x,y) = let rectangle = grRectangle grid
