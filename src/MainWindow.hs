@@ -31,10 +31,11 @@ run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
   GTK.initGUI
+  loadedLabyrinth <- loadLabyrinth
   legendDimensions <- computeLegendDimensions
   window <- GTK.windowNew
   canvas <- GTK.drawingAreaNew
-  state  <- STM.atomically $ STM.newTVar Nothing
+  state  <- STM.atomically $ STM.newTVar loadedLabyrinth
   GTK.widgetAddEvents canvas [GTK.ButtonPressMask, 
                               GTK.PointerMotionMask, 
                               GTK.PointerMotionHintMask]
@@ -267,16 +268,34 @@ clearLabyrinth state redraw =
 
 saveAndQuit :: STM.TVar (Maybe Labyrinth) -> IO ()
 saveAndQuit state = 
-  do labyrinth <- STM.atomically $ STM.readTVar state  
+  do labyrinth <- STM.atomically $ (STM.readTVar state >>= labyFreeze )
      saveLabyrinth labyrinth
      GTK.mainQuit
 
-saveLabyrinth :: Maybe Labyrinth -> IO () 
+saveLabyrinth :: Maybe FrozenLabyrinth -> IO () 
 saveLabyrinth Nothing = return ()
 saveLabyrinth (Just labyrinth) =
-  do directory <- Directory.getXdgDirectory Directory.XdgData "hlabyrinth"
-     Directory.createDirectoryIfMissing False directory
-     -- Binary.encodeFile (directory </> "last.game") labyrinth
+  do file <- getSavedGameFile True
+     Binary.encodeFile file labyrinth
 
+loadLabyrinth :: IO (Maybe Labyrinth)
+loadLabyrinth =
+  do file <- getSavedGameFile False
+     fileExists <- Directory.doesFileExist file
+     if fileExists then loadLayrinthDo file
+     else return Nothing
+  where loadLayrinthDo file = do labyrinth <- Binary.decodeFileOrFail file 
+                                 case labyrinth of
+                                     Left _ -> return Nothing
+                                     Right value -> do unfrozen <- STM.atomically $ labyUnFreeze value
+                                                       return $ Just unfrozen
 
-      
+getSavedGameFile :: Bool -> IO FilePath
+getSavedGameFile createDirectory
+  | createDirectory = do directory <- getDirectory
+                         Directory.createDirectoryIfMissing False directory
+                         return (getFile directory)
+  | otherwise       = do directory <- getDirectory
+                         return (getFile directory)
+  where getDirectory = Directory.getXdgDirectory Directory.XdgData "hlabyrinth" 
+        getFile directory = directory </> "last.game"

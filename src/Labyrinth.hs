@@ -5,19 +5,22 @@ module Labyrinth(
   RedrawInfo(..),
   NextAction(..),
   ActionType(..),
+  FrozenLabyrinth(..),
   labyConstruct, 
   labyMarkBox,
   labyGetRedrawInfo,
   labySetNextAction,
   labyStateToColor,
-  labyClear) where
+  labyClear,
+  labyFreeze,
+  labyUnFreeze) where
 
 import GHC.Generics
 import Data.Binary(Binary)
 
 import Data.Maybe(isJust, catMaybes)
-import Data.Array.MArray(newArray,writeArray,readArray,mapArray,getElems)
-import Data.Array.Unboxed(UArray)
+import Data.Array.MArray(newArray,writeArray,readArray,mapArray,getElems,freeze,thaw)
+import Data.Array.IArray(Array)
 
 import Control.Error.Util(hoistMaybe)
 import Control.Monad.Trans(lift)
@@ -33,7 +36,7 @@ data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, 
 data ActionType = SetAction | UnSetAction deriving(Eq, Show, Generic)
 
 type LabyArray = TArray (Int, Int) BoxState 
-type FrozenLabyArray = UArray (Int, Int) BoxState 
+type FrozenLabyArray = Array (Int, Int) BoxState 
 
 data Labyrinth = Labyrinth {
   labyBoxState :: LabyArray,
@@ -290,3 +293,32 @@ labyIsEmpty labyrinth =
   do elems <- getElems (labyBoxState labyrinth)
      let listEmpty = null [ e | e <- elems, e /= Empty ]
      return listEmpty
+
+labyFreeze :: Maybe Labyrinth -> STM (Maybe FrozenLabyrinth)
+labyFreeze Nothing   = return Nothing
+labyFreeze (Just labyrinth) = 
+  do array <- freeze (labyBoxState labyrinth)
+     nextAction <- readTVar (labyNextAction labyrinth)
+     startField <- readTVar (labyStartField labyrinth)
+     targetField <- readTVar (labyTargetField labyrinth)
+     return $ Just FrozenLabyrinth {
+        frLabyBoxState = array,
+        frLabyGrid = labyGrid labyrinth,
+        frLabyNextAction = nextAction,
+        frLabyStartField = startField,
+        frLabyTargetField = targetField
+    }
+
+labyUnFreeze :: FrozenLabyrinth -> STM Labyrinth
+labyUnFreeze labyrinth =
+  do array <- thaw (frLabyBoxState labyrinth)
+     nextAction <- newTVar (frLabyNextAction labyrinth)
+     startField <- newTVar (frLabyStartField labyrinth)
+     targetField <- newTVar (frLabyTargetField labyrinth)
+     return Labyrinth {
+        labyBoxState = array,
+        labyGrid = (frLabyGrid labyrinth),
+        labyNextAction = nextAction,
+        labyStartField = startField,
+        labyTargetField = targetField
+     }
