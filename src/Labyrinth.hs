@@ -28,7 +28,7 @@ import Control.Monad.Trans.Maybe(MaybeT(MaybeT), runMaybeT)
 import Control.Concurrent.STM(STM,TVar,readTVar,newTVar,modifyTVar,writeTVar)
 import Control.Concurrent.STM.TArray(TArray)
 
-import Algorithm.Search(aStarM)
+import Algorithm.Search(aStarM, pruningM)
 
 import Rectangle
 import Grid
@@ -321,15 +321,31 @@ labyThaw labyrinth =
         labyTargetField = targetField
      }
 
-labyFindPath :: Maybe Labyrinth -> STM [(Int, Int)]
-labyFindPath Nothing = return []
+labyFindPath :: Maybe Labyrinth -> STM (Maybe (Int, [(Int, Int)]))
+labyFindPath Nothing = return Nothing
 labyFindPath (Just labyrinth) = 
-  do let grid = labyGrid labyrinth
-     start <- readTVar $ labyStartField labyrinth
+  do start <- readTVar $ labyStartField labyrinth
      target <- readTVar $ labyTargetField labyrinth
      labyFindPath start target
   where 
-     labyFindPath Nothing _ = return []
-     labyFindPath _ Nothing = return []
-     labyFindPath (Just start) (Just target) = return []
+     grid = labyGrid labyrinth
+     labyFindPath :: Maybe (Int, Int) -> Maybe (Int, Int) -> STM (Maybe (Int, [(Int, Int)]))
+     labyFindPath Nothing _ = return Nothing
+     labyFindPath _ Nothing = return Nothing
+     labyFindPath (Just start) (Just target) = 
+       do let taxicabNeighbors :: (Int,Int) -> [(Int,Int)]
+              taxicabNeighbors (x, y) = [(x, y + 1), (x - 1, y), (x + 1, y), (x, y - 1)]
+              taxicabDistance :: (Int,Int) -> (Int, Int) -> Int
+              taxicabDistance (x1, y1) (x2, y2) = abs (x2 - x1) + abs (y2 - y1)
+              taxicabDistanceM :: (Int,Int) -> (Int, Int) -> STM Int
+              taxicabDistanceM pt1 pt2 = do let dist = taxicabDistance pt1 pt2
+                                            return dist
+              isBorder (x,y) = x < 0 || y < 0 || x >= grXBoxCnt grid || y >= grYBoxCnt grid
+              isWall :: (Int, Int) -> STM Bool
+              isWall pt | isBorder pt = return True
+                        | otherwise   = do elem <- readArray (labyBoxState labyrinth) pt
+                                           return $ elem == Border
+          aStarM ((return . taxicabNeighbors) `pruningM` isWall) taxicabDistanceM
+                 (taxicabDistanceM target) (return . (== target)) start
+         
 
