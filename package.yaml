@@ -6,12 +6,11 @@ maintainer: kkilger@gmail.com
 license: GPL-3
 extra-source-files:
 - ChangeLog.md
-default-extensions:
-- DeriveGeneric
 other-extensions:
 - MultiParamTypeClasses
 - FlexibleInstances
 - FunctionalDependencies
+- DeriveGeneric
 ghc-options:
 - -threaded
 - -rtsopts
@@ -33,6 +32,7 @@ dependencies:
 - transformers >=0.5.2 && <0.6
 - errors >=2.2.2 && <2.3
 - mmorph >= 1.0.9 && <1.2
+- search-algorithms >=0.3.0 && <0.4
 executables:
   hlabyrinth:
     main: Main.hs
