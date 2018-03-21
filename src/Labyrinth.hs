@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric, FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Labyrinth(
   Labyrinth(..), 
   BoxState(..), 
@@ -27,6 +27,8 @@ import Control.Monad.Trans(lift)
 import Control.Monad.Trans.Maybe(MaybeT(MaybeT), runMaybeT)
 import Control.Concurrent.STM(STM,TVar,readTVar,newTVar,modifyTVar,writeTVar)
 import Control.Concurrent.STM.TArray(TArray)
+
+import Algorithm.Search(aStarM)
 
 import Rectangle
 import Grid
@@ -318,3 +320,16 @@ labyThaw labyrinth =
         labyStartField = startField,
         labyTargetField = targetField
      }
+
+labyFindPath :: Maybe Labyrinth -> STM [(Int, Int)]
+labyFindPath Nothing = return []
+labyFindPath (Just labyrinth) = 
+  do let grid = labyGrid labyrinth
+     start <- readTVar $ labyStartField labyrinth
+     target <- readTVar $ labyTargetField labyrinth
+     labyFindPath start target
+  where 
+     labyFindPath Nothing _ = return []
+     labyFindPath _ Nothing = return []
+     labyFindPath (Just start) (Just target) = return []
+
