@@ -287,7 +287,7 @@ loadLabyrinth =
   where loadLayrinthDo file = do labyrinth <- Binary.decodeFileOrFail file 
                                  case labyrinth of
                                      Left _ -> return Nothing
-                                     Right value -> do unfrozen <- STM.atomically $ labyUnFreeze value
+                                     Right value -> do unfrozen <- STM.atomically $ labyThaw value
                                                        return $ Just unfrozen
 
 getSavedGameFile :: Bool -> IO FilePath

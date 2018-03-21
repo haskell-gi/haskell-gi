@@ -13,7 +13,7 @@ module Labyrinth(
   labyStateToColor,
   labyClear,
   labyFreeze,
-  labyUnFreeze) where
+  labyThaw) where
 
 import GHC.Generics
 import Data.Binary(Binary)
@@ -305,8 +305,8 @@ labyFreeze (Just labyrinth) =
         frLabyTargetField = targetField
     }
 
-labyUnFreeze :: FrozenLabyrinth -> STM Labyrinth
-labyUnFreeze labyrinth =
+labyThaw :: FrozenLabyrinth -> STM Labyrinth
+labyThaw labyrinth =
   do array <- thaw (frLabyBoxState labyrinth)
      nextAction <- newTVar (frLabyNextAction labyrinth)
      startField <- newTVar (frLabyStartField labyrinth)
