@@ -14,3 +14,4 @@ script:
 cache:
   directories:
     - $HOME/.stack
+    - /nix
