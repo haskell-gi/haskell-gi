@@ -36,10 +36,6 @@ executables:
     main: Main.hs
     source-dirs: src
     when: 
-      - condition: flag(static)
-        ld-options: 
-        - -static
-        - -pthread
       - condition: flag(llvm)
         ghc-options:
         - -fllvm
@@ -53,10 +49,6 @@ executables:
         ghc-options:
         - -debug
 flags:
-  static:
-    description: Pass -static/-pthread to ghc when linking the stack binary.
-    manual: true
-    default: true
   llvm:
     description: Build with llvm backend
     manual: true
