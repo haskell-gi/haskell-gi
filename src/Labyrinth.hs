@@ -13,13 +13,15 @@ module Labyrinth(
   labyStateToColor,
   labyClear,
   labyFreeze,
-  labyThaw) where
+  labyThaw,
+  labyFindAndMark,
+  labyResetPath) where
 
 import GHC.Generics
 import Data.Binary(Binary)
 
 import Data.Maybe(isJust, catMaybes)
-import Data.Array.MArray(newArray,writeArray,readArray,mapArray,getElems,freeze,thaw)
+import Data.Array.MArray(newArray,writeArray,readArray,mapArray,getElems,freeze,thaw, getAssocs)
 import Data.Array.IArray(Array)
 
 import Control.Error.Util(hoistMaybe)
@@ -33,7 +35,7 @@ import Algorithm.Search(aStarM, pruningM)
 import Rectangle
 import Grid
 
-data BoxState = Empty | Border | StartField | TargetField deriving(Eq, Show, Generic)
+data BoxState = Empty | Border | StartField | TargetField | Path deriving(Eq, Show, Generic)
 data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, Generic)
 data ActionType = SetAction | UnSetAction deriving(Eq, Show, Generic)
 
@@ -272,6 +274,7 @@ labyStateToColor Empty = (1.0, 1.0, 1.0)
 labyStateToColor Border = (0, 0, 1.0)
 labyStateToColor StartField = (0.0, 1.0, 0.0)
 labyStateToColor TargetField = (1.0, 0.0, 0.0) 
+labyStateToColor Path = (1.0, 0.3, 1.0)
 
 labyClear :: Maybe Labyrinth -> STM (Maybe Labyrinth)
 labyClear Nothing = return Nothing
@@ -319,18 +322,28 @@ labyThaw labyrinth =
         labyTargetField = targetField
      }
 
-labyFindPath :: Maybe Labyrinth -> STM (Maybe (Int, [(Int, Int)]))
-labyFindPath Nothing = return Nothing
-labyFindPath (Just labyrinth) = 
+labyFindAndMark :: Maybe Labyrinth -> STM [RectangleInScreenCoordinates Int]
+labyFindAndMark Nothing   = return []
+labyFindAndMark (Just labyrinth) = 
+  do target <- readTVar $ labyTargetField labyrinth 
+     path <- labyFindPath labyrinth
+     rectangles <- mapM markBox [ p | p <- path, Just t <- [target], p /= t ]
+     return $ catMaybes rectangles
+  where markBox :: PointInGridCoordinates Int -> STM (Maybe (RectangleInScreenCoordinates Int)) 
+        markBox box = do writeArray (labyBoxState labyrinth) box Path   
+                         return $ grBoxToPixel (labyGrid labyrinth) box
+
+labyFindPath :: Labyrinth -> STM [(Int, Int)]
+labyFindPath labyrinth = 
   do start <- readTVar $ labyStartField labyrinth
      target <- readTVar $ labyTargetField labyrinth
-     labyFindPath start target
+     labyFindPathDo start target
   where 
      grid = labyGrid labyrinth
-     labyFindPath :: Maybe (Int, Int) -> Maybe (Int, Int) -> STM (Maybe (Int, [(Int, Int)]))
-     labyFindPath Nothing _ = return Nothing
-     labyFindPath _ Nothing = return Nothing
-     labyFindPath (Just start) (Just target) = 
+     labyFindPathDo :: Maybe (Int, Int) -> Maybe (Int, Int) -> STM [(Int, Int)]
+     labyFindPathDo Nothing _ = return []
+     labyFindPathDo _ Nothing = return []
+     labyFindPathDo (Just start) (Just target) = 
        do let taxicabNeighbors :: (Int,Int) -> [(Int,Int)]
               taxicabNeighbors (x, y) = [(x, y + 1), (x - 1, y), (x + 1, y), (x, y - 1)]
               taxicabDistance :: (Int,Int) -> (Int, Int) -> Int
@@ -343,7 +356,16 @@ labyFindPath (Just labyrinth) =
               isWall pt | isBorder pt = return True
                         | otherwise   = do elem <- readArray (labyBoxState labyrinth) pt
                                            return $ elem == Border
-          aStarM ((return . taxicabNeighbors) `pruningM` isWall) taxicabDistanceM
-                 (taxicabDistanceM target) (return . (== target)) start
-         
+          maybe [] snd <$> aStarM ((return . taxicabNeighbors) `pruningM` isWall) taxicabDistanceM
+                                   (taxicabDistanceM target) (return . (== target)) start
 
+labyResetPath :: Maybe Labyrinth -> STM [RectangleInScreenCoordinates Int]
+labyResetPath Nothing = return []
+labyResetPath (Just labyrinth) =
+  do elems <- getAssocs (labyBoxState labyrinth)
+     let paths = [ fst x | x <- elems, snd x == Path ]
+     rectangles <- mapM unmarkBox paths
+     return $ catMaybes rectangles
+  where unmarkBox :: PointInGridCoordinates Int -> STM (Maybe (RectangleInScreenCoordinates Int)) 
+        unmarkBox box = do writeArray (labyBoxState labyrinth) box Empty   
+                           return $ grBoxToPixel (labyGrid labyrinth) box 

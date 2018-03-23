@@ -74,6 +74,8 @@ keyPressHandler state changeCursor redraw = GTK.tryEvent $
       "s" -> setNextAction state changeCursor SetStartField
       "t" -> setNextAction state changeCursor SetTargetField
       "c" -> clearLabyrinth state redraw
+      "w" -> findPath state redraw
+      "r" -> resetPath state redraw
 
 sizeChangeHandler
   :: Int -> Int -> (Int, Int) -> STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> GTK.EventM GTK.EConfigure Bool
@@ -99,7 +101,8 @@ computeLegendDimensions =
                               ceiling $ Cairo.textExtentsHeight extents)
 
 legend :: String 
-legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT | \"s\": PLACE START | \"t\": PLACE TARGET | \"c\": CLEAR LABYRINTH"
+legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT | s: PLACE START | t: PLACE TARGET | c: CLEAR LABYRINTH | \ 
+         \ w: FIND PATH | r: RESET PATH"
 
 setLegendTextStyle :: Cairo.Render()
 setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
@@ -163,9 +166,9 @@ drawBoxes = mapM_ drawBox
 
 createBoxText :: BoxState -> (Double, Double, Double, Double) -> Cairo.Render ()
 createBoxText boxState (x, y, width, height)
-  | boxState `elem` [Empty, Border] = return ()
-  | boxState == StartField          = createBoxTextDo "S"
-  | boxState == TargetField         = createBoxTextDo "T"
+  | boxState `elem` [Empty, Border, Path] = return ()
+  | boxState == StartField                = createBoxTextDo "S"
+  | boxState == TargetField               = createBoxTextDo "T"
   where
     pixelToPoint :: Double -> GTK.FontMap -> IO Double
     pixelToPoint px fontMap = do resolution <- GTK.cairoFontMapGetResolution fontMap
@@ -264,6 +267,18 @@ clearLabyrinth state redraw =
                     (w,h) = grScreenSize grid
                 in  redraw (Rectangle 0 0 w h)   
       Nothing -> return ()
+
+findPath :: STM.TVar (Maybe Labyrinth) -> (Rectangle Int -> IO ()) ->  IO ()
+findPath state redraw = 
+  do
+    path <- STM.atomically $ STM.readTVar state >>= labyFindAndMark
+    mapM_ redraw path
+
+resetPath :: STM.TVar (Maybe Labyrinth) -> (Rectangle Int -> IO ()) ->  IO ()
+resetPath state redraw = 
+  do
+    path <- STM.atomically $ STM.readTVar state >>= labyResetPath
+    mapM_ redraw path 
 
 saveAndQuit :: STM.TVar (Maybe Labyrinth) -> IO ()
 saveAndQuit state = 
