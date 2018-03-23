@@ -24,7 +24,7 @@ One great source of fun when using Haskell, are the different ways to build a pr
 ```
 curl -sSL https://get.haskellstack.org/ | sh
 ```
-[stack](https://docs.haskellstack.org) is nowadays the best way to build Haskell projects. It is like the combination of `rustup` and `cargo` in the Rust world. Especially it automatically installs (multiple) versions of `ghc`, the Haskell compiler.
+[stack](https://docs.haskellstack.org) is nowadays the best way to build Haskell projects. It is like the combination of `rustup` and `cargo` in the Rust world. Especially it automatically installs (eventually multiple) versions of `ghc`, the Haskell compiler.
 
 2. Install nix
 
