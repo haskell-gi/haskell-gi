@@ -7,4 +7,4 @@ extra-deps:
 resolver: lts-11.1
 nix:
   enable: true
-  packages: [llvm_39]
+  packages: [llvm_39,pkgconfig,cairo,pango,gtk3]
