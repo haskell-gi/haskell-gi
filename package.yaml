@@ -12,10 +12,7 @@ other-extensions:
 - FunctionalDependencies
 - DeriveGeneric
 ghc-options:
-- -threaded
 - -rtsopts
-- -O2
-- -fllvm
 dependencies:
 - base >=4.10 && <4.11
 - binary >= 0.8 && <0.9
@@ -38,3 +35,41 @@ executables:
   hlabyrinth:
     main: Main.hs
     source-dirs: src
+    when: 
+      - condition: flag(static)
+        ld-options: 
+        - -static
+        - -pthread
+      - condition: flag(llvm)
+        ghc-options:
+        - -fllvm
+      - condition: flag(threaded)
+        ghc-options:
+        - -threaded 
+      - condition: flag(optimize)
+        ghc-options:
+        - -O2
+      - condition: flag(debug)
+        ghc-options:
+        - -debug
+flags:
+  static:
+    description: Pass -static/-pthread to ghc when linking the stack binary.
+    manual: true
+    default: true
+  llvm:
+    description: Build with llvm backend
+    manual: true
+    default: true
+  threaded: 
+    description: Build with threaded ghc runtime
+    manual: true
+    default: true
+  optimize:
+    description: Build with optimizations enabled
+    manual: true
+    default: true
+  debug:
+    description: Use debug runtime for ghc
+    manual: true
+    default: false
