@@ -1,5 +1,5 @@
 sudo: false
-language: c
+language: nix
 
 addons:
   apt:
