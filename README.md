@@ -20,13 +20,19 @@ One great source of fun when using Haskell, are the different ways to build a pr
 ### Installation using stack and nix
 
 1. Install stack 
+
 ```
 curl -sSL https://get.haskellstack.org/ | sh
 ```
+[stack](https://docs.haskellstack.org) is nowadays the best way to build Haskell projects. It is like the combination of `rustup` and `cargo` in the Rust world. Especially it automatically installs (multiple) versions of `ghc`, the Haskell compiler.
+
 2. Install nix
+
 ```
 curl https://nixos.org/nix/install | sh
 ```
+[nix](https://nixos.org/nix/) is like `stack` for _external_ dependencies, like operating system libraries. It ensures that the build is made in some closed container, independent of the environment of the underlying operating system. The `stack.yaml` configuration automatically builds inside a nix container, so you do not have to envoke any `nix` commands by yourself. 
+
 3. Build the project
 ```
 stack build
