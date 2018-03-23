@@ -1,13 +1,6 @@
 sudo: false
 language: nix
 
-addons:
-  apt:
-    packages:
-      - libgtk-3-dev
-      - libgtk2.0-dev
-      - libgmp-dev
-
 before_install:
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
