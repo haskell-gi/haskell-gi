@@ -30,6 +30,7 @@ curl -sSL https://get.haskellstack.org/ | sh
 
 ```
 curl https://nixos.org/nix/install | sh
+source ~/.nix-profile/etc/profile.d/nix.sh 
 ```
 [nix](https://nixos.org/nix/) is like `stack` for _external_ dependencies, like operating system libraries. It ensures that the build is made in some closed container, independent of the environment of the underlying operating system. The `stack.yaml` configuration automatically builds inside a nix container, so you do not have to envoke any `nix` commands by yourself. 
 
