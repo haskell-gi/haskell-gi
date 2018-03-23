@@ -15,7 +15,7 @@ It is possible to build a labyrinth, to place and start and end points and compu
 
 ## Installation
 
-One great source of fun when using Haskell, are the different ways to build a project. There are at least four different ways to build this one, using a disjoint set of tools. I recommend using [stack](https://docs.haskellstack.org) and [nix](https://nixos.org/nix/), because it does not need you to install some dependencies, notably `GTK`, `cairo` and `llvm 3.9`.
+One great source of fun when using Haskell, are the different ways to build a project. There are at least four different ways to build this one, using a disjoint set of tools. I recommend using [stack](https://docs.haskellstack.org) and [nix](https://nixos.org/nix/), because it automatically (and locally) installs all dependencies, notably `GTK`, `cairo` and `llvm 3.9`, without polluting your operating system.
 
 ### Installation using stack and nix
 
