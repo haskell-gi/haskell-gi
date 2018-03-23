@@ -11,4 +11,28 @@ complete.
 
 ## Game principle
 
-It is possible to build a labyrinth, to place and start and end points and compute the shortest way through the labyrinth. 
+It is possible to build a labyrinth, to place and start and end points and compute the shortest way through the labyrinth. When closed, the current labyrinth is saved and restored, when the game is started.
+
+## Installation
+
+One great source of fun when using Haskell, are the different ways to build a project. There are at least four different ways to build this one, using a disjoint set of tools. I recommend using [stack](https://docs.haskellstack.org) and [nix](https://nixos.org/nix/).
+
+### Installation using stack and nix
+
+1. Install stack 
+```
+curl -sSL https://get.haskellstack.org/ | sh
+```
+2. Install nix
+```
+curl https://nixos.org/nix/install | sh
+```
+3. Build the project
+```
+stack build
+```
+4. Run the project
+```
+stack install stack-run
+stack run
+```
