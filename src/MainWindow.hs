@@ -173,8 +173,7 @@ createBoxText boxState (x, y, width, height)
     getMarkUp :: String -> Double -> String                                 
     getMarkUp text pt = "<span font=\"" ++ show (round pt) ++ "\">" ++ text ++ "</span>"
     setMarkUp :: Pango.PangoLayout -> String -> IO String 
-    setMarkUp layout string = do result <- Pango.layoutSetMarkup layout (Glib.stringToGlib string)
-                                 return $ Glib.glibToString result
+    setMarkUp layout string = Glib.glibToString <$> Pango.layoutSetMarkup layout (Glib.stringToGlib string)
     createBoxTextDo :: String -> Cairo.Render ()
     createBoxTextDo text =
       do fontMap <- liftIO GTK.cairoFontMapGetDefault
@@ -295,7 +294,6 @@ getSavedGameFile createDirectory
   | createDirectory = do directory <- getDirectory
                          Directory.createDirectoryIfMissing False directory
                          return (getFile directory)
-  | otherwise       = do directory <- getDirectory
-                         return (getFile directory)
+  | otherwise       = getFile <$> getDirectory
   where getDirectory = Directory.getXdgDirectory Directory.XdgData "hlabyrinth" 
         getFile directory = directory </> "last.game"

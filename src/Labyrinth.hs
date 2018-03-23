@@ -251,9 +251,7 @@ labyGetBoxesInsideArea area labyrinth =
 labyGetBoxData :: LabyArray -> Grid Int 
                             -> PointInGridCoordinates Int 
                             -> Maybe (STM (BoxState, RectangleInScreenCoordinates Int))
-labyGetBoxData array grid point =
-  do pixel <- grBoxToPixel grid point
-     return $ labyGetBoxTuple array point pixel
+labyGetBoxData array grid point = labyGetBoxTuple array point <$> grBoxToPixel grid point
 
 labyGetBoxTuple :: LabyArray -> PointInGridCoordinates Int 
                              -> Rectangle Int 
