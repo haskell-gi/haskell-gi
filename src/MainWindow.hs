@@ -17,6 +17,7 @@ import qualified Control.Concurrent.STM as STM
 import qualified System.Directory as Directory
 import qualified System.IO as IO
 import qualified Data.Binary as Binary
+import qualified System.FilePath as Path
 
 import Rectangle
 import Labyrinth
@@ -31,7 +32,8 @@ run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
   GTK.initGUI
-  loadedLabyrinth <- loadLabyrinth
+  savedState <- getSavedGameFile False
+  loadedLabyrinth <- loadLabyrinth savedState
   legendDimensions <- computeLegendDimensions
   window <- GTK.windowNew
   canvas <- GTK.drawingAreaNew
@@ -44,7 +46,7 @@ run option = do
   let redrawFn = redraw canvas
       setCursorFn = setCursor canvas
   GTK.on window GTK.objectDestroy     GTK.mainQuit
-  GTK.on window GTK.keyPressEvent     (keyPressHandler state setCursorFn redrawFn)
+  GTK.on window GTK.keyPressEvent     (keyPressHandler state setCursorFn redrawFn window)
   GTK.on canvas GTK.configureEvent    (sizeChangeHandler 
     boxSize borderSize legendDimensions state setCursorFn)
   GTK.on canvas GTK.draw              (drawCanvasHandler state)
@@ -65,8 +67,9 @@ setCursor window cursorType = do drawWindow <- GTK.widgetGetParentWindow window
 
 keyPressHandler :: STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) 
                                               -> (Rectangle Int -> IO ())  
+                                              -> GTK.Window
                                               -> GTK.EventM GTK.EKey Bool
-keyPressHandler state changeCursor redraw = GTK.tryEvent $ 
+keyPressHandler state changeCursor redraw window = GTK.tryEvent $ 
   do
     keyName <- GTK.eventKeyName
     liftIO $ case Text.unpack keyName of
@@ -76,6 +79,8 @@ keyPressHandler state changeCursor redraw = GTK.tryEvent $
       "c" -> clearLabyrinth state redraw
       "w" -> findPath state redraw
       "r" -> resetPath state redraw
+      "F1" -> openSaveFileDialog state window
+      "F2" -> openOpenFileDialog state window
 
 sizeChangeHandler
   :: Int -> Int -> (Int, Int) -> STM.TVar (Maybe Labyrinth) -> (GTK.CursorType -> IO ()) -> GTK.EventM GTK.EConfigure Bool
@@ -102,7 +107,7 @@ computeLegendDimensions =
 
 legend :: String 
 legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT | s: PLACE START | t: PLACE TARGET | c: CLEAR LABYRINTH | \ 
-         \ w: FIND PATH | r: RESET PATH"
+         \ w: FIND PATH | r: RESET PATH | F1: SAVE | F2: LOAD"
 
 setLegendTextStyle :: Cairo.Render()
 setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
@@ -282,20 +287,21 @@ resetPath state redraw =
 
 saveAndQuit :: STM.TVar (Maybe Labyrinth) -> IO ()
 saveAndQuit state = 
-  do labyrinth <- STM.atomically $ STM.readTVar state >>= labyFreeze
-     saveLabyrinth labyrinth
+  do file <- getSavedGameFile True 
+     saveLabyrinth state file
      GTK.mainQuit
 
-saveLabyrinth :: Maybe FrozenLabyrinth -> IO () 
-saveLabyrinth Nothing = return ()
-saveLabyrinth (Just labyrinth) =
-  do file <- getSavedGameFile True
-     Binary.encodeFile file labyrinth
+saveLabyrinth :: STM.TVar (Maybe Labyrinth) -> FilePath -> IO ()
+saveLabyrinth state file =
+  do labyrinth <- STM.atomically $ STM.readTVar state >>= labyFreeze
+     saveLabyrinthDo labyrinth 
+  where saveLabyrinthDo :: Maybe FrozenLabyrinth -> IO () 
+        saveLabyrinthDo Nothing = return ()
+        saveLabyrinthDo (Just labyrinth) = Binary.encodeFile file labyrinth
 
-loadLabyrinth :: IO (Maybe Labyrinth)
-loadLabyrinth =
-  do file <- getSavedGameFile False
-     fileExists <- Directory.doesFileExist file
+loadLabyrinth :: FilePath -> IO (Maybe Labyrinth)
+loadLabyrinth file =
+  do fileExists <- Directory.doesFileExist file
      if fileExists then loadLayrinthDo file
      else return Nothing
   where loadLayrinthDo file = do labyrinth <- Binary.decodeFileOrFail file 
@@ -312,3 +318,65 @@ getSavedGameFile createDirectory
   | otherwise       = getFile <$> getDirectory
   where getDirectory = Directory.getXdgDirectory Directory.XdgData "hlabyrinth" 
         getFile directory = directory </> "last.game"
+
+openSaveFileDialog :: STM.TVar (Maybe Labyrinth) -> GTK.Window -> IO ()     
+openSaveFileDialog state window =
+  do dialog <- GTK.fileChooserDialogNew
+                 (Just "Save labyrinth")
+                 (Just window)
+                 GTK.FileChooserActionSave
+                 [("gtk-cancel", GTK.ResponseCancel),
+                  ("gtk-save", GTK.ResponseAccept)]
+     filter <- labyrinthFileFilter
+     GTK.fileChooserAddFilter dialog filter
+     GTK.widgetShow dialog
+     response <- GTK.dialogRun dialog
+     case response of 
+         GTK.ResponseAccept -> do Just fileName <- GTK.fileChooserGetFilename dialog
+                                  saveLabyrinth state (addLabyFileExtension fileName)
+         otherwise -> return ()
+     GTK.widgetHide dialog
+
+openOpenFileDialog :: STM.TVar (Maybe Labyrinth) -> GTK.Window -> IO ()     
+openOpenFileDialog state window =
+  do dialog <- GTK.fileChooserDialogNew
+                 (Just "Open labyrinth")
+                 (Just window)
+                 GTK.FileChooserActionOpen
+                 [("gtk-cancel", GTK.ResponseCancel),
+                  ("gtk-open", GTK.ResponseAccept)]
+     filter <- labyrinthFileFilter
+     GTK.fileChooserAddFilter dialog filter
+     GTK.widgetShow dialog
+     response <- GTK.dialogRun dialog
+     case response of 
+         GTK.ResponseAccept -> do Just fileName <- GTK.fileChooserGetFilename dialog
+                                  let fileExt = addLabyFileExtension fileName 
+                                  loadedLabyrinth <- loadLabyrinth fileExt
+                                  case loadedLabyrinth of 
+                                     Just labyrinth -> STM.atomically $ STM.modifyTVar state 
+                                                         (const $ Just labyrinth)
+                                     Nothing -> return ()
+         otherwise -> return ()
+     GTK.widgetHide dialog 
+
+labyFileExtension :: String
+labyFileExtension = ".laby"
+
+labyFileExtensionHelp :: String
+labyFileExtensionHelp = 
+  "Labyrinth files (" ++ labyFileExtension ++ ")"
+     
+labyrinthFileFilter :: IO GTK.FileFilter
+labyrinthFileFilter =
+  do labyFiles <- GTK.fileFilterNew
+     GTK.fileFilterSetName labyFiles labyFileExtensionHelp
+     GTK.fileFilterAddPattern labyFiles labyFileExtension
+     return labyFiles
+
+addLabyFileExtension :: FilePath -> FilePath 
+addLabyFileExtension path =
+  let (base, ext) = Path.splitExtension path
+  in base ++ ext 
+          ++ if ext == labyFileExtension then "" 
+             else labyFileExtension
