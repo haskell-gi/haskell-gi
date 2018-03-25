@@ -15,10 +15,9 @@ import qualified System.Glib as Glib
 import qualified Graphics.Rendering.Pango.Layout as Pango
 import qualified Control.Concurrent.STM as STM
 import qualified System.Directory as Directory
-import qualified System.IO as IO
-import qualified Data.Binary as Binary
-import qualified System.FilePath as Path
+import qualified System.FilePath as Path 
 
+import qualified LoadSave 
 import Rectangle
 import Labyrinth
 import Grid
@@ -32,12 +31,11 @@ run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
   GTK.initGUI
-  savedState <- getSavedGameFile False
-  loadedLabyrinth <- loadLabyrinth savedState
   legendDimensions <- computeLegendDimensions
   window <- GTK.windowNew
   canvas <- GTK.drawingAreaNew
-  state  <- STM.atomically $ STM.newTVar loadedLabyrinth
+  state  <- STM.atomically $ STM.newTVar Nothing 
+  savedState <- getSavedGameFile False
   GTK.widgetAddEvents canvas [GTK.ButtonPressMask, 
                               GTK.PointerMotionMask, 
                               GTK.PointerMotionHintMask]
@@ -73,7 +71,7 @@ keyPressHandler state changeCursor redraw window = GTK.tryEvent $
   do
     keyName <- GTK.eventKeyName
     liftIO $ case Text.unpack keyName of
-      "Escape" -> saveAndQuit state
+      "Escape" -> saveAndQuit window state
       "s" -> setNextAction state changeCursor SetStartField
       "t" -> setNextAction state changeCursor SetTargetField
       "c" -> clearLabyrinth state redraw
@@ -285,30 +283,33 @@ resetPath state redraw =
     path <- STM.atomically $ STM.readTVar state >>= labyResetPath
     mapM_ redraw path 
 
-saveAndQuit :: STM.TVar (Maybe Labyrinth) -> IO ()
-saveAndQuit state = 
+saveAndQuit :: GTK.WindowClass a => a -> STM.TVar (Maybe Labyrinth) -> IO ()
+saveAndQuit window state = 
   do file <- getSavedGameFile True 
-     saveLabyrinth state file
+     saveLabyrinth window state file
      GTK.mainQuit
 
-saveLabyrinth :: STM.TVar (Maybe Labyrinth) -> FilePath -> IO ()
-saveLabyrinth state file =
-  do labyrinth <- STM.atomically $ STM.readTVar state >>= labyFreeze
-     saveLabyrinthDo labyrinth 
-  where saveLabyrinthDo :: Maybe FrozenLabyrinth -> IO () 
-        saveLabyrinthDo Nothing = return ()
-        saveLabyrinthDo (Just labyrinth) = Binary.encodeFile file labyrinth
+saveLabyrinth :: GTK.WindowClass a => a -> STM.TVar (Maybe Labyrinth) -> FilePath -> IO ()
+saveLabyrinth window state file =
+  do labyrinth <- STM.atomically $ STM.readTVar state >>= labyFreeze 
+     LoadSave.saveLabyrinth labyrinth file (errorPopup window) 
 
-loadLabyrinth :: FilePath -> IO (Maybe Labyrinth)
-loadLabyrinth file =
-  do fileExists <- Directory.doesFileExist file
-     if fileExists then loadLayrinthDo file
-     else return Nothing
-  where loadLayrinthDo file = do labyrinth <- Binary.decodeFileOrFail file 
-                                 case labyrinth of
-                                     Left _ -> return Nothing
-                                     Right value -> do unfrozen <- STM.atomically $ labyThaw value
-                                                       return $ Just unfrozen
+loadLabyrinth :: GTK.WindowClass a => a -> FilePath -> IO (Maybe Labyrinth) 
+loadLabyrinth window file = 
+  do labyrinth <- LoadSave.loadLabyrinth file (errorPopup window)
+     case labyrinth of 
+         Just laby -> do unfrozen <- STM.atomically $ labyThaw laby
+                         return $ Just unfrozen
+         Nothing -> return Nothing
+     
+errorPopup :: GTK.WindowClass a => a -> String -> IO ()
+errorPopup window text = 
+  do msg <- GTK.messageDialogNew (Just (GTK.toWindow window))
+               [GTK.DialogModal, GTK.DialogDestroyWithParent]
+               GTK.MessageError GTK.ButtonsClose
+               text
+     GTK.dialogRun msg
+     GTK.widgetDestroy msg
 
 getSavedGameFile :: Bool -> IO FilePath
 getSavedGameFile createDirectory
@@ -317,13 +318,13 @@ getSavedGameFile createDirectory
                          return (getFile directory)
   | otherwise       = getFile <$> getDirectory
   where getDirectory = Directory.getXdgDirectory Directory.XdgData "hlabyrinth" 
-        getFile directory = directory </> "last.game"
+        getFile directory = directory </> ("last" ++ labyFileExtension)
 
 openSaveFileDialog :: STM.TVar (Maybe Labyrinth) -> GTK.Window -> IO ()     
 openSaveFileDialog state window =
   openFileDialog state window GTK.FileChooserActionSave "Save labyrinth" 
                  "gtk-save" onSuccess 
-  where onSuccess fileName = saveLabyrinth state (addLabyFileExtension fileName)
+  where onSuccess window fileName = saveLabyrinth window state (addLabyFileExtension fileName)
 
 openOpenFileDialog :: STM.TVar (Maybe Labyrinth) -> GTK.Window 
                                                  -> (Rectangle Int -> IO ())   
@@ -331,9 +332,9 @@ openOpenFileDialog :: STM.TVar (Maybe Labyrinth) -> GTK.Window
 openOpenFileDialog state window redraw =
   openFileDialog state window GTK.FileChooserActionOpen "Open labyrinth" 
                  "gtk-open" onSuccess
-  where onSuccess fileName = 
+  where onSuccess window fileName = 
           do let fileExt = addLabyFileExtension fileName 
-             loadedLabyrinth <- loadLabyrinth fileExt
+             loadedLabyrinth <- loadLabyrinth window fileExt
              case loadedLabyrinth of 
                  Just labyrinth -> do STM.atomically $ STM.writeTVar state (Just labyrinth)
                                       let grid  = labyGrid labyrinth 
@@ -345,7 +346,7 @@ openFileDialog :: STM.TVar (Maybe Labyrinth) -> GTK.Window
                                              -> GTK.FileChooserAction
                                              -> String
                                              -> String 
-                                             -> ( FilePath -> IO ()) 
+                                             -> ( GTK.FileChooserDialog -> FilePath -> IO ()) 
                                              -> IO ()
 openFileDialog state window action label button onSuccess =
   do dialog <- GTK.fileChooserDialogNew
@@ -360,7 +361,7 @@ openFileDialog state window action label button onSuccess =
      response <- GTK.dialogRun dialog
      case response of 
          GTK.ResponseAccept -> do Just fileName <- GTK.fileChooserGetFilename dialog
-                                  onSuccess fileName
+                                  onSuccess dialog fileName
          _                  -> return ()
      GTK.widgetHide dialog  
 

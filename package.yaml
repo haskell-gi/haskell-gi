@@ -31,6 +31,8 @@ dependencies:
 - errors >=2.2.2 && <2.3
 - mmorph >= 1.0.9 && <1.2
 - search-algorithms >=0.3 && <0.4
+- pureMD5 >= 2.1 && <2.2
+- bytestring >=0.10 && <0.11
 executables:
   hlabyrinth:
     main: Main.hs
