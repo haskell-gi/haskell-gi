@@ -45,16 +45,16 @@ saveLabyrinth (Just labyrinth) file errorHandler =
 loadLabyrinth :: FilePath -> (String -> IO ()) -> IO (Maybe FrozenLabyrinth)
 loadLabyrinth file errorHandler =
   do fileExists <- Directory.doesFileExist file
-     if fileExists then loadLayrinthDo file
+     if fileExists then loadLabyrinthDo file
      else do errorHandler $ fileCouldNotBeFoundString file 
              return Nothing
-  where loadLayrinthDo file = do result <- try (IO.withBinaryFile file IO.ReadMode (readLabyFile file)) 
-                                 case result of
-                                     Left exc -> do errorHandler $ show (exc :: IOException)
-                                                    return Nothing
-                                     Right (Left err) -> do errorHandler err
-                                                            return Nothing
-                                     Right (Right labyrinth) -> return $ Just labyrinth
+  where loadLabyrinthDo file = do result <- try (IO.withBinaryFile file IO.ReadMode (readLabyFile file)) 
+                                  case result of
+                                      Left exc -> do errorHandler $ show (exc :: IOException)
+                                                     return Nothing
+                                      Right (Left err) -> do errorHandler err
+                                                             return Nothing
+                                      Right (Right labyrinth) -> return $ Just labyrinth
 
 readLabyFile :: FilePath -> IO.Handle -> IO (Either String FrozenLabyrinth)
 readLabyFile file handle = 
