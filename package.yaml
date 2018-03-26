@@ -54,7 +54,7 @@ flags:
   llvm:
     description: Build with llvm backend
     manual: true
-    default: true
+    default: false
   threaded: 
     description: Build with threaded ghc runtime
     manual: true
