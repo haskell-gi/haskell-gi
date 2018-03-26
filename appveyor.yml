@@ -6,16 +6,15 @@ build: off
 
 before_test:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
-- IF "%BITS%" == "32" SET ARCH=i686
-- IF "%BITS%" == "64" SET ARCH=x86_64
-- SET PATH=C:\msys64\mingw%BITS%\bin;%PATH%;C:\msys64\usr\bin
+- SET PATH=C:\msys64\mingw64\bin;%PATH%;C:\msys64\usr\bin
 - SET PATH=C:\Program Files\Git\mingw64\bin;%PATH%
-- pacman --noconfirm -S mingw-w64-%ARCH%-gtk3
-- curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-%ARCH%
+- pacman --noconfirm -S mingw-w64-x86_64-gtk3
+- curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
 - 7z x stack.zip stack.exe
 
 clone_folder: "c:\\stack"
 environment:
+  arch: x64
   global:
     STACK_ROOT: "c:\\sr"
 
