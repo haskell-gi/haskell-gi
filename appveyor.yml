@@ -12,7 +12,9 @@ environment:
 before_test:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
 - SET PATH=C:\msys64\usr\bin;%PATH%
-- pacman --noconfirm -S mingw-w64-x86_64-gtk3
+- pacman -Syu
+- pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain autoconf automake libtool make match mingw-w64-x86_64-libtool
+- pacman --noconfirm -S mingw-w64-x86_64-gtk3 mingw-w64-x86_64-cairo mingw-w64-x86_64-gobject-introspection mingw-w64-glib2 mingw-w64-pango
 - curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
 - 7z x stack.zip stack.exe
 
