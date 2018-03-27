@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/cohomology/hlabyrinth.svg?branch=master)](https://travis-ci.org/cohomology/hlabyrinth)
+[![Linux Build Status](https://img.shields.io/travis/cohomology/hlabyrinth.svg?label=Linux%20build)](https://travis-ci.org/cohomology/hlabyrinth)  [![Windows Build Status](https://img.shields.io/appveyor/ci/cohomology/hlabyrinth.svg?label=Windows%20build)](https://ci.appveyor.com/project/cohomology/hlabyrinth)
 
 # hlabyrinth
 
