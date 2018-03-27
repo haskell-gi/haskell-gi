@@ -11,7 +11,7 @@ environment:
 
 before_test:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
-- SET PATH=C:\msys64\ming64\bin;C:\msys64\usr\bin;%PATH%
+- SET PATH=C:\msys64\mingw64\bin;C:\msys64\usr\bin;%PATH%
 - SET PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
 - SET XDG_DATA_DIRS=C:\msys64\mingw64\share
 - pacman --noconfirm -Syu
