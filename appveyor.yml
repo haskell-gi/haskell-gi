@@ -3,16 +3,20 @@
 #- "c:\\sr" # stack root, short paths == fewer problems
 
 build: off
+platform: x64
 
 environment:
-  arch: x64
   global:
     STACK_ROOT: "c:\\sr" 
 
 before_test:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
-- SET PATH=C:\msys64\usr\bin;%PATH%
-- pacman --noconfirm -S mingw-w64-x86_64-gtk3
+- SET PATH=C:\msys64\ming64\bin;C:\msys64\usr\bin;%PATH%
+- SET PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
+- SET XDG_DATA_DIRS=C:\msys64\mingw64\share
+- pacman --noconfirm -Syu
+- appveyor-retry pacman -S --needed --noconfirm base-devel mingw64/mingw-w64-x86_64-toolchain autoconf automake libtool make mingw64/mingw-w64-x86_64-libtool
+- appveyor-retry pacman -S --noconfirm mingw64/mingw-w64-x86_64-gtk3 mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gobject-introspection mingw64/mingw-w64-x86_64-cairo mingw64/mingw-w64-x86_64-pango
 - curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
 - 7z x stack.zip stack.exe
 
@@ -22,4 +26,4 @@ test_script:
 - stack setup > nul
 # The ugly echo "" hack is to avoid complaints about 0 being an invalid file
 # descriptor
-- echo "" | stack --no-terminal test --jobs 1
+- echo "" | stack --no-terminal --extra-lib-dirs c:\msys64\mingw64\lib --extra-include-dirs c:\msys64\mingw64\include;c:\msys64\mingw64\lib\gtk-3.0\include;c:\msys64\mingw64\include\glib-2.0;c:\msys64\mingw64\lib\pango-1.0\include;c:\msys64\mingw64\lib\cairo\include;c:\msys64\mingw64\lib\gdk-pixbuf-2.0\include test --jobs 1
