@@ -26,4 +26,4 @@ test_script:
 - stack setup > nul
 # The ugly echo "" hack is to avoid complaints about 0 being an invalid file
 # descriptor
-- echo "" | stack --no-terminal --extra-lib-dirs c:\msys64\mingw64\lib --extra-include-dirs c:\msys64\mingw64\include test --jobs 1
+- echo "" | stack --no-terminal --extra-lib-dirs c:\msys64\mingw64\lib --extra-include-dirs c:\msys64\mingw64\include;c:\msys64\mingw64\include\gtk-3.0;c:\msys64\mingw64\include\glib-2.0;c:\msys64\mingw64\include\pango-1.0;c:\msys64\mingw64\include\cairo;c:\msys64\mingw64\include\gdk-pixbuf-2.0  test --jobs 1
