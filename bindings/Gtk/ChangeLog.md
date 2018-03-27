@@ -1,3 +1,7 @@
+### 3.0.22
+
++ The return of [`applicationNew`](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Application.html#v:applicationNew) value can be null, but it is not marked as such in the introspection data, leading to a rather confusing error message (see [issue 142](https://github.com/haskell-gi/haskell-gi/issues/142) and [issue 143](https://github.com/haskell-gi/haskell-gi/issues/143)).
+
 ### 3.0.21
 
 + The return value of [`widgetDragDestFindTarget`](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Widget.html#v:widgetDragDestFindTarget) is nullable, but was not marked as such.
