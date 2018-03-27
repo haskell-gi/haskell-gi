@@ -14,7 +14,7 @@ before_test:
 - SET PATH=C:\msys64\usr\bin;%PATH%
 - pacman --noconfirm -Syu
 - pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain autoconf automake libtool make mingw-w64-x86_64-libtool
-- pacman --noconfirm -S mingw-w64-x86_64-gtk3 mingw-w64-x86_64-cairo mingw-w64-x86_64-gobject-introspection mingw-w64-glib2 mingw-w64-pango
+- pacman --noconfirm -S mingw-w64-x86_64-gtk3 mingw-w64-x86_64-cairo mingw-w64-x86_64-gobject-introspection mingw-w64-x86_64-glib2 mingw-w64-x86_64-pango
 - curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
 - 7z x stack.zip stack.exe
 
