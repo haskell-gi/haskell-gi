@@ -11,7 +11,9 @@ environment:
 
 before_test:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
-- SET PATH=C:\msys64\usr\bin;%PATH%
+- SET PATH=C:\msys64\ming64\bin;C:\msys64\usr\bin;%PATH%
+- SET PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
+- SET XDG_DATA_DIRS=C:\msys64\mingw64\share
 - pacman --noconfirm -Syu
 - pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain autoconf automake libtool make mingw-w64-x86_64-libtool
 - pacman --noconfirm -S mingw-w64-x86_64-gtk3 mingw-w64-x86_64-cairo mingw-w64-x86_64-gobject-introspection mingw-w64-x86_64-glib2 mingw-w64-x86_64-pango
