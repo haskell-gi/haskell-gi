@@ -15,7 +15,7 @@ before_test:
 - SET PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
 - SET XDG_DATA_DIRS=C:\msys64\mingw64\share
 - pacman --noconfirm -Syu
-- appveyor-retry pacman -S --needed --noconfirm mingw64/base-devel mingw64/mingw-w64-x86_64-toolchain mingw64/autoconf mingw64/automake mingw64/libtool mingw64/make ming64/mingw-w64-x86_64-libtool
+- appveyor-retry pacman -S --needed --noconfirm base-devel mingw64/mingw-w64-x86_64-toolchain autoconf automake libtool make mingw64/mingw-w64-x86_64-libtool
 - appveyor-retry pacman -S --noconfirm mingw64/mingw-w64-x86_64-gtk3 mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gobject-introspection mingw64/mingw-w64-x86_64-cairo mingw64/mingw-w64-x86_64-pango
 - curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
 - 7z x stack.zip stack.exe
