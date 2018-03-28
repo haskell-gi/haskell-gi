@@ -3,28 +3,32 @@ module LoadSave(saveLabyrinth, loadLabyrinth) where
 import Control.Exception(IOException,try)  
 
 import qualified System.Directory as Directory 
-import qualified Data.Binary as Binary 
 import qualified System.IO as IO
 import qualified System.FilePath as Path
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.ByteString as ByteString
 import qualified Data.Digest.Pure.MD5 as MD5 
+import qualified Data.Serialize as Cereal
+import qualified Data.SafeCopy as SafeCopy (safePut, safeGet) 
+import qualified Text.Printf as Printf
+
+import Data.Word(Word8)
 
 import Labyrinth
 
-internalErrorString :: FilePath -> String
-internalErrorString file = "Internal error while saving: \"" ++ file ++ "\"."
+internalErrorString :: Path.FilePath -> String
+internalErrorString = Printf.printf "Internal error while saving \"%s\"" 
 
-couldNotSaveString :: FilePath -> String
-couldNotSaveString file = "Could not save: " ++ file 
+couldNotSaveString :: Path.FilePath -> String
+couldNotSaveString = Printf.printf "Could not save file \"%s\""  
 
-fileCouldNotBeFoundString :: FilePath -> String
-fileCouldNotBeFoundString file = "File \"" ++ file ++ "\" could not be found." 
+fileCouldNotBeFoundString :: Path.FilePath -> String 
+fileCouldNotBeFoundString = Printf.printf "File \"%s\" could not be found." 
 
-fileIsCorruptedError :: FilePath -> String
-fileIsCorruptedError file = "The file: \"" ++ file ++ "\" is corrupted and could not be read."
+fileIsCorruptedError :: Path.FilePath -> String
+fileIsCorruptedError = Printf.printf "The file \"%s\" is corrupted and could not be read."
 
-labyFileMagicBytes :: [Binary.Word8]
+labyFileMagicBytes :: [Word8]
 labyFileMagicBytes = [76,97,98,121]  
 
 saveLabyrinth :: Maybe FrozenLabyrinth -> FilePath 
@@ -33,7 +37,7 @@ saveLabyrinth :: Maybe FrozenLabyrinth -> FilePath
 saveLabyrinth Nothing file errorHandler = errorHandler $ internalErrorString file
 saveLabyrinth (Just labyrinth) file errorHandler =
   do let byteString = ByteString.pack labyFileMagicBytes
-         encoded = Binary.encode labyrinth
+         (_, encoded) = Cereal.runPutMLazy $ SafeCopy.safePut labyrinth
          hashed  = MD5.md5DigestBytes $ MD5.md5 encoded 
          withHash = ByteString.append byteString hashed
          complete = ByteString.append withHash $ LazyByteString.toStrict encoded
@@ -69,7 +73,7 @@ readLabyFile file handle =
 
 decodeLabyrinth :: ByteString.ByteString -> Either String FrozenLabyrinth
 decodeLabyrinth encodedLabyrinth = 
-  let decoded = Binary.decodeOrFail $ LazyByteString.fromChunks [encodedLabyrinth]
+  let decoded = Cereal.runGet SafeCopy.safeGet encodedLabyrinth
   in case decoded of 
-      Left (_,_,error) -> Left error
-      Right (_,_,labyrinth) -> Right labyrinth
+      Left error -> Left error
+      Right labyrinth -> Right labyrinth

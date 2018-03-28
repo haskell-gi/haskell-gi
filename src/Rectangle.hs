@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies, DeriveGeneric  #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies #-}
 module Rectangle(
   Rectangle(..), 
   Point,
@@ -11,15 +11,18 @@ module Rectangle(
 ) 
 where
 
-import GHC.Generics
-import Data.Binary(Binary)
+import Data.SafeCopy (SafeCopy(..), contain, safePut, safeGet) 
 import qualified Graphics.UI.Gtk as GTK (Rectangle(..)) 
 
 type Point a = (a,a)
 
-data Rectangle a = Rectangle a a a a deriving(Eq, Show, Generic)
+data Rectangle a = Rectangle a a a a deriving(Eq, Show)
 
-instance Binary a => Binary (Rectangle a)
+instance SafeCopy a => SafeCopy (Rectangle a) where 
+  putCopy (Rectangle x y w h) = contain $ do safePut x; safePut y; 
+                                             safePut w; safePut h;
+  getCopy = contain $ Rectangle <$> safeGet <*> safeGet 
+                                <*> safeGet <*> safeGet
 
 class Num a => IsARectangle r a | r -> a where
   rTopLeftX :: r -> a

@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 module Labyrinth(
   Labyrinth(..), 
   BoxState(..), 
@@ -17,9 +16,8 @@ module Labyrinth(
   labyFindAndMark,
   labyResetPath) where
 
-import GHC.Generics
-import Data.Binary(Binary)
-
+import Data.Serialize.Get(Get)
+import Data.SafeCopy(SafeCopy(..), contain, safePut, safeGet, deriveSafeCopy, base)   
 import Data.Maybe(isJust, catMaybes)
 import Data.Array.MArray(newArray,writeArray,readArray,mapArray,getElems,freeze,thaw, getAssocs)
 import Data.Array.IArray(Array)
@@ -35,9 +33,9 @@ import Algorithm.Search(aStarM, pruningM)
 import Rectangle
 import Grid
 
-data BoxState = Empty | Border | StartField | TargetField | Path deriving(Eq, Show, Generic)
-data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, Generic)
-data ActionType = SetAction | UnSetAction deriving(Eq, Show, Generic)
+data BoxState = Empty | Border | StartField | TargetField | Path deriving(Eq, Show, Read)
+data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, Read)
+data ActionType = SetAction | UnSetAction deriving(Eq, Show)
 
 type LabyArray = TArray (Int, Int) BoxState 
 type FrozenLabyArray = Array (Int, Int) BoxState 
@@ -50,9 +48,13 @@ data Labyrinth = Labyrinth {
   labyTargetField :: TVar (Maybe (Int, Int))
 }  
 
-instance Binary NextAction 
-instance Binary BoxState
-instance Binary ActionType
+instance SafeCopy BoxState where
+  putCopy x = contain $ safePut (show x)
+  getCopy = contain $ read <$> (safeGet :: Get String)
+
+instance SafeCopy NextAction where
+  putCopy x = contain $ safePut (show x)
+  getCopy = contain $ read <$> (safeGet :: Get String) 
 
 data FrozenLabyrinth = FrozenLabyrinth {
   frLabyBoxState :: FrozenLabyArray,
@@ -60,9 +62,13 @@ data FrozenLabyrinth = FrozenLabyrinth {
   frLabyNextAction :: NextAction,
   frLabyStartField :: Maybe (Int, Int),
   frLabyTargetField :: Maybe (Int, Int)
-} deriving (Generic)
+} 
 
-instance Binary FrozenLabyrinth
+instance SafeCopy FrozenLabyrinth where 
+  putCopy (FrozenLabyrinth s g a sf tf) = contain $ do safePut s; safePut g; safePut a;
+                                                       safePut sf; safePut tf;
+  getCopy = contain $ FrozenLabyrinth <$> safeGet <*> safeGet <*> safeGet <*> safeGet  
+                                                  <*> safeGet 
 
 data RedrawInfo = RedrawInfo {
   labyRedrIntersect :: Maybe (Rectangle Int),  -- intersection with playing area

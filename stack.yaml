@@ -5,4 +5,3 @@ extra-deps:
 - gio-0.13.4.1
 - gtk3-0.14.8
 resolver: lts-11.1
-
