@@ -33,8 +33,8 @@ import Algorithm.Search(aStarM, pruningM)
 import Rectangle
 import Grid
 
-data BoxState = Empty | Border | StartField | TargetField | Path deriving(Eq, Show, Read)
-data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, Read)
+data BoxState = Empty | Border | StartField | TargetField | Path deriving(Eq, Show, Enum)
+data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, Enum)
 data ActionType = SetAction | UnSetAction deriving(Eq, Show)
 
 type LabyArray = TArray (Int, Int) BoxState 
@@ -49,12 +49,12 @@ data Labyrinth = Labyrinth {
 }  
 
 instance SafeCopy BoxState where
-  putCopy x = contain $ safePut (show x)
-  getCopy = contain $ read <$> (safeGet :: Get String)
+  putCopy x = contain $ safePut (fromEnum x)
+  getCopy = contain $ toEnum <$> (safeGet :: Get Int)
 
 instance SafeCopy NextAction where
-  putCopy x = contain $ safePut (show x)
-  getCopy = contain $ read <$> (safeGet :: Get String) 
+  putCopy x = contain $ safePut (fromEnum x)
+  getCopy = contain $ toEnum <$> (safeGet :: Get Int) 
 
 data FrozenLabyrinth = FrozenLabyrinth {
   frLabyBoxState :: FrozenLabyArray,
