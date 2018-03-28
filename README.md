@@ -1,4 +1,6 @@
 [![Linux Build Status](https://img.shields.io/travis/cohomology/hlabyrinth.svg?label=Linux%20build)](https://travis-ci.org/cohomology/hlabyrinth)  [![Windows Build Status](https://img.shields.io/appveyor/ci/cohomology/hlabyrinth.svg?label=Windows%20build)](https://ci.appveyor.com/project/cohomology/hlabyrinth)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Haskell](https://img.shields.io/badge/language-haskell-blue.svg)](https://www.haskell.org)
 
 # hlabyrinth
 
