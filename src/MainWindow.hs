@@ -42,9 +42,10 @@ run :: CmdOptions -> IO ()
 run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
-  localeString <- Locale.setLocale Locale.LC_CTYPE (Just "")
+  localeString <- Locale.setLocale Locale.LC_MESSAGES (Just "")
   GTK.initGUI
-  legendDimensions <- computeLegendDimensions
+  let language = localeGetLanguage localeString 
+  legendDimensions <- computeLegendDimensions language
   window <- GTK.windowNew
   canvas <- GTK.drawingAreaNew
   GTK.widgetAddEvents canvas [GTK.ButtonPressMask, 
@@ -61,7 +62,7 @@ run option = do
     stLabyrinth = labyrinth,
     stLegendDim = legendDimensions,
     stWindow = window,
-    stLanguage = localeGetLanguage localeString
+    stLanguage = language
   }
   GTK.on window GTK.objectDestroy     GTK.mainQuit
   GTK.on window GTK.keyPressEvent     (keyPressHandler state)
@@ -110,20 +111,16 @@ sizeChangeHandler state =
      liftIO $ stSetCursorFn state GTK.TopLeftArrow
      return True
 
-computeLegendDimensions :: IO (Int, Int)
-computeLegendDimensions =
+computeLegendDimensions :: Language -> IO (Int, Int)
+computeLegendDimensions language =
     Cairo.withImageSurface Cairo.FormatRGB24 1920 1080 withSurface
   where withSurface :: Cairo.Surface -> IO (Int, Int)
         withSurface surface = Cairo.renderWith surface doRender
         doRender :: Cairo.Render (Int, Int)
         doRender = do setLegendTextStyle
-                      extents <- Cairo.textExtents legend
+                      extents <- Cairo.textExtents (renderLegend language)
                       return (ceiling $ Cairo.textExtentsWidth extents, 
                               ceiling $ Cairo.textExtentsHeight extents)
-
-legend :: String 
-legend = "LEFT BTN: DRAW | RIGHT BTN: CLEAR | ESC: QUIT | s: PLACE START | t: PLACE TARGET | c: CLEAR LABYRINTH | \ 
-         \ w: FIND PATH | r: RESET PATH | F1: SAVE | F2: LOAD"
 
 setLegendTextStyle :: Cairo.Render()
 setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
@@ -151,7 +148,7 @@ drawLabyrinth state drawRectangle (Just info) =
     clearArea 
     drawAxes (labyRedrIntersect info) (labyRedrGrid info)
     drawBoxes state (labyRedrBoxes info)
-    drawLegend (labyRedrLegend info) (grLegendRectangle $ labyRedrGrid info)
+    drawLegend (stLanguage state) (labyRedrLegend info) (grLegendRectangle $ labyRedrGrid info)
 
 clearArea :: Cairo.Render ()
 clearArea = do Cairo.save
@@ -216,15 +213,15 @@ createBoxText state boxState (x, y, width, height)
          Cairo.setSourceRGB 0 0 0
          GTK.showLayout layout
                                             
-drawLegend :: Bool -> Rectangle Int -> Cairo.Render ()
-drawLegend False _               = return ()
-drawLegend True  legendRectangle = 
+drawLegend :: Language -> Bool -> Rectangle Int -> Cairo.Render ()
+drawLegend language False _               = return ()
+drawLegend language True  legendRectangle = 
   do 
     let (x,y) = rTopLeft legendRectangle
     Cairo.save
     Cairo.moveTo (fromIntegral x) (fromIntegral y)
     setLegendTextStyle
-    Cairo.showText legend
+    Cairo.showText (renderLegend language)
     Cairo.restore
 
 buttonPressHandler :: LabyrinthState -> GTK.EventM GTK.EButton Bool

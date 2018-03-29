@@ -4,7 +4,8 @@ module UserTexts(
   DialogWidgetTexts(..),
   Language(..),
   BoxText(..),
-  localeGetLanguage
+  localeGetLanguage,
+  renderLegend
 ) where
 
 import qualified System.FilePath as Path 
@@ -42,6 +43,10 @@ data DialogWidgetTexts =
 
 data BoxText = BoxStartFieldText | BoxTargetFieldText
 
+data LegendText = DrawBoxText | ClearBoxText | QuitText | PlaceStartText | 
+                  PlaceTargetText | ClearLabyrinthText | FindPathText | ResetPathText |
+                  SaveText | LoadText deriving(Enum, Bounded)
+ 
 instance UserText ErrorMessage where  
   translate English (FileInternalErrorWhileSaving file) = 
     Printf.printf "Internal error while saving \"%s\"." file
@@ -90,3 +95,33 @@ instance UserText BoxText where
   
   translate German BoxStartFieldText = "S"
   translate German BoxTargetFieldText = "Z" 
+
+instance UserText LegendText where
+  translate English DrawBoxText        = "LEFT BTN: DRAW" 
+  translate English ClearBoxText       = "RIGHT BTN: CLEAR" 
+  translate English QuitText           = "ESC: QUIT"
+  translate English PlaceStartText     = "s: PLACE START"
+  translate English PlaceTargetText    = "t: PLACE TARGET"
+  translate English ClearLabyrinthText = "c: CLEAR LABYRINTH" 
+  translate English FindPathText       = "w: FIND PATH"  
+  translate English ResetPathText      = "r: RESET PATH"   
+  translate English SaveText           = "F1: SAVE"    
+  translate English LoadText           = "F2: LOAD"     
+
+  translate German DrawBoxText        = "MAUS LINKS: FELD ZEICHNEN" 
+  translate German ClearBoxText       = "MAUS RECHTS: FELD LÖSCHEN" 
+  translate German QuitText           = "ESC: BEENDEN"
+  translate German PlaceStartText     = "s: START PLATZIEREN"
+  translate German PlaceTargetText    = "t: ZIEL PLATZIEREN"
+  translate German ClearLabyrinthText = "c: LABYRINTH LÖSCHEN" 
+  translate German FindPathText       = "w: WEG FINDEN"  
+  translate German ResetPathText      = "r: WEG ZURÜCKSETZEN"   
+  translate German SaveText           = "F1: SPEICHERN"    
+  translate German LoadText           = "F2: LADEN" 
+
+renderLegend :: Language -> String
+renderLegend language = 
+  let concatDelim "" y = y
+      concatDelim x y  = x ++ " | " ++ y
+      legendPieces = [minBound..maxBound] :: [LegendText] 
+  in foldl concatDelim  "" (map (translate language) legendPieces)
