@@ -32,3 +32,5 @@ bindings/*/dist-newstyle/*
 
 # For Emacs
 TAGS
+
+/**/.vscode/
