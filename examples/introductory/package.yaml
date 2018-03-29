@@ -1,0 +1,64 @@
+name:                basic
+version:             0.1.0.0
+# github:              "githubuser/exercises"
+license:             LGPL-2.1
+author:              "Murat Özsöyler"
+maintainer:          "murat.ozsoyler@gmail.com"
+copyright:           "2018 Murat Özsöyler"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            Basic program example in GTK+ documents
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/githubuser/exercises#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- text
+- gi-gio
+- gi-gtk
+- haskell-gi-base
+
+executables:
+  basic:
+    main:                basic.hs
+    source-dirs:         src
+    ghc-options:
+    - -Wall
+    - -fno-warn-unused-do-bind
+    - -fwarn-incomplete-patterns
+    - -fno-warn-name-shadowing
+    - -fno-warn-unused-do-bind
+    - -threaded
+    - -with-rtsopts=-N
+
+  hello-world:
+    main:                hello-world.hs
+    source-dirs:         src
+    ghc-options:
+    - -Wall
+    - -fno-warn-unused-do-bind
+    - -fwarn-incomplete-patterns
+    - -fno-warn-name-shadowing
+    - -fno-warn-unused-do-bind
+    - -threaded
+    - -with-rtsopts=-N
+
+  packed-widgets:
+    main:                packed-widgets.hs
+    source-dirs:         src
+    ghc-options:
+    - -Wall
+    - -fno-warn-unused-do-bind
+    - -fwarn-incomplete-patterns
+    - -fno-warn-name-shadowing
+    - -fno-warn-unused-do-bind
+    - -threaded
+    - -with-rtsopts=-N
