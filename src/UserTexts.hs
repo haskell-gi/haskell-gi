@@ -20,7 +20,7 @@ defaultLanguage = English
 localeGetLanguage :: Maybe String -> Language
 localeGetLanguage Nothing = defaultLanguage
 localeGetLanguage (Just languageString)
-  | length languageString <= 2 = defaultLanguage
+  | length languageString < 2 = defaultLanguage
   | otherwise = localeGetLanguageDo $ take 2 languageString 
   where localeGetLanguageDo lang = case lang of 
                                        "de" -> German
