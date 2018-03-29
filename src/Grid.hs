@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric  #-}
-
 module Grid(
   Grid(..),
   PointInGridCoordinates(..),
@@ -12,9 +10,7 @@ module Grid(
   grAxesList,
 ) where 
 
-import GHC.Generics
-import Data.Binary(Binary)
-
+import Data.SafeCopy(SafeCopy(..), contain, safePut, safeGet)  
 import Rectangle
 
 type PointInGridCoordinates a = Point a
@@ -30,9 +26,14 @@ data Grid a = Grid {
   grXBoxCnt :: a,
   grYBoxCnt :: a,
   grBorderSize :: a
-} deriving(Eq, Show, Generic)
+} deriving(Eq, Show)
 
-instance Binary a => Binary (Grid a)
+instance SafeCopy a => SafeCopy (Grid a) where 
+  putCopy (Grid ss r lr bs xbc ybc bos) = contain $ do safePut ss; safePut r; safePut lr; safePut bs;
+                                                       safePut xbc; safePut ybc; safePut bos;
+  getCopy = contain $ Grid <$> safeGet <*> safeGet <*> safeGet <*> safeGet <*> safeGet 
+                                       <*> safeGet <*> safeGet
+
 
 grPixelToBox :: (Integral a, Ord a) => Grid a -> PointInScreenCoordinates a -> Maybe (PointInGridCoordinates a)
 grPixelToBox grid (x,y) = let rectangle = grRectangle grid

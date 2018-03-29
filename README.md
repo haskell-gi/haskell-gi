@@ -1,4 +1,6 @@
-[![Build Status](https://travis-ci.org/cohomology/hlabyrinth.svg?branch=master)](https://travis-ci.org/cohomology/hlabyrinth)
+[![Linux Build Status](https://img.shields.io/travis/cohomology/hlabyrinth/master.svg?label=Linux%20build)](https://travis-ci.org/cohomology/hlabyrinth)  [![Windows Build Status](https://img.shields.io/appveyor/ci/cohomology/hlabyrinth/master.svg?label=Windows%20build)](https://ci.appveyor.com/project/cohomology/hlabyrinth)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Haskell](https://img.shields.io/badge/language-haskell-blue.svg)](https://www.haskell.org)
 
 # hlabyrinth
 
@@ -30,16 +32,15 @@ curl -sSL https://get.haskellstack.org/ | sh
 
 ```
 curl https://nixos.org/nix/install | sh
-source ~/.nix-profile/etc/profile.d/nix.sh 
 ```
 [nix](https://nixos.org/nix/) is like `stack` for _external_ dependencies, like operating system libraries. It ensures that the build is made in some closed container, independent of the environment of the underlying operating system. The `stack.yaml` configuration automatically builds inside a nix container, so you do not have to envoke any `nix` commands by yourself. Note that `nix` uses alot of space inside `/nix/store`. A basic set of packages used for building `hlabyrinth` is about 2 GB.
 
 3. Build the project
 ```
-stack build
+stack --stack-yaml stack-nix.yaml build
 ```
 4. Run the project
 ```
-stack install stack-run
-stack run
+stack --stack-yaml stack-nix.yaml install stack-run
+stack --stack-yaml stack-nix.yaml run
 ```
