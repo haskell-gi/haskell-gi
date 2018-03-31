@@ -21,8 +21,7 @@ before_build:
 - 7z x stack.zip stack.exe
 - for /f %%i in ('stack path --programs') do set STACK_PROGRAMS_PATH=%%i
 - for /f %%i in ('stack path --local-bin') do set STACK_BIN_PATH=%%i
-- for /f %%i in ('stack exec ghc -- --version | grep -oP "version\s+\K([\w.])*') do set GHC_VERSION=%%i
-- copy C:\msys64\mingw64\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-%GHC_VERSION%\bin
+- copy C:\msys64\mingw64\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-8.2.2\bin
 
 clone_folder: "c:\\stack"
 
