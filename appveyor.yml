@@ -2,7 +2,6 @@
 #cache:
 #- "c:\\sr" # stack root, short paths == fewer problems
 
-build: off
 platform: x64
 
 environment:
@@ -22,15 +21,16 @@ before_test:
 - 7z x stack.zip stack.exe
 - for /f %%i in ('stack path --programs') do set STACK_PROGRAMS_PATH=%%i
 - for /f %%i in ('stack path --local-bin') do set STACK_BIN_PATH=%%i
-- copy C:\msys64\mingw64\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-8.2.2\bin
+- for /f %%i in ('stack exec ghc -- --version | grep -oP "version\s+\K([\w.])*') do set GHC_VERSION=%%i
+- copy C:\msys64\mingw64\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-%GHC_VERSION%\bin
 
 clone_folder: "c:\\stack"
 
-test_script:
+build_script:
 - stack setup > nul
 # The ugly echo "" hack is to avoid complaints about 0 being an invalid file
 # descriptor
-- echo "" | stack --no-terminal test --jobs 1
+- echo "" | stack --no-terminal build --jobs 1
 
 after_build:
 - stack install
@@ -78,6 +78,9 @@ after_build:
 - cp -ruH %MINGW64_PATH%/share/icons BuildResult/share
 - cp -ruH %MINGW64_PATH%/share/glib-2.0 BuildResult/share
 - 7z a hlabyrinth.zip BuildResult\*
+
+test_script:
+- echo "" | stack --no-terminal test --jobs 1
 
 branches:
   only:
