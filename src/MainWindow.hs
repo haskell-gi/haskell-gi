@@ -45,7 +45,6 @@ run option = do
       borderSize = cmdBorderSize option
   language <- GI.getDefaultLanguage
   languageString <- GIPango.languageToString language 
-  putStrLn $ Text.unpack languageString
   GTK.initGUI
   let labyLanguage = getLanguage $ Text.unpack languageString 
   legendDimensions <- computeLegendDimensions labyLanguage
