@@ -11,7 +11,8 @@ environment:
 
 before_test:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
-- SET PATH=C:\msys64\mingw64\bin;C:\msys64\usr\bin;%PATH%
+- SET MINGW64_PATH=c:\msys64\mingw64
+- SET PATH=%MINGW64_PATH%\bin;C:\msys64\usr\bin;%PATH%
 - SET PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
 - SET XDG_DATA_DIRS=C:\msys64\mingw64\share
 - pacman --noconfirm -Syu
@@ -20,8 +21,8 @@ before_test:
 - curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
 - 7z x stack.zip stack.exe
 - for /f %%i in ('stack path --programs') do set STACK_PROGRAMS_PATH=%%i
+- for /f %%i in ('stack path --local-bin') do set STACK_BIN_PATH=%%i
 - copy C:\msys64\mingw64\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-8.2.2\bin
-
 
 clone_folder: "c:\\stack"
 
@@ -31,6 +32,57 @@ test_script:
 # descriptor
 - echo "" | stack --no-terminal test --jobs 1
 
+after_build:
+- stack install
+- mkdir BuildResult
+- mkdir -p BuildResult/bin
+- mkdir -p BuildResult/share
+- cp -uH %STACK_BIN_PATH%/hlabyrinth.exe BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libatk-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libatk-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libcairo-gobject-2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libcairo-2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgdk_pixbuf-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgdk-3-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgio-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libglib-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgobject-2.0-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgthread-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgtk-3-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpango-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpangocairo-1.0-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libintl-8.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgcc_s_seh-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libfontconfig-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libfreetype-6.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpng16-16.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/zlib1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libepoxy-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgmodule-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libwinpthread-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpcre-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libffi-6.dll BuildResult/bin  
+- cp -uH %MINGW64_PATH%/bin/libpangoft2-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpangowin32-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libiconv-2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libexpat-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libbz2-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libharfbuzz-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgraphite2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libstdc++-6.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll BuildResult/bin
+- cp -ruH %MINGW64_PATH%/share/themes BuildResult/share
+- cp -ruH %MINGW64_PATH%/share/icons BuildResult/share
+- cp -ruH %MINGW64_PATH%/share/glib-2.0 BuildResult/share
+- 7z a hlabyrinth.zip BuildResult\*
+
 branches:
   only:
     - master
+
+artifacts:
+  - path: hlabyrinth.zip
+    name: hlabyrinth
