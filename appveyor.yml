@@ -8,7 +8,7 @@ environment:
   global:
     STACK_ROOT: "c:\\sr" 
 
-before_test:
+before_build:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
 - SET MINGW64_PATH=c:\msys64\mingw64
 - SET PATH=%MINGW64_PATH%\bin;C:\msys64\usr\bin;%PATH%
