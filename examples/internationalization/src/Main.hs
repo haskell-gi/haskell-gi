@@ -32,6 +32,5 @@ loadWindow :: IO (Maybe ApplicationWindow)
 loadWindow = do
   builder <- builderNew
   builderAddFromFile builder "ui/i18n.ui"
-  --builderSetTranslationDomain builder (Just "i18n")
   mWindow <- builderGetObject builder "window"
   maybe (return Nothing) (castTo ApplicationWindow) mWindow
