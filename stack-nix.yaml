@@ -4,7 +4,12 @@ packages:
 extra-deps:
 - gio-0.13.4.1
 - gtk3-0.14.8
-resolver: lts-11.1
+- gi-gtk-3.0.22
+- gi-gdk-3.0.15
+- gi-gdkpixbuf-2.0.15
+- gi-gio-2.0.17
+- gi-pango-1.0.16
+resolver: lts-11.2
 nix:
   enable: true
   packages: [llvm_39,pkgconfig,cairo,pango,gtk3]

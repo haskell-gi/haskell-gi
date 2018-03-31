@@ -4,7 +4,7 @@ module UserTexts(
   DialogWidgetTexts(..),
   Language(..),
   BoxText(..),
-  localeGetLanguage,
+  getLanguage,
   renderLegend
 ) where
 
@@ -17,9 +17,8 @@ data Language = English | German
 defaultLanguage :: Language
 defaultLanguage = English
 
-localeGetLanguage :: Maybe String -> Language
-localeGetLanguage Nothing = defaultLanguage
-localeGetLanguage (Just languageString)
+getLanguage :: String -> Language
+getLanguage languageString
   | length languageString < 2 = defaultLanguage
   | otherwise = localeGetLanguageDo $ take 2 languageString 
   where localeGetLanguageDo lang = case lang of 

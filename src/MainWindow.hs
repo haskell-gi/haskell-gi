@@ -13,10 +13,11 @@ import qualified Graphics.UI.Gtk as GTK
 import qualified Graphics.Rendering.Cairo as Cairo
 import qualified System.Glib as Glib
 import qualified Graphics.Rendering.Pango.Layout as Pango
+import qualified GI.Gtk as GI
+import qualified GI.Pango as GIPango
 import qualified Control.Concurrent.STM as STM
 import qualified System.Directory as Directory
 import qualified System.FilePath as Path 
-import qualified System.Locale.SetLocale as Locale
 
 import qualified LoadSave 
 import Rectangle
@@ -42,10 +43,12 @@ run :: CmdOptions -> IO ()
 run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
-  localeString <- Locale.setLocale Locale.LC_MESSAGES (Just "")
+  language <- GI.getDefaultLanguage
+  languageString <- GIPango.languageToString language 
+  putStrLn $ Text.unpack languageString
   GTK.initGUI
-  let language = localeGetLanguage localeString 
-  legendDimensions <- computeLegendDimensions language
+  let labyLanguage = getLanguage $ Text.unpack languageString 
+  legendDimensions <- computeLegendDimensions labyLanguage
   window <- GTK.windowNew
   canvas <- GTK.drawingAreaNew
   GTK.widgetAddEvents canvas [GTK.ButtonPressMask, 
@@ -62,7 +65,7 @@ run option = do
     stLabyrinth = labyrinth,
     stLegendDim = legendDimensions,
     stWindow = window,
-    stLanguage = language
+    stLanguage = labyLanguage
   }
   GTK.on window GTK.objectDestroy     GTK.mainQuit
   GTK.on window GTK.keyPressEvent     (keyPressHandler state)

@@ -19,6 +19,9 @@ before_test:
 - appveyor-retry pacman -S --noconfirm mingw64/mingw-w64-x86_64-gtk3 mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gobject-introspection mingw64/mingw-w64-x86_64-cairo mingw64/mingw-w64-x86_64-pango
 - curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
 - 7z x stack.zip stack.exe
+- for /f %%i in ('stack path --programs') do set STACK_PROGRAMS_PATH=%%i
+- copy C:\msys64\mingw64\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-8.2.2\bin
+
 
 clone_folder: "c:\\stack"
 
@@ -26,7 +29,7 @@ test_script:
 - stack setup > nul
 # The ugly echo "" hack is to avoid complaints about 0 being an invalid file
 # descriptor
-- echo "" | stack --no-terminal --extra-lib-dirs c:\msys64\mingw64\lib --extra-include-dirs c:\msys64\mingw64\include;c:\msys64\mingw64\lib\gtk-3.0\include;c:\msys64\mingw64\include\glib-2.0;c:\msys64\mingw64\lib\pango-1.0\include;c:\msys64\mingw64\lib\cairo\include;c:\msys64\mingw64\lib\gdk-pixbuf-2.0\include test --jobs 1
+- echo "" | stack --no-terminal test --jobs 1
 
 branches:
   only:
