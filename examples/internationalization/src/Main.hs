@@ -1,36 +1,36 @@
+{-# LANGUAGE OverloadedLabels, OverloadedStrings #-}
+
 module Main where
 
-import           Data.Maybe (fromJust)
-import qualified Data.Text as T
-import           GI.Gtk hiding (main)
-import           GI.Gio hiding (Application, applicationNew)
+import           System.Exit  (die)
+import qualified GI.Gtk       as Gtk
+import           Data.GI.Base (new, on, AttrOp((:=)), unsafeCastTo)
 
 main :: IO ()
 main = do
-  mApp <- applicationNew (Just "com.example.i18n")
-                         [ApplicationFlagsFlagsNone]
-  maybe (return ()) runApplication mApp
- where runApplication app = do
-           onApplicationActivate app (goExample app)
-           applicationRun app (Just ["i18n"])
-           return ()
+  app <- new Gtk.Application [ #applicationId := "com.example.i18n" ]
 
+  on app #activate (goExample app)
+  #run app Nothing
 
-goExample :: Application -> IO ()
+  return ()
+
+goExample :: Gtk.Application -> IO ()
 goExample app = do
-  mWindow <- loadWindow
-  maybe showError showWindow mWindow
- where showError = do 
-           putStrLn "Something seems to have gone wrong loading the window"
-           putStrLn "Ending the example..."
-       showWindow window = do
-           applicationAddWindow app window
-           widgetShowAll window
+  window <- loadWindow
 
+  #addWindow app window
+  #showAll window
 
-loadWindow :: IO (Maybe ApplicationWindow)
+loadWindow :: IO Gtk.ApplicationWindow
 loadWindow = do
-  builder <- builderNew
-  builderAddFromFile builder "ui/i18n.ui"
-  mWindow <- builderGetObject builder "window"
-  maybe (return Nothing) (castTo ApplicationWindow) mWindow
+  builder <- new Gtk.Builder []
+
+  #addFromFile builder "ui/i18n.ui"
+  mWindow <- #getObject builder "window"
+
+  maybe showError (unsafeCastTo Gtk.ApplicationWindow) mWindow
+
+  where
+    showError = die ("Something seems to have gone wrong loading the window.\n"
+                     <> "Ending the example...")
