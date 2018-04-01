@@ -21,9 +21,6 @@ install:
  - cabal --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
  - travis_retry cabal update
- - cabal install Cabal-$CABALLIBVER
- - hash -r
- - cabal --version
 
 # Here starts the actual work to be performed for the package under test; any command which exits with a non-zero exit code causes the build to fail.
 script:
@@ -34,7 +31,7 @@ script:
  - cabal build
  - cabal install
  - popd
- - cabal install --dependencies-only
+ - cabal install --dependencies-only --contraint="Cabal == $CABALVER.*"
  - cabal configure
  - cabal build
  # For building the test program later, doing it now avoids a recompilation
