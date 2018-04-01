@@ -2,8 +2,8 @@ sudo: required
 dist: trusty
 
 env:
- - CABALVER=1.18 CABALLIBVER=1.18.1.7 GHCVER=7.8.3
- - CABALVER=1.18 CABALLIBVER=1.18.1.7 GHCVER=7.8.4
+ - CABALVER=1.18 CABALLIBVER=1.22.8.0 GHCVER=7.8.3
+ - CABALVER=1.18 CABALLIBVER=1.22.8.0 GHCVER=7.8.4
  - CABALVER=1.22 CABALLIBVER=1.22.8.0 GHCVER=7.10.1
  - CABALVER=1.22 CABALLIBVER=1.22.8.0 GHCVER=7.10.2
  - CABALVER=1.22 CABALLIBVER=1.22.8.0 GHCVER=7.10.3
@@ -31,7 +31,7 @@ script:
  - cabal build
  - cabal install
  - popd
- - cabal install --dependencies-only --contraint="Cabal == $CABALVER.*"
+ - cabal install --dependencies-only --contraint="Cabal == $CABALLIBVER*"
  - cabal configure
  - cabal build
  # For building the test program later, doing it now avoids a recompilation
