@@ -31,23 +31,24 @@ script:
  - cabal build
  - cabal install
  - popd
- - cabal install --enable-tests --dependencies-only --constraint="Cabal == $CABALVER.*"
+ - cabal install --enable-tests --dependencies-only
  - cabal configure
  - cabal build
  # For building the test program later, doing it now avoids a recompilation
  - cabal run haskell-gi -- -l -O test Gtk Gdk
  - cabal run haskell-gi -- -c -O test Gtk
+ - cabal test
  - cabal clean
  - cabal check
 
  - cd bindings
- - cabal install --dependencies-only --constraint="Cabal == $CABALVER.*"
+ - cabal install --dependencies-only
  - cabal run genBuildInfo `./PKGS.sh`
  - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
  - cabal install -j1 ./Gtk
  - cabal install -j3 ./GtkSource
  - cd ../test
- - cabal install --dependencies-only --constraint="Cabal == $CABALVER.*"
+ - cabal install --dependencies-only
  - cabal configure
  - cabal build
 notifications:
