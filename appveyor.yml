@@ -8,12 +8,14 @@ environment:
   global:
     STACK_ROOT: "c:\\sr" 
 
+clone_folder: "c:\\stack"
+
 before_build:
 # http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
 - SET MINGW64_PATH=c:\msys64\mingw64
 - SET PATH=%MINGW64_PATH%\bin;C:\msys64\usr\bin;%PATH%
-- SET PKG_CONFIG_PATH=C:\msys64\mingw64\lib\pkgconfig
-- SET XDG_DATA_DIRS=C:\msys64\mingw64\share
+- SET PKG_CONFIG_PATH=%MINGW64_PATH%\lib\pkgconfig
+- SET XDG_DATA_DIRS=%MINGW64_PATH%\share
 - pacman --noconfirm -Syu
 - appveyor-retry pacman -S --needed --noconfirm base-devel mingw64/mingw-w64-x86_64-toolchain autoconf automake libtool make mingw64/mingw-w64-x86_64-libtool
 - appveyor-retry pacman -S --noconfirm mingw64/mingw-w64-x86_64-gtk3 mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gobject-introspection mingw64/mingw-w64-x86_64-cairo mingw64/mingw-w64-x86_64-pango
@@ -21,9 +23,8 @@ before_build:
 - 7z x stack.zip stack.exe
 - for /f %%i in ('stack path --programs') do set STACK_PROGRAMS_PATH=%%i
 - for /f %%i in ('stack path --local-bin') do set STACK_BIN_PATH=%%i
-- copy C:\msys64\mingw64\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-8.2.2\bin
-
-clone_folder: "c:\\stack"
+- for /f %%i in ('stack exec ghc -- --version ^| grep -oP "version\s+\K([\w.])*"') do set GHC_VERSION=%%i
+- copy %MINGW64_PATH%\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-%GHC_VERSION%\bin
 
 build_script:
 - stack setup > nul
@@ -34,8 +35,8 @@ build_script:
 after_build:
 - stack install
 - mkdir BuildResult
-- mkdir -p BuildResult/bin
-- mkdir -p BuildResult/share
+- mkdir BuildResult\bin
+- mkdir BuildResult\share
 - cp -uH %STACK_BIN_PATH%/hlabyrinth.exe BuildResult/bin
 - cp -uH %MINGW64_PATH%/bin/libatk-1.0-0.dll BuildResult/bin
 - cp -uH %MINGW64_PATH%/bin/libatk-1.0-0.dll BuildResult/bin
