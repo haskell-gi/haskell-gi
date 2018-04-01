@@ -4,7 +4,6 @@ dist: trusty
 env:
  - CABALVER=2.2 GHCVER=7.10.3
  - CABALVER=2.2 GHCVER=8.0.2
- - CABALVER=2.2 GHCVER=8.2.2
  - CABALVER=2.2 GHCVER=8.4.1
 
 before_install:
