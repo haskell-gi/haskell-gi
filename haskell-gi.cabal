@@ -27,7 +27,7 @@ Library
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.32, gobject-2.0 >= 2.32
   build-depends:       base >= 4.7 && < 5,
                        haskell-gi-base == 0.21.*,
-                       Cabal >= 1.20,
+                       Cabal >= 1.18,
                        attoparsec == 0.13.*,
                        containers,
                        directory,
