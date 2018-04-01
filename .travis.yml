@@ -31,7 +31,7 @@ script:
  - cabal build
  - cabal install
  - popd
- - cabal install --dependencies-only --contraint="Cabal-$CABALLIBVER"
+ - cabal install --dependencies-only --constraint="Cabal == $CABALLIBVER"
  - cabal configure
  - cabal build
  # For building the test program later, doing it now avoids a recompilation
