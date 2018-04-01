@@ -79,7 +79,7 @@ There is now still no way to translate the strings. For that we must extract
 them. We can do this with multiple tools, but one reliable way is with xgettext.
 From the project directory run the following command:
 
-`gettext -L Glade -o po/i18n.pot ui/i18n.ui`
+`xgettext -L Glade -o po/i18n.pot ui/i18n.ui`
 
 Per language you want to translate to, copy the pot file to a po file with
 the language code as its name. For details on using the po format, see for
