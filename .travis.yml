@@ -41,7 +41,7 @@ script:
    if [ ${GHCVER%.*} = "7.8" ]; then
       echo Warning: No tests run since doctest does not install in GHC 7.8
    else
-      cabal install --enable-tests --dependencies-only
+      cabal install --enable-tests --dependencies-only --constraint="Cabal == $CABALLIBVER"
       cabal test
    fi
  - cabal clean
@@ -55,13 +55,13 @@ script:
    (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
 
  - cd bindings
- - cabal install --dependencies-only
+ - cabal install --dependencies-only --constraint="Cabal == $CABALLIBVER"
  - cabal run genBuildInfo `./PKGS.sh`
  - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
  - cabal install -j1 ./Gtk
  - cabal install -j3 ./GtkSource
  - cd ../test
- - cabal install --dependencies-only
+ - cabal install --dependencies-only --constraint="Cabal == $CABALLIBVER"
  - cabal configure
  - cabal build
 notifications:
