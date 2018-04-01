@@ -14,7 +14,7 @@ maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
 stability:           Experimental
 category:            Development
 build-type:          Simple
-tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1
+tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1, GHC == 8.4.1
 cabal-version:       >=1.8
 
 extra-source-files: ChangeLog.md
@@ -27,7 +27,7 @@ Library
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.32, gobject-2.0 >= 2.32
   build-depends:       base >= 4.7 && < 5,
                        haskell-gi-base == 0.21.*,
-                       Cabal >= 1.20,
+                       Cabal >= 1.24,
                        attoparsec == 0.13.*,
                        containers,
                        directory,
