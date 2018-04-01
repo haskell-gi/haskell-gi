@@ -2,13 +2,13 @@ sudo: required
 dist: trusty
 
 env:
- - CABALVER=1.18 CABALLIBVER=1.24.2.0 GHCVER=7.8.3
- - CABALVER=1.18 CABALLIBVER=1.24.2.0 GHCVER=7.8.4
- - CABALVER=1.22 CABALLIBVER=1.24.2.0 GHCVER=7.10.1
- - CABALVER=1.22 CABALLIBVER=1.24.2.0 GHCVER=7.10.2
- - CABALVER=1.22 CABALLIBVER=1.24.2.0 GHCVER=7.10.3
- - CABALVER=1.24 CABALLIBVER=1.24.2.0 GHCVER=8.0.1
- - CABALVER=1.24 CABALLIBVER=1.24.2.0 GHCVER=8.0.2
+ - CABALVER=1.24 GHCVER=7.8.3
+ - CABALVER=1.24 GHCVER=7.8.4
+ - CABALVER=1.24 GHCVER=7.10.1
+ - CABALVER=1.24 GHCVER=7.10.2
+ - CABALVER=1.24 GHCVER=7.10.3
+ - CABALVER=1.24 GHCVER=8.0.1
+ - CABALVER=1.24 GHCVER=8.0.2
 
 before_install:
  - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
@@ -31,7 +31,7 @@ script:
  - cabal build
  - cabal install
  - popd
- - cabal install --dependencies-only --constraint="Cabal == $CABALLIBVER"
+ - cabal install --dependencies-only --constraint="Cabal == $CABALVER.*"
  - cabal configure
  - cabal build
  # For building the test program later, doing it now avoids a recompilation
@@ -41,7 +41,7 @@ script:
    if [ ${GHCVER%.*} = "7.8" ]; then
       echo Warning: No tests run since doctest does not install in GHC 7.8
    else
-      cabal install --enable-tests --dependencies-only --constraint="Cabal == $CABALLIBVER"
+      cabal install --enable-tests --dependencies-only --constraint="Cabal == $CABALVER.*"
       cabal test
    fi
  - cabal clean
@@ -55,13 +55,13 @@ script:
    (cd dist && cabal install --force-reinstalls "$SRC_TGZ")
 
  - cd bindings
- - cabal install --dependencies-only --constraint="Cabal == $CABALLIBVER"
+ - cabal install --dependencies-only --constraint="Cabal == $CABALVER.*"
  - cabal run genBuildInfo `./PKGS.sh`
  - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
  - cabal install -j1 ./Gtk
  - cabal install -j3 ./GtkSource
  - cd ../test
- - cabal install --dependencies-only --constraint="Cabal == $CABALLIBVER"
+ - cabal install --dependencies-only --constraint="Cabal == $CABALVER.*"
  - cabal configure
  - cabal build
 notifications:
