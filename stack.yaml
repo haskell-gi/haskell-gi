@@ -9,4 +9,4 @@ extra-deps:
 - gi-gdkpixbuf-2.0.15
 - gi-gio-2.0.17
 - gi-pango-1.0.16
-resolver: lts-11.2
+resolver: lts-11.3
