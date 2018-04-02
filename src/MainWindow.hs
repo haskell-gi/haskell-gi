@@ -9,15 +9,14 @@ import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
 
 import qualified Data.Text as Text
-import qualified Graphics.UI.Gtk as GTK
-import qualified Graphics.Rendering.Cairo as Cairo
-import qualified System.Glib as Glib
-import qualified Graphics.Rendering.Pango.Layout as Pango
-import qualified GI.Gtk as GI
-import qualified GI.Pango as GIPango
 import qualified Control.Concurrent.STM as STM
 import qualified System.Directory as Directory
 import qualified System.FilePath as Path 
+
+import qualified GI.Gtk as GTK
+import qualified GI.Pango as Pango
+import qualified GI.Glib as Glib
+import qualified GI.Cairo as Cairo 
 
 import qualified LoadSave 
 import Rectangle
