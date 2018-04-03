@@ -7,6 +7,7 @@ import System.FilePath((</>))
 
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
+import Foreign.Ptr (castPtr) 
 
 import qualified Data.Text as Text
 import qualified Control.Concurrent.STM as STM
@@ -14,9 +15,11 @@ import qualified System.Directory as Directory
 import qualified System.FilePath as Path 
 
 import qualified GI.Gtk as GTK
+import qualified GI.Gdk as GDK
 import qualified GI.Pango as Pango
-import qualified GI.Glib as Glib
-import qualified GI.Cairo as Cairo 
+import qualified GI.GLib as Glib
+import qualified Graphics.Rendering.Cairo as Cairo
+import qualified GI.Cairo  
 
 import qualified LoadSave 
 import Rectangle
@@ -30,7 +33,7 @@ data CmdOptions = CmdOptions
 
 data LabyrinthState = LabyrinthState 
   { stRedrawFn    :: Rectangle Int -> IO (),
-    stSetCursorFn :: GTK.CursorType -> IO (),
+    stSetCursorFn :: GDK.CursorType -> IO (),
     stBoxSize     :: Int,
     stBorderSize  :: Int,
     stLabyrinth   :: STM.TVar (Maybe Labyrinth),
@@ -42,16 +45,16 @@ run :: CmdOptions -> IO ()
 run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
-  language <- GI.getDefaultLanguage
-  languageString <- GIPango.languageToString language 
-  GTK.initGUI
+  language <- GTK.getDefaultLanguage
+  languageString <- Pango.languageToString language 
+  GTK.init Nothing
   let labyLanguage = getLanguage $ Text.unpack languageString 
   legendDimensions <- computeLegendDimensions labyLanguage
-  window <- GTK.windowNew
+  window <- GTK.windowNew GTK.WindowTypeToplevel
   canvas <- GTK.drawingAreaNew
-  GTK.widgetAddEvents canvas [GTK.ButtonPressMask, 
-                              GTK.PointerMotionMask, 
-                              GTK.PointerMotionHintMask]
+  GTK.widgetAddEvents canvas [GDK.EventMaskButtonPressMask, 
+                              GDK.EventMaskPointerMotionMask, 
+                              GDK.EventMaskPointerMotionHintMask]
   GTK.containerAdd window canvas
   GTK.windowFullscreen window
   labyrinth  <- STM.atomically $ STM.newTVar Nothing  
@@ -65,43 +68,53 @@ run option = do
     stWindow = window,
     stLanguage = labyLanguage
   }
-  GTK.on window GTK.objectDestroy     GTK.mainQuit
-  GTK.on window GTK.keyPressEvent     (keyPressHandler state)
-  GTK.on canvas GTK.configureEvent    (sizeChangeHandler state)
-  GTK.on canvas GTK.draw              (drawCanvasHandler state)
-  GTK.on canvas GTK.buttonPressEvent  (buttonPressHandler state)
-  GTK.on canvas GTK.motionNotifyEvent (motionNotifyHandler state)
+  GTK.onWidgetDestroy window GTK.mainQuit
+  GTK.onWidgetKeyPressEvent window (keyPressHandler state)
+  GTK.onWidgetSizeAllocate canvas (sizeChangeHandler state) 
+  GTK.onWidgetDraw canvas (drawCanvasHandler state)
+  GTK.onWidgetButtonPressEvent canvas (buttonPressHandler state)
+  GTK.onWidgetMotionNotifyEvent canvas (motionNotifyHandler state)
   GTK.widgetShowAll window
-  GTK.mainGUI
+  GTK.main
+
+-- | This function bridges gi-cairo with the hand-written cairo
+-- package. It takes a `GI.Cairo.Context` (as it appears in gi-cairo),
+-- and a `Render` action (as in the cairo lib), and renders the
+-- `Render` action into the given context.
+renderWithContext :: GI.Cairo.Context -> Cairo.Render () -> IO ()
+renderWithContext ct r = withManagedPtr ct $ \p ->
+  runReaderT (runRender r) (Cairo (castPtr p)) 
 
 redraw :: GTK.DrawingArea -> Rectangle Int -> IO()
 redraw drawingArea rectangle = let (x,y,width,height) = rToTuple id rectangle
                                in GTK.widgetQueueDrawArea drawingArea x y width height
 
-setCursor :: GTK.DrawingArea -> GTK.CursorType -> IO () 
+setCursor :: GTK.DrawingArea -> GDK.CursorType -> IO () 
 setCursor window cursorType = do drawWindow <- GTK.widgetGetParentWindow window
-                                 cursor <- GTK.cursorNew cursorType
-                                 GTK.drawWindowSetCursor drawWindow (Just cursor)
+                                 cursor <- GDK.cursorNew cursorType
+                                 GDK.windowSetCursor drawWindow (Just cursor)
                                  return ()
 
-keyPressHandler :: LabyrinthState -> GTK.EventM GTK.EKey Bool
-keyPressHandler state = GTK.tryEvent $ 
+keyPressHandler :: LabyrinthState -> IO Bool
+keyPressHandler state keyPressInfo = 
   do
-    keyName <- GTK.eventKeyName
+    keyName <- GDK.getEventKeyKeyval keyPressInfo
     liftIO $ case Text.unpack keyName of
-      "Escape" -> saveAndQuit state
-      "s" -> setNextAction state SetStartField
-      "t" -> setNextAction state SetTargetField
-      "c" -> clearLabyrinth state 
-      "w" -> findPath state 
-      "r" -> resetPath state 
-      "F1" -> openSaveFileDialog state 
-      "F2" -> openOpenFileDialog state 
+      "Escape" -> saveAndQuit state                >> return True
+      "s" -> setNextAction state SetStartField     >> return True
+      "t" -> setNextAction state SetTargetField    >> return True
+      "c" -> clearLabyrinth state                  >> return True
+      "w" -> findPath state                        >> return True
+      "r" -> resetPath state                       >> return True
+      "F1" -> openSaveFileDialog state             >> return True
+      "F2" -> openOpenFileDialog state             >> return True
+      _    -> return False
 
-sizeChangeHandler :: LabyrinthState -> GTK.EventM GTK.EConfigure Bool
-sizeChangeHandler state =
+sizeChangeHandler :: LabyrinthState -> GDK.Rectangle -> IO ()
+sizeChangeHandler state rectangle =
   do let labyrinth = stLabyrinth state
-     region@(width, height) <- GTK.eventSize
+     region@(width, height) <- (GDK.getRectangleWidth rectangle, 
+                                GDK.getRectangleHeight rectangle)
      liftIO $ STM.atomically $ do
        old <- STM.readTVar labyrinth
        let boxSize = stBoxSize state
@@ -109,7 +122,7 @@ sizeChangeHandler state =
            legendDimensions = stLegendDim state
        new <- labyConstruct old boxSize borderSize legendDimensions region 
        STM.writeTVar labyrinth (Just new)
-     liftIO $ stSetCursorFn state GTK.TopLeftArrow
+     liftIO $ stSetCursorFn state GDK.CursorTypeTopLeftArrow
      return True
 
 computeLegendDimensions :: Language -> IO (Int, Int)
@@ -190,7 +203,7 @@ createBoxText state boxState (x, y, width, height)
   | boxState == StartField                = createBoxTextDo BoxStartFieldText
   | boxState == TargetField               = createBoxTextDo BoxTargetFieldText
   where
-    pixelToPoint :: Double -> GTK.FontMap -> IO Double
+    pixelToPoint :: Double -> Pango.FontMap -> IO Double
     pixelToPoint px fontMap = do resolution <- GTK.cairoFontMapGetResolution fontMap
                                  return $ px * 72 / resolution
     getMarkUp :: String -> Double -> String                                 
@@ -267,7 +280,7 @@ handleMarkBox state (x, y) action = do let redraw = stRedrawFn state
 setNextAction :: LabyrinthState -> NextAction -> IO ()
 setNextAction state action = 
   do STM.atomically $ STM.readTVar (stLabyrinth state) >>= labySetNextAction action 
-     stSetCursorFn state GTK.Cross            
+     stSetCursorFn state GDK.CursorTypeCrosshair 
 
 clearLabyrinth :: LabyrinthState ->  IO ()
 clearLabyrinth state = 

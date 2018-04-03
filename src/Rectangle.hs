@@ -12,7 +12,6 @@ module Rectangle(
 where
 
 import Data.SafeCopy (SafeCopy(..), contain, safePut, safeGet) 
-import qualified Graphics.UI.Gtk as GTK (Rectangle(..)) 
 
 type Point a = (a,a)
 
@@ -43,12 +42,6 @@ instance Num a => IsARectangle (Rectangle a) a where
   rTopLeftY (Rectangle _ y _ _) = y 
   rWidth    (Rectangle _ _ width _) = width   
   rHeight   (Rectangle _ _ _ height) = height    
-
-instance IsARectangle GTK.Rectangle Int where
-  rTopLeftX (GTK.Rectangle x _ _ _) = x
-  rTopLeftY (GTK.Rectangle _ y _ _) = y 
-  rWidth    (GTK.Rectangle _ _ width _) = width   
-  rHeight   (GTK.Rectangle _ _ _ height) = height     
 
 instance IsARectangle (Double, Double, Double, Double) Int where
   rTopLeftX (x,_,_,_) = round x

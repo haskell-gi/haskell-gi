@@ -1,15 +1,24 @@
 flags: {}
 packages:
 - .
+resolver: lts-11.3
 extra-deps:
-- gio-0.13.4.1
-- gtk3-0.14.8
 - gi-gtk-3.0.22
+- gi-pango-1.0.16
 - gi-gdk-3.0.15
 - gi-gdkpixbuf-2.0.15
 - gi-gio-2.0.17
-- gi-pango-1.0.16
-resolver: lts-11.2
+flags:
+  gi-gdk:
+    enable-overloading: false
+  gi-gdkpixbuf:
+    enable-overloading: false
+  gi-gio:
+    enable-overloading: false
+  gi-gtk:
+    enable-overloading: false
+  gi-pango:
+    enable-overloading: false 
 nix:
   enable: true
   packages: [llvm_39,pkgconfig,cairo,pango,gtk3,gobjectIntrospection]
