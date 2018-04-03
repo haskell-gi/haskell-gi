@@ -17,6 +17,7 @@ import qualified System.FilePath as Path
 import qualified GI.Gtk as GTK
 import qualified GI.Gdk as GDK
 import qualified GI.Pango as Pango
+import qualified GI.PangoCairo as PangoCairo
 import qualified GI.GLib as Glib
 import qualified Graphics.Rendering.Cairo as Cairo
 import qualified GI.Cairo  
@@ -71,7 +72,7 @@ run option = do
   GTK.onWidgetDestroy window GTK.mainQuit
   GTK.onWidgetKeyPressEvent window (keyPressHandler state)
   GTK.onWidgetSizeAllocate canvas (sizeChangeHandler state) 
-  GTK.onWidgetDraw canvas (drawCanvasHandler state)
+  GTK.onWidgetDraw canvas (renderWithContext $ drawCanvasHandler state)
   GTK.onWidgetButtonPressEvent canvas (buttonPressHandler state)
   GTK.onWidgetMotionNotifyEvent canvas (motionNotifyHandler state)
   GTK.widgetShowAll window
@@ -81,9 +82,9 @@ run option = do
 -- package. It takes a `GI.Cairo.Context` (as it appears in gi-cairo),
 -- and a `Render` action (as in the cairo lib), and renders the
 -- `Render` action into the given context.
-renderWithContext :: GI.Cairo.Context -> Cairo.Render () -> IO ()
-renderWithContext ct r = withManagedPtr ct $ \p ->
-  runReaderT (runRender r) (Cairo (castPtr p)) 
+renderWithContext :: Cairo.Render () -> GI.Cairo.Context -> IO ()
+renderWithContext render context = withManagedPtr context $ \p ->
+  runReaderT (runRender render) (Cairo (castPtr p)) 
 
 redraw :: GTK.DrawingArea -> Rectangle Int -> IO()
 redraw drawingArea rectangle = let (x,y,width,height) = rToTuple id rectangle
@@ -204,16 +205,16 @@ createBoxText state boxState (x, y, width, height)
   | boxState == TargetField               = createBoxTextDo BoxTargetFieldText
   where
     pixelToPoint :: Double -> Pango.FontMap -> IO Double
-    pixelToPoint px fontMap = do resolution <- GTK.cairoFontMapGetResolution fontMap
+    pixelToPoint px fontMap = do resolution <- PangoCairo.fontMapGetResolution fontMap
                                  return $ px * 72 / resolution
     getMarkUp :: String -> Double -> String                                 
     getMarkUp text pt = "<span font=\"" ++ show (round pt) ++ "\">" ++ text ++ "</span>"
-    setMarkUp :: Pango.PangoLayout -> String -> IO String 
-    setMarkUp layout string = Glib.glibToString <$> Pango.layoutSetMarkup layout (Glib.stringToGlib string)
+    setMarkUp :: Pango.Layout -> String -> IO () 
+    setMarkUp layout string = Pango.layoutSetMarkup layout (Text.pack string) (length string)
     createBoxTextDo :: BoxText -> Cairo.Render ()
     createBoxTextDo boxText =
       do let translation = translate (stLanguage state) boxText 
-         fontMap <- liftIO GTK.cairoFontMapGetDefault
+         fontMap <- PangoCairo.fontMapGetDefault
          context <- liftIO $ GTK.cairoCreateContext (Just fontMap)
          layout <- liftIO $ GTK.layoutEmpty context
          fontSize <- liftIO $ pixelToPoint width fontMap
