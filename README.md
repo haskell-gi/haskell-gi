@@ -39,7 +39,7 @@ stack build
 ```
 ### 3.2 Installation using stack and nix
 
-In opposite to the installation option via `stack` alone, this also automatically provides all dependencies in a container like manner. As an additional advantage, one may use the `llvm` backend for `ghc`. Note that this uses a lot of hard disk space, around `2.5 GB` for Nix and `3 GB` for stack.
+In opposite to the installation option via `stack` alone, this also automatically provides all dependencies in a container like manner. As an additional advantage, one may use the `llvm` backend for `ghc`. Note that this uses a lot of hard disk space, around `2.5 GB` for Nix and `3 GB` for stack. Luckily, the stack and nix repositories can easily be deleted by removing `~/.stack` and `/nix/`.
 
 1. Install stack 
 ```
