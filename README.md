@@ -21,7 +21,7 @@ One great source of fun when using Haskell, are the different ways to build a pr
 
 ### 3.1 Installation using stack
 
-This installation option has the advantage, that the native operating system libraries are used. Also much less hard disk space is wasted. As a disadvantage, `llvm` can not be used as a `ghc` backend.
+This installation option has the advantage, that the native operating system libraries are used. Also much less hard disk space is wasted. As a disadvantage, `llvm` can not be used as a `ghc` backend, except if you have a very old Linux distribution which still provides `llvm 3.9`.
 
 1. Install prerequisites
 
@@ -39,7 +39,7 @@ stack build
 ```
 ### 3.2 Installation using stack and nix
 
-In oposite to the installation option via `stack` alone, this also automatically provides all dependencies in a container like manner. As an additional advantage, one may use the `llvm` backend for `ghc`.
+In opposite to the installation option via `stack` alone, this also automatically provides all dependencies in a container like manner. As an additional advantage, one may use the `llvm` backend for `ghc`. Note that this uses a lot of hard disk space, round `2.5 GB` for Nix and `3 GB` for stack.
 
 1. Install stack 
 ```
