@@ -19,7 +19,7 @@ renderWithContext renderFn context = GI.withManagedPtr context $ \p ->
   runReaderT (runRender (renderFn context)) (Cairo (castPtr p))  
 
 dialogRun :: GTK.IsDialog a => a -> IO GTK.ResponseType 
-dialogRun dialog = (toEnum . fromIntegral) <$> GTK.dialogRun dialog 
+dialogRun dialog = toEnum . fromIntegral <$> GTK.dialogRun dialog 
 
 dialogAddButton :: GTK.IsDialog a => a -> String -> GTK.ResponseType -> IO GTK.Widget
 dialogAddButton dialog text response = 

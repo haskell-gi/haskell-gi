@@ -221,7 +221,7 @@ createBoxText cairoContext state boxState (x, y, width, height)
     createBoxTextDo boxText =
       do let translation = translate (stLanguage state) boxText 
          fontMap <- PangoCairo.fontMapGetDefault
-         context <- liftIO $ Pango.contextNew
+         context <- liftIO Pango.contextNew
          Pango.contextSetFontMap context fontMap
          layout <- liftIO $ Pango.layoutNew context
          fontSize <- liftIO $ pixelToPoint width fontMap
@@ -416,7 +416,7 @@ openFileDialog :: GTK.Window  -> GTK.FileChooserAction
                               -> IO ()
 openFileDialog window action language label button onSuccess =
   do dialog <- GI.new' GTK.FileChooserDialog [] 
-     GTK.setWindowTitle dialog (Text.pack $ label)
+     GTK.setWindowTitle dialog (Text.pack label)
      GTK.windowSetTransientFor dialog $ Just window
      GTK.fileChooserSetAction dialog action
      dialogAddButton dialog "gtk-cancel" GTK.ResponseTypeCancel
