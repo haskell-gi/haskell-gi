@@ -1,19 +1,19 @@
 module MainWindow(CmdOptions(..), run) where
 
 import Data.List(intersect)
-import Data.Maybe(isJust)
+import Data.Maybe(isJust, fromMaybe)
 import System.Exit(exitSuccess)
 import System.FilePath((</>))
 
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
-import Foreign.Ptr (castPtr) 
 
 import qualified Data.Text as Text
 import qualified Control.Concurrent.STM as STM
 import qualified System.Directory as Directory
 import qualified System.FilePath as Path 
 
+import qualified Data.GI.Base as GI
 import qualified GI.Gtk as GTK
 import qualified GI.Gdk as GDK
 import qualified GI.Pango as Pango
@@ -27,6 +27,7 @@ import Rectangle
 import Labyrinth
 import Grid
 import UserTexts
+import GIHelper
 
 data CmdOptions = CmdOptions
   { cmdBoxSize :: Int ,
@@ -54,8 +55,7 @@ run option = do
   window <- GTK.windowNew GTK.WindowTypeToplevel
   canvas <- GTK.drawingAreaNew
   GTK.widgetAddEvents canvas [GDK.EventMaskButtonPressMask, 
-                              GDK.EventMaskPointerMotionMask, 
-                              GDK.EventMaskPointerMotionHintMask]
+                              GDK.EventMaskPointerMotionMask]
   GTK.containerAdd window canvas
   GTK.windowFullscreen window
   labyrinth  <- STM.atomically $ STM.newTVar Nothing  
@@ -69,6 +69,7 @@ run option = do
     stWindow = window,
     stLanguage = labyLanguage
   }
+  disableEventCompression window
   GTK.onWidgetDestroy window GTK.mainQuit
   GTK.onWidgetKeyPressEvent window (keyPressHandler state)
   GTK.onWidgetSizeAllocate canvas (sizeChangeHandler state) 
@@ -78,28 +79,30 @@ run option = do
   GTK.widgetShowAll window
   GTK.main
 
--- | This function bridges gi-cairo with the hand-written cairo
--- package. It takes a `GI.Cairo.Context` (as it appears in gi-cairo),
--- and a `Render` action (as in the cairo lib), and renders the
--- `Render` action into the given context.
-renderWithContext :: Cairo.Render () -> GI.Cairo.Context -> IO ()
-renderWithContext render context = withManagedPtr context $ \p ->
-  runReaderT (runRender render) (Cairo (castPtr p)) 
+disableEventCompression :: GTK.Window -> IO ()
+disableEventCompression window =
+  do maybeGdkWindow <- GTK.widgetGetWindow window  
+     case maybeGdkWindow of
+         Just gdkWindow -> GDK.windowSetEventCompression gdkWindow False 
+         Nothing        -> return ()
 
 redraw :: GTK.DrawingArea -> Rectangle Int -> IO()
-redraw drawingArea rectangle = let (x,y,width,height) = rToTuple id rectangle
+redraw drawingArea rectangle = let (x,y,width,height) = rToTuple fromIntegral rectangle
                                in GTK.widgetQueueDrawArea drawingArea x y width height
 
 setCursor :: GTK.DrawingArea -> GDK.CursorType -> IO () 
-setCursor window cursorType = do drawWindow <- GTK.widgetGetParentWindow window
-                                 cursor <- GDK.cursorNew cursorType
-                                 GDK.windowSetCursor drawWindow (Just cursor)
-                                 return ()
+setCursor window cursorType = do maybeWindow <- GTK.widgetGetParentWindow window
+                                 case maybeWindow of 
+                                     Just gdkWindow -> do display <- GDK.windowGetDisplay gdkWindow
+                                                          cursor <- GDK.cursorNewForDisplay display cursorType 
+                                                          GDK.windowSetCursor gdkWindow (Just cursor)
+                                     Nothing     -> return ()
 
-keyPressHandler :: LabyrinthState -> IO Bool
+keyPressHandler :: LabyrinthState -> GDK.EventKey -> IO Bool
 keyPressHandler state keyPressInfo = 
   do
-    keyName <- GDK.getEventKeyKeyval keyPressInfo
+    keyVal <- GDK.getEventKeyKeyval keyPressInfo
+    keyName <- fromMaybe Text.empty <$> GDK.keyvalName keyVal
     liftIO $ case Text.unpack keyName of
       "Escape" -> saveAndQuit state                >> return True
       "s" -> setNextAction state SetStartField     >> return True
@@ -114,8 +117,9 @@ keyPressHandler state keyPressInfo =
 sizeChangeHandler :: LabyrinthState -> GDK.Rectangle -> IO ()
 sizeChangeHandler state rectangle =
   do let labyrinth = stLabyrinth state
-     region@(width, height) <- (GDK.getRectangleWidth rectangle, 
-                                GDK.getRectangleHeight rectangle)
+     width <- GDK.getRectangleWidth rectangle 
+     height <- GDK.getRectangleHeight rectangle
+     let region = (width, height)
      liftIO $ STM.atomically $ do
        old <- STM.readTVar labyrinth
        let boxSize = stBoxSize state
@@ -124,7 +128,6 @@ sizeChangeHandler state rectangle =
        new <- labyConstruct old boxSize borderSize legendDimensions region 
        STM.writeTVar labyrinth (Just new)
      liftIO $ stSetCursorFn state GDK.CursorTypeTopLeftArrow
-     return True
 
 computeLegendDimensions :: Language -> IO (Int, Int)
 computeLegendDimensions language =
@@ -142,27 +145,28 @@ setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
                         Cairo.setSourceRGB 0 0 0                        
                         Cairo.setFontSize 13.0
 
-drawCanvasHandler :: LabyrinthState -> Cairo.Render ()
-drawCanvasHandler state = 
+drawCanvasHandler :: LabyrinthState -> GI.Cairo.Context -> Cairo.Render Bool
+drawCanvasHandler state cairoContext = 
   do 
     let labyrinth = stLabyrinth state
     extents <- Cairo.clipExtents
     let drawRectangle = rFromBoundingBox round extents
     redrawInfo <- liftIO (getRedrawInfo labyrinth drawRectangle)
-    drawLabyrinth state drawRectangle redrawInfo
+    drawLabyrinth cairoContext state drawRectangle redrawInfo
+    return True
   where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> IO (Maybe RedrawInfo)
         getRedrawInfo labyrinth drawRectangle = STM.atomically $
           do
             labyrinth <- STM.readTVar labyrinth
             labyGetRedrawInfo labyrinth drawRectangle
 
-drawLabyrinth :: LabyrinthState -> Rectangle Int -> Maybe RedrawInfo -> Cairo.Render ()
-drawLabyrinth _      _            Nothing     = return ()
-drawLabyrinth state drawRectangle (Just info) = 
+drawLabyrinth :: GI.Cairo.Context -> LabyrinthState -> Rectangle Int -> Maybe RedrawInfo -> Cairo.Render ()
+drawLabyrinth _            _     _             Nothing     = return ()
+drawLabyrinth cairoContext state drawRectangle (Just info) = 
   do
     clearArea 
     drawAxes (labyRedrIntersect info) (labyRedrGrid info)
-    drawBoxes state (labyRedrBoxes info)
+    drawBoxes cairoContext state (labyRedrBoxes info)
     drawLegend (stLanguage state) (labyRedrLegend info) (grLegendRectangle $ labyRedrGrid info)
 
 clearArea :: Cairo.Render ()
@@ -186,8 +190,10 @@ drawLine rectangle = do
   Cairo.rectangle x y width height
   Cairo.fill
 
-drawBoxes :: LabyrinthState -> [ (BoxState, RectangleInScreenCoordinates Int) ] -> Cairo.Render ()
-drawBoxes state = mapM_ drawBox
+drawBoxes :: GI.Cairo.Context -> LabyrinthState 
+                              -> [ (BoxState, RectangleInScreenCoordinates Int) ] 
+                              -> Cairo.Render ()
+drawBoxes cairoContext state = mapM_ drawBox
   where drawBox :: (BoxState, RectangleInScreenCoordinates Int) -> Cairo.Render ()
         drawBox (boxState, rectangle) = let (r,g,b) = labyStateToColor boxState
                                             (x,y,width,height) = rToTuple fromIntegral rectangle
@@ -195,38 +201,41 @@ drawBoxes state = mapM_ drawBox
                                               Cairo.setSourceRGB r g b
                                               Cairo.rectangle x y width height                                              
                                               Cairo.fill
-                                              createBoxText state boxState (x,y,width,height)
+                                              createBoxText cairoContext state boxState (x,y,width,height)
                                               Cairo.restore
 
-createBoxText :: LabyrinthState -> BoxState -> (Double, Double, Double, Double) -> Cairo.Render ()
-createBoxText state boxState (x, y, width, height)
+createBoxText :: GI.Cairo.Context -> LabyrinthState -> BoxState 
+                                  -> (Double, Double, Double, Double) 
+                                  -> Cairo.Render ()
+createBoxText cairoContext state boxState (x, y, width, height)
   | boxState `elem` [Empty, Border, Path] = return ()
   | boxState == StartField                = createBoxTextDo BoxStartFieldText
   | boxState == TargetField               = createBoxTextDo BoxTargetFieldText
   where
-    pixelToPoint :: Double -> Pango.FontMap -> IO Double
+    pixelToPoint :: Double -> PangoCairo.FontMap -> IO Double
     pixelToPoint px fontMap = do resolution <- PangoCairo.fontMapGetResolution fontMap
                                  return $ px * 72 / resolution
     getMarkUp :: String -> Double -> String                                 
     getMarkUp text pt = "<span font=\"" ++ show (round pt) ++ "\">" ++ text ++ "</span>"
-    setMarkUp :: Pango.Layout -> String -> IO () 
-    setMarkUp layout string = Pango.layoutSetMarkup layout (Text.pack string) (length string)
     createBoxTextDo :: BoxText -> Cairo.Render ()
     createBoxTextDo boxText =
       do let translation = translate (stLanguage state) boxText 
          fontMap <- PangoCairo.fontMapGetDefault
-         context <- liftIO $ GTK.cairoCreateContext (Just fontMap)
-         layout <- liftIO $ GTK.layoutEmpty context
+         context <- liftIO $ Pango.contextNew
+         Pango.contextSetFontMap context fontMap
+         layout <- liftIO $ Pango.layoutNew context
          fontSize <- liftIO $ pixelToPoint width fontMap
          let markup = getMarkUp translation fontSize 
-         liftIO $ setMarkUp layout markup
-         (_, GTK.Rectangle _ _ lw lh) <- liftIO $ Pango.layoutGetPixelExtents layout
-         let lx = x + (width - fromIntegral lw) / 2
-             ly = y + (height - fromIntegral lh) / 2
+         liftIO $ Pango.layoutSetMarkup layout (Text.pack markup) 
+                                               (fromIntegral $ length markup)
+         (_, extents) <- liftIO $ Pango.layoutGetPixelExtents layout
+         rw <- fromIntegral <$> Pango.getRectangleWidth extents
+         rh <- fromIntegral <$> Pango.getRectangleHeight extents 
+         let lx = x + (width - fromIntegral rw) / 2
+             ly = y + (height - fromIntegral rh) / 2
          Cairo.moveTo lx ly
-         GTK.updateLayout layout
          Cairo.setSourceRGB 0 0 0
-         GTK.showLayout layout
+         PangoCairo.showLayout cairoContext layout
                                             
 drawLegend :: Language -> Bool -> Rectangle Int -> Cairo.Render ()
 drawLegend language False _               = return ()
@@ -239,26 +248,35 @@ drawLegend language True  legendRectangle =
     Cairo.showText (renderLegend language)
     Cairo.restore
 
-buttonPressHandler :: LabyrinthState -> GTK.EventM GTK.EButton Bool
-buttonPressHandler state = GTK.tryEvent $ do
-  button      <- GTK.eventButton
-  coordinates <- GTK.eventCoordinates
-  case button of
-    GTK.LeftButton  -> liftIO $ handleMarkBox state coordinates SetAction
-    GTK.RightButton -> liftIO $ handleMarkBox state coordinates UnSetAction
-  return ()
-
-motionNotifyHandler :: LabyrinthState -> GTK.EventM GTK.EMotion Bool
-motionNotifyHandler state = GTK.tryEvent $ 
+buttonPressHandler :: LabyrinthState -> GDK.EventButton -> IO Bool
+buttonPressHandler state button = 
   do
-    coordinates <- GTK.eventCoordinates
-    modifier    <- GTK.eventModifierMouse
-    let mouseModifiers = intersect modifier [GTK.Button1, GTK.Button3]
+    btnNo   <- GDK.getEventButtonButton button
+    buttonX <- GDK.getEventButtonX button  
+    buttonY <- GDK.getEventButtonY button
+    let coordinates = (buttonX, buttonY)
+    let markBox action = do handleMarkBox state coordinates action
+                            return True 
+    case btnNo of
+      1  -> markBox SetAction    -- left mouse button
+      3  -> markBox UnSetAction  -- right mouse button
+      _  -> return False
+
+motionNotifyHandler :: LabyrinthState -> GDK.EventMotion ->IO Bool
+motionNotifyHandler state motion = 
+  do
+    motionX <- GDK.getEventMotionX motion  
+    motionY <- GDK.getEventMotionY motion 
+    let coordinates = (motionX, motionY)
+    modifier <- GDK.getEventMotionState motion
+    let mouseModifiers = intersect modifier [GDK.ModifierTypeButton1Mask, 
+                                             GDK.ModifierTypeButton3Mask]
+    let markBox action = do handleMarkBox state coordinates action
+                            return True
     case mouseModifiers of
-      [GTK.Button1] -> liftIO $ handleMarkBox state coordinates SetAction
-      [GTK.Button3] -> liftIO $ handleMarkBox state coordinates UnSetAction
-    GTK.eventRequestMotions
-    return ()
+      [GDK.ModifierTypeButton1Mask] -> markBox SetAction
+      [GDK.ModifierTypeButton3Mask] -> markBox UnSetAction
+      _                             -> return False
 
 handleMarkBox :: LabyrinthState -> PointInScreenCoordinates Double -> ActionType -> IO ()
 handleMarkBox state (x, y) action = do let redraw = stRedrawFn state 
@@ -276,7 +294,7 @@ handleMarkBox state (x, y) action = do let redraw = stRedrawFn state
             lift $ STM.writeTVar labyrinth (Just new)
             return (redrawArea, resetCursor)
         doResetCursor False = return ()
-        doResetCursor True = stSetCursorFn state GTK.TopLeftArrow
+        doResetCursor True = stSetCursorFn state GDK.CursorTypeTopLeftArrow 
 
 setNextAction :: LabyrinthState -> NextAction -> IO ()
 setNextAction state action = 
@@ -315,7 +333,7 @@ saveAndQuit state =
      saveLabyrinth (stWindow state) state file
      GTK.mainQuit
 
-saveLabyrinth :: GTK.WindowClass a => a -> LabyrinthState -> FilePath -> IO ()
+saveLabyrinth :: GTK.IsWindow a => a -> LabyrinthState -> FilePath -> IO ()
 saveLabyrinth window state file =
   do let labyrinth = stLabyrinth state
      frozen <- STM.atomically $ STM.readTVar labyrinth >>= labyFreeze 
@@ -325,7 +343,7 @@ saveLabyrinth window state file =
                         return ()
          Right _  -> return ()
 
-loadLabyrinth :: GTK.WindowClass a => a -> LabyrinthState -> FilePath -> IO (Maybe Labyrinth) 
+loadLabyrinth :: GTK.IsWindow a => a -> LabyrinthState -> FilePath -> IO (Maybe Labyrinth) 
 loadLabyrinth window state file = 
   do labyrinth <- LoadSave.loadLabyrinth file 
      case labyrinth of 
@@ -336,14 +354,15 @@ loadLabyrinth window state file =
          Right labyrinth -> do unfrozen <- STM.atomically $ labyThaw labyrinth
                                return $ Just unfrozen
      
-errorPopup :: GTK.WindowClass a => a -> String -> IO ()
+errorPopup :: GTK.IsWindow a => a -> String -> IO ()
 errorPopup window text = 
-  do msg <- GTK.messageDialogNew (Just (GTK.toWindow window))
-               [GTK.DialogModal, GTK.DialogDestroyWithParent]
-               GTK.MessageError GTK.ButtonsClose
-               text
-     GTK.dialogRun msg
-     GTK.widgetDestroy msg
+  do dialog <- GI.new' GTK.MessageDialog [GTK.constructMessageDialogButtons GTK.ButtonsTypeOk]
+     GTK.setMessageDialogMessageType dialog GTK.MessageTypeError
+     GTK.setMessageDialogText dialog (Text.pack text)
+     GTK.windowSetTransientFor dialog (Just window)
+     GTK.setWindowWindowPosition dialog GTK.WindowPositionCenterOnParent
+     dialogRun dialog
+     GTK.widgetDestroy dialog
 
 getSavedGameFile :: Bool -> IO FilePath
 getSavedGameFile createDirectory
@@ -396,21 +415,21 @@ openFileDialog :: GTK.Window  -> GTK.FileChooserAction
                               -> ( GTK.FileChooserDialog -> FilePath -> IO ()) 
                               -> IO ()
 openFileDialog window action language label button onSuccess =
-  do dialog <- GTK.fileChooserDialogNew
-                (Just label)
-                (Just window)
-                action
-                [("gtk-cancel", GTK.ResponseCancel),
-                (button, GTK.ResponseAccept)]
+  do dialog <- GI.new' GTK.FileChooserDialog [] 
+     GTK.setWindowTitle dialog (Text.pack $ label)
+     GTK.windowSetTransientFor dialog $ Just window
+     GTK.fileChooserSetAction dialog action
+     dialogAddButton dialog "gtk-cancel" GTK.ResponseTypeCancel
+     dialogAddButton dialog button GTK.ResponseTypeAccept
      filter <- labyrinthFileFilter language
      GTK.fileChooserAddFilter dialog filter
      GTK.widgetShow dialog
-     response <- GTK.dialogRun dialog
+     response <- dialogRun dialog
      case response of 
-         GTK.ResponseAccept -> do Just fileName <- GTK.fileChooserGetFilename dialog
-                                  onSuccess dialog fileName
+         GTK.ResponseTypeAccept -> do Just fileName <- GTK.fileChooserGetFilename dialog
+                                      onSuccess dialog fileName
          _                  -> return ()
-     GTK.widgetHide dialog  
+     GTK.widgetDestroy dialog  
 
 labyFileExtension :: String
 labyFileExtension = ".laby"
@@ -425,8 +444,8 @@ labyFileExtensionHelp language =
 labyrinthFileFilter :: Language -> IO GTK.FileFilter
 labyrinthFileFilter language =
   do labyFiles <- GTK.fileFilterNew
-     GTK.fileFilterSetName labyFiles (labyFileExtensionHelp language)
-     GTK.fileFilterAddPattern labyFiles labyFileExtensionWildcard
+     GTK.fileFilterSetName labyFiles (Just $ Text.pack $ labyFileExtensionHelp language)
+     GTK.fileFilterAddPattern labyFiles (Text.pack labyFileExtensionWildcard)
      return labyFiles
 
 addLabyFileExtension :: FilePath -> FilePath 

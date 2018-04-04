@@ -86,13 +86,15 @@ legendBottomMargin = 5
 legendLeftMargin :: Int 
 legendLeftMargin = 10
 
-labyConstruct :: Maybe Labyrinth -> Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth 
+labyConstruct :: Integral a => Maybe Labyrinth -> Int -> Int -> (Int, Int) -> (a, a) -> STM Labyrinth 
 labyConstruct Nothing boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
-  labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
+  let (tw, th) = (fromIntegral totalWidth, fromIntegral totalHeight) 
+  in labyConstructNew boxSize borderSize (legendWidth, legendHeight) (tw, th)
 labyConstruct (Just labyrinth) boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
   do isEmpty <- labyIsEmpty labyrinth 
-     if isEmpty then labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
-     else labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
+     let (tw, th) = (fromIntegral totalWidth, fromIntegral totalHeight)
+     if isEmpty then labyConstructNew boxSize borderSize (legendWidth, legendHeight) (tw, th)
+     else labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (tw, th)
   
 labyConstructNew :: Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth 
 labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 

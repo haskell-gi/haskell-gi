@@ -24,7 +24,7 @@ flags:
   gi-pango:
     enable-overloading: false 
   gi-pangocairo:
-    enable-overloading: false
+    enable-overloading: false  
 nix:
   enable: true
   packages: [llvm_39,pkgconfig,cairo,pango,gtk3,gobjectIntrospection]
