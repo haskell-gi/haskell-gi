@@ -27,7 +27,7 @@ import Rectangle
 import Labyrinth
 import Grid
 import UserTexts
-import GIHelper
+import GIHelper (renderWithContext, dialogRun, dialogAddButton)
 
 data CmdOptions = CmdOptions
   { cmdBoxSize :: Int ,
@@ -103,7 +103,7 @@ keyPressHandler state keyPressInfo =
   do
     keyVal <- GDK.getEventKeyKeyval keyPressInfo
     keyName <- fromMaybe Text.empty <$> GDK.keyvalName keyVal
-    liftIO $ case Text.unpack keyName of
+    case Text.unpack keyName of
       "Escape" -> saveAndQuit state                >> return True
       "s" -> setNextAction state SetStartField     >> return True
       "t" -> setNextAction state SetTargetField    >> return True
@@ -120,14 +120,14 @@ sizeChangeHandler state rectangle =
      width <- GDK.getRectangleWidth rectangle 
      height <- GDK.getRectangleHeight rectangle
      let region = (width, height)
-     liftIO $ STM.atomically $ do
+     STM.atomically $ do
        old <- STM.readTVar labyrinth
        let boxSize = stBoxSize state
            borderSize = stBorderSize state
            legendDimensions = stLegendDim state
        new <- labyConstruct old boxSize borderSize legendDimensions region 
        STM.writeTVar labyrinth (Just new)
-     liftIO $ stSetCursorFn state GDK.CursorTypeTopLeftArrow
+     stSetCursorFn state GDK.CursorTypeTopLeftArrow
 
 computeLegendDimensions :: Language -> IO (Int, Int)
 computeLegendDimensions language =
