@@ -4,25 +4,44 @@
 
 # hlabyrinth
 
-## Rationale
+## 1. Rationale
 
 The is a simple labyrinth builder "game" for my son, written in Haskell and using GTK+ and Cairo. It started as a project to learn [Rust](https://www.rust-lang.org), but it turned out to be written in [Haskell](https://www.haskell.org).
 
 The original Rust implementation can still be found [here](https://github.com/cohomology/rustirinth), but is much less 
 complete.
 
-## Game principle
+## 2. Game principle
 
 It is possible to build a labyrinth, to place and start and end points and compute the shortest way through the labyrinth. When closed, the current labyrinth is saved and restored, when the game is started.
 
-## Installation
+## 3. Installation
 
-One great source of fun when using Haskell, are the different ways to build a project. There are at least four different ways to build this one, using a disjoint set of tools. I recommend using [stack](https://docs.haskellstack.org) and [nix](https://nixos.org/nix/), because it automatically (and locally) installs all dependencies, notably the Haskell compiler `ghc`, `GTK`, `cairo` and `llvm`, without polluting your operating system.
+One great source of fun when using Haskell, are the different ways to build a project. There are at least four different ways to build this one, using a disjoint set of tools. I recommend using [stack](https://docs.haskellstack.org) and (optionally) [nix](https://nixos.org/nix/), because it automatically (and locally) installs all dependencies, notably the Haskell compiler `ghc`, `GTK`, `cairo` and `llvm`, without polluting your operating system.
 
-### Installation using stack and nix
+### 3.1 Installation using stack
+
+This installation option has the advantage, that the native operating system libraries are used. Also much less hard disk space is wasted. As a disadvantage, `llvm` can not be used as a `ghc` backend.
+
+1. Install prerequisites
+
+On Debian, this is something like:
+```
+apt-get install libgirepository1.0-dev libgtk-3-dev libcairo2-dev build-essential cmake
+```
+2. Install stack
+```
+curl -sSL https://get.haskellstack.org/ | sh
+```
+3. Build project
+```
+stack build
+```
+### 3.2 Installation using stack and nix
+
+In oposite to the installation option via `stack` alone, this also automatically provides all dependencies in a container like manner. As an additional advantage, one may use the `llvm` backend for `ghc`.
 
 1. Install stack 
-
 ```
 curl -sSL https://get.haskellstack.org/ | sh
 ```
@@ -37,10 +56,5 @@ curl https://nixos.org/nix/install | sh
 
 3. Build the project
 ```
-stack --stack-yaml stack-nix.yaml build
-```
-4. Run the project
-```
-stack --stack-yaml stack-nix.yaml install stack-run
-stack --stack-yaml stack-nix.yaml run
+stack --stack-yaml stack-nix.yaml build --flag hlabyrinth:llvm
 ```
