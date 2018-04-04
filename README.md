@@ -29,7 +29,7 @@ On Debian, this is something like:
 ```
 apt-get install libgirepository1.0-dev libgtk-3-dev libcairo2-dev build-essential cmake
 ```
-2. Install stack
+2. Install [stack](https://docs.haskellstack.org) 
 ```
 curl -sSL https://get.haskellstack.org/ | sh
 ```
