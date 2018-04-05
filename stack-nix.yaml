@@ -27,4 +27,4 @@ flags:
     enable-overloading: false  
 nix:
   enable: true
-  packages: [llvm_39,pkgconfig,cairo,pango,gtk3,gobjectIntrospection]
+  packages: [llvm_39,pkgconfig,cairo,pango,gtk3,glib,gobjectIntrospection,zlib]
