@@ -49,9 +49,9 @@ run :: CmdOptions -> IO ()
 run option = do
   let boxSize    = cmdBoxSize option
       borderSize = cmdBorderSize option
+  GTK.init Nothing 
   language <- GTK.getDefaultLanguage
   languageString <- Pango.languageToString language 
-  GTK.init Nothing
   let labyLanguage = getLanguage $ Text.unpack languageString 
   legendDimensions <- computeLegendDimensions labyLanguage
   window <- GTK.windowNew GTK.WindowTypeToplevel
