@@ -5,6 +5,7 @@ import Data.Maybe(isJust, fromMaybe)
 import System.Exit(exitSuccess)
 import System.FilePath((</>))
 
+import Control.Monad(liftM)
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
 
@@ -333,15 +334,15 @@ saveAndQuit state =
      saveLabyrinth (stWindow state) state file
      GTK.mainQuit
 
-saveLabyrinth :: GTK.IsWindow a => a -> LabyrinthState -> FilePath -> IO ()
+saveLabyrinth :: GTK.IsWindow a => a -> LabyrinthState -> FilePath -> IO Bool
 saveLabyrinth window state file =
   do let labyrinth = stLabyrinth state
      frozen <- STM.atomically $ STM.readTVar labyrinth >>= labyFreeze 
      saveResult <- LoadSave.saveLabyrinth frozen file 
      case saveResult of 
          Left msg -> do errorPopup window (translate (stLanguage state) msg) 
-                        return ()
-         Right _  -> return ()
+                        return False
+         Right _  -> return True
 
 loadLabyrinth :: GTK.IsWindow a => a -> LabyrinthState -> FilePath -> IO (Maybe Labyrinth) 
 loadLabyrinth window state file = 
@@ -403,16 +404,17 @@ openOpenFileDialog state =
                                                                        legendDimensions screenDimensions
                                                   STM.writeTVar (stLabyrinth state) (Just new) 
                                                   return $ Just new
-        repaintLabyrinth Nothing  = return ()
-        repaintLabyrinth (Just labyrinth) = let grid  = labyGrid labyrinth 
-                                                (w,h) = grScreenSize grid
-                                            in stRedrawFn state (Rectangle 0 0 w h)     
+        repaintLabyrinth Nothing  = return False
+        repaintLabyrinth (Just labyrinth) = do let grid  = labyGrid labyrinth 
+                                                   (w,h) = grScreenSize grid
+                                               stRedrawFn state (Rectangle 0 0 w h)     
+                                               return True
         
 openFileDialog :: GTK.Window  -> GTK.FileChooserAction
                               -> Language
                               -> String
                               -> String 
-                              -> ( GTK.FileChooserDialog -> FilePath -> IO ()) 
+                              -> ( GTK.FileChooserDialog -> FilePath -> IO Bool) 
                               -> IO ()
 openFileDialog window action language label button onSuccess =
   do dialog <- GI.new' GTK.FileChooserDialog [] 
@@ -424,12 +426,17 @@ openFileDialog window action language label button onSuccess =
      filter <- labyrinthFileFilter language
      GTK.fileChooserAddFilter dialog filter
      GTK.widgetShow dialog
-     response <- dialogRun dialog
-     case response of 
-         GTK.ResponseTypeAccept -> do Just fileName <- GTK.fileChooserGetFilename dialog
-                                      onSuccess dialog fileName
-         _                  -> return ()
-     GTK.widgetDestroy dialog  
+     runDialog dialog
+     GTK.widgetDestroy dialog 
+  where runDialog dialog = do response <- dialogRun dialog 
+                              rerun <- handleResponse dialog response
+                              if rerun then runDialog dialog
+                              else return ()
+        handleResponse dialog GTK.ResponseTypeAccept = 
+          do Just fileName <- GTK.fileChooserGetFilename dialog
+             success <- onSuccess dialog fileName
+             return $ not success
+        handleResponse dialog _ = return False
 
 labyFileExtension :: String
 labyFileExtension = ".laby"
