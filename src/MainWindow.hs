@@ -436,7 +436,7 @@ openFileDialog window action language label button onSuccess =
           do Just fileName <- GTK.fileChooserGetFilename dialog
              success <- onSuccess dialog fileName
              return $ not success
-        handleResponse dialog _ = return False
+        handleResponse _ _ = return False
 
 labyFileExtension :: String
 labyFileExtension = ".laby"
