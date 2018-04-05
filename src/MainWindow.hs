@@ -22,6 +22,7 @@ import qualified GI.PangoCairo as PangoCairo
 import qualified GI.GLib as Glib
 import qualified Graphics.Rendering.Cairo as Cairo
 import qualified GI.Cairo  
+import qualified Data.String.Unicode
 
 import qualified LoadSave 
 import Rectangle
@@ -209,24 +210,33 @@ createBoxText :: GI.Cairo.Context -> LabyrinthState -> BoxState
                                   -> (Double, Double, Double, Double) 
                                   -> Cairo.Render ()
 createBoxText cairoContext state boxState (x, y, width, height)
-  | boxState `elem` [Empty, Border, Path] = return ()
-  | boxState == StartField                = createBoxTextDo BoxStartFieldText
-  | boxState == TargetField               = createBoxTextDo BoxTargetFieldText
+  | boxState `elem` [Empty, Border]       = return ()
+  | boxState == StartField                = createBoxTextDo (translate (stLanguage state) BoxStartFieldText)
+  | boxState == TargetField               = createBoxTextDo (translate (stLanguage state) BoxTargetFieldText)
+  | Path direction <- boxState            = createBoxTextDo (computeBoxTextFromDirection direction)
   where
+    computeBoxTextFromDirection direction = Data.String.Unicode.unicodeToXmlEntity $ case direction of 
+                                                                                        North -> "⇑"  
+                                                                                        NorthEast -> "⇗"
+                                                                                        East -> "⇒" 
+                                                                                        SouthEast -> "⇘"
+                                                                                        South -> "⇓"
+                                                                                        SouthWest -> "⇙"
+                                                                                        West ->  "⇐"
+                                                                                        NorthWest -> "⇖"
     pixelToPoint :: Double -> PangoCairo.FontMap -> IO Double
     pixelToPoint px fontMap = do resolution <- PangoCairo.fontMapGetResolution fontMap
                                  return $ px * 72 / resolution
     getMarkUp :: String -> Double -> String                                 
     getMarkUp text pt = "<span font=\"" ++ show (round pt) ++ "\">" ++ text ++ "</span>"
-    createBoxTextDo :: BoxText -> Cairo.Render ()
+    createBoxTextDo :: String -> Cairo.Render ()
     createBoxTextDo boxText =
-      do let translation = translate (stLanguage state) boxText 
-         fontMap <- PangoCairo.fontMapGetDefault
+      do fontMap <- PangoCairo.fontMapGetDefault
          context <- liftIO Pango.contextNew
          Pango.contextSetFontMap context fontMap
          layout <- liftIO $ Pango.layoutNew context
          fontSize <- liftIO $ pixelToPoint width fontMap
-         let markup = getMarkUp translation fontSize 
+         let markup = getMarkUp boxText fontSize 
          liftIO $ Pango.layoutSetMarkup layout (Text.pack markup) 
                                                (fromIntegral $ length markup)
          (_, extents) <- liftIO $ Pango.layoutGetPixelExtents layout
@@ -319,8 +329,10 @@ clearLabyrinth state =
 findPath :: LabyrinthState ->  IO ()
 findPath state = 
   do
-    path <- STM.atomically $ STM.readTVar (stLabyrinth state) >>= labyFindAndMark
-    mapM_ (stRedrawFn state) path
+    result <- STM.atomically $ STM.readTVar (stLabyrinth state) >>= labyFindAndMark
+    case result of 
+        Left errorMsg -> errorPopup (stWindow state) (translate (stLanguage state) errorMsg)  
+        Right path -> mapM_ (stRedrawFn state) path
 
 resetPath :: LabyrinthState ->  IO ()
 resetPath state = 

@@ -34,7 +34,9 @@ data ErrorMessage =
   FileCouldNotBeFound Path.FilePath |
   FileIsCorrupted Path.FilePath |
   FileReadPermissionError Path.FilePath Exception.IOException |
-  FileWritePermissionError Path.FilePath Exception.IOException
+  FileWritePermissionError Path.FilePath Exception.IOException | 
+  StartPointNotSet  | TargetPointNotSet | NoPathFound | 
+  InternalErrorInPathFinder
 
 data DialogWidgetTexts =
   FileSaveCaption | FileOpenCaption | FileSave | FileOpen |
@@ -59,6 +61,14 @@ instance UserText ErrorMessage where
     Printf.printf "Insufficient permissions while reading the file \"%s\"." file 
   translate English (FileWritePermissionError file _) =
     Printf.printf "Insufficient permissions while writing the file \"%s\"." file  
+  translate English StartPointNotSet =
+    Printf.printf "No start point has been set. No path can be calculated."
+  translate English TargetPointNotSet =
+    Printf.printf "No target point has been set. No path can be calculated." 
+  translate English NoPathFound =
+    Printf.printf "No path between start and target could be found."  
+  translate English InternalErrorInPathFinder =
+    Printf.printf "Internal error in path finding. Processing aborted."   
 
   translate German (FileInternalErrorWhileSaving file) = 
     Printf.printf "Interner Fehler beim Speichern der Datei \"%s\"." file
@@ -72,6 +82,14 @@ instance UserText ErrorMessage where
     Printf.printf "Fehlende Berechtigung zum Lesen der Datei \"%s\"." file  
   translate German (FileWritePermissionError file _) =
     Printf.printf "Fehlende Berechtigung zum Schreiben der Datei \"%s\"." file   
+  translate German StartPointNotSet =
+    Printf.printf "Es wurde kein Startpunkt gesetzt. Daher kann kein Weg gefunden werden."
+  translate German TargetPointNotSet =
+    Printf.printf "Es wurde kein Zielpunkt gesetzt. Daher kann kein Weg gefunden werden." 
+  translate German NoPathFound =
+    Printf.printf "Es konnte kein Weg zwischen Start- und Zielpunkt gefunden werden."   
+  translate German InternalErrorInPathFinder =
+    Printf.printf "Es wurde ein interner Fehler in der Wegbestimmung festgestellt. Der Vorgang wurde abgebrochen."    
 
 instance UserText DialogWidgetTexts where  
   translate English FileSaveCaption = "Save File"

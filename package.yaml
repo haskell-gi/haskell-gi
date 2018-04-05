@@ -10,6 +10,7 @@ other-extensions:
 - MultiParamTypeClasses
 - FlexibleInstances
 - FunctionalDependencies
+- TemplateHaskell
 ghc-options:
 - -rtsopts
 dependencies:
@@ -37,6 +38,7 @@ dependencies:
 - bytestring >=0.10 && <0.11
 - cereal >= 0.5.5.0 && <0.6
 - safecopy >=0.9.4.1 && <1
+- hxt-unicode >=9.0 && <9.1
 executables:
   hlabyrinth:
     main: Main.hs
