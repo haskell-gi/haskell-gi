@@ -13,7 +13,7 @@ complete.
 
 ## 2. Game principle
 
-It is possible to build a labyrinth, to place and start and end points and compute the shortest way through the labyrinth. When closed, the current labyrinth is saved and restored, when the game is started.
+It is possible to draw a labyrinth, to place and start and end points and compute the shortest way through the labyrinth. It is possible to save/load labyrinths to the harddisk.
 
 ## 3. Installation
 
