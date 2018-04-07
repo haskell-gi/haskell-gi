@@ -14,6 +14,8 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
     Although only `window` and `searchBar` `#show`ed in the original code but this results in a blank and unresponsive window. `#show`ing all components individually or `#showAll` of them at once at the end of the function solves the problem. I don't know whether this is a haskell-gi or the original code problem.
 6. __Action Namespace:__ [actuion-namespace.c example in GTK repository](https://gitlab.gnome.org/GNOME/gtk/blob/master/examples/action-namespace.c)
 
+    This example gives critical messages if linked with gi-gio older than version 2.0.18. Although marked critical, these messages are harmless.
+
 ## How to compile and run examples
 As the author is familiar only with Haskell stack, the examples are built and run by this tool (any suggestions are welcome).
 
