@@ -11,6 +11,7 @@ packages:
 
 extra-deps: 
 - haskell-gi-0.21.0
+- gi-gio-2.0.18
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
@@ -35,3 +36,5 @@ extra-deps:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+
+# allow-newer: true
