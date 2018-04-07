@@ -52,7 +52,7 @@ activateApp app = do
 
 main :: IO ()
 main = do
-  app <- new Gtk.Application [ #applicationId := "haskell-gi.exapmles.packed-widgets"
+  app <- new Gtk.Application [ #applicationId := "haskell-gi.examples.packed-widgets"
                              , #flags := [ Gio.ApplicationFlagsFlagsNone ]
                              ]
   on app #activate $ activateApp app
