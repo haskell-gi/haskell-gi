@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings, OverloadedLabels, ScopedTypeVariables #-}
 
+{- action-namespace.c example in GTK repository. Please refer to README for more. -}
+
 module Main where
 
 import           Control.Monad (when)
@@ -12,7 +14,7 @@ import           Data.GI.Base
 import qualified GI.Gio as Gio
 import qualified GI.Gtk as Gtk
 
-type ActionEntryInfo = (Text, Gio.ActionEntryActivateFieldCallback_WithClosures) --C_ActionEntryActivateFieldCallback)
+type ActionEntryInfo = (Text, Gio.ActionEntryActivateFieldCallback_WithClosures)
 
 docEntryInfos :: [ActionEntryInfo]
 docEntryInfos = [ ("save", actionActivated)
@@ -94,6 +96,12 @@ getCastedObjectFromBuilder builder name typeToCast = #getObject builder name
 maybeGVariantFromText :: Text -> IO (Maybe GVariant)
 maybeGVariantFromText text = Just <$> gvariantFromText text
 
+addSectionWithNameSpace :: Gio.MenuModel -> Text -> Gio.Menu -> IO ()
+addSectionWithNameSpace model namespace menu = do
+  section <- Gio.menuItemNewSection Nothing model
+  #setAttributeValue section "action-namespace" =<< maybeGVariantFromText namespace
+  #appendItem menu section
+
 appActivate:: Gtk.Application -> IO ()
 appActivate app = do
   windows <- #getWindows app
@@ -112,18 +120,17 @@ appActivate app = do
     winMenu <- getCastedObjectFromBuilder builder "win-menu" Gio.MenuModel
     buttonMenu <- new Gio.Menu []
 
-    section <- Gio.menuItemNewSection Nothing docMenu
-    #setAttributeValue section "action-namespace" =<< maybeGVariantFromText "doc"
-    #appendItem buttonMenu section
-    section <- Gio.menuItemNewSection Nothing winMenu
-    #setAttributeValue section "action-namespace" =<< maybeGVariantFromText "win"
-    #appendItem buttonMenu section
+    addSectionWithNameSpace docMenu "doc" buttonMenu
+    addSectionWithNameSpace winMenu "win" buttonMenu
 
     button <- new Gtk.MenuButton [ #label := "Menu"
                                  , #halign := Gtk.AlignCenter
                                  , #valign := Gtk.AlignStart
                                  ]
     #insertActionGroup button "doc" =<< castTo Gio.ActionGroup docActions
+    -- If following line is compiled then items belonging to "win" namespace will be enabled 
+    -- #insertActionGroup button "win" =<< castTo Gio.ActionGroup docActions
+
     #setMenuModel button =<< castTo Gio.MenuModel buttonMenu
     #add win button
 
