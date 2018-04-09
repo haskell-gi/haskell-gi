@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Drawing.Tranformations
+-- Module      :  GI.Cairo.Render.Internal.Drawing.Tranformations
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -11,9 +11,9 @@
 -- Manipulating the current transformation matrix.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Drawing.Transformations where
+module GI.Cairo.Render.Internal.Drawing.Transformations where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign hiding (rotate)
 import Foreign.C

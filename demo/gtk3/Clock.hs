@@ -14,7 +14,7 @@
 -- updated to GTK 3 by Catherine Holloway
 --
 
-import Graphics.Rendering.Cairo
+import GI.Cairo.Render
 import Graphics.UI.Gtk
 import Graphics.UI.Gtk.Gdk.EventM
 import Data.Time

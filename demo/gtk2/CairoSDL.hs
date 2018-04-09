@@ -1,5 +1,5 @@
 import qualified Graphics.UI.SDL as SDL
-import Graphics.Rendering.Cairo
+import GI.Cairo.Render
 import Foreign.Ptr ( castPtr )
 
 demo1 :: Render ()

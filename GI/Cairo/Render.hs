@@ -26,7 +26,7 @@
         (CAIRO_VERSION >= CAIRO_VERSION_ENCODE(major,minor,micro))
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo
+-- Module      :  GI.Cairo.Render
 -- Copyright   :  (c) Paolo Martini 2005, (c) Abraham Egnor 2004, (c) Aetion Technologies LLC 2004
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -63,7 +63,7 @@
 -- externally. For example, Gtk2Hs provides a binding to the backend for X11
 -- (and win32 on Windows).
 -----------------------------------------------------------------------------
-module Graphics.Rendering.Cairo (
+module GI.Cairo.Render (
   -- * Drawing
     renderWith
   , save
@@ -334,13 +334,13 @@ import Data.Array.Base ( MArray, newArray, newArray_, unsafeRead, unsafeWrite,
 #endif
                        )
 #ifdef CAIRO_HAS_PNG_FUNCTIONS
-import Graphics.Rendering.Cairo.Internal (imageSurfaceCreateFromPNG)
+import GI.Cairo.Render.Internal (imageSurfaceCreateFromPNG)
 #endif
 
-import Graphics.Rendering.Cairo.Types
-import Graphics.Rendering.Cairo.Internal.Utilities (CairoString(..))
-import qualified Graphics.Rendering.Cairo.Internal as Internal
-import Graphics.Rendering.Cairo.Internal (Render(..), bracketR)
+import GI.Cairo.Render.Types
+import GI.Cairo.Render.Internal.Utilities (CairoString(..))
+import qualified GI.Cairo.Render.Internal as Internal
+import GI.Cairo.Render.Internal (Render(..), bracketR)
 
 liftRender0 :: (Cairo -> IO a) -> Render a
 liftRender0 f = ask >>= \context -> liftIO (f context)
@@ -1880,8 +1880,8 @@ instance HasBounds SurfaceData where
 
 -- | 'SurfaceData' is a mutable array.
 instance Storable e => MArray SurfaceData e IO where
-  newArray (l,u) e = error "Graphics.Rendering.Cairo.newArray: not implemented"
-  newArray_ (l,u)  = error "Graphics.Rendering.Cairo.newArray_: not implemented"
+  newArray (l,u) e = error "GI.Cairo.Render.newArray: not implemented"
+  newArray_ (l,u)  = error "GI.Cairo.Render.newArray_: not implemented"
   {-# INLINE unsafeRead #-}
   unsafeRead (SurfaceData (Surface pb) pixPtr _ _) idx = do
       e <- peekElemOff pixPtr idx

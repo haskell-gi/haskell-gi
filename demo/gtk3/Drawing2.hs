@@ -5,8 +5,8 @@
 --
 
 import qualified Graphics.UI.Gtk as G
-import qualified Graphics.Rendering.Cairo as C
-import qualified Graphics.Rendering.Cairo.Matrix as M
+import qualified GI.Cairo.Render as C
+import qualified GI.Cairo.Render.Matrix as M
 
 
 windowWidth, windowHeight :: Int

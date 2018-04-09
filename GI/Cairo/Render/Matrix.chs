@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Matrix
+-- Module      :  GI.Cairo.Render.Matrix
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -11,7 +11,7 @@
 -- Matrix math
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Matrix (
+module GI.Cairo.Render.Matrix (
     Matrix(Matrix)
   , MatrixPtr
   , identity

@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Surfaces.Image
+-- Module      :  GI.Cairo.Render.Internal.Surfaces.Image
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see doc/COPYRIGHT)
 --
@@ -12,9 +12,9 @@
 -- Rendering to memory buffers.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Surfaces.Image where
+module GI.Cairo.Render.Internal.Surfaces.Image where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

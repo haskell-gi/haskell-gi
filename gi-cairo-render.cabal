@@ -1,21 +1,21 @@
-Name:           cairo
-Version:        0.13.4.2
+Name:           gi-cairo-cabal
+Version:        0.0.1
 License:        BSD3
 License-file:   COPYRIGHT
-Copyright:      (c) 2001-2010 The Gtk2Hs Team, (c) Paolo Martini 2005, (c) Abraham Egnor 2003, 2004, (c) Aetion Technologies LLC 2004
+Copyright:      (c) 2018 Kilian Kilger, (c) 2001-2010 The Gtk2Hs Team, (c) Paolo Martini 2005, (c) Abraham Egnor 2003, 2004, (c) Aetion Technologies LLC 2004
 Author:         Axel Simon, Duncan Coutts
-Maintainer:     gtk2hs-users@lists.sourceforge.net
-Build-Type:     Custom
+Maintainer:     Kilian Kilger (kkilger@gmail.com)
+Build-Type:     Simple
 Cabal-Version:  >= 1.24
 Stability:      stable
 homepage:       http://projects.haskell.org/gtk2hs/
 bug-reports:    https://github.com/gtk2hs/gtk2hs/issues
-Synopsis:       Binding to the Cairo library.
+Synopsis:       GI friendly Binding to the Cairo library.
 Description:    Cairo is a library to render high quality vector graphics. There
                 exist various backends that allows rendering to Gtk windows, PDF,
                 PS, PNG and SVG documents, amongst others.
 Category:       Graphics
-Tested-With:    GHC == 7.0.4, GHC == 7.2.2, GHC == 7.4.1
+Tested-With:    GHC == 8.2.2, GHC == 8.0.2
 extra-source-files: cairo-gtk2hs.h
 
 Data-Dir:       demo
@@ -51,38 +51,33 @@ Flag cairo_ps
 Flag cairo_svg
   Description: Build the Scalable Vector Graphics (SVG) backend of Cairo.
 
-custom-setup
-  setup-depends: base >= 4.6,
-                 Cabal >= 1.24 && < 2.1,
-                 gtk2hs-buildtools >= 0.13.2.0 && < 0.14
-
 Library
         build-depends:  base >= 4 && < 5,
                         utf8-string >= 0.2 && < 1.1,
                         text >= 1.0.0.0 && < 1.3,
                         bytestring, mtl, array
-        exposed-modules:  Graphics.Rendering.Cairo
-                          Graphics.Rendering.Cairo.Matrix
-                          Graphics.Rendering.Cairo.Types
+        exposed-modules:  GI.Cairo.Render
+                          GI.Cairo.Render.Matrix
+                          GI.Cairo.Render.Types
                           -- this module is only meant to be used by other
                           -- modules implementing a Cairo interface
-                          Graphics.Rendering.Cairo.Internal
+                          GI.Cairo.Render.Internal
         other-modules:
-                          Graphics.Rendering.Cairo.Internal.Drawing.Cairo
-                          Graphics.Rendering.Cairo.Internal.Drawing.Paths
-                          Graphics.Rendering.Cairo.Internal.Drawing.Patterns
-                          Graphics.Rendering.Cairo.Internal.Drawing.Text
-                          Graphics.Rendering.Cairo.Internal.Drawing.Transformations
-                          Graphics.Rendering.Cairo.Internal.Fonts.FontOptions
-                          Graphics.Rendering.Cairo.Internal.Surfaces.Image
-                          Graphics.Rendering.Cairo.Internal.Surfaces.PNG
-                          Graphics.Rendering.Cairo.Internal.Surfaces.Surface
-                          Graphics.Rendering.Cairo.Internal.Utilities
-                          Graphics.Rendering.Cairo.Internal.Surfaces.PDF
-                          Graphics.Rendering.Cairo.Internal.Surfaces.PS
-                          Graphics.Rendering.Cairo.Internal.Surfaces.SVG
-                          Graphics.Rendering.Cairo.Internal.Region
-        default-language:   Haskell98
+                          GI.Cairo.Render.Internal.Drawing.Cairo
+                          GI.Cairo.Render.Internal.Drawing.Paths
+                          GI.Cairo.Render.Internal.Drawing.Patterns
+                          GI.Cairo.Render.Internal.Drawing.Text
+                          GI.Cairo.Render.Internal.Drawing.Transformations
+                          GI.Cairo.Render.Internal.Fonts.FontOptions
+                          GI.Cairo.Render.Internal.Surfaces.Image
+                          GI.Cairo.Render.Internal.Surfaces.PNG
+                          GI.Cairo.Render.Internal.Surfaces.Surface
+                          GI.Cairo.Render.Internal.Utilities
+                          GI.Cairo.Render.Internal.Surfaces.PDF
+                          GI.Cairo.Render.Internal.Surfaces.PS
+                          GI.Cairo.Render.Internal.Surfaces.SVG
+                          GI.Cairo.Render.Internal.Region
+        default-language:   Haskell2010
         default-extensions: ForeignFunctionInterface
         Include-dirs: .
         x-c2hs-Header:  cairo-gtk2hs.h

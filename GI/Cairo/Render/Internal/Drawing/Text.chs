@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Drawing.Text
+-- Module      :  GI.Cairo.Render.Internal.Drawing.Text
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -11,11 +11,11 @@
 -- Rendering text.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Drawing.Text where
+module GI.Cairo.Render.Internal.Drawing.Text where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
-import Graphics.Rendering.Cairo.Internal.Utilities (CairoString(..))
+import GI.Cairo.Render.Internal.Utilities (CairoString(..))
 
 import Foreign
 import Foreign.C

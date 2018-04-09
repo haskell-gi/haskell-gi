@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Region
+-- Module      :  GI.Cairo.Render.Internal.Region
 -- Copyright   :  (c) Hamish Mackenzie 2013
 -- License     :  BSD-style (see doc/COPYRIGHT)
 --
@@ -11,11 +11,11 @@
 -- Region functions.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Region where
+module GI.Cairo.Render.Internal.Region where
 
 #if CAIRO_CHECK_VERSION(1,10,0)
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

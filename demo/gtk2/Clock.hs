@@ -10,7 +10,7 @@
 --    Duncan Coutts <duncan.coutts@worc.ox.ac.uk>
 --
 
-import Graphics.Rendering.Cairo
+import GI.Cairo.Render
 import Graphics.UI.Gtk
 import Graphics.UI.Gtk.Gdk.EventM
 import System.Time

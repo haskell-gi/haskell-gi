@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Surfaces.PDF
+-- Module      :  GI.Cairo.Render.Internal.Surfaces.PS
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see doc/COPYRIGHT)
 --
@@ -9,24 +9,24 @@
 -- Stability   :  experimental
 -- Portability :  portable
 --
--- Rendering PDF documents.
+-- Rendering PS documents.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Surfaces.PDF where
+module GI.Cairo.Render.Internal.Surfaces.PS where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C
 
 {#context lib="cairo" prefix="cairo"#}
 
-#ifdef CAIRO_HAS_PDF_SURFACE
+#ifdef CAIRO_HAS_PS_SURFACE
 
-{#fun pdf_surface_create  as pdfSurfaceCreate { withCAString* `FilePath', `Double', `Double' } -> `Surface' mkSurface*#}
+{#fun ps_surface_create  as psSurfaceCreate { withCAString* `FilePath', `Double', `Double' } -> `Surface' mkSurface*#}
 
 #if CAIRO_CHECK_VERSION(1,2,0)
-{#fun pdf_surface_set_size as pdfSurfaceSetSize { withSurface* `Surface', `Double', `Double' } -> `()'#}
+{#fun cairo_ps_surface_set_size as psSurfaceSetSize { withSurface* `Surface', `Double', `Double' } -> `()'#}
 #endif
 
 #endif

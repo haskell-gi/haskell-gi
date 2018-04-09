@@ -1,6 +1,6 @@
 -- Example of an drawing graphics onto a canvas.
 import Graphics.UI.Gtk
-import Graphics.Rendering.Cairo
+import GI.Cairo.Render
 import Graphics.UI.Gtk.Gdk.EventM
 
 main = do

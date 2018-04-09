@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Surfaces.PNG
+-- Module      :  GI.Cairo.Render.Internal.Surfaces.PNG
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -12,9 +12,9 @@
 -- Reading and writing PNG images.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Surfaces.PNG where
+module GI.Cairo.Render.Internal.Surfaces.PNG where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

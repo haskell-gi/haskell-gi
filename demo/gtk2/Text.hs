@@ -1,5 +1,5 @@
-import Graphics.Rendering.Cairo
-import qualified Graphics.Rendering.Cairo.Matrix as M
+import GI.Cairo.Render
+import qualified GI.Cairo.Render.Matrix as M
 
 boxText :: String -> Double -> Double -> Render ()
 boxText text x y = do

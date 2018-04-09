@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Fonts.FontOptions
+-- Module      :  GI.Cairo.Render.Internal.Fonts.FontOptions
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see doc/COPYRIGHT)
 --
@@ -11,9 +11,9 @@
 -- How a font should be rendered.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Fonts.FontOptions where
+module GI.Cairo.Render.Internal.Fonts.FontOptions where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

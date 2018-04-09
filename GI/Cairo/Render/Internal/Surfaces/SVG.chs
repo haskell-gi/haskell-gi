@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Surfaces.SVG
+-- Module      :  GI.Cairo.Render.Internal.Surfaces.SVG
 -- Copyright   :  (c) Duncan Coutts 2007
 -- License     :  BSD-style (see doc/COPYRIGHT)
 --
@@ -12,9 +12,9 @@
 -- Rendering SVG images.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Surfaces.SVG where
+module GI.Cairo.Render.Internal.Surfaces.SVG where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

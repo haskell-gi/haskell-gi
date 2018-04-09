@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Drawing.Cairo
+-- Module      :  GI.Cairo.Render.Internal.Drawing.Cairo
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -11,9 +11,9 @@
 -- The cairo drawing context functions.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Drawing.Cairo where
+module GI.Cairo.Render.Internal.Drawing.Cairo where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

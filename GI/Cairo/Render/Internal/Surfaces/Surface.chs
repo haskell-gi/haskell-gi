@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Surfaces.Surface
+-- Module      :  GI.Cairo.Render.Internal.Surfaces.Surface
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see doc/COPYRIGHT)
 --
@@ -11,9 +11,9 @@
 -- Base class for surfaces.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Surfaces.Surface where
+module GI.Cairo.Render.Internal.Surfaces.Surface where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

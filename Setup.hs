@@ -2,7 +2,6 @@
 -- all Gtk2Hs-specific boilerplate is kept in
 -- gtk2hs-buildtools:Gtk2HsSetup
 --
-import Gtk2HsSetup ( gtk2hsUserHooks )
-import Distribution.Simple ( defaultMainWithHooks )
+import Distribution.Simple ( defaultMain )
 
-main = defaultMainWithHooks gtk2hsUserHooks
+main = defaultMain

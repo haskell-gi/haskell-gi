@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Drawing.Patterns
+-- Module      :  GI.Cairo.Render.Internal.Drawing.Patterns
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -11,9 +11,9 @@
 -- Gradients and filtered sources.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Drawing.Patterns where
+module GI.Cairo.Render.Internal.Drawing.Patterns where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C

@@ -2,7 +2,7 @@
 {-# OPTIONS_HADDOCK hide #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Types
+-- Module      :  GI.Cairo.Render.Types
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -14,7 +14,7 @@
 -----------------------------------------------------------------------------
 
 -- #hide
-module Graphics.Rendering.Cairo.Types (
+module GI.Cairo.Render.Types (
     PixelData
   , Matrix(Matrix), MatrixPtr
   , Cairo(Cairo), unCairo
@@ -61,7 +61,7 @@ module Graphics.Rendering.Cairo.Types (
 
   ) where
 
-{#import Graphics.Rendering.Cairo.Matrix#}
+{#import GI.Cairo.Render.Matrix#}
 
 import Foreign hiding (rotate)
 import Foreign.C
@@ -104,8 +104,8 @@ unPattern (Pattern x) = x
 --
 -- * 'Status' is used to indicate errors that can occur when using
 --   Cairo. In some cases it is returned directly by functions. When using
---   'Graphics.Rendering.Cairo.Render', the last error, if any, is stored
---   in the monad and can be retrieved with 'Graphics.Rendering.Cairo.status'.
+--   'GI.Cairo.Render.Render', the last error, if any, is stored
+--   in the monad and can be retrieved with 'GI.Cairo.Render.status'.
 --
 {#enum status_t as Status {underscoreToCase} deriving(Eq,Show)#}
 
@@ -334,9 +334,9 @@ foreign import ccall unsafe "&cairo_font_options_destroy"
 -- | A Cairo path.
 --
 -- * A path is a sequence of drawing operations that are accumulated until
---   'Graphics.Rendering.Cairo.stroke' is called. Using a path is particularly
+--   'GI.Cairo.Render.stroke' is called. Using a path is particularly
 --   useful when drawing lines with special join styles and
---   'Graphics.Rendering.Cairo.closePath'.
+--   'GI.Cairo.Render.closePath'.
 --
 {#pointer *path_t as Path newtype#}
 unPath (Path x) = x

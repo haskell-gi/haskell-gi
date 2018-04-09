@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Drawing.Paths
+-- Module      :  GI.Cairo.Render.Internal.Drawing.Paths
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -11,15 +11,15 @@
 -- Creating paths and manipulating path data.
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Drawing.Paths where
+module GI.Cairo.Render.Internal.Drawing.Paths where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C
 import Data.Text
 
-import Graphics.Rendering.Cairo.Internal.Utilities (CairoString(..))
+import GI.Cairo.Render.Internal.Utilities (CairoString(..))
 
 {#context lib="cairo" prefix="cairo"#}
 

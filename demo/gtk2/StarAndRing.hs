@@ -1,5 +1,5 @@
-import Graphics.Rendering.Cairo
-import qualified Graphics.Rendering.Cairo.Matrix as M
+import GI.Cairo.Render
+import qualified GI.Cairo.Render.Matrix as M
 
 ringPath :: Render ()
 ringPath = do

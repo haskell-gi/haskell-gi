@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Graphics.Rendering.Cairo.Internal.Utilities
+-- Module      :  GI.Cairo.Render.Internal.Utilities
 -- Copyright   :  (c) Paolo Martini 2005
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -12,9 +12,9 @@
 -- http://cairographics.org/manual/Support.html
 -----------------------------------------------------------------------------
 
-module Graphics.Rendering.Cairo.Internal.Utilities where
+module GI.Cairo.Render.Internal.Utilities where
 
-{#import Graphics.Rendering.Cairo.Types#}
+{#import GI.Cairo.Render.Types#}
 
 import Foreign
 import Foreign.C
