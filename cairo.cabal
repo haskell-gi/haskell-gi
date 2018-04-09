@@ -1,0 +1,97 @@
+Name:           cairo
+Version:        0.13.4.2
+License:        BSD3
+License-file:   COPYRIGHT
+Copyright:      (c) 2001-2010 The Gtk2Hs Team, (c) Paolo Martini 2005, (c) Abraham Egnor 2003, 2004, (c) Aetion Technologies LLC 2004
+Author:         Axel Simon, Duncan Coutts
+Maintainer:     gtk2hs-users@lists.sourceforge.net
+Build-Type:     Custom
+Cabal-Version:  >= 1.24
+Stability:      stable
+homepage:       http://projects.haskell.org/gtk2hs/
+bug-reports:    https://github.com/gtk2hs/gtk2hs/issues
+Synopsis:       Binding to the Cairo library.
+Description:    Cairo is a library to render high quality vector graphics. There
+                exist various backends that allows rendering to Gtk windows, PDF,
+                PS, PNG and SVG documents, amongst others.
+Category:       Graphics
+Tested-With:    GHC == 7.0.4, GHC == 7.2.2, GHC == 7.4.1
+extra-source-files: cairo-gtk2hs.h
+
+Data-Dir:       demo
+Data-Files:     cairo-clock-icon.png
+                gtk2/CairoGhci.hs
+                gtk2/Clock.hs
+                gtk2/Drawing2.hs
+                gtk2/Drawing.hs
+                gtk2/Graph.hs
+                gtk2/Makefile
+                gtk2/StarAndRing.hs
+                gtk2/Text.hs
+                gtk3/CairoGhci.hs
+                gtk3/Clock.hs
+                gtk3/Drawing2.hs
+                gtk3/Drawing.hs
+                gtk3/Graph.hs
+                gtk3/Makefile
+                gtk3/StarAndRing.hs
+                gtk3/Text.hs
+
+Source-Repository head
+  type:         git
+  location:     https://github.com/gtk2hs/gtk2hs
+  subdir:       cairo
+
+Flag cairo_pdf
+  Description: Build the PDF backend of Cairo.
+
+Flag cairo_ps
+  Description: Build the PostScript backend of Cairo.
+
+Flag cairo_svg
+  Description: Build the Scalable Vector Graphics (SVG) backend of Cairo.
+
+custom-setup
+  setup-depends: base >= 4.6,
+                 Cabal >= 1.24 && < 2.1,
+                 gtk2hs-buildtools >= 0.13.2.0 && < 0.14
+
+Library
+        build-depends:  base >= 4 && < 5,
+                        utf8-string >= 0.2 && < 1.1,
+                        text >= 1.0.0.0 && < 1.3,
+                        bytestring, mtl, array
+        exposed-modules:  Graphics.Rendering.Cairo
+                          Graphics.Rendering.Cairo.Matrix
+                          Graphics.Rendering.Cairo.Types
+                          -- this module is only meant to be used by other
+                          -- modules implementing a Cairo interface
+                          Graphics.Rendering.Cairo.Internal
+        other-modules:
+                          Graphics.Rendering.Cairo.Internal.Drawing.Cairo
+                          Graphics.Rendering.Cairo.Internal.Drawing.Paths
+                          Graphics.Rendering.Cairo.Internal.Drawing.Patterns
+                          Graphics.Rendering.Cairo.Internal.Drawing.Text
+                          Graphics.Rendering.Cairo.Internal.Drawing.Transformations
+                          Graphics.Rendering.Cairo.Internal.Fonts.FontOptions
+                          Graphics.Rendering.Cairo.Internal.Surfaces.Image
+                          Graphics.Rendering.Cairo.Internal.Surfaces.PNG
+                          Graphics.Rendering.Cairo.Internal.Surfaces.Surface
+                          Graphics.Rendering.Cairo.Internal.Utilities
+                          Graphics.Rendering.Cairo.Internal.Surfaces.PDF
+                          Graphics.Rendering.Cairo.Internal.Surfaces.PS
+                          Graphics.Rendering.Cairo.Internal.Surfaces.SVG
+                          Graphics.Rendering.Cairo.Internal.Region
+        default-language:   Haskell98
+        default-extensions: ForeignFunctionInterface
+        Include-dirs: .
+        x-c2hs-Header:  cairo-gtk2hs.h
+        pkgconfig-depends: cairo >= 1.2.0
+        if flag(cairo_pdf)
+          pkgconfig-depends: cairo-pdf
+        if flag(cairo_ps)
+          pkgconfig-depends: cairo-ps
+        if flag(cairo_svg)
+          pkgconfig-depends: cairo-svg
+        if os(darwin) || os(freebsd)
+          cpp-options: -D__attribute__(A)= -D_Nullable= -D_Nonnull=
