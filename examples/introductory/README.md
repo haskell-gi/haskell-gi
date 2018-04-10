@@ -17,6 +17,15 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
     This example shows how menu items belonging to different namespaces can be enabled/disabled together. If the commented out line compiled then items in "win" namespace are enabled or else stay disabled.
 
     This example gives critical messages if linked with gi-gio older than version 2.0.18. Although marked critical, these messages are harmless.
+7. __Resource Bundle:__ This simple example is designed to show how to bundle various resources together the GTK+ program uses. It shows some images which are loaded from the resource bundle, as well as the UI definition and logo images for the application.
+    
+    To run the program,
+    1. You should generate the resource bundle that includes various resources the program needs. 
+    
+        For this refer to `resource-bundle.cmd` which is a Windows `CMD` batch file. Run this file if you are using Windows. If not the command in this file should be usable on all the OSes GTK+ runs.
+
+        Bu sure the the current directory is same with the batch file resides when running.
+    3. Once generated, copy resulted `resource-bundle.gresource` file to the directory where executable resides.
 
 ## How to compile and run examples
 As the author is familiar only with Haskell stack, the examples are built and run by this tool (any suggestions are welcome).

@@ -19,7 +19,9 @@ synopsis:            haskell-gi introductory program examples based on examples 
 # common to point users to the README.md file.
 description:         Please see the README on Github at <https://github.com/githubuser/exercises#readme>
 
-source-dirs: src
+source-dirs: 
+  - src
+  # - src/resource-bundle
 
 ghc-options:
 - -Wall
@@ -39,31 +41,30 @@ dependencies:
 - filepath
 - gi-cairo
 - gi-gdk
+- gi-gdkpixbuf
 - gi-gio
 - gi-gtk
 - haskell-gi-base
 
 executables:
-  basic:
-    main:                basic.hs
+  # basic:
+  #   main:                basic.hs
 
-  hello-world:
-    main:                hello-world.hs
+  # hello-world:
+  #   main:                hello-world.hs
 
-  packed-widgets:
-    main:                packed-widgets.hs
+  # packed-widgets:
+  #   main:                packed-widgets.hs
 
-  # drawing:
-  #   main:                drawing.hs
-
-  builder:
-    main: builder.hs
+  # builder:
+  #   main: builder.hs
  
-  search-bar:
-    main: search-bar.hs
+  # search-bar:
+  #   main: search-bar.hs
 
-  action-namespace:
-    main: action-namespace.hs
+  # action-namespace:
+  #   main: action-namespace.hs
 
-  # sunny:
-  #   main: sunny.hs
+  resource-bundle:
+    source-dirs: src/resource-bundle
+    main: resource-bundle.hs

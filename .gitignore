@@ -34,3 +34,5 @@ bindings/*/dist-newstyle/*
 TAGS
 
 /**/.vscode/
+*.ui~
+*.gresource
