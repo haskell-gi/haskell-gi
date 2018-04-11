@@ -7,16 +7,16 @@ Author:         Axel Simon, Duncan Coutts
 Maintainer:     Kilian Kilger (kkilger@gmail.com)
 Build-Type:     Simple
 Cabal-Version:  >= 1.24
-Stability:      stable
-homepage:       http://projects.haskell.org/gtk2hs/
-bug-reports:    https://github.com/gtk2hs/gtk2hs/issues
+Stability:      experimental
+homepage:       https://github.com/cohomology/gi-cairo-render
+bug-reports:    https://github.com/cohomology/gi-cairo-render/issues
 Synopsis:       GI friendly Binding to the Cairo library.
 Description:    Cairo is a library to render high quality vector graphics. There
                 exist various backends that allows rendering to Gtk windows, PDF,
                 PS, PNG and SVG documents, amongst others.
 Category:       Graphics
 Tested-With:    GHC == 8.2.2, GHC == 8.0.2
-extra-source-files: cairo-gtk2hs.h
+extra-source-files: include/gi-cairo-render.h
 
 Data-Dir:       demo
 Data-Files:     cairo-clock-icon.png
@@ -39,8 +39,7 @@ Data-Files:     cairo-clock-icon.png
 
 Source-Repository head
   type:         git
-  location:     https://github.com/gtk2hs/gtk2hs
-  subdir:       cairo
+  location:     https://github.com/cohomology/gi-cairo-render
 
 Flag cairo_pdf
   Description: Build the PDF backend of Cairo.
