@@ -12,6 +12,8 @@
 -- Rendering PDF documents.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Surfaces.PDF where
 
 {#import GI.Cairo.Render.Types#}

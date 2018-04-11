@@ -12,6 +12,8 @@
 -- Rendering PS documents.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Surfaces.PS where
 
 {#import GI.Cairo.Render.Types#}

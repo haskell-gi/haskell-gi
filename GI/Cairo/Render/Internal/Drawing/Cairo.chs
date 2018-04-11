@@ -11,6 +11,8 @@
 -- The cairo drawing context functions.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h"
+
 module GI.Cairo.Render.Internal.Drawing.Cairo where
 
 {#import GI.Cairo.Render.Types#}

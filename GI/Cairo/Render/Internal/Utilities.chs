@@ -11,6 +11,7 @@
 --
 -- http://cairographics.org/manual/Support.html
 -----------------------------------------------------------------------------
+#include "gi-cairo-render.h" 
 
 module GI.Cairo.Render.Internal.Utilities where
 

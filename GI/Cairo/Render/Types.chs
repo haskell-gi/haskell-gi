@@ -13,6 +13,8 @@
 -- Haskell bindings to the cairo types.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 -- #hide
 module GI.Cairo.Render.Types (
     PixelData

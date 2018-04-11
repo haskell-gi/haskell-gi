@@ -11,6 +11,8 @@
 -- Manipulating the current transformation matrix.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Drawing.Transformations where
 
 {#import GI.Cairo.Render.Types#}

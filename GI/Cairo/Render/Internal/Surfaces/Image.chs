@@ -12,6 +12,8 @@
 -- Rendering to memory buffers.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Surfaces.Image where
 
 {#import GI.Cairo.Render.Types#}

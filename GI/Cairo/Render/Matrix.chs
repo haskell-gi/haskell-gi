@@ -11,6 +11,8 @@
 -- Matrix math
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Matrix (
     Matrix(Matrix)
   , MatrixPtr

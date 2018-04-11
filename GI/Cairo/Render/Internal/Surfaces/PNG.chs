@@ -12,6 +12,8 @@
 -- Reading and writing PNG images.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Surfaces.PNG where
 
 {#import GI.Cairo.Render.Types#}

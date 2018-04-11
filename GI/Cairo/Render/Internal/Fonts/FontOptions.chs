@@ -11,6 +11,8 @@
 -- How a font should be rendered.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Fonts.FontOptions where
 
 {#import GI.Cairo.Render.Types#}

@@ -12,6 +12,8 @@
 -- Rendering SVG images.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Surfaces.SVG where
 
 {#import GI.Cairo.Render.Types#}

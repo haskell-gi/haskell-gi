@@ -11,6 +11,8 @@
 -- Gradients and filtered sources.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h"   
+
 module GI.Cairo.Render.Internal.Drawing.Patterns where
 
 {#import GI.Cairo.Render.Types#}

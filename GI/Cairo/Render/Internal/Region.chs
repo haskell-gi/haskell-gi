@@ -11,6 +11,8 @@
 -- Region functions.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Region where
 
 #if CAIRO_CHECK_VERSION(1,10,0)

@@ -11,6 +11,8 @@
 -- Base class for surfaces.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Surfaces.Surface where
 
 {#import GI.Cairo.Render.Types#}

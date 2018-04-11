@@ -11,6 +11,8 @@
 -- Rendering text.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Drawing.Text where
 
 {#import GI.Cairo.Render.Types#}

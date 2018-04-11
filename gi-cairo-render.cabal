@@ -5,7 +5,7 @@ License-file:   COPYRIGHT
 Copyright:      (c) 2018 Kilian Kilger, (c) 2001-2010 The Gtk2Hs Team, (c) Paolo Martini 2005, (c) Abraham Egnor 2003, 2004, (c) Aetion Technologies LLC 2004
 Author:         Axel Simon, Duncan Coutts
 Maintainer:     Kilian Kilger (kkilger@gmail.com)
-Build-Type:     Custom
+Build-Type:     Simple
 Cabal-Version:  >= 1.24
 Stability:      stable
 homepage:       http://projects.haskell.org/gtk2hs/
@@ -51,10 +51,6 @@ Flag cairo_ps
 Flag cairo_svg
   Description: Build the Scalable Vector Graphics (SVG) backend of Cairo.
 
-custom-setup
-  setup-depends: base >= 4.6,
-                 Cabal >= 1.24 && < 2.1
-
 Library
         build-depends:  base >= 4 && < 5,
                         utf8-string >= 0.2 && < 1.1,
@@ -83,8 +79,7 @@ Library
                           GI.Cairo.Render.Internal.Region
         default-language:   Haskell2010
         default-extensions: ForeignFunctionInterface
-        Include-dirs: .
-        x-c2hs-Header:  cairo-gtk2hs.h
+        Include-dirs: include
         pkgconfig-depends: cairo >= 1.2.0
         if flag(cairo_pdf)
           pkgconfig-depends: cairo-pdf

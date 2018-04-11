@@ -11,6 +11,8 @@
 -- Creating paths and manipulating path data.
 -----------------------------------------------------------------------------
 
+#include "gi-cairo-render.h" 
+
 module GI.Cairo.Render.Internal.Drawing.Paths where
 
 {#import GI.Cairo.Render.Types#}
