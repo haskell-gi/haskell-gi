@@ -25,8 +25,8 @@ import Foreign.C
 {#fun translate          as translate        { unCairo `Cairo', `Double', `Double' } -> `()'#}
 {#fun scale              as scale            { unCairo `Cairo', `Double', `Double' } -> `()'#}
 {#fun rotate             as rotate           { unCairo `Cairo', `Double' } -> `()'#}
-{#fun transform          as transform        { unCairo `Cairo', `Matrix' } -> `()'#}
-{#fun set_matrix         as setMatrix        { unCairo `Cairo', `Matrix' } -> `()'#}
+{#fun transform          as transform        { unCairo `Cairo', with* `Matrix' } -> `()'#}
+{#fun set_matrix         as setMatrix        { unCairo `Cairo', with* `Matrix' } -> `()'#}
 {#fun get_matrix         as getMatrix        { unCairo `Cairo', alloca- `Matrix' peek*} -> `()'#}
 {#fun identity_matrix    as identityMatrix   { unCairo `Cairo' } -> `()'#}
 {#fun user_to_device     as userToDevice     { unCairo `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
