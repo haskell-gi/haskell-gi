@@ -20,7 +20,7 @@ module GI.Cairo.Render.Types (
     PixelData
   , Matrix(Matrix), MatrixPtr
   , Cairo(Cairo), unCairo
-  , Surface(Surface), withSurface, mkSurface, manageSurface
+  , Surface(Surface), SurfacePtr, withSurface, mkSurface, manageSurface
   , Pattern(Pattern), unPattern
   , Status(..)
   , Operator(..)
@@ -40,12 +40,12 @@ module GI.Cairo.Render.Types (
   , SubpixelOrder(..)
   , HintStyle(..)
   , HintMetrics(..)
-  , FontOptions(..), withFontOptions, mkFontOptions
+  , FontOptions(..), FontOptionsPtr, withFontOptions, mkFontOptions
   , Path(..), unPath
 #if CAIRO_CHECK_VERSION(1,10,0)
   , RectangleInt(..), RectangleIntPtr
   , RegionOverlap(..)
-  , Region(..), withRegion, mkRegion
+  , Region(..), RegionPtr, withRegion, mkRegion
 #endif
   , Content(..)
   , Format(..)
@@ -79,8 +79,9 @@ type PixelData = Ptr CUChar
 unCairo (Cairo x) = x
 
 -- | The medium to draw on.
-{#pointer *surface_t as Surface foreign newtype#}
-withSurface (Surface x) = withForeignPtr x
+newtype Surface = Surface { unSurface :: ForeignPtr Surface }
+{#pointer *surface_t as SurfacePtr -> Surface #}
+withSurface = withForeignPtr . unSurface
 
 mkSurface :: Ptr Surface -> IO Surface
 mkSurface surfacePtr = do
@@ -309,9 +310,10 @@ instance Storable FontExtents where
 {#enum hint_metrics_t as HintMetrics {underscoreToCase} deriving(Eq,Show)#}
 
 -- | Specifies how to render text.
-{#pointer *font_options_t as FontOptions foreign newtype#}
+newtype FontOptions = FontOptions { unFontOption :: ForeignPtr FontOptions }
+{#pointer *font_options_t as FontOptionsPtr -> FontOptions #}
 
-withFontOptions (FontOptions fptr) = withForeignPtr fptr
+withFontOptions fptr = withForeignPtr $ unFontOption fptr
 
 mkFontOptions :: Ptr FontOptions -> IO FontOptions
 mkFontOptions fontOptionsPtr = do
@@ -377,9 +379,9 @@ instance Storable RectangleInt where
 -- | A Cairo region. Represents a set of integer-aligned rectangles.
 --
 -- It allows set-theoretical operations like regionUnion and regionIntersect to be performed on them.
-{#pointer *region_t as Region foreign newtype#}
-
-withRegion (Region fptr) = withForeignPtr fptr
+newtype Region = Region { unRegion :: ForeignPtr Region }
+{#pointer *region_t as RegionPtr -> Region #}
+withRegion = withForeignPtr . unRegion 
 
 mkRegion :: Ptr Region -> IO Region
 mkRegion regionPtr = do
