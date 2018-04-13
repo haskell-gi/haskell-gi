@@ -43,7 +43,7 @@ module GI.Cairo.Render.Types (
   , FontOptions(..), withFontOptions, mkFontOptions
   , Path(..), unPath
 #if CAIRO_CHECK_VERSION(1,10,0)
-  , RectangleInt(..)
+  , RectangleInt(..), RectangleIntPtr
   , RegionOverlap(..)
   , Region(..), withRegion, mkRegion
 #endif

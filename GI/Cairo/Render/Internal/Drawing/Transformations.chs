@@ -22,14 +22,14 @@ import Foreign.C
 
 {#context lib="cairo" prefix="cairo"#}
 
-{#fun translate          as translate        { unCairo `Cairo', `Double', `Double' } -> `()'#}
-{#fun scale              as scale            { unCairo `Cairo', `Double', `Double' } -> `()'#}
-{#fun rotate             as rotate           { unCairo `Cairo', `Double' } -> `()'#}
-{#fun transform          as transform        { unCairo `Cairo', with* `Matrix' } -> `()'#}
-{#fun set_matrix         as setMatrix        { unCairo `Cairo', with* `Matrix' } -> `()'#}
-{#fun get_matrix         as getMatrix        { unCairo `Cairo', alloca- `Matrix' peek*} -> `()'#}
-{#fun identity_matrix    as identityMatrix   { unCairo `Cairo' } -> `()'#}
-{#fun user_to_device     as userToDevice     { unCairo `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
-{#fun user_to_device_distance as userToDeviceDistance { unCairo `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
-{#fun device_to_user     as deviceToUser     { unCairo `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
-{#fun device_to_user_distance as deviceToUserDistance { unCairo `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun translate          as translate        { `Cairo', `Double', `Double' } -> `()'#}
+{#fun scale              as scale            { `Cairo', `Double', `Double' } -> `()'#}
+{#fun rotate             as rotate           { `Cairo', `Double' } -> `()'#}
+{#fun transform          as transform        { `Cairo', with* `Matrix' } -> `()'#}
+{#fun set_matrix         as setMatrix        { `Cairo', with* `Matrix' } -> `()'#}
+{#fun get_matrix         as getMatrix        { `Cairo', alloca- `Matrix' peek*} -> `()'#}
+{#fun identity_matrix    as identityMatrix   { `Cairo' } -> `()'#}
+{#fun user_to_device     as userToDevice     { `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun user_to_device_distance as userToDeviceDistance {  `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun device_to_user     as deviceToUser     { `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun device_to_user_distance as deviceToUserDistance { `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}

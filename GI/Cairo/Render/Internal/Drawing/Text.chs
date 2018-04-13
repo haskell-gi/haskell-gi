@@ -30,10 +30,10 @@ selectFontFace c string slant weight =
     {# call select_font_face #}
         c string' (cFromEnum slant) (cFromEnum weight)
 
-{#fun set_font_size    as setFontSize    { unCairo `Cairo', `Double' } -> `()'#}
-{#fun set_font_matrix  as setFontMatrix  { unCairo `Cairo', with* `Matrix' } -> `()'#}
-{#fun get_font_matrix  as getFontMatrix  { unCairo `Cairo', alloca- `Matrix' peek*} -> `()'#}
-{#fun set_font_options as setFontOptions { unCairo `Cairo',  withFontOptions* `FontOptions' } -> `()'#}
+{#fun set_font_size    as setFontSize    { `Cairo', `Double' } -> `()'#}
+{#fun set_font_matrix  as setFontMatrix  { `Cairo', with* `Matrix' } -> `()'#}
+{#fun get_font_matrix  as getFontMatrix  { `Cairo', alloca- `Matrix' peek*} -> `()'#}
+{#fun set_font_options as setFontOptions { `Cairo',  withFontOptions* `FontOptions' } -> `()'#}
 
 showText :: CairoString string => Cairo -> string -> IO ()
 showText c string =
@@ -41,7 +41,7 @@ showText c string =
     {# call show_text #}
         c string'
 
-{#fun font_extents     as fontExtents    { unCairo `Cairo', alloca- `FontExtents' peek* } -> `()'#}
+{#fun font_extents     as fontExtents    { `Cairo', alloca- `FontExtents' peek* } -> `()'#}
 
 textExtents :: CairoString string => Cairo -> string -> IO TextExtents
 textExtents c string =
