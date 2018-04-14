@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  GI.Cairo.Render.Context
+-- Module      :  GI.Cairo.Render.Connector
 -- Copyright   :  (c) Kilian Kilger 2018
 -- License     :  BSD-style (see cairo/COPYRIGHT)
 --
@@ -10,7 +10,7 @@
 --
 -- Connection to the gi-cairo package
 -----------------------------------------------------------------------------
-module GI.Cairo.Render.Context (
+module GI.Cairo.Render.Connector (
    renderWithContext, getContext, toRender
 ) where
 
