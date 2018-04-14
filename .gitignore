@@ -1,6 +1,7 @@
-/dist/
+*/dist/*
 *.lkshf
-/gtk2hs_macros.h
-dist-newstyle
+*/dist-newstyle/*
+dist/
+dist-newstyle/
 .stack-work
 
