@@ -1,7 +1,7 @@
 Name:           gi-cairo-render
 Version:        0.0.1
 License:        BSD3
-License-file:   COPYRIGHT
+License-file:   LICENSE
 Copyright:      (c) 2018 Kilian Kilger, (c) 2001-2010 The Gtk2Hs Team, (c) Paolo Martini 2005, (c) Abraham Egnor 2003, 2004, (c) Aetion Technologies LLC 2004
 Author:         Axel Simon, Duncan Coutts
 Maintainer:     Kilian Kilger (kkilger@gmail.com)
