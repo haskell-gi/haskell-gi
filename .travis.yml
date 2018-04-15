@@ -32,6 +32,7 @@ script:
  - cabal configure
  - cabal build
  - cabal install
+ - cabal haddock
  - popd
 
  - pushd gi-cairo-connector
@@ -39,6 +40,7 @@ script:
  - cabal configure
  - cabal build
  - cabal install
+ - cabal haddock
  - popd 
 
  - pushd examples/sdl
@@ -46,4 +48,12 @@ script:
  - cabal configure
  - cabal build
  - popd  
+
+ - pushd examples/clock
+ - cabal install --only-dependencies
+ - cabal configure
+ - cabal build
+ - popd   
+
+ - cabal new-build all
 

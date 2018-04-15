@@ -1,0 +1,186 @@
+
+Clock.hs:340:28: error:
+    • Couldn't match type ‘GI.Cairo.Context’ with ‘Render Bool’
+      Expected type: GTK.WidgetDrawCallback
+        Actual type: Render Bool -> IO Bool
+    • In the second argument of ‘GTK.onWidgetDraw’, namely
+        ‘(renderWithContext $ drawCanvasHandler canvas)’
+      In a stmt of a 'do' block:
+        GTK.onWidgetDraw
+          canvas (renderWithContext $ drawCanvasHandler canvas)
+      In the expression:
+        do GTK.init Nothing
+           window <- GTK.windowNew GTK.WindowTypeToplevel
+           GTK.windowSetPosition window GTK.WindowPositionCenterAlways
+           GTK.widgetSetAppPaintable window True
+           ....
+    |
+340 |   GTK.onWidgetDraw canvas (renderWithContext $ drawCanvasHandler canvas) 
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clock.hs:340:48: error:
+    • Couldn't match expected type ‘GI.Cairo.Context’
+                  with actual type ‘Render Bool’
+    • In the second argument of ‘($)’, namely
+        ‘drawCanvasHandler canvas’
+      In the second argument of ‘GTK.onWidgetDraw’, namely
+        ‘(renderWithContext $ drawCanvasHandler canvas)’
+      In a stmt of a 'do' block:
+        GTK.onWidgetDraw
+          canvas (renderWithContext $ drawCanvasHandler canvas)
+    |
+340 |   GTK.onWidgetDraw canvas (renderWithContext $ drawCanvasHandler canvas) 
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clock.hs:342:20: error:
+    • Variable not in scope: containerChild
+    • Perhaps you meant one of these:
+        ‘GTK.containerAdd’ (imported from GI.Gtk),
+        ‘GTK.containerChildType’ (imported from GI.Gtk),
+        ‘GTK.setContainerChild’ (imported from GI.Gtk)
+    |
+342 |   GTK.set window [ containerChild := canvas, windowDecorated := False,
+    |                    ^^^^^^^^^^^^^^
+
+Clock.hs:342:35: error:
+    • Data constructor not in scope:
+        (:=)
+          :: t0
+             -> GTK.DrawingArea
+             -> GTK.AttrOp
+                  GTK.Window 'haskell-gi-base-0.21.0:Data.GI.Base.Attributes.AttrSet
+    • Perhaps you meant one of these:
+        ‘GTK.:=’ (imported from GI.Gtk), ‘GTK.::=’ (imported from GI.Gtk),
+        ‘GTK.:=>’ (imported from GI.Gtk)
+      Perhaps you want to add ‘:=’ to the import list in the import of
+      ‘GI.GLib’ (Clock.hs:20:1-27).
+    |
+342 |   GTK.set window [ containerChild := canvas, windowDecorated := False,
+    |                                   ^^
+
+Clock.hs:342:46: error:
+    • Variable not in scope: windowDecorated
+    • Perhaps you meant one of these:
+        ‘GTK.windowGetDecorated’ (imported from GI.Gtk),
+        ‘GTK.windowSetDecorated’ (imported from GI.Gtk),
+        ‘GTK.getWindowDecorated’ (imported from GI.Gtk)
+    |
+342 |   GTK.set window [ containerChild := canvas, windowDecorated := False,
+    |                                              ^^^^^^^^^^^^^^^
+
+Clock.hs:342:62: error:
+    • Data constructor not in scope:
+        (:=)
+          :: t1
+             -> Bool
+             -> GTK.AttrOp
+                  GTK.Window 'haskell-gi-base-0.21.0:Data.GI.Base.Attributes.AttrSet
+    • Perhaps you meant one of these:
+        ‘GTK.:=’ (imported from GI.Gtk), ‘GTK.::=’ (imported from GI.Gtk),
+        ‘GTK.:=>’ (imported from GI.Gtk)
+      Perhaps you want to add ‘:=’ to the import list in the import of
+      ‘GI.GLib’ (Clock.hs:20:1-27).
+    |
+342 |   GTK.set window [ containerChild := canvas, windowDecorated := False,
+    |                                                              ^^
+
+Clock.hs:343:20: error:
+    • Variable not in scope: windowResizable
+    • Perhaps you meant one of these:
+        ‘GDK.windowResize’ (imported from GI.Gdk),
+        ‘GTK.windowResize’ (imported from GI.Gtk),
+        ‘GTK.windowGetResizable’ (imported from GI.Gtk)
+    |
+343 |                    windowResizable := True, windowTitle := (pack "Gtk2Hs Cairo Clock") ]
+    |                    ^^^^^^^^^^^^^^^
+
+Clock.hs:343:36: error:
+    • Data constructor not in scope:
+        (:=)
+          :: t2
+             -> Bool
+             -> GTK.AttrOp
+                  GTK.Window 'haskell-gi-base-0.21.0:Data.GI.Base.Attributes.AttrSet
+    • Perhaps you meant one of these:
+        ‘GTK.:=’ (imported from GI.Gtk), ‘GTK.::=’ (imported from GI.Gtk),
+        ‘GTK.:=>’ (imported from GI.Gtk)
+      Perhaps you want to add ‘:=’ to the import list in the import of
+      ‘GI.GLib’ (Clock.hs:20:1-27).
+    |
+343 |                    windowResizable := True, windowTitle := (pack "Gtk2Hs Cairo Clock") ]
+    |                                    ^^
+
+Clock.hs:343:45: error:
+    • Variable not in scope: windowTitle
+    • Perhaps you meant one of these:
+        ‘GDK.windowHide’ (imported from GI.Gdk),
+        ‘GDK.windowSetTitle’ (imported from GI.Gdk),
+        ‘GTK.windowSetTitle’ (imported from GI.Gtk)
+    |
+343 |                    windowResizable := True, windowTitle := (pack "Gtk2Hs Cairo Clock") ]
+    |                                             ^^^^^^^^^^^
+
+Clock.hs:343:57: error:
+    • Data constructor not in scope:
+        (:=)
+          :: t3
+             -> Text
+             -> GTK.AttrOp
+                  GTK.Window 'haskell-gi-base-0.21.0:Data.GI.Base.Attributes.AttrSet
+    • Perhaps you meant one of these:
+        ‘GTK.:=’ (imported from GI.Gtk), ‘GTK.::=’ (imported from GI.Gtk),
+        ‘GTK.:=>’ (imported from GI.Gtk)
+      Perhaps you want to add ‘:=’ to the import list in the import of
+      ‘GI.GLib’ (Clock.hs:20:1-27).
+    |
+343 |                    windowResizable := True, windowTitle := (pack "Gtk2Hs Cairo Clock") ]
+    |                                                         ^^
+
+Clock.hs:345:3: error:
+    • Couldn't match expected type ‘IO a1’
+                  with actual type ‘GI.GLib.Callbacks.SourceFunc
+                                    -> m1 GHC.Word.Word32’
+    • Probable cause: ‘timeoutAdd’ is applied to too few arguments
+      In a stmt of a 'do' block:
+        timeoutAdd (widgetQueueDraw window >> return True) 1000
+      In the expression:
+        do GTK.init Nothing
+           window <- GTK.windowNew GTK.WindowTypeToplevel
+           GTK.windowSetPosition window GTK.WindowPositionCenterAlways
+           GTK.widgetSetAppPaintable window True
+           ....
+      In an equation for ‘main’:
+          main
+            = do GTK.init Nothing
+                 window <- GTK.windowNew GTK.WindowTypeToplevel
+                 GTK.windowSetPosition window GTK.WindowPositionCenterAlways
+                 ....
+    |
+345 |   timeoutAdd (widgetQueueDraw window >> return True) 1000
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clock.hs:345:15: error:
+    • Variable not in scope: widgetQueueDraw :: GTK.Window -> m0 a0
+    • Perhaps you meant one of these:
+        ‘GTK.widgetQueueDraw’ (imported from GI.Gtk),
+        ‘GTK.widgetQueueDrawArea’ (imported from GI.Gtk)
+    |
+345 |   timeoutAdd (widgetQueueDraw window >> return True) 1000
+    |               ^^^^^^^^^^^^^^^
+
+Clock.hs:345:15: error:
+    • Couldn't match expected type ‘GHC.Int.Int32’
+                  with actual type ‘m0 Bool’
+    • In the first argument of ‘timeoutAdd’, namely
+        ‘(widgetQueueDraw window >> return True)’
+      In a stmt of a 'do' block:
+        timeoutAdd (widgetQueueDraw window >> return True) 1000
+      In the expression:
+        do GTK.init Nothing
+           window <- GTK.windowNew GTK.WindowTypeToplevel
+           GTK.windowSetPosition window GTK.WindowPositionCenterAlways
+           GTK.widgetSetAppPaintable window True
+           ....
+    |
+345 |   timeoutAdd (widgetQueueDraw window >> return True) 1000
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

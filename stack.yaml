@@ -3,3 +3,4 @@ packages:
   - gi-cairo-render
   - gi-cairo-connector
   - examples/sdl
+  - examples/clock
