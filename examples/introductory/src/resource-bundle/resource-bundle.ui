@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.21.0 
+<!-- Generated with glade 3.22.1 
 
 - 
 Copyright (C) 
@@ -49,7 +49,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
     <property name="name">appWindow</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Resource bundle</property>
-    <property name="icon_name">emblem-package</property>
+    <property name="icon_name">package-x-generic</property>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
     <child>
       <object class="GtkGrid">
         <property name="visible">True</property>
@@ -64,7 +67,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/Kilimanjaro_from_Amboseli.jpg</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Ispir-2.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Tortum-falls.jpg</property>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -75,7 +89,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/240px-Mt_Uluguru_and_Sisal_plantations.jpg</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Orhaniye-1.jpg</property>
           </object>
           <packing>
             <property name="left_attach">2</property>
@@ -86,18 +100,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/240px-Crepuscular_rays_at_Sunset_near_Waterberg_Plateau.jpg</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Selimiye-1.jpg</property>
           </object>
           <packing>
-            <property name="left_attach">3</property>
-            <property name="top_attach">2</property>
+            <property name="left_attach">0</property>
+            <property name="top_attach">3</property>
           </packing>
         </child>
         <child>
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/240px-Mt_Herschel,_Antarctica,_Jan_2006.jpg</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Kapadokya-1.jpg</property>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -108,7 +122,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/Adelie_penguins_in_the_South_Shetland_Islands.jpg</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/YatMarin-Marmaris-1.jpg</property>
           </object>
           <packing>
             <property name="left_attach">2</property>
@@ -119,18 +133,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/240px-Fryxellsee_Opt.jpg</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Artos-1.jpg</property>
           </object>
           <packing>
-            <property name="left_attach">3</property>
-            <property name="top_attach">3</property>
+            <property name="left_attach">0</property>
+            <property name="top_attach">1</property>
           </packing>
         </child>
         <child>
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/Phewa_lake_029.JPG</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Goreme-1.jpg</property>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -141,7 +155,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           <object class="GtkImage">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/2014_Reliktowy_Park_Narodowy_Rica,_Widok_na_jezioro_Rica_od_strony_po_udniowo-zachodniej_(06).jpg</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/Ispir-1.jpg</property>
           </object>
           <packing>
             <property name="left_attach">2</property>
@@ -149,117 +163,84 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           </packing>
         </child>
         <child>
-          <object class="GtkImage">
+          <object class="GtkBox">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="resource">/haskell-gi/examples/resource-bundle/240px-Hunza_Valley,_view_from_Eagle's_Nest.jpg</property>
-          </object>
-          <packing>
-            <property name="left_attach">3</property>
-            <property name="top_attach">1</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="halign">start</property>
-            <property name="valign">center</property>
-            <property name="label" translatable="yes">Asia</property>
-            <attributes>
-              <attribute name="weight" value="bold"/>
-            </attributes>
-          </object>
-          <packing>
-            <property name="left_attach">0</property>
-            <property name="top_attach">1</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="halign">start</property>
-            <property name="valign">center</property>
-            <property name="label" translatable="yes">Africa</property>
-            <attributes>
-              <attribute name="weight" value="bold"/>
-            </attributes>
-          </object>
-          <packing>
-            <property name="left_attach">0</property>
-            <property name="top_attach">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="halign">start</property>
-            <property name="valign">center</property>
-            <property name="label" translatable="yes">Antarctica</property>
-            <attributes>
-              <attribute name="weight" value="bold"/>
-            </attributes>
-          </object>
-          <packing>
-            <property name="left_attach">0</property>
-            <property name="top_attach">3</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkMenuButton">
-            <property name="name">menuButton</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">True</property>
-            <property name="halign">start</property>
-            <property name="valign">center</property>
-            <property name="popup">menu1</property>
-            <property name="use_popover">False</property>
             <child>
-              <placeholder/>
+              <object class="GtkMenuButton">
+                <property name="name">menuButton</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="halign">start</property>
+                <property name="valign">center</property>
+                <property name="popup">menu1</property>
+                <property name="use_popover">False</property>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Here are a bunch of images from the author.</property>
+                <property name="use_markup">True</property>
+                <property name="justify">center</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
             </child>
           </object>
           <packing>
             <property name="left_attach">0</property>
-            <property name="top_attach">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Here are a bunch of images from three continents. Just random from &lt;a href="https://commons.wikimedia.org/wiki/Category:Images_by_continent"&gt;Wikimedia Commons, Category: Images By Continent&lt;/a&gt;. </property>
-            <property name="use_markup">True</property>
-          </object>
-          <packing>
-            <property name="left_attach">1</property>
             <property name="top_attach">0</property>
             <property name="width">3</property>
           </packing>
         </child>
       </object>
     </child>
-    <child type="titlebar">
-      <placeholder/>
-    </child>
   </object>
   <object class="GtkAboutDialog" id="aboutDialog">
     <property name="can_focus">False</property>
     <property name="modal">True</property>
-    <property name="icon_name">emblem-package</property>
+    <property name="icon_name">package-x-generic</property>
     <property name="type_hint">dialog</property>
     <property name="transient_for">applicationwindow1</property>
     <property name="program_name">Resource Bundle</property>
     <property name="version">0.0.1</property>
-    <property name="copyright" translatable="yes">Pictures and icon: © Wikipedia Commons</property>
+    <property name="copyright" translatable="yes">Pictures: Murat Özsöyler
+Logo &amp; Icons: Glade icon mimetypes/package-x-generic</property>
     <property name="comments" translatable="yes">For more information go to:</property>
     <property name="website">https://github.com/haskell-gi/haskell-gi</property>
     <property name="website_label" translatable="yes">haskell-gi GitHub repository</property>
-    <property name="authors">Murat Özsöyler</property>
-    <property name="logo">resource:///haskell-gi/examples/resource-bundle/Gnome-compressed-240x240.svg.png</property>
+    <property name="authors">Murat Özsöyler
+Iñaki García Etxebarria</property>
+    <property name="logo_icon_name">package-x-generic</property>
     <property name="license_type">lgpl-2-1</property>
+    <child>
+      <placeholder/>
+    </child>
     <child internal-child="vbox">
       <object class="GtkBox">
         <property name="can_focus">False</property>
@@ -277,9 +258,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
           </packing>
         </child>
       </object>
-    </child>
-    <child>
-      <placeholder/>
     </child>
   </object>
 </interface>

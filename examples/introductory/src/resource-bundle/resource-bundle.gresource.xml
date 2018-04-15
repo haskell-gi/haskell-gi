@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/haskell-gi/examples/resource-bundle">
-    <file preprocess="to-pixdata">Gnome-compressed-60x60.svg.png</file>
-    <file preprocess="to-pixdata">Gnome-compressed-240x240.svg.png</file>
-    <file preprocess="to-pixdata">240px-Crepuscular_rays_at_Sunset_near_Waterberg_Plateau.jpg</file>
-    <file preprocess="to-pixdata">240px-Fryxellsee_Opt.jpg</file>
-    <file preprocess="to-pixdata">240px-Hunza_Valley,_view_from_Eagle's_Nest.jpg</file>
-    <file preprocess="to-pixdata">240px-Mt_Herschel,_Antarctica,_Jan_2006.jpg</file>
-    <file preprocess="to-pixdata">240px-Mt_Uluguru_and_Sisal_plantations.jpg</file>
-    <file preprocess="to-pixdata">2014_Reliktowy_Park_Narodowy_Rica,_Widok_na_jezioro_Rica_od_strony_po_udniowo-zachodniej_(06).jpg</file>
-    <file preprocess="to-pixdata">Adelie_penguins_in_the_South_Shetland_Islands.jpg</file>
-    <file preprocess="to-pixdata">Kilimanjaro_from_Amboseli.jpg</file>
-    <file preprocess="to-pixdata">Phewa_lake_029.JPG</file>
+    <file preprocess="to-pixdata">Artos-1.jpg</file>
+    <file preprocess="to-pixdata">Goreme-1.jpg</file>
+    <file preprocess="to-pixdata">Ispir-1.jpg</file>
+    <file preprocess="to-pixdata">Ispir-2.jpg</file>
+    <file preprocess="to-pixdata">Kapadokya-1.jpg</file>
+    <file preprocess="to-pixdata">Orhaniye-1.jpg</file>
+    <file preprocess="to-pixdata">Selimiye-1.jpg</file>
+    <file preprocess="to-pixdata">Tortum-falls.jpg</file>
+    <file preprocess="to-pixdata">YatMarin-Marmaris-1.jpg</file>
     <file compressed="true">resource-bundle.ui</file>
   </gresource>
 </gresources>

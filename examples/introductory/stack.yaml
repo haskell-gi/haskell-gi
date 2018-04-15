@@ -2,3 +2,5 @@ resolver: nightly-2018-04-09
 
 packages:
 - .
+
+# with-hpack: C:\Users\zmtemp\AppData\Roaming\local\bin\hpack.exe

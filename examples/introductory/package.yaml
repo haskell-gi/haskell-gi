@@ -46,25 +46,32 @@ dependencies:
 - gi-gtk
 - haskell-gi-base
 
+# verbatim: 
+#   pkgconfig-depends: glib-2.0 >= 2.32
+
 executables:
-  # basic:
-  #   main:                basic.hs
+  basic:
+    main:                basic.hs
 
-  # hello-world:
-  #   main:                hello-world.hs
+  hello-world:
+    main:                hello-world.hs
 
-  # packed-widgets:
-  #   main:                packed-widgets.hs
+  packed-widgets:
+    main:                packed-widgets.hs
 
-  # builder:
-  #   main: builder.hs
+  builder:
+    main: builder.hs
  
-  # search-bar:
-  #   main: search-bar.hs
+  search-bar:
+    main: search-bar.hs
 
-  # action-namespace:
-  #   main: action-namespace.hs
+  action-namespace:
+    main: action-namespace.hs
 
   resource-bundle:
     source-dirs: src/resource-bundle
     main: resource-bundle.hs
+    # External resource bundles Step 3: Comment out the 2 lines below
+    c-sources: src/resource-bundle/resources.c
+    pkg-config-dependencies: glib-2.0 >= 2.32
+
