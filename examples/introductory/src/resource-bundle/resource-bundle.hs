@@ -4,18 +4,22 @@ module Main where
 
 import           Data.Maybe (fromJust)
 import           Data.Text (Text)
+-- External resource bundles Step 2: Reactivate next 2 lines
+-- import           System.Environment 
+-- import           System.FilePath 
 
 import           Data.GI.Base
-import qualified GI.GdkPixbuf as GdkPixbuf  
 import qualified GI.Gio as Gio 
 import qualified GI.Gtk as Gtk
 
 unsafeGetObjectWithCast :: GObject o => Gtk.Builder -> Text -> (ManagedPtr o -> o) -> IO o
 unsafeGetObjectWithCast builder name totype_ = #getObject builder name >>= unsafeCastTo totype_ . fromJust
 
--- External resource bundles Step 2: Reactivate next 2 lines
--- resourceFileName :: FilePath -- [String] or Text tested
--- resourceFileName = "./resource-bundle.gresource"
+-- External resource bundles Step 2: Reactivate next 4 lines
+-- resourceFileName :: IO FilePath
+-- resourceFileName = getExecutablePath 
+--                  >>= return . dropFileName 
+--                  >>= return . (flip combine) "resource-bundle.gresource"
 
 openAbout :: Gtk.AboutDialog -> IO ()
 openAbout aboutDialog = #run aboutDialog >> return ()
@@ -23,7 +27,7 @@ openAbout aboutDialog = #run aboutDialog >> return ()
 appActivate :: Gtk.Application -> IO ()
 appActivate app = do
   -- External resource bundles Step 2: Reactivate next 2 lines
-  -- resource <- Gio.resourceLoad resourceFileName
+  -- resource <- Gio.resourceLoad =<< resourceFileName
   -- Gio.resourcesRegister resource
 
   builder <- Gtk.builderNewFromResource "/haskell-gi/examples/resource-bundle/resource-bundle.ui"

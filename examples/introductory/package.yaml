@@ -46,9 +46,6 @@ dependencies:
 - gi-gtk
 - haskell-gi-base
 
-# verbatim: 
-#   pkgconfig-depends: glib-2.0 >= 2.32
-
 executables:
   basic:
     main:                basic.hs

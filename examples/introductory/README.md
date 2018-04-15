@@ -23,7 +23,7 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
     * __Internal resources:__ This type of resources are embedded into the executable. So resources are ready as soon as the program loaded. We owe this to @gratexe, since he showed us how to achieve this. In this example this type of resources are default.
     * __External resources:__ This resource bundles are in separate files from the executable. Some times this is necessary because more than one program may share same resources. To prepare for this type of resource bundles, you should take these steps before program compilation and resource bundling:
         * __Step 1:__ Find `resource-bundle.cmd` (or the equivalent for your OS). Comment out second line and delete `@rem` at the start of the 6th line.
-        * __Step 2:__ Delete comment markers of lines 17-18 and 25-26 in `resource-bundle.hs`. 
+        * __Step 2:__ Delete comment markers of lines 8-9, 19-22 and 30-31 in `resource-bundle.hs`. 
         * __Step 3:__ 
             * __If you are using `stack`:__ Comment out lines 75-76 in `package.yaml`. Be sure to delete `.cabal` files (the backup of this file is `introductory-examples.cabal-save` if you want to return back to original).
             * __If you are using `Cabal`:__ Comment out lines 135-139 `introductory-examples.cabal`.
