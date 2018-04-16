@@ -69,7 +69,7 @@ writeCabal fname info =
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi == 0.21.1 && < 0.22"
+               , "haskell-gi >= 0.21.1 && < 0.22"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
