@@ -11,3 +11,10 @@ add-node WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array type
 set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array c:type gchar**
 set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array/@type name utf8
 set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array/@type c:type gchar**
+
+# https://github.com/haskell-gi/haskell-gi/issues/155
+# Even get_current_item can return null if no page has ever been loaded
+set-attr WebKit2/WebKitBackForwardList/get_current_item/@return-value nullable 1
+set-attr WebKit2/WebKitBackForwardList/get_back_item/@return-value nullable 1
+set-attr WebKit2/WebKitBackForwardList/get_forward_item/@return-value nullable 1
+set-attr WebKit2/WebKitBackForwardList/get_nth_item/@return-value nullable 1
