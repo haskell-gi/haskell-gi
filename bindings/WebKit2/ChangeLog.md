@@ -1,4 +1,4 @@
-### 4.0.16
+### 4.0.17
 
 + The `ignoreHosts` argument of [`networkProxySettingsNew`](https://hackage.haskell.org/package/gi-webkit2/docs/GI-WebKit2-Structs-NetworkProxySettings.html#v:networkProxySettingsNew) was being represented as `Maybe Text`, but it should have been `Maybe [Text]`. This fixes [issue 154](https://github.com/haskell-gi/haskell-gi/issues/154).
 
