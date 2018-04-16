@@ -57,3 +57,9 @@ script:
 
  - cabal new-build all
 
+cache:
+ directories:
+ - $HOME/.cabal/packages
+ - $HOME/.cabal/store
+ - $HOME/.cabal/bin
+
