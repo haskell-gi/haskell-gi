@@ -45,7 +45,7 @@ writeCabal fname info =
        , "maintainer:           " <> PI.maintainers
        , "category:             " <> PI.category
        , "build-type:           Custom"
-       , "cabal-version:        >= 1.24"
+       , "cabal-version:        1.24"
        , let commonFiles = "README.md ChangeLog.md stack.yaml"
          in case girOverrides info of
            Nothing -> "\nextra-source-files: " <> commonFiles <> "\n"
