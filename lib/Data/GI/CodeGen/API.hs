@@ -58,7 +58,7 @@ module Data.GI.CodeGen.API
 import Control.Applicative ((<$>))
 #endif
 
-import Control.Monad ((>=>), forM, forM_)
+import Control.Monad ((>=>), foldM, forM, forM_)
 import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe, catMaybes)
@@ -149,7 +149,11 @@ data GIRNameTag = GIRPlainName Text
 
 -- | A rule for modifying the GIR file.
 data GIRRule = GIRSetAttr (GIRPath, XML.Name) Text -- ^ (Path to element,
-                                                   -- attrName), newValue
+                                                   -- attrName), newValue.
+             | GIRAddNode GIRPath XML.Name -- ^ Add a child node at
+                                           -- the given selector.
+             | GIRDeleteNode GIRPath -- ^ Delete any nodes matching
+                                     -- the given selector.
              deriving (Show)
 
 data API
@@ -456,27 +460,65 @@ fixupGIRDocument rules doc =
 -- otherwise return the element ummodified.
 fixupGIR :: [GIRRule] -> XML.Element -> XML.Element
 fixupGIR rules elem =
-    elem {XML.elementNodes = map (\e -> foldr applyGIRRule e rules)
-                             (XML.elementNodes elem)}
-    where applyGIRRule :: GIRRule -> XML.Node -> XML.Node
-          applyGIRRule (GIRSetAttr (path, attr) newVal) n =
-              girSetAttr (path, attr) newVal n
+    elem {XML.elementNodes =
+          mapMaybe (\e -> foldM applyGIRRule e rules) (XML.elementNodes elem)}
+    where applyGIRRule :: XML.Node -> GIRRule -> Maybe XML.Node
+          applyGIRRule n (GIRSetAttr (path, attr) newVal) =
+            Just $ girSetAttr (path, attr) newVal n
+          applyGIRRule n (GIRAddNode path new) =
+            Just $ girAddNode path new n
+          applyGIRRule n (GIRDeleteNode path) =
+            girDeleteNodes path n
 
 -- | Set an attribute for the child element specified by the given
 -- path.
 girSetAttr :: (GIRPath, XML.Name) -> Text -> XML.Node -> XML.Node
 girSetAttr (spec:rest, attr) newVal n@(XML.NodeElement elem) =
     if specMatch spec n
-    then if null rest -- Matched the full path, apply
-         then XML.NodeElement (elem {XML.elementAttributes =
-                                     M.insert attr newVal
-                                          (XML.elementAttributes elem)})
-         -- Still some selectors to apply
-         else XML.NodeElement (elem {XML.elementNodes =
-                                     map (girSetAttr (rest, attr) newVal)
-                                     (XML.elementNodes elem)})
+    then case rest of
+           -- Matched the full path, apply
+           [] -> XML.NodeElement (elem {XML.elementAttributes =
+                                        M.insert attr newVal
+                                        (XML.elementAttributes elem)})
+           -- Still some selectors to apply
+           _ -> XML.NodeElement (elem {XML.elementNodes =
+                                       map (girSetAttr (rest, attr) newVal)
+                                       (XML.elementNodes elem)})
     else n
 girSetAttr _ _ n = n
+
+-- | Add the given subnode to any nodes matching the given path
+girAddNode :: GIRPath -> XML.Name -> XML.Node -> XML.Node
+girAddNode (spec:rest) newNode n@(XML.NodeElement elem) =
+  if specMatch spec n
+  then case rest of
+    -- Matched the full path, add the new child node.
+    [] -> let newElement = XML.Element { elementName = newNode
+                                       , elementAttributes = M.empty
+                                       , elementNodes = [] }
+          in XML.NodeElement (elem {XML.elementNodes =
+                                    XML.elementNodes elem <>
+                                     [XML.NodeElement newElement]})
+    -- Still some selectors to apply.
+    _ -> XML.NodeElement (elem {XML.elementNodes =
+                                map (girAddNode rest newNode)
+                                 (XML.elementNodes elem)})
+  else n
+girAddNode _ _ n = n
+
+-- | Delete any nodes matching the given path.
+girDeleteNodes :: GIRPath -> XML.Node -> Maybe XML.Node
+girDeleteNodes (spec:rest) n@(XML.NodeElement elem) =
+  if specMatch spec n
+  then case rest of
+         -- Matched the full path, discard the node
+         [] -> Nothing
+         -- More selectors to apply
+         _ -> Just $ XML.NodeElement (elem {XML.elementNodes =
+                                            mapMaybe (girDeleteNodes rest)
+                                            (XML.elementNodes elem)})
+  else Just n
+girDeleteNodes _ n = Just n
 
 -- | Lookup the given attribute and if present see if it matches the
 -- given regex.
