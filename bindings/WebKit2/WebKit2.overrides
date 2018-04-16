@@ -3,3 +3,11 @@ pkg-config-name JavaScriptCore javascriptcoregtk
 
 # https://bugs.webkit.org/show_bug.cgi?id=152826
 set-attr WebKit2/WebView/get_uri/@return-value nullable 1
+
+# https://github.com/haskell-gi/haskell-gi/issues/154
+delete-node WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@type
+add-node WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts array
+add-node WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array type
+set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array c:type gchar**
+set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array/@type name utf8
+set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array/@type c:type gchar**
