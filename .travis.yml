@@ -28,7 +28,7 @@ script:
  - cabal install c2hs
 
  - pushd gi-cairo-render
- - cabal install --only-dependencies
+ - travis_retry cabal install --only-dependencies
  - cabal configure
  - cabal build
  - cabal install
@@ -36,7 +36,7 @@ script:
  - popd
 
  - pushd gi-cairo-connector
- - cabal install --only-dependencies
+ - travis_retry cabal install --only-dependencies
  - cabal configure
  - cabal build
  - cabal install
@@ -44,7 +44,7 @@ script:
  - popd 
 
  - pushd examples/sdl
- - cabal install --only-dependencies
+ - travis_retry cabal install --only-dependencies
  - cabal configure
  - cabal build
  - popd  
@@ -55,7 +55,7 @@ script:
  - cabal build
  - popd   
 
- - cabal new-build all
+ - travis_retry cabal new-build all
 
 cache:
  directories:
