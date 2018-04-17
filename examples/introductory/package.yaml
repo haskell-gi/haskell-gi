@@ -53,17 +53,14 @@ executables:
   packed-widgets:
     main:                packed-widgets.hs
 
-  # drawing:
-  #   main:                drawing.hs
-
   builder:
     main: builder.hs
+
+  attribute-usage:
+    main: attribute-usage.hs
  
   search-bar:
     main: search-bar.hs
 
   action-namespace:
     main: action-namespace.hs
-
-  # sunny:
-  #   main: sunny.hs
