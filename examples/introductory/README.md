@@ -19,14 +19,14 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
     This example gives critical messages if linked with gi-gio older than version 2.0.18. Although marked critical, these messages are harmless.
 7. __Resource Bundle:__ This simple example is designed to show how to bundle various resources together the GTK+ program uses. It shows some images which are loaded from the resource bundle, as well as the UI definition and logo images for the application.
 
+    __Attention!__ Please use `stack 1.7.0.1` version when using building this example.
+
     There are two types of resource bundles:
     * __Internal resources:__ This type of resources are embedded into the executable. So resources are ready as soon as the program loaded. We owe this to @gratexe, since he showed us how to achieve this. In this example this type of resources are default.
     * __External resources:__ This resource bundles are in separate files from the executable. Some times this is necessary because more than one program may share same resources. To prepare for this type of resource bundles, you should take these steps before program compilation and resource bundling:
         * __Step 1:__ Find `resource-bundle.cmd` (or the equivalent for your OS). Comment out second line and delete `@rem` at the start of the 6th line.
         * __Step 2:__ Delete comment markers of lines 8-9, 19-22 and 30-31 in `resource-bundle.hs`. 
-        * __Step 3:__ 
-            * __If you are using `stack`:__ Comment out lines 75-76 in `package.yaml`. Be sure to delete `.cabal` files (the backup of this file is `introductory-examples.cabal-save` if you want to return back to original).
-            * __If you are using `Cabal`:__ Comment out lines 135-139 `introductory-examples.cabal`.
+        * __Step 3:__ Comment out lines 75-76 in `package.yaml`. Be sure to delete `.cabal` files (the backup of this file is `introductory-examples.cabal-save` if you want to return back to original). If you are using `Cabal` run `stack build --dry-run` to create cabal file.
     
     To run the program,
     1. You should generate the resource bundle that includes various resources the program needs. 
