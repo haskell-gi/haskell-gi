@@ -312,6 +312,7 @@ module GI.Cairo.Render (
 
   ) where
 
+import Data.GI.Base (wrapBoxed, freeBoxed)
 import Control.Monad (unless, when)
 import Control.Monad.Reader (ReaderT(runReaderT), ask, MonadIO, liftIO)
 import Control.Exception (bracket)
@@ -367,9 +368,10 @@ renderWith :: (MonadIO m) =>
   -> Render a
   -> m a
 renderWith surface (Render m) = liftIO $
-  bracket (Internal.create surface)
+  bracket (do context <- Internal.create surface
+              wrapBoxed Cairo context)
           (\context -> do status <- Internal.status context
-                          Internal.destroy context
+                          freeBoxed context
                           unless (status == StatusSuccess) $
                             fail =<< Internal.statusToString status)
           (\context -> runReaderT m context)

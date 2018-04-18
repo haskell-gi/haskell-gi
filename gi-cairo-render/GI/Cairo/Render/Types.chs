@@ -19,7 +19,7 @@
 module GI.Cairo.Render.Types (
     PixelData
   , Matrix(Matrix), MatrixPtr
-  , Cairo(Cairo), unCairo
+  , Cairo(Cairo), CairoPtr, unCairo
   , Surface(Surface), SurfacePtr, withSurface, mkSurface, manageSurface
   , Pattern(Pattern), unPattern
   , Status(..)
@@ -65,6 +65,7 @@ module GI.Cairo.Render.Types (
 
 {#import GI.Cairo.Render.Matrix#}
 
+import Data.GI.Base (ManagedPtr, BoxedObject(..), GType(..))
 import Foreign hiding (rotate)
 import Foreign.C
 
@@ -74,14 +75,21 @@ import Control.Monad (liftM)
 
 type PixelData = Ptr CUChar
 
+foreign import ccall "cairo_gobject_context_get_type" 
+  c_cairo_gobject_context_get_type :: IO GType
+
 -- not visible
-{#pointer *cairo_t as Cairo newtype#}
+newtype Cairo = Cairo (ManagedPtr Cairo) 
+{#pointer *cairo_t as CairoPtr -> Cairo#}
 unCairo (Cairo x) = x
+        
+instance BoxedObject Cairo where
+  boxedType _ = c_cairo_gobject_context_get_type
 
 -- | The medium to draw on.
 newtype Surface = Surface { unSurface :: ForeignPtr Surface }
 {#pointer *surface_t as SurfacePtr -> Surface #}
-withSurface = withForeignPtr . unSurface
+withSurface = withForeignPtr . unSurface 
 
 mkSurface :: Ptr Surface -> IO Surface
 mkSurface surfacePtr = do
