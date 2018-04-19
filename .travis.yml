@@ -1,8 +1,19 @@
 sudo: false
 dist: trusty
+language: c
 
-env:
- - CABALVER=2.2 GHCVER=8.4.1
+matrix:
+  include:
+    - ghc: "8.4.1"
+      env:
+        - CABALVER=2.2 GHCVER=8.4.1 
+      addons:
+        apt:
+          sources:
+            sourceline: ppa:hvr/ghc 
+          packages: 
+            - cabal-install-2.2
+            - ghc-8.4.1
 
 addons:
   apt:
@@ -10,8 +21,6 @@ addons:
       - sourceline: ppa:hvr/ghc
     packages:
       - libsdl2-dev
-      - cabal-install-$CABALVER 
-      - ghc-$GHCVER 
       - happy-1.19.5 
       - alex-3.1.7 
       - libgirepository1.0-dev 
