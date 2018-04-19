@@ -64,7 +64,7 @@ Library
         default-extensions: ForeignFunctionInterface
         Include-dirs: include
         pkgconfig-depends: cairo >= 1.2.0,
-                           cairo-gobject >= 1.14
+                           cairo-gobject >= 1.13
         if flag(cairo_pdf)
           pkgconfig-depends: cairo-pdf
         if flag(cairo_ps)
