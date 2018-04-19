@@ -63,7 +63,8 @@ Library
         default-language:   Haskell2010
         default-extensions: ForeignFunctionInterface
         Include-dirs: include
-        pkgconfig-depends: cairo >= 1.2.0
+        pkgconfig-depends: cairo >= 1.2.0,
+                           cairo-gobject >= 1.14
         if flag(cairo_pdf)
           pkgconfig-depends: cairo-pdf
         if flag(cairo_ps)

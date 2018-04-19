@@ -24,8 +24,6 @@ import Foreign.C
 {#context lib="cairo" prefix="cairo"#}
 
 {#fun create                                 { withSurface* `Surface' } -> `CairoPtr' #}
-{#fun reference                              { withManagedPtr* `Cairo' } -> `()' #}
-{#fun destroy                                { withManagedPtr* `Cairo' } -> `()' #}
 {#fun save                                   { withManagedPtr* `Cairo' } -> `()' #}
 {#fun restore                                { withManagedPtr* `Cairo' } -> `()' #}
 {#fun status             as status           { withManagedPtr* `Cairo' } -> `Status' cToEnum#}
