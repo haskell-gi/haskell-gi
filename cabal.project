@@ -3,3 +3,4 @@ packages: gi-cairo-render/gi-cairo-render.cabal,
 
 optional-packages: examples/sdl/gi-cairo-render-sdl.cabal
                    examples/clock/gi-cairo-render-clock.cabal
+                   examples/hlabyrinth/hlabyrinth.cabal

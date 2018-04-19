@@ -4,3 +4,5 @@ packages:
   - gi-cairo-connector
   - examples/sdl
   - examples/clock
+  - examples/hlabyrinth
+
