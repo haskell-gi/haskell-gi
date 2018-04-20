@@ -8,6 +8,7 @@ import System.FilePath((</>))
 import Control.Monad(liftM)
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
+import GI.Cairo.Connector (renderWithContext, toRender) 
 
 import qualified Data.Text as Text
 import qualified Control.Concurrent.STM as STM
@@ -20,7 +21,7 @@ import qualified GI.Gdk as GDK
 import qualified GI.Pango as Pango
 import qualified GI.PangoCairo as PangoCairo
 import qualified GI.GLib as Glib
-import qualified Graphics.Rendering.Cairo as Cairo
+import qualified GI.Cairo.Render as Cairo
 import qualified GI.Cairo  
 import qualified Data.String.Unicode
 
@@ -29,7 +30,7 @@ import Rectangle
 import Labyrinth
 import Grid
 import UserTexts
-import GIHelper (renderWithContext, dialogRun, dialogAddButton)
+import GIHelper (dialogRun, dialogAddButton)
 
 data CmdOptions = CmdOptions
   { cmdBoxSize :: Int ,
@@ -147,14 +148,14 @@ setLegendTextStyle = do Cairo.setAntialias Cairo.AntialiasSubpixel
                         Cairo.setSourceRGB 0 0 0                        
                         Cairo.setFontSize 13.0
 
-drawCanvasHandler :: LabyrinthState -> GI.Cairo.Context -> Cairo.Render Bool
-drawCanvasHandler state cairoContext = 
+drawCanvasHandler :: LabyrinthState -> Cairo.Render Bool
+drawCanvasHandler state = 
   do 
     let labyrinth = stLabyrinth state
     extents <- Cairo.clipExtents
     let drawRectangle = rFromBoundingBox round extents
     redrawInfo <- liftIO (getRedrawInfo labyrinth drawRectangle)
-    drawLabyrinth cairoContext state drawRectangle redrawInfo
+    drawLabyrinth state drawRectangle redrawInfo
     return True
   where getRedrawInfo :: STM.TVar (Maybe Labyrinth) -> Rectangle Int -> IO (Maybe RedrawInfo)
         getRedrawInfo labyrinth drawRectangle = STM.atomically $
@@ -162,13 +163,13 @@ drawCanvasHandler state cairoContext =
             labyrinth <- STM.readTVar labyrinth
             labyGetRedrawInfo labyrinth drawRectangle
 
-drawLabyrinth :: GI.Cairo.Context -> LabyrinthState -> Rectangle Int -> Maybe RedrawInfo -> Cairo.Render ()
-drawLabyrinth _            _     _             Nothing     = return ()
-drawLabyrinth cairoContext state drawRectangle (Just info) = 
+drawLabyrinth :: LabyrinthState -> Rectangle Int -> Maybe RedrawInfo -> Cairo.Render ()
+drawLabyrinth _     _             Nothing     = return ()
+drawLabyrinth state drawRectangle (Just info) = 
   do
     clearArea 
     drawAxes (labyRedrIntersect info) (labyRedrGrid info)
-    drawBoxes cairoContext state (labyRedrBoxes info)
+    drawBoxes state (labyRedrBoxes info)
     drawLegend (stLanguage state) (labyRedrLegend info) (grLegendRectangle $ labyRedrGrid info)
 
 clearArea :: Cairo.Render ()
@@ -192,10 +193,9 @@ drawLine rectangle = do
   Cairo.rectangle x y width height
   Cairo.fill
 
-drawBoxes :: GI.Cairo.Context -> LabyrinthState 
-                              -> [ (BoxState, RectangleInScreenCoordinates Int) ] 
-                              -> Cairo.Render ()
-drawBoxes cairoContext state = mapM_ drawBox
+drawBoxes :: LabyrinthState -> [ (BoxState, RectangleInScreenCoordinates Int) ] 
+                            -> Cairo.Render ()
+drawBoxes state = mapM_ drawBox
   where drawBox :: (BoxState, RectangleInScreenCoordinates Int) -> Cairo.Render ()
         drawBox (boxState, rectangle) = let (r,g,b) = labyStateToColor boxState
                                             (x,y,width,height) = rToTuple fromIntegral rectangle
@@ -203,13 +203,13 @@ drawBoxes cairoContext state = mapM_ drawBox
                                               Cairo.setSourceRGB r g b
                                               Cairo.rectangle x y width height                                              
                                               Cairo.fill
-                                              createBoxText cairoContext state boxState (x,y,width,height)
+                                              createBoxText state boxState (x,y,width,height)
                                               Cairo.restore
 
-createBoxText :: GI.Cairo.Context -> LabyrinthState -> BoxState 
-                                  -> (Double, Double, Double, Double) 
-                                  -> Cairo.Render ()
-createBoxText cairoContext state boxState (x, y, width, height)
+createBoxText :: LabyrinthState -> BoxState 
+                                -> (Double, Double, Double, Double) 
+                                -> Cairo.Render ()
+createBoxText state boxState (x, y, width, height)
   | boxState `elem` [Empty, Border]       = return ()
   | boxState == StartField                = createBoxTextDo (translate (stLanguage state) BoxStartFieldText)
   | boxState == TargetField               = createBoxTextDo (translate (stLanguage state) BoxTargetFieldText)
@@ -246,7 +246,7 @@ createBoxText cairoContext state boxState (x, y, width, height)
              ly = y + (height - fromIntegral rh) / 2
          Cairo.moveTo lx ly
          Cairo.setSourceRGB 0 0 0
-         PangoCairo.showLayout cairoContext layout
+         toRender $ (flip PangoCairo.showLayout) layout
                                             
 drawLegend :: Language -> Bool -> Rectangle Int -> Cairo.Render ()
 drawLegend language False _               = return ()
