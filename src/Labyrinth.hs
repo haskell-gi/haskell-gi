@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-} 
 module Labyrinth(
   Labyrinth(..), 
   BoxState(..), 
@@ -5,6 +6,7 @@ module Labyrinth(
   NextAction(..),
   ActionType(..),
   FrozenLabyrinth(..),
+  Direction(..),
   labyConstruct, 
   labyMarkBox,
   labyGetRedrawInfo,
@@ -32,8 +34,10 @@ import Algorithm.Search(aStarM, pruningM)
 
 import Rectangle
 import Grid
+import UserTexts
 
-data BoxState = Empty | Border | StartField | TargetField | Path deriving(Eq, Show, Enum)
+data Direction = NorthEast | East | SouthEast | South | SouthWest | West | NorthWest | North deriving(Eq, Show, Enum, Bounded)
+data BoxState = Empty | Border | StartField | TargetField | Path Direction deriving(Eq, Show)
 data NextAction = SetBorder | SetStartField | SetTargetField deriving(Eq, Show, Enum)
 data ActionType = SetAction | UnSetAction deriving(Eq, Show)
 
@@ -48,9 +52,11 @@ data Labyrinth = Labyrinth {
   labyTargetField :: TVar (Maybe (Int, Int))
 }  
 
-instance SafeCopy BoxState where
+instance SafeCopy Direction where
   putCopy x = contain $ safePut (fromEnum x)
-  getCopy = contain $ toEnum <$> (safeGet :: Get Int)
+  getCopy = contain $ toEnum <$> (safeGet :: Get Int)  
+
+deriveSafeCopy 1 'base ''BoxState
 
 instance SafeCopy NextAction where
   putCopy x = contain $ safePut (fromEnum x)
@@ -86,13 +92,15 @@ legendBottomMargin = 5
 legendLeftMargin :: Int 
 legendLeftMargin = 10
 
-labyConstruct :: Maybe Labyrinth -> Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth 
+labyConstruct :: Integral a => Maybe Labyrinth -> Int -> Int -> (Int, Int) -> (a, a) -> STM Labyrinth 
 labyConstruct Nothing boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
-  labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
+  let (tw, th) = (fromIntegral totalWidth, fromIntegral totalHeight) 
+  in labyConstructNew boxSize borderSize (legendWidth, legendHeight) (tw, th)
 labyConstruct (Just labyrinth) boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
   do isEmpty <- labyIsEmpty labyrinth 
-     if isEmpty then labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
-     else labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight)
+     let (tw, th) = (fromIntegral totalWidth, fromIntegral totalHeight)
+     if isEmpty then labyConstructNew boxSize borderSize (legendWidth, legendHeight) (tw, th)
+     else labyConstructFrom labyrinth boxSize borderSize (legendWidth, legendHeight) (tw, th)
   
 labyConstructNew :: Int -> Int -> (Int, Int) -> (Int, Int) -> STM Labyrinth 
 labyConstructNew boxSize borderSize (legendWidth, legendHeight) (totalWidth, totalHeight) = 
@@ -280,7 +288,7 @@ labyStateToColor Empty = (1.0, 1.0, 1.0)
 labyStateToColor Border = (0, 0, 1.0)
 labyStateToColor StartField = (0.0, 1.0, 0.0)
 labyStateToColor TargetField = (1.0, 0.0, 0.0) 
-labyStateToColor Path = (1.0, 0.3, 1.0)
+labyStateToColor (Path _) = (1.0, 0.3, 1.0)
 
 labyClear :: Maybe Labyrinth -> STM (Maybe Labyrinth)
 labyClear Nothing = return Nothing
@@ -328,27 +336,51 @@ labyThaw labyrinth =
         labyTargetField = targetField
      }
 
-labyFindAndMark :: Maybe Labyrinth -> STM [RectangleInScreenCoordinates Int]
-labyFindAndMark Nothing   = return []
+labyFindAndMark :: Maybe Labyrinth -> STM (Either ErrorMessage [RectangleInScreenCoordinates Int])
+labyFindAndMark Nothing   = return $ Left InternalErrorInPathFinder
 labyFindAndMark (Just labyrinth) = 
-  do target <- readTVar $ labyTargetField labyrinth 
-     path <- labyFindPath labyrinth
-     rectangles <- mapM markBox [ p | p <- path, Just t <- [target], p /= t ]
-     return $ catMaybes rectangles
-  where markBox :: PointInGridCoordinates Int -> STM (Maybe (RectangleInScreenCoordinates Int)) 
-        markBox box = do writeArray (labyBoxState labyrinth) box Path   
-                         return $ grBoxToPixel (labyGrid labyrinth) box
+  do path <- labyFindPath labyrinth
+     case path of 
+         Left error -> return $ Left error
+         Right foundPath -> do Just start <- readTVar $ labyStartField labyrinth  
+                               let pathWithStartElement = start : foundPath      -- include start element
+                               let directionList = labyPathDirection pathWithStartElement
+                               repaintAreas <- mapM markBox (tail directionList) -- remove it again
+                               return $ Right $ catMaybes repaintAreas
+  where markBox :: (Direction, PointInGridCoordinates Int) -> STM (Maybe (RectangleInScreenCoordinates Int)) 
+        markBox (dir, box) = do writeArray (labyBoxState labyrinth) box (Path dir)
+                                return $ grBoxToPixel (labyGrid labyrinth) box
 
-labyFindPath :: Labyrinth -> STM [(Int, Int)]
+labyPathDirection :: [(Int, Int)] -> [(Direction, (Int, Int))]
+labyPathDirection list 
+  | [x,y] <- list = [(computeDirection x y, x)] 
+  | x : y : z : xs <- list  = let d1 = computeDirection x y
+                                  d2 = computeDirection x z
+                              in if d1 == d2 then (d1,x) : labyPathDirection (tail list)
+                                 else (d1,x) : (d2,y) : labyPathDirection (tail $ tail list)
+  | otherwise     = []
+  where computeDirection :: (Int, Int) -> (Int, Int) -> Direction
+        computeDirection (x1,y1) (x2,y2) = computeDirectionDo (compare x1 x2) (compare y1 y2)
+        computeDirectionDo c1 c2 = case (c1, c2) of 
+                                    (LT, LT) -> SouthEast
+                                    (LT, EQ) -> East
+                                    (LT, GT) -> NorthEast
+                                    (EQ, LT) -> South
+                                    (EQ, GT) -> North
+                                    (GT, LT) -> SouthWest
+                                    (GT, EQ) -> West
+                                    (GT, GT) -> NorthWest
+
+labyFindPath :: Labyrinth -> STM (Either ErrorMessage [(Int, Int)])
 labyFindPath labyrinth = 
   do start <- readTVar $ labyStartField labyrinth
      target <- readTVar $ labyTargetField labyrinth
      labyFindPathDo start target
   where 
      grid = labyGrid labyrinth
-     labyFindPathDo :: Maybe (Int, Int) -> Maybe (Int, Int) -> STM [(Int, Int)]
-     labyFindPathDo Nothing _ = return []
-     labyFindPathDo _ Nothing = return []
+     labyFindPathDo :: Maybe (Int, Int) -> Maybe (Int, Int) -> STM (Either ErrorMessage [(Int, Int)])
+     labyFindPathDo Nothing _ = return $ Left StartPointNotSet
+     labyFindPathDo _ Nothing = return $ Left TargetPointNotSet
      labyFindPathDo (Just start) (Just target) = 
        do let taxicabNeighbors :: (Int,Int) -> [(Int,Int)]
               taxicabNeighbors (x, y) = [(x, y + 1), (x - 1, y), (x + 1, y), (x, y - 1)]
@@ -362,14 +394,14 @@ labyFindPath labyrinth =
               isWall pt | isBorder pt = return True
                         | otherwise   = do elem <- readArray (labyBoxState labyrinth) pt
                                            return $ elem == Border
-          maybe [] snd <$> aStarM ((return . taxicabNeighbors) `pruningM` isWall) taxicabDistanceM
-                                   (taxicabDistanceM target) (return . (== target)) start
+          maybe (Left NoPathFound) (Right . snd) <$> aStarM ((return . taxicabNeighbors) `pruningM` isWall) taxicabDistanceM
+                                                             (taxicabDistanceM target) (return . (== target)) start
 
 labyResetPath :: Maybe Labyrinth -> STM [RectangleInScreenCoordinates Int]
 labyResetPath Nothing = return []
 labyResetPath (Just labyrinth) =
   do elems <- getAssocs (labyBoxState labyrinth)
-     let paths = [ fst x | x <- elems, snd x == Path ]
+     let paths = [ fst x | x <- elems, Path _ <- [snd x] ]
      rectangles <- mapM unmarkBox paths
      return $ catMaybes rectangles
   where unmarkBox :: PointInGridCoordinates Int -> STM (Maybe (RectangleInScreenCoordinates Int)) 
