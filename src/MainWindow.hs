@@ -8,7 +8,7 @@ import System.FilePath((</>))
 import Control.Monad(liftM)
 import Control.Monad.Trans(lift, liftIO)
 import Control.Monad.Trans.Maybe(MaybeT, runMaybeT)
-import GI.Cairo.Connector (renderWithContext, toRender) 
+import GI.Cairo.Render.Connector (renderWithContext, toRender) 
 
 import qualified Data.Text as Text
 import qualified Control.Concurrent.STM as STM
