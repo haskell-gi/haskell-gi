@@ -333,20 +333,28 @@ prepareInCallback arg (Callback {cbCallable = cb}) = do
               return (maker, wrapper, drop)
         _ -> terror $ "prepareInCallback : Not an interface! " <> T.pack (ppShow arg)
 
-  when (scope == ScopeTypeAsync) $ do
-   ft <- typeShow <$> foreignType (argType arg)
-   line $ ptrName <> " <- callocMem :: IO (Ptr (" <> ft <> "))"
-
   wrapMaybe arg >>= bool
             (do
               let name' = prime name
-                  p = if (scope == ScopeTypeAsync)
-                      then parenthesize $ "Just " <> ptrName
-                      else "Nothing"
                   dropped =
                       case drop of
                         Just dropper -> parenthesize (dropper <> " " <> name)
                         Nothing -> name
+              -- ScopeTypeAsync callbacks are somewhat tricky: they
+              -- will be called only once, and the data associated to
+              -- them will be invalid after the first call.
+              --
+              -- So we pass them a pointer to a dynamically allocated
+              -- `Ptr FunPtr`, which contains a pointer to the
+              -- `FunPtr` we dynamically allocate wrapping the Haskell
+              -- function. On first invocation, the wrapper will then
+              -- free this memory.
+              p <- if (scope == ScopeTypeAsync)
+                   then do ft <- typeShow <$> foreignType (argType arg)
+                           line $ ptrName <> " <- callocMem :: IO (Ptr (" <> ft <> "))"
+                           return $ parenthesize $ "Just " <> ptrName
+                   else return "Nothing"
+
               line $ name' <> " <- " <> maker <> " "
                        <> parenthesize (wrapper <> " " <> p <> " " <> dropped)
               when (scope == ScopeTypeAsync) $
@@ -361,14 +369,16 @@ prepareInCallback arg (Callback {cbCallable = cb}) = do
                     jName' = prime jName
                 line $ "Just " <> jName <> " -> do"
                 indent $ do
-                         let p = if (scope == ScopeTypeAsync)
-                                 then parenthesize $ "Just " <> ptrName
-                                 else "Nothing"
-                             dropped =
-                                 case drop of
+                         let dropped = case drop of
                                    Just dropper ->
                                        parenthesize (dropper <> " " <> jName)
                                    Nothing -> jName
+                         p <- if (scope == ScopeTypeAsync)
+                           then do ft <- typeShow <$> foreignType (argType arg)
+                                   line $ ptrName <> " <- callocMem :: IO (Ptr (" <> ft <> "))"
+                                   return $ parenthesize $ "Just " <> ptrName
+                           else return "Nothing"
+
                          line $ jName' <> " <- " <> maker <> " "
                                   <> parenthesize (wrapper <> " "
                                                    <> p <> " " <> dropped)
