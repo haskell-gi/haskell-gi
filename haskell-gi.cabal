@@ -1,5 +1,5 @@
 name:                haskell-gi
-version:             0.21.1
+version:             0.21.2
 synopsis:            Generate Haskell bindings for GObject Introspection capable libraries
 description:         Generate Haskell bindings for GObject Introspection capable libraries. This includes most notably
                      Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
