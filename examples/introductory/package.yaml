@@ -1,5 +1,5 @@
 name:                introductory-examples
-version:             0.1.0.0
+version:             0.2.0.0
 # github:              "githubuser/exercises"
 license:             LGPL-2.1
 author:              "Murat Özsöyler"
@@ -19,7 +19,9 @@ synopsis:            haskell-gi introductory program examples based on examples 
 # common to point users to the README.md file.
 description:         Please see the README on Github at <https://github.com/githubuser/exercises#readme>
 
-source-dirs: src
+source-dirs: 
+  - src
+  # - src/resource-bundle
 
 ghc-options:
 - -Wall
@@ -39,6 +41,7 @@ dependencies:
 - filepath
 - gi-cairo
 - gi-gdk
+- gi-gdkpixbuf
 - gi-gio
 - gi-gtk
 - haskell-gi-base
@@ -53,9 +56,6 @@ executables:
   packed-widgets:
     main:                packed-widgets.hs
 
-  # drawing:
-  #   main:                drawing.hs
-
   builder:
     main: builder.hs
  
@@ -65,5 +65,9 @@ executables:
   action-namespace:
     main: action-namespace.hs
 
-  # sunny:
-  #   main: sunny.hs
+  resource-bundle:
+    source-dirs: src/resource-bundle
+    main: resource-bundle.hs
+    # External resource bundles Step 3: Comment out the 2 lines below
+    c-sources: src/resource-bundle/resources.c
+    pkg-config-dependencies: glib-2.0 >= 2.32
