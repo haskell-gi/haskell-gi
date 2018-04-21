@@ -1,3 +1,6 @@
 .stack-work/
 *.cabal
-
+*.ui~
+*.gresource
+*.c
+config.yaml
