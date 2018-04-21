@@ -19,7 +19,7 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
     This example gives critical messages if linked with gi-gio older than version 2.0.18. Although marked critical, these messages are harmless.
 7. __Resource Bundle:__ This simple example is designed to show how to bundle various resources together the GTK+ program uses. It shows some images which are loaded from the resource bundle, as well as the UI definition and logo images for the application.
 
-    __Attention!__ Please use `stack 1.7.0.1` version when using building this example.
+    __Attention!__ Please use `stack >= 1.7.0.1` version when building this example.
 
     There are two types of resource bundles:
     * __Internal resources:__ This type of resources are embedded into the executable. So resources are ready as soon as the program loaded. In this example this type of resources are default.
