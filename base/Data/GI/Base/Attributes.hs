@@ -84,8 +84,7 @@
 --
 -- There are other variants of these operators, see 'AttrOp'
 -- below. ':=>' and ':~>' are like ':=' and ':~' but operate in the
--- 'IO' monad rather than being pure. There is also '::=' and '::~'
--- which take the object as an extra parameter.
+-- 'IO' monad rather than being pure.
 --
 -- Attributes can also be set during construction of a
 -- `Data.GI.Base.BasicTypes.GObject` using `Data.GI.Base.Properties.new`
@@ -153,7 +152,7 @@ import GHC.Exts (Constraint)
 import GHC.OverloadedLabels (IsLabel(..))
 #endif
 
-infixr 0 :=,:~,:=>,:~>,::=,::~
+infixr 0 :=,:~,:=>,:~>
 
 -- | A proxy for attribute labels.
 data AttrLabelProxy (a :: Symbol) = AttrLabelProxy
@@ -274,7 +273,7 @@ type AttrConstructC info obj attr value = (HasAttributeList obj,
 
 -- | Constructors for the different operations allowed on an attribute.
 data AttrOp obj (tag :: AttrOpTag) where
-    -- Assign a value to an attribute
+    -- | Assign a value to an attribute
     (:=)  :: (HasAttributeList obj,
               info ~ ResolveAttribute attr obj,
               AttrInfo info,
@@ -282,7 +281,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               AttrOpAllowed tag info obj,
               (AttrSetTypeConstraint info) b) =>
              AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
-    -- Assign the result of an IO action to an attribute
+    -- | Assign the result of an IO action to an attribute
     (:=>) :: (HasAttributeList obj,
               info ~ ResolveAttribute attr obj,
               AttrInfo info,
@@ -290,7 +289,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               AttrOpAllowed tag info obj,
               (AttrSetTypeConstraint info) b) =>
              AttrLabelProxy (attr :: Symbol) -> IO b -> AttrOp obj tag
-    -- Apply an update function to an attribute
+    -- | Apply an update function to an attribute
     (:~)  :: (HasAttributeList obj,
               info ~ ResolveAttribute attr obj,
               AttrInfo info,
@@ -301,7 +300,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               (AttrSetTypeConstraint info) b,
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (a -> b) -> AttrOp obj tag
-    -- Apply an IO update function to an attribute
+    -- | Apply an IO update function to an attribute
     (:~>) :: (HasAttributeList obj,
               info ~ ResolveAttribute attr obj,
               AttrInfo info,
@@ -312,27 +311,6 @@ data AttrOp obj (tag :: AttrOpTag) where
               (AttrSetTypeConstraint info) b,
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (a -> IO b) -> AttrOp obj tag
-    -- Assign a value to an attribute with the object as an argument
-    (::=) :: (HasAttributeList obj,
-              info ~ ResolveAttribute attr obj,
-              AttrInfo info,
-              AttrBaseTypeConstraint info obj,
-              tag ~ 'AttrSet,
-              AttrOpAllowed tag info obj,
-              (AttrSetTypeConstraint info) b) =>
-             AttrLabelProxy (attr :: Symbol) -> (obj -> b) -> AttrOp obj tag
-    -- Apply an update function to an attribute with the object as an
-    -- argument
-    (::~) :: (HasAttributeList obj,
-              info ~ ResolveAttribute attr obj,
-              AttrInfo info,
-              AttrBaseTypeConstraint info obj,
-              tag ~ 'AttrSet,
-              AttrOpAllowed 'AttrSet info obj,
-              AttrOpAllowed 'AttrGet info obj,
-              (AttrSetTypeConstraint info) b,
-              a ~ (AttrGetType info)) =>
-             AttrLabelProxy (attr :: Symbol) -> (obj -> a -> b) -> AttrOp obj tag
 
 -- | Set a number of properties for some object.
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
@@ -348,9 +326,6 @@ set obj = liftIO . mapM_ app
                       \v -> attrSet (resolve attr) obj (f v)
    app (attr :~> f) = attrGet (resolve attr) obj >>= f >>=
                       attrSet (resolve attr) obj
-   app (attr ::= f) = attrSet (resolve attr) obj (f obj)
-   app (attr ::~ f) = attrGet (resolve attr) obj >>=
-                      \v -> attrSet (resolve attr) obj (f obj v)
 
 -- | Constraints on a @obj@\/@attr@ pair so `get` is possible,
 -- producing a value of type @result@.
