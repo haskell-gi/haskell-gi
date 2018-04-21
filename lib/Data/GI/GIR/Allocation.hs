@@ -27,5 +27,4 @@ unknownAllocationInfo = AllocationInfo {
                           allocCalloc = AllocationOpUnknown
                         , allocCopy = AllocationOpUnknown
                         , allocFree = AllocationOpUnknown
-
                         }

@@ -1,3 +1,7 @@
+### 0.21.1
+
++ Remove the `::=` and `::~` constructors in `AttrOp`, since they cannot really be used for anything, since they are pure functions.
+
 ### 0.21.0
 
 + New release to keep major version parity with the `haskell-gi` package, no changes otherwise.
