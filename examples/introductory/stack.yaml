@@ -1,4 +1,6 @@
-resolver: nightly-2018-03-31
+resolver: nightly-2018-04-21
 
 packages:
 - .
+
+# with-hpack: C:\Users\zmtemp\AppData\Roaming\local\bin\hpack.exe

@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.22.1 
+
+- 
+Copyright (C) 
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+-->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <!-- interface-local-resource-path image/ -->
+  <!-- interface-license-type lgplv2 -->
+  <object class="GtkMenu" id="menu1">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <child>
+      <object class="GtkMenuItem" id="about">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">_About</property>
+        <property name="use_underline">True</property>
+        <signal name="activate" handler="app.about" swapped="no"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="quit">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">_Quit</property>
+        <property name="use_underline">True</property>
+        <signal name="activate" handler="app.quit" swapped="no"/>
+      </object>
+    </child>
+  </object>
+  <object class="GtkApplicationWindow" id="applicationwindow1">
+    <property name="name">appWindow</property>
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Resource bundle</property>
+    <property name="icon_name">package-x-generic</property>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
+    <child>
+      <object class="GtkGrid">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="margin_left">7</property>
+        <property name="margin_right">7</property>
+        <property name="margin_top">7</property>
+        <property name="margin_bottom">7</property>
+        <property name="row_spacing">5</property>
+        <property name="column_spacing">5</property>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Ispir-2.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Tortum-falls.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="top_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Orhaniye-1.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="top_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Selimiye-1.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Kapadokya-1.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="top_attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/YatMarin-Marmaris-1.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="top_attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Artos-1.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Goreme-1.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="top_attach">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="resource">/haskell-gi/examples/resource-bundle/image/Ispir-1.jpg</property>
+          </object>
+          <packing>
+            <property name="left_attach">2</property>
+            <property name="top_attach">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkMenuButton">
+                <property name="name">menuButton</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="halign">start</property>
+                <property name="valign">center</property>
+                <property name="popup">menu1</property>
+                <property name="use_popover">False</property>
+                <child>
+                  <placeholder/>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Here are a bunch of images from the author.</property>
+                <property name="use_markup">True</property>
+                <property name="justify">center</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="left_attach">0</property>
+            <property name="top_attach">0</property>
+            <property name="width">3</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkAboutDialog" id="aboutDialog">
+    <property name="can_focus">False</property>
+    <property name="modal">True</property>
+    <property name="icon_name">package-x-generic</property>
+    <property name="type_hint">dialog</property>
+    <property name="transient_for">applicationwindow1</property>
+    <property name="program_name">Resource Bundle</property>
+    <property name="version">0.0.1</property>
+    <property name="copyright" translatable="yes">Pictures: Murat Özsöyler
+Logo &amp; Icons: Glade icon mimetypes/package-x-generic</property>
+    <property name="comments" translatable="yes">For more information go to:</property>
+    <property name="website">https://github.com/haskell-gi/haskell-gi</property>
+    <property name="website_label" translatable="yes">haskell-gi GitHub repository</property>
+    <property name="authors">Murat Özsöyler
+Iñaki García Etxebarria</property>
+    <property name="logo_icon_name">package-x-generic</property>
+    <property name="license_type">lgpl-2-1</property>
+    <child>
+      <placeholder/>
+    </child>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
