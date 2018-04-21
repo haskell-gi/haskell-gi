@@ -22,7 +22,7 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
     __Attention!__ Please use `stack 1.7.0.1` version when using building this example.
 
     There are two types of resource bundles:
-    * __Internal resources:__ This type of resources are embedded into the executable. So resources are ready as soon as the program loaded. We owe this to @gratexe, since he showed us how to achieve this. In this example this type of resources are default.
+    * __Internal resources:__ This type of resources are embedded into the executable. So resources are ready as soon as the program loaded. In this example this type of resources are default.
     * __External resources:__ This resource bundles are in separate files from the executable. Some times this is necessary because more than one program may share same resources. To prepare for this type of resource bundles, you should take these steps before program compilation and resource bundling:
         * __Step 1:__ Find `resource-bundle.cmd` (or the equivalent for your OS). Comment out second line and delete `@rem` at the start of the 6th line.
         * __Step 2:__ Delete comment markers of lines 8-9, 19-22 and 30-31 in `resource-bundle.hs`. 
