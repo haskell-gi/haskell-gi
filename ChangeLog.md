@@ -1,3 +1,10 @@
+### 0.21.2
+
++ Do not free `Ptr Word8` types after performing the call to C,
+since they only get passed along. Otherwise one could easily double free in functions such as [GdkPixbuf.pixbufNewFromData](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-Pixbuf.html#v:pixbufNewFromData).
+
++ Fix a leak on optional `ScopeTypeAsync` callbacks.
+
 ### 0.20.4
 
 + Improve marshaling of array arguments with no specified size. This improves the generated bindings for various functions, for instance [`GObject.signalEmitv`](https://hackage.haskell.org/package/gi-gobject/docs/GI-GObject-Functions.html#v:signalEmitv).

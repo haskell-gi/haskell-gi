@@ -30,6 +30,8 @@ basicFreeFn (TBasicType TUTF8) = Just "freeMem"
 basicFreeFn (TBasicType TFileName) = Just "freeMem"
 basicFreeFn (TBasicType _) = Nothing
 basicFreeFn (TInterface _) = Nothing
+-- Just passed along
+basicFreeFn (TCArray False (-1) (-1) (TBasicType TUInt8)) = Nothing
 basicFreeFn (TCArray{}) = Just "freeMem"
 basicFreeFn (TGArray _) = Just "unrefGArray"
 basicFreeFn (TPtrArray _) = Just "unrefPtrArray"
@@ -93,6 +95,8 @@ basicFreeFnOnError t@(TInterface _) transfer = do
                                  return Nothing
                           else return Nothing
     _ -> return Nothing
+-- Just passed along
+basicFreeFnOnError (TCArray False (-1) (-1) (TBasicType TUInt8)) _ = return Nothing
 basicFreeFnOnError (TCArray{}) _ = return $ Just "freeMem"
 basicFreeFnOnError (TGArray _) _ = return $ Just "unrefGArray"
 basicFreeFnOnError (TPtrArray _) _ = return $ Just "unrefPtrArray"

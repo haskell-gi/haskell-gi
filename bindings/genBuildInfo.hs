@@ -45,7 +45,7 @@ writeCabal fname info =
        , "maintainer:           " <> PI.maintainers
        , "category:             " <> PI.category
        , "build-type:           Custom"
-       , "cabal-version:        >= 1.24"
+       , "cabal-version:        1.24"
        , let commonFiles = "README.md ChangeLog.md stack.yaml"
          in case girOverrides info of
            Nothing -> "\nextra-source-files: " <> commonFiles <> "\n"
@@ -53,7 +53,7 @@ writeCabal fname info =
        , "custom-setup"
        , "      setup-depends: base >= 4.7 && < 5,"
        , "                     Cabal >= 1.24,"
-       , "                     haskell-gi == 0.21.*"
+       , "                     haskell-gi >= 0.21.1 && < 0.22"
        , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
@@ -69,7 +69,7 @@ writeCabal fname info =
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi == 0.21.*"
+               , "haskell-gi >= 0.21.1 && < 0.22"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]

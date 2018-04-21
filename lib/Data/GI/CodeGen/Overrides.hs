@@ -162,6 +162,10 @@ parseOneLine (T.stripPrefix "namespace-version " -> Just s) =
     withFlags $ parseNsVersion s
 parseOneLine (T.stripPrefix "set-attr " -> Just s) =
     withFlags $ parseSetAttr s
+parseOneLine (T.stripPrefix "add-node " -> Just s) =
+    withFlags $ parseAdd s
+parseOneLine (T.stripPrefix "delete-node " -> Just s) =
+    withFlags $ parseDelete s
 parseOneLine (T.stripPrefix "C-docs-url " -> Just u) =
     withFlags $ parseDocsUrl u
 parseOneLine (T.stripPrefix "if " -> Just s) = parseIf s
@@ -254,6 +258,27 @@ parseSetAttr t =
     throwError ("set-attr syntax is of the form\n" <>
                "\t\"set-attr nodePath attrName newValue\"\n" <>
                "Got \"set-attr " <> t <> "\" instead.")
+
+-- | Add the given child node to all nodes matching the path.
+parseAdd :: Text -> Parser ()
+parseAdd (T.words -> [path, name]) = do
+  pathSpec <- parsePathSpec path
+  parsedName <- parseXMLName name
+  tell $ defaultOverrides {girFixups = [GIRAddNode pathSpec parsedName]}
+parseAdd t =
+    throwError ("add-node syntax is of the form\n" <>
+               "\t\"add-node nodePath newName\"\n" <>
+               "Got \"add-node " <> t <> "\" instead.")
+
+-- | Delete all nodes matching the given path.
+parseDelete :: Text -> Parser ()
+parseDelete (T.words -> [path]) = do
+  pathSpec <- parsePathSpec path
+  tell $ defaultOverrides {girFixups = [GIRDeleteNode pathSpec]}
+parseDelete t =
+    throwError ("delete-node syntax is of the form\n" <>
+               "\t\"delete-node nodePath\"\n" <>
+               "Got \"delete-node " <> t <> "\" instead.")
 
 -- | Parse a documentation URL for the given module.
 parseDocsUrl :: Text -> Parser ()
