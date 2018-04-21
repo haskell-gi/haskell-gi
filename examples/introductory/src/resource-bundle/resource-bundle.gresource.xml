@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/haskell-gi/examples/resource-bundle">
-    <file preprocess="to-pixdata">Artos-1.jpg</file>
-    <file preprocess="to-pixdata">Goreme-1.jpg</file>
-    <file preprocess="to-pixdata">Ispir-1.jpg</file>
-    <file preprocess="to-pixdata">Ispir-2.jpg</file>
-    <file preprocess="to-pixdata">Kapadokya-1.jpg</file>
-    <file preprocess="to-pixdata">Orhaniye-1.jpg</file>
-    <file preprocess="to-pixdata">Selimiye-1.jpg</file>
-    <file preprocess="to-pixdata">Tortum-falls.jpg</file>
-    <file preprocess="to-pixdata">YatMarin-Marmaris-1.jpg</file>
+    <file>image/Artos-1.jpg</file>
+    <file>image/Goreme-1.jpg</file>
+    <file>image/Ispir-1.jpg</file>
+    <file>image/Ispir-2.jpg</file>
+    <file>image/Kapadokya-1.jpg</file>
+    <file>image/Orhaniye-1.jpg</file>
+    <file>image/Selimiye-1.jpg</file>
+    <file>image/Tortum-falls.jpg</file>
+    <file>image/YatMarin-Marmaris-1.jpg</file>
     <file compressed="true">resource-bundle.ui</file>
   </gresource>
 </gresources>
