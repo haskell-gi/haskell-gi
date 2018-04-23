@@ -58,6 +58,9 @@ executables:
 
   builder:
     main: builder.hs
+
+  attribute-usage:
+    main: attribute-usage.hs
  
   search-bar:
     main: search-bar.hs

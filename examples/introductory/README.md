@@ -4,6 +4,15 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
 ## Examples implemented (for now!)
 1. __Basic:__ [Basic example of GTK+ documents](https://developer.gnome.org/gtk3/stable/gtk-getting-started.html).
 2. __Hello world:__ [Hello World example of GTK+ documents](https://developer.gnome.org/gtk3/stable/gtk-getting-started.html).
+2. __Attribute usage:__ As per the [gi-base documentation](https://hackage.haskell.org/package/haskell-gi-base-0.21.0/docs/Data-GI-Base.html#t:AttrOp) there are several ways to assign to the object properties for convenience:
+    
+    1. __Normal value assignment:__ Bare constants or return values from full function applications can be assigned to the properties by `(:=)` operator. This operator can be used in `new` object construction.
+    2. __Assignment of the values encapsulated by IO monad:__ `(:=>)` operator can assign the values wrapped in `IO`. This operator can also be used in `new` object construction.
+    3. __Function application:__ Functions can be used to calculate property values using `(:~)` operator. This function is provided by the current value of the property in its parameter (be aware that if the return type of `get` function for the property is `Maybe` then the value is wrapped in `Maybe`) and return value is assigned as the new value. This operator **can not** be used in `new` object construction.
+    4. __Monadic function application:__ Results of functions returning `IO` wrapped values can be assigned by `(:~>)` operator. The current value of the property is passed in sole parameter of the function (note the type may be `Maybe a` depending on the get result for the same property). This operator **can not** be used in `new` object construction.
+
+    This example is a contrieved program that shows all these property assignment operators. Just read the comments in the `appActivate` function. 
+
 3. __Packed widgets:__ [Packing example of GTK+ documents](https://developer.gnome.org/gtk3/3.12/ch01s02.html).
 4. __Builder:__ [Packing buttons with GtkBuilder example of GTK+ documents](https://developer.gnome.org/gtk3/stable/ch01s03.html).
 
