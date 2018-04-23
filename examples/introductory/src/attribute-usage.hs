@@ -3,71 +3,114 @@
 module Main where
 
 import           Data.Int
--- import qualified Data.Text as Text
--- import qualified Data.Text.IO as Text
--- import           Data.Text (Text)
-import           System.IO (hFlush, stdout)
+import           Data.Maybe (fromJust)
+import qualified Data.Text as Text
+import           Data.Text (Text)
 
 import           Data.GI.Base
 import qualified GI.Gio as Gio
+import qualified GI.Gdk as Gdk
 import qualified GI.Gtk as Gtk
 
+tooltipMarkup :: Text
+tooltipMarkup = 
+  "As per the <span foreground=\"blue\">gi-base documentation (https://hackage.haskell.org/package/haskell-gi-base-0.21.0/docs/Data-GI-Base.html#t:AttrOp)</span> there are several ways to assign to the object properties for convenience:\n\
+  \\n\
+  \<b>Normal value assignment </b>\n\
+  \Bare constants or return values from full function applications can be assigned to the properties by <tt>(:=)</tt> operator. This operator can be used in <tt>new</tt> object construction.\n\
+  \\n\
+  \<b>Assignment of the values encapsulated by IO monad</b>\n\
+  \<tt>(:=>)</tt> operator can assign the values wrapped in <tt>IO</tt>. This operator can also be used in <tt>new</tt> object construction.\n\
+  \\n\
+  \<b>Function application</b>\n\
+  \Functions can be used to calculate property values using <tt>(:~)</tt> operator. This function is provided by the current value of the property in its parameter (be aware that if the return type of <tt>get</tt> function for the property is <tt>Maybe</tt> then the value is wrapped in <tt>Maybe</tt>) and return value is assigned as the new value. This operator <i>can not</i> be used in <tt>new</tt> object construction.\n\
+  \\n\
+  \<b>Monadic function application</b>\n\
+  \Results of functions returning <tt>IO</tt> wrapped values can be assigned by <tt>(:~>)</tt> operator. The current value of the property is passed in sole parameter of the function (note the type may be <tt>Maybe a</tt> depending on the get result for the same property). This operator <i>can not</i> be used in <tt>new</tt> object construction."
+    
 appWinWidth :: Int32
 appWinWidth = 500
+
+goldenRatio :: Double
+goldenRatio = (1.0 + sqrt 5.0) / 2.0
 
 appActivate :: Gtk.Application -> IO ()
 appActivate app = do
   -- we can set attributes of GTK objects by various ways.
-  
   -- when constructing
-  appWin <- new Gtk.ApplicationWindow [#application := app]
-  reportDefaultWidth appWin
-
-  -- after construction using normal values
-  set appWin [ #defaultHeight := 200
-             -- using constant 
-             , #defaultWidth := appWinWidth
-             ]
-  reportDefaultWidth appWin
-             
-  -- using a pure update function. 
-  -- This function receives the current value of the attribute and returns the new value.
-  set appWin [#defaultWidth :~ \old -> old + 100]
-  reportDefaultWidth appWin
-
-  -- You can set attributes with values encapsulated in IO monad
-  set appWin [#defaultWidth :=> get appWin #defaultWidth
-                            >>= \w -> putStr ("Input width (now " ++ show w ++ "px):") >> hFlush stdout >> getLine
-                            >>= return . read 
-             ]
-  reportDefaultWidth appWin
-
-  -- .. or you can let a monadic update function return the new value. The current value is passed to this function.
-  set appWin [#defaultWidth :~> retAvgWidth] 
-  reportDefaultWidth appWin
-
-  set appWin [#defaultWidth ::= retSameWidth]
-  reportDefaultWidth appWin  
-
+                                        -- You can assign normal values
+  appWin <- new Gtk.ApplicationWindow [ #application := app
+                                        -- as well as IO wrapped values
+                                      , #title :=> getTextValue "Enter title of the window"
+                                      ]
+  tv <- new Gtk.TextView [ #editable := False
+                         , #wrapMode := Gtk.WrapModeWordChar
+                         ]
+  buf <- tv `get` #buffer
+  iter <- #getStartIter buf
+  #insertMarkup buf iter tooltipMarkup $ toEnum $ Text.length tooltipMarkup
+  #add appWin tv 
+  scWidth <- ( `get` #width) =<< getMonitorGeometry appWin
+  -- after construction you can...
+                 -- assign normal values
+  appWin `set` [ #opacity := 0.50
+                 -- assign return values of pure functions
+               , #defaultWidth :~ \_ -> scWidth `div` 2
+               -- additionally you can
+                 -- assign IO wrapped values and ...
+               , #tooltipMarkup :=> getTextValue "Enter window tooltip text (enter Pango markup if you dare!)"
+                 -- return values of monadic functions
+               , #defaultHeight :~> (\_ -> min <$> (( `get` #height) =<< getMonitorGeometry appWin)
+                                               <*> (return . fromInteger . round $ ((fromIntegral scWidth)::Double) / 2.0 / goldenRatio)
+                                    )
+               ]
   #showAll appWin
   return ()
 
--- This function receives old attribute value and returns the new one in IO monad
-retAvgWidth :: Int32 -> IO Int32 
-retAvgWidth old = do 
-  putStr $ "Input default width (now " ++ show old ++ "):" 
-  hFlush stdout
-  valStr <- getLine
-  let inpVal = read valStr :: Int32
-  return $ (old + inpVal) `div` 2
+getMonitorGeometry :: Gtk.IsWidget a => a -> IO Gdk.Rectangle
+getMonitorGeometry wdg = return . fromJust
+                       =<<  Gdk.getMonitorGeometry
+                       =<< return . fromJust
+                       =<< (flip Gdk.displayGetMonitor $ 0)
+                       =<< Gtk.widgetGetDisplay wdg
 
-retSameWidth :: {- GObject o => o -} Gtk.ApplicationWindow -> Int32
-retSameWidth obj = get obj #defaultWidth >>= (- 500)  
+getTextValue ::Text -> IO Text
+getTextValue prompt = do
+  win <- new Gtk.Dialog [#title := prompt]
+  box <- #getContentArea win
+  entry <- newEntry
+  #packStart box entry True False 0
+  let respOk = (toEnum $ fromEnum Gtk.ResponseTypeOk)::Int32
+  #addButton win "OK" $ fromInteger $ toInteger $ respOk
+  #setDefaultResponse win respOk
+  #showAll win
+  result <- loopUntilOk win entry
+  #destroy win
+  return result
 
-reportDefaultWidth :: Gtk.ApplicationWindow -> IO ()
-reportDefaultWidth appWin = do 
-  w <- get appWin #defaultWidth
-  putStrLn $ "Default width is set to " ++ show w ++ "."
+  where 
+    newEntry :: IO Gtk.Entry
+    newEntry = do
+      result <- new Gtk.Entry [#placeholderText := prompt] 
+      set result [#widthChars := toEnum $ Text.length prompt]
+      return result
+
+    loopUntilOk :: Gtk.Dialog -> Gtk.Entry -> IO Text
+    loopUntilOk win entry = do
+      response <- #run win >>= return . toEnum . fromEnum
+      if response == Gtk.ResponseTypeOk
+        then do
+          isValid <- testValid entry
+          if isValid
+            then getResult entry
+            else loopUntilOk win entry
+        else loopUntilOk win entry
+
+    getResult :: Gtk.Entry -> IO Text
+    getResult = ( `get` #text) 
+
+    testValid :: Gtk.Entry -> IO Bool
+    testValid entry = return . ( > 0) . Text.length =<< getResult entry
 
 main :: IO ()
 main = do
