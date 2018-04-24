@@ -20,7 +20,6 @@ description:         Please see the README on Github at <https://github.com/gith
 
 source-dirs: 
   - src
-  # - src/resource-bundle
 
 ghc-options:
 - -Wall
