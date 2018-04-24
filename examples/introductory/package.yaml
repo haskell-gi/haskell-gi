@@ -1,6 +1,5 @@
 name:                introductory-examples
-version:             0.2.0.0
-# github:              "githubuser/exercises"
+version:             0.3.0.0
 license:             LGPL-2.1
 author:              "Murat Özsöyler"
 maintainer:          "murat.ozsoyler@gmail.com"
