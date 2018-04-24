@@ -2,6 +2,5 @@
 *.cabal
 *.ui~
 *.gresource
-*.c
 config.yaml
 *.cabal
