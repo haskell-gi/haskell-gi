@@ -58,4 +58,3 @@ First of all you should not compile with ghc 8.2.* as it is subject to the overl
 3. Be sure `\mingw64\bin` and `\usr\bin` are in path when compiling with stack.  
 3. Compile the examples with stack.
 4. Run the examples with stack exec
- 
