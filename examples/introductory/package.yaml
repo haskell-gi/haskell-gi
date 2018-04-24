@@ -1,6 +1,5 @@
 name:                introductory-examples
-version:             0.2.0.0
-# github:              "githubuser/exercises"
+version:             0.3.0.0
 license:             LGPL-2.1
 author:              "Murat Özsöyler"
 maintainer:          "murat.ozsoyler@gmail.com"
@@ -21,7 +20,6 @@ description:         Please see the README on Github at <https://github.com/gith
 
 source-dirs: 
   - src
-  # - src/resource-bundle
 
 ghc-options:
 - -Wall
@@ -58,6 +56,9 @@ executables:
 
   builder:
     main: builder.hs
+
+  attribute-usage:
+    main: attribute-usage.hs
  
   search-bar:
     main: search-bar.hs
