@@ -1,7 +1,7 @@
 # haskell-gi-examples
 haskell-gi introductory examples inspired by [GTK+ documentation](https://developer.gnome.org/gtk3/stable).
 
-## Examples implemented (for now!)
+## Examples implemented
 1. __Basic:__ [Basic example of GTK+ documents](https://developer.gnome.org/gtk3/stable/gtk-getting-started.html).
 2. __Hello world:__ [Hello World example of GTK+ documents](https://developer.gnome.org/gtk3/stable/gtk-getting-started.html).
 2. __Attribute usage:__ As per the [gi-base documentation](https://hackage.haskell.org/package/haskell-gi-base-0.21.0/docs/Data-GI-Base.html#t:AttrOp) there are several ways to assign to the object properties for convenience:
