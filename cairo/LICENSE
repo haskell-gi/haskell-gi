@@ -1,11 +1,4 @@
-This archive contains multiple Haskell projects with different LICENSE restrictions (most notable BSD3 and LGPL-2.1 licenses). 
-Each Haskell project has its own LICENSE and copyright owners, specified in the corresponding .cabal file.
-
-The license below only concerns all files outside of any Haskell project (e.g. this file).
-
------------------------------------------------------------------------
-
-                    GNU LESSER GENERAL PUBLIC LICENSE
+                  GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
 
  Copyright (C) 1991, 1999 Free Software Foundation, Inc.
@@ -460,4 +453,4 @@ LIBRARY (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
 RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
 FAILURE OF THE LIBRARY TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
 SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
-DAMAGES. 
+DAMAGES.

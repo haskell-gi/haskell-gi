@@ -1,0 +1,96 @@
+Name:           gi-cairo
+Version:        1.0.16
+License:        LGPL-2.1
+License-file:   LICENSE
+Copyright:      (c) 2018 Kilian Kilger, Iñaki García Etxebarria
+Author:         Iñaki García Etxebarria,
+                Kilian Kilger
+Maintainer:     Kilian Kilger (kkilger@gmail.com)
+Build-Type:     Simple
+Cabal-Version:  1.24
+homepage:       https://github.com/haskell-gi/haskell-gi
+bug-reports:    https://github.com/haskell-gi/haskell-gi/issues
+Synopsis:       GI friendly binding to the Cairo library.
+Description:    This library contains hand-written bindings to the cairo library, suitable for use with bindings generated with haskell-gi.
+Category:       Graphics
+Tested-With:    GHC == 8.2.2, GHC == 8.0.2
+
+extra-source-files: README.md ChangeLog.md stack.yaml
+
+Source-Repository head
+  type:         git
+  location:     https://github.com/haskell-gi/haskell-gi
+  subdir:       cairo
+
+Flag cairo_pdf
+  Description: Build the PDF backend of Cairo.
+
+Flag cairo_ps
+  Description: Build the PostScript backend of Cairo.
+
+Flag cairo_svg
+  Description: Build the Scalable Vector Graphics (SVG) backend of Cairo.
+
+Library
+      default-language: Haskell2010
+      build-depends:    base >= 4 && < 5,
+                        haskell-gi-base >=0.21.0 && <1,
+                        haskell-gi-overloading < 1.1,
+                        utf8-string >= 0.2 && < 1.1,
+                        text >= 1.0.0.0 && < 1.3,
+                        bytestring, mtl, array, containers
+
+      default-extensions: ScopedTypeVariables, CPP, OverloadedStrings, NegativeLiterals, ConstraintKinds, TypeFamilies, MultiParamTypeClasses, KindSignatures, FlexibleInstances, UndecidableInstances, DataKinds, FlexibleContexts
+      other-extensions: PatternSynonyms, ViewPatterns
+      ghc-options: -fno-warn-unused-imports -fno-warn-warnings-deprecations
+
+      exposed-modules: GI.Cairo.Render
+                       GI.Cairo.Render.Connector
+                       GI.Cairo.Render.Matrix
+                       GI.Cairo.Render.Types
+                       -- this module is only meant to be used by
+                       -- other modules implementing a Cairo interface
+                       GI.Cairo.Render.Internal
+
+                       GI.Cairo
+                       GI.Cairo.Enums
+                       GI.Cairo.Functions
+                       GI.Cairo.Structs
+                       GI.Cairo.Structs.Context
+                       GI.Cairo.Structs.Device
+                       GI.Cairo.Structs.FontFace
+                       GI.Cairo.Structs.FontOptions
+                       GI.Cairo.Structs.Matrix
+                       GI.Cairo.Structs.Path
+                       GI.Cairo.Structs.Pattern
+                       GI.Cairo.Structs.RectangleInt
+                       GI.Cairo.Structs.Region
+                       GI.Cairo.Structs.ScaledFont
+                       GI.Cairo.Structs.Surface
+
+      other-modules:   GI.Cairo.Render.Internal.Drawing.Cairo
+                       GI.Cairo.Render.Internal.Drawing.Paths
+                       GI.Cairo.Render.Internal.Drawing.Patterns
+                       GI.Cairo.Render.Internal.Drawing.Text
+                       GI.Cairo.Render.Internal.Drawing.Transformations
+                       GI.Cairo.Render.Internal.Fonts.FontOptions
+                       GI.Cairo.Render.Internal.Surfaces.Image
+                       GI.Cairo.Render.Internal.Surfaces.PNG
+                       GI.Cairo.Render.Internal.Surfaces.Surface
+                       GI.Cairo.Render.Internal.Utilities
+                       GI.Cairo.Render.Internal.Surfaces.PDF
+                       GI.Cairo.Render.Internal.Surfaces.PS
+                       GI.Cairo.Render.Internal.Surfaces.SVG
+                       GI.Cairo.Render.Internal.Region
+
+      Include-dirs: include
+      pkgconfig-depends: cairo >= 1.2.0,
+                         cairo-gobject >= 1.13
+      if flag(cairo_pdf)
+          pkgconfig-depends: cairo-pdf
+      if flag(cairo_ps)
+          pkgconfig-depends: cairo-ps
+      if flag(cairo_svg)
+          pkgconfig-depends: cairo-svg
+      if os(darwin) || os(freebsd)
+          cpp-options: -D__attribute__(A)= -D_Nullable= -D_Nonnull=
