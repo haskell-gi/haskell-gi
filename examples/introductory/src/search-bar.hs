@@ -51,9 +51,7 @@ appActivateHandler app = do
 
 main :: IO ()
 main = do
-  app <- new Gtk.Application [ #applicationId := "haskell-gi.examples.search-bar"
-                             , #flags := [ Gio.ApplicationFlagsFlagsNone ]
-                             ]
+  app <- new Gtk.Application [#applicationId := "haskell-gi.examples.search-bar"]
   on app #activate $ do appActivateHandler app
 
   #run app Nothing        
