@@ -4,7 +4,7 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
 ## Examples implemented
 1. __Basic:__ [Basic example of GTK+ documents](https://developer.gnome.org/gtk3/stable/gtk-getting-started.html).
 2. __Hello world:__ [Hello World example of GTK+ documents](https://developer.gnome.org/gtk3/stable/gtk-getting-started.html).
-2. __Attribute usage:__ As per the [gi-base documentation](https://hackage.haskell.org/package/haskell-gi-base-0.21.0/docs/Data-GI-Base.html#t:AttrOp) there are several ways to assign to the object properties for convenience:
+2. __Attribute usage:__ As per the [haskell-gi-base documentation](https://hackage.haskell.org/package/haskell-gi-base-0.21.0/docs/Data-GI-Base.html#t:AttrOp) there are several ways to assign to the object properties for convenience:
     
     1. __Normal value assignment:__ Bare constants or return values from full function applications can be assigned to the properties by `(:=)` operator. This operator can be used in `new` object construction.
     2. __Assignment of the values encapsulated by IO monad:__ `(:=>)` operator can assign the values wrapped in `IO`. This operator can also be used in `new` object construction.
