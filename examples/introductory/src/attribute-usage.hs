@@ -8,7 +8,6 @@ import qualified Data.Text as Text
 import           Data.Text (Text)
 
 import           Data.GI.Base
-import qualified GI.Gio as Gio
 import qualified GI.Gdk as Gdk
 import qualified GI.Gtk as Gtk
 
