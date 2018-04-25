@@ -138,7 +138,7 @@ appActivate app = do
 
 main :: IO ()
 main = do
-  app <- new Gtk.Application [ #applicationId := "haskell-gi.examples.action-namespace" ]
+  app <- new Gtk.Application [#applicationId := "haskell-gi.examples.action-namespace"]
   on app #activate $ appActivate app
 
   #run app Nothing

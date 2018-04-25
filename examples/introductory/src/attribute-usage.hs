@@ -114,9 +114,7 @@ getTextValue prompt = do
 
 main :: IO ()
 main = do
-  app <- new Gtk.Application [ #applicationId := "haskell-gi.examples.attribute-usage"
-                             , #flags := [Gio.ApplicationFlagsFlagsNone]
-                             ]
+  app <- new Gtk.Application [#applicationId := "haskell-gi.examples.attribute-usage"]
   on app #activate $ appActivate app
 
   #run app Nothing
