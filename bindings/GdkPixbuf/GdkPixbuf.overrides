@@ -13,6 +13,19 @@ if windows
    endif
 endif
 
+# See https://github.com/haskell-gi/haskell-gi/issues/16
+set-attr GdkPixbuf/PixbufAnimation/new_from_file/@parameters/filename/@type name filename
+set-attr GdkPixbuf/PixbufAnimation/new_from_file_utf8/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/new_from_file/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/new_from_file_utf8/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/new_from_file_at_size/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/new_from_file_at_size_utf8/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/new_from_file_at_scale/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/new_from_file_at_scale_utf8/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/get_file_info/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/get_file_info_async/@parameters/filename/@type name filename
+set-attr GdkPixbuf/Pixbuf/savev/@parameters/filename/@type name filename
+
 # Missing from the introspection data, see
 # https://github.com/haskell-gi/haskell-gi/issues/127
 set-attr GdkPixbuf/Pixbuf/new/@return-value nullable 1
