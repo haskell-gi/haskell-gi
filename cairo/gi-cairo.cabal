@@ -46,7 +46,6 @@ Library
       ghc-options: -fno-warn-unused-imports -fno-warn-warnings-deprecations
 
       exposed-modules: GI.Cairo.Render
-                       GI.Cairo.Render.Connector
                        GI.Cairo.Render.Matrix
                        GI.Cairo.Render.Types
                        -- this module is only meant to be used by

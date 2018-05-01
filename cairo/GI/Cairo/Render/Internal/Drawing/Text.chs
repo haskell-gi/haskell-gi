@@ -25,28 +25,28 @@ import Foreign.C
 
 {#context lib="cairo" prefix="cairo"#}
 
-selectFontFace :: CairoString string => Cairo -> string -> FontSlant -> FontWeight -> IO ()
+selectFontFace :: CairoString string => Context -> string -> FontSlant -> FontWeight -> IO ()
 selectFontFace c string slant weight =
     withManagedPtr c $ \ctxt -> 
       withUTFString string $ \string' ->
       {# call select_font_face #}
         ctxt string' (cFromEnum slant) (cFromEnum weight)
 
-{#fun set_font_size    as setFontSize    { withManagedPtr* `Cairo', `Double' } -> `()'#}
-{#fun set_font_matrix  as setFontMatrix  { withManagedPtr* `Cairo', with* `Matrix' } -> `()'#}
-{#fun get_font_matrix  as getFontMatrix  { withManagedPtr* `Cairo', alloca- `Matrix' peek*} -> `()'#}
-{#fun set_font_options as setFontOptions { withManagedPtr* `Cairo',  withFontOptions* `FontOptions' } -> `()'#}
+{#fun set_font_size    as setFontSize    { withManagedPtr* `Context', `Double' } -> `()'#}
+{#fun set_font_matrix  as setFontMatrix  { withManagedPtr* `Context', with* `Matrix' } -> `()'#}
+{#fun get_font_matrix  as getFontMatrix  { withManagedPtr* `Context', alloca- `Matrix' peek*} -> `()'#}
+{#fun set_font_options as setFontOptions { withManagedPtr* `Context',  withFontOptions* `FontOptions' } -> `()'#}
 
-showText :: CairoString string => Cairo -> string -> IO ()
+showText :: CairoString string => Context -> string -> IO ()
 showText c string =
     withManagedPtr c $ \ctxt ->
     withUTFString string $ \string' ->
     {# call show_text #}
         ctxt string'
 
-{#fun font_extents     as fontExtents    { withManagedPtr* `Cairo', alloca- `FontExtents' peek* } -> `()'#}
+{#fun font_extents     as fontExtents    { withManagedPtr* `Context', alloca- `FontExtents' peek* } -> `()'#}
 
-textExtents :: CairoString string => Cairo -> string -> IO TextExtents
+textExtents :: CairoString string => Context -> string -> IO TextExtents
 textExtents c string =
     withManagedPtr c $ \ctxt ->
       withUTFString string $ \string' ->

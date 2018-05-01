@@ -38,7 +38,6 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.Map as Map
 import qualified Foreign.Ptr as FP
 
-
 -- | Memory-managed wrapper type.
 newtype Context = Context (ManagedPtr Context)
 foreign import ccall "cairo_gobject_context_get_type" c_cairo_gobject_context_get_type :: 
@@ -50,7 +49,6 @@ instance BoxedObject Context where
 -- | A convenience alias for `Nothing` :: `Maybe` `Context`.
 noContext :: Maybe Context
 noContext = Nothing
-
 
 #if ENABLE_OVERLOADING
 instance O.HasAttributeList Context

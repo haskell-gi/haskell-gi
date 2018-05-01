@@ -343,19 +343,19 @@ import GI.Cairo.Render.Internal.Utilities (CairoString(..))
 import qualified GI.Cairo.Render.Internal as Internal
 import GI.Cairo.Render.Internal (Render(..), bracketR)
 
-liftRender0 :: (Cairo -> IO a) -> Render a
+liftRender0 :: (Context -> IO a) -> Render a
 liftRender0 f = ask >>= \context -> liftIO (f context)
-liftRender1 :: (Cairo -> a -> IO b) -> a -> Render b
+liftRender1 :: (Context -> a -> IO b) -> a -> Render b
 liftRender1 f a = ask >>= \context -> liftIO (f context a)
-liftRender2 :: (Cairo -> a -> b -> IO c) -> a -> b -> Render c
+liftRender2 :: (Context -> a -> b -> IO c) -> a -> b -> Render c
 liftRender2 f a b = ask >>= \context -> liftIO (f context a b)
-liftRender3 :: (Cairo -> a -> b -> c -> IO d) -> a -> b -> c -> Render d
+liftRender3 :: (Context -> a -> b -> c -> IO d) -> a -> b -> c -> Render d
 liftRender3 f a b c = ask >>= \context -> liftIO (f context a b c)
-liftRender4 :: (Cairo -> a -> b -> c -> d -> IO e) -> a -> b -> c -> d -> Render e
+liftRender4 :: (Context -> a -> b -> c -> d -> IO e) -> a -> b -> c -> d -> Render e
 liftRender4 f a b c d = ask >>= \context -> liftIO (f context a b c d)
-liftRender5 :: (Cairo -> a -> b -> c -> d -> e -> IO f) -> a -> b -> c -> d -> e -> Render f
+liftRender5 :: (Context -> a -> b -> c -> d -> e -> IO f) -> a -> b -> c -> d -> e -> Render f
 liftRender5 f a b c d e = ask >>= \context -> liftIO (f context a b c d e)
-liftRender6 :: (Cairo -> a -> b -> c -> d -> e -> f -> IO g) -> a -> b -> c -> d -> e -> f -> Render g
+liftRender6 :: (Context -> a -> b -> c -> d -> e -> f -> IO g) -> a -> b -> c -> d -> e -> f -> Render g
 liftRender6 f a b c d e g = ask >>= \context -> liftIO (f context a b c d e g)
 
 -- | Creates a new Render context with all graphics state parameters set to
@@ -369,11 +369,46 @@ renderWith :: (MonadIO m) =>
   -> m a
 renderWith surface (Render m) = liftIO $
   bracket (do context <- Internal.create surface
-              wrapBoxed Cairo context)
+              wrapBoxed Context context)
           (\context -> do status <- Internal.status context
                           unless (status == StatusSuccess) $
                             fail =<< Internal.statusToString status)
           (\context -> runReaderT m context)
+
+-- | This function is used to call a function in the 'GI.Cairo.Render.Render' monad
+-- from the draw function of GTK+. It takes a 'GI.Cairo.Structs.Context' (as it
+-- appears in [gi-cairo](https://hackage.haskell.org/package/gi-cairo)) and a 
+-- 'GI.Cairo.Render.Render' action (as it appears in gi-cairo-render)
+-- and renders the `Render` context inside the given context.
+renderWithContext :: MonadIO m => 
+                         Render a                   -- ^ Render action
+                      -> Context                    -- ^ Context from gi-cairo 
+                      -> m a                        -- ^ Result of the action
+renderWithContext r ctxt = liftIO $ runReaderT (runRender r) ctxt 
+
+-- | This function is used to call back to functions of GI.Pango or GI.PangoCairo
+-- or other Haskell GI libraries from inside the `Cairo.Render` action. 
+-- Example:
+-- 
+-- > draw :: Cairo.Render () 
+-- > draw = do ...
+-- >           context <- getContext
+-- >           somePangoFunction context
+-- 
+getContext :: Render Context -- ^ Underlying GI.Cairo.Context 
+getContext = ask  
+
+-- | This function is used to "lift" functions of GI.Pango or GI.PangoCairo
+-- to the Render monad.
+-- Example:
+-- 
+-- > draw :: Cairo.Render () 
+-- > draw = do ...
+-- >           toRender somePangoFunction
+  
+toRender :: (Context -> IO a) -> Render a
+toRender fun = do context <- getContext
+                  liftIO $ fun context 
 
 -- | Makes a copy of the current state and saves it on an internal stack of
 -- saved states. When 'restore' is called, the saved state is restored.

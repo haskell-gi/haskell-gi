@@ -23,14 +23,14 @@ import Foreign.C
 
 {#context lib="cairo" prefix="cairo"#}
 
-{#fun translate          as translate        { withManagedPtr* `Cairo', `Double', `Double' } -> `()'#}
-{#fun scale              as scale            { withManagedPtr* `Cairo', `Double', `Double' } -> `()'#}
-{#fun rotate             as rotate           { withManagedPtr* `Cairo', `Double' } -> `()'#}
-{#fun transform          as transform        { withManagedPtr* `Cairo', with* `Matrix' } -> `()'#}
-{#fun set_matrix         as setMatrix        { withManagedPtr* `Cairo', with* `Matrix' } -> `()'#}
-{#fun get_matrix         as getMatrix        { withManagedPtr* `Cairo', alloca- `Matrix' peek*} -> `()'#}
-{#fun identity_matrix    as identityMatrix   { withManagedPtr* `Cairo' } -> `()'#}
-{#fun user_to_device     as userToDevice     { withManagedPtr* `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
-{#fun user_to_device_distance as userToDeviceDistance {  withManagedPtr* `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
-{#fun device_to_user     as deviceToUser     { withManagedPtr* `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
-{#fun device_to_user_distance as deviceToUserDistance { withManagedPtr* `Cairo', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun translate          as translate        { withManagedPtr* `Context', `Double', `Double' } -> `()'#}
+{#fun scale              as scale            { withManagedPtr* `Context', `Double', `Double' } -> `()'#}
+{#fun rotate             as rotate           { withManagedPtr* `Context', `Double' } -> `()'#}
+{#fun transform          as transform        { withManagedPtr* `Context', with* `Matrix' } -> `()'#}
+{#fun set_matrix         as setMatrix        { withManagedPtr* `Context', with* `Matrix' } -> `()'#}
+{#fun get_matrix         as getMatrix        { withManagedPtr* `Context', alloca- `Matrix' peek*} -> `()'#}
+{#fun identity_matrix    as identityMatrix   { withManagedPtr* `Context' } -> `()'#}
+{#fun user_to_device     as userToDevice     { withManagedPtr* `Context', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun user_to_device_distance as userToDeviceDistance {  withManagedPtr* `Context', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun device_to_user     as deviceToUser     { withManagedPtr* `Context', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
+{#fun device_to_user_distance as deviceToUserDistance { withManagedPtr* `Context', withFloatConv* `Double' peekFloatConv*, withFloatConv* `Double' peekFloatConv* } -> `()'#}
