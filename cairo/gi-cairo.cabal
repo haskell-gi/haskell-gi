@@ -39,6 +39,7 @@ Library
                         utf8-string >= 0.2 && < 1.1,
                         text >= 1.0.0.0 && < 1.3,
                         bytestring, mtl, array, containers
+      build-tools:      c2hs >= 0.28
 
       default-extensions: ScopedTypeVariables, CPP, OverloadedStrings, NegativeLiterals, ConstraintKinds, TypeFamilies, MultiParamTypeClasses, KindSignatures, FlexibleInstances, UndecidableInstances, DataKinds, FlexibleContexts
       other-extensions: PatternSynonyms, ViewPatterns
