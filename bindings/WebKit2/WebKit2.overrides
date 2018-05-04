@@ -11,6 +11,9 @@ set-attr WebKit2/WebView/get_favicon/@return-value nullable 1
 set-attr WebKit2/WebView/get_main_resource/@return-value nullable 1
 set-attr WebKit2/WebView/show_option_menu/@parameters/event nullable 1
 
+set-attr WebKit2/WebContext/get_favicon_database_directory/@return-value nullable 1
+set-attr WebKit2/WebContext/get_spell_checking_languages/@return-value nullable 1
+
 # https://github.com/haskell-gi/haskell-gi/issues/154
 delete-node WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@type
 add-node WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts array
@@ -25,3 +28,54 @@ set-attr WebKit2/BackForwardList/get_current_item/@return-value nullable 1
 set-attr WebKit2/BackForwardList/get_back_item/@return-value nullable 1
 set-attr WebKit2/BackForwardList/get_forward_item/@return-value nullable 1
 set-attr WebKit2/BackForwardList/get_nth_item/@return-value nullable 1
+
+set-attr WebKit2/BackForwardListItem/get_title/@return-value nullable 1
+set-attr WebKit2/BackForwardListItem/get_uri/@return-value nullable 1
+set-attr WebKit2/BackForwardListItem/get_original_uri/@return-value nullable 1
+
+set-attr WebKit2/URIRequest/get_http_headers/@return-value nullable 1
+
+set-attr WebKit2/URIResponse/get_suggested_filename/@return-value nullable 1
+set-attr WebKit2/URIResponse/get_http_headers/@return-value nullable 1
+
+set-attr WebKit2/Download/get_destination/@return-value nullable 1
+set-attr WebKit2/Download/get_response/@return-value nullable 1
+set-attr WebKit2/Download/get_web_view/@return-value nullable 1
+
+set-attr WebKit2/NavigationPolicyDecision/get_frame_name/@return-value nullable 1
+
+set-attr WebKit2/HitTestResult/get_link_uri/@return-value nullable 1
+set-attr WebKit2/HitTestResult/get_link_title/@return-value nullable 1
+set-attr WebKit2/HitTestResult/get_link_label/@return-value nullable 1
+set-attr WebKit2/HitTestResult/get_image_uri/@return-value nullable 1
+set-attr WebKit2/HitTestResult/get_media_uri/@return-value nullable 1
+
+set-attr WebKit2/PrintCustomWidget/get_widget/@return-value nullable 1
+
+set-attr WebKit2/PrintOperation/get_print_settings/@return-value nullable 1
+set-attr WebKit2/PrintOperation/get_page_setup/@return-value nullable 1
+
+set-attr WebKit2/WebResource/get_response/@return-value nullable 1
+
+set-attr WebKit2/FaviconDatabase/get_favicon_uri/@return-value nullable 1
+
+set-attr WebKit2/FileChooserRequest/get_mime_types_filter/@return-value nullable 1
+set-attr WebKit2/FileChooserRequest/get_selected_files/@return-value nullable 1
+
+set-attr WebKit2/WebInspector/get_inspected_uri/@return-value nullable 1
+set-attr WebKit2/WebInspector/get_web_view/@return-value nullable 1
+
+set-attr WebKit2/ContextMenu/first/@return-value nullable 1
+set-attr WebKit2/ContextMenu/last/@return-value nullable 1
+set-attr WebKit2/ContextMenu/get_item_at_position/@return-value nullable 1
+set-attr WebKit2/ContextMenu/get_user_data/@return-value nullable 1
+
+set-attr WebKit2/ContextMenuItem/get_action/@return-value nullable 1
+set-attr WebKit2/ContextMenuItem/get_gaction/@return-value nullable 1
+set-attr WebKit2/ContextMenuItem/get_submenu/@return-value nullable 1
+
+set-attr WebKit2/OptionMenu/get_item/@return-value nullable 1
+
+set-attr WebKit2/OptionMenuItem/get_tooltip/@return-value nullable 1
+
+set-attr WebKit2/AutomationSession/get_application_info/@return-value nullable 1
