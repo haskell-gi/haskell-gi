@@ -11,6 +11,7 @@ set-attr WebKit2/WebView/get_favicon/@return-value nullable 1
 set-attr WebKit2/WebView/get_main_resource/@return-value nullable 1
 set-attr WebKit2/WebView/show_option_menu/@parameters/event nullable 1
 
+# https://github.com/haskell-gi/haskell-gi/pull/162
 set-attr WebKit2/WebContext/get_favicon_database_directory/@return-value nullable 1
 set-attr WebKit2/WebContext/get_spell_checking_languages/@return-value nullable 1
 
@@ -29,12 +30,12 @@ set-attr WebKit2/BackForwardList/get_back_item/@return-value nullable 1
 set-attr WebKit2/BackForwardList/get_forward_item/@return-value nullable 1
 set-attr WebKit2/BackForwardList/get_nth_item/@return-value nullable 1
 
+# https://github.com/haskell-gi/haskell-gi/pull/162
 set-attr WebKit2/BackForwardListItem/get_title/@return-value nullable 1
 set-attr WebKit2/BackForwardListItem/get_uri/@return-value nullable 1
 set-attr WebKit2/BackForwardListItem/get_original_uri/@return-value nullable 1
 
 set-attr WebKit2/URIRequest/get_http_headers/@return-value nullable 1
-
 set-attr WebKit2/URIResponse/get_suggested_filename/@return-value nullable 1
 set-attr WebKit2/URIResponse/get_http_headers/@return-value nullable 1
 
