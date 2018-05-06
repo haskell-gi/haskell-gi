@@ -3,9 +3,8 @@ namespace WebKit2WebExtension
 # https://github.com/haskell-gi/haskell-gi/issues/67
 ignore DOMNode.clone_node
 
+# https://github.com/haskell-gi/haskell-gi/pull/162
 set-attr WebKit2WebExtension/WebExtension/get_page/@return-value nullable 1
-
 set-attr WebKit2WebExtension/WebPage/get_dom_document/@return-value nullable 1
 set-attr WebKit2WebExtension/WebPage/get_uri/@return-value nullable 1
-
 set-attr WebKit2WebExtension/Frame/get_uri/@return-value nullable 1
