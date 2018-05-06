@@ -1,5 +1,8 @@
 namespace GstVideo
 
+# We don't yet generate support for class structures
+ignore VideoOverlay.install_properties
+
 # Generated from gstreamer-video 1.8.0 with xsltproc Nullable.xslt GstVideo-1.0.gir
 set-attr GstVideo/VideoChromaResample/@method/@parameters/lines nullable 1
 set-attr GstVideo/VideoCodecFrame/get_user_data/@return-value nullable 1
