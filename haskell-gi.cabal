@@ -115,7 +115,9 @@ test-suite doctests
   type:          exitcode-stdio-1.0
   ghc-options:   -threaded
   main-is:       DocTests.hs
-  build-depends: base, doctest >= 0.8
+  build-depends: base
+               , process
+               , doctest >= 0.8
 
 executable haskell-gi
   main-is:             haskell-gi.hs
