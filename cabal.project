@@ -7,9 +7,12 @@ optional-packages: bindings/GLib/gi-glib.cabal
                    bindings/GObject/gi-gobject.cabal
                    bindings/Atk/gi-atk.cabal
                    bindings/Gio/gi-gio.cabal
-                   bindings/cairo/gi-cairo.cabal
                    bindings/Pango/gi-pango.cabal
                    bindings/PangoCairo/gi-pangocairo.cabal
                    bindings/GdkPixbuf/gi-gdkpixbuf.cabal
                    bindings/Gdk/gi-gdk.cabal
                    bindings/Gtk/gi-gtk.cabal
+                   cairo/gi-cairo.cabal
+                   cairo/examples/clock/gi-cairo-clock.cabal
+                   cairo/examples/sdl/gi-cairo-sdl.cabal
+

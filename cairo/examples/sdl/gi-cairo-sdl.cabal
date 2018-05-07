@@ -1,4 +1,4 @@
-Name:           gi-cairo-render-sdl
+Name:           gi-cairo-sdl
 Version:        0.0.1
 License:        BSD3
 License-file:   LICENSE
@@ -25,6 +25,6 @@ Source-Repository head
 Executable sdl-demo
         build-depends:  base >= 4 && < 5,
                         sdl2 >= 2.0.4 && <2.5,
-                        gi-cairo-render == 0.0.*
+                        gi-cairo >= 1.0.16
         main-is:        CairoSDL.hs 
         default-language:   Haskell2010

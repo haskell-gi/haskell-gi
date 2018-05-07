@@ -1,4 +1,5 @@
-{-# LANGUAGE PatternSynonyms, OverloadedStrings #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- original author:
 --    Mirco "MacSlow" Mueller <macslow@bangang.de>
@@ -8,30 +9,29 @@
 --
 -- http://www.gnu.org/licenses/licenses.html#GPL
 --
--- ported to Haskell by:
+-- ported to Haskell (gtk2hs) by:
 --    Duncan Coutts <duncan.coutts@worc.ox.ac.uk>
 --
--- updated to GTK 3 by Catherine Holloway
--- converted to Haskell GI by Kilian Kilger
+-- ported to haskell-gi from the gtk2hs port by:
+--    Iñaki García Etxebarria <garetxe@gmail.com>
 --
-import qualified GI.Cairo
-import qualified GI.Gdk as GDK
-import qualified GI.Gtk as GTK  
-import GI.GLib (pattern PRIORITY_DEFAULT, timeoutAdd)
-import GI.Cairo.Render.Connector (renderWithContext)
-import GI.Cairo.Render
-import Data.Time
+
 import Control.Monad (when)
+import Control.Monad.Trans.Reader (runReaderT)
 import Data.Maybe (isJust)
 import Data.IORef
-import Data.Text as Text
-import Data.Maybe (fromMaybe)
+import System.Time
 
-drawClockBackground :: GTK.IsWidget widget => widget -> Bool -> Render ()
-drawClockBackground canvas quality = do
+import Data.GI.Base
 
-  width  <- liftIO $ GTK.widgetGetAllocatedWidth  canvas
-  height <- liftIO $ GTK.widgetGetAllocatedHeight canvas
+import qualified GI.Cairo as GI.Cairo
+import qualified GI.GLib as GLib
+import qualified GI.Gdk as Gdk
+import qualified GI.GdkPixbuf as GP
+import qualified GI.Gtk as Gtk
+
+drawClockBackground :: Bool -> Int -> Int -> Render ()
+drawClockBackground quality width height = do
   save
   scale (fromIntegral width) (fromIntegral height)
 
@@ -51,11 +51,8 @@ drawClockBackground canvas quality = do
 
   restore
 
-drawClockHands :: GTK.IsWidget widget => widget -> Bool -> Render ()
-drawClockHands canvas quality = do
-
-  width  <- liftIO $ GTK.widgetGetAllocatedWidth  canvas
-  height <- liftIO $ GTK.widgetGetAllocatedHeight canvas
+drawClockHands :: Bool -> Int -> Int -> Render ()
+drawClockHands quality width height = do
   save
   scale (fromIntegral width) (fromIntegral height)
 
@@ -66,10 +63,12 @@ drawClockHands canvas quality = do
   setLineCap LineCapRound
   setLineJoin LineJoinRound
 
-  time <- liftIO (localTimeOfDay . zonedTimeToLocalTime <$> getZonedTime)
-  let hours   = fromIntegral (todHour time `mod` 12)
-      minutes = fromIntegral (todMin time)
-      seconds = realToFrac (todSec time)
+  time <- liftIO (getClockTime >>= toCalendarTime)
+  let hours   = fromIntegral (if ctHour time >= 12
+                                then ctHour time - 12
+                                else ctHour time)
+      minutes = fromIntegral (ctMin time)
+      seconds = fromIntegral (ctSec time)
 
   drawHourHand quality hours minutes seconds
   drawMinuteHand quality minutes seconds
@@ -95,22 +94,22 @@ drawClockForeground quality width height = do
   restore
 
 drawDropShadow =
-  withRadialPattern 0.55 0.55 0.25 0.5 0.5 0.525 $ \p -> do
-    patternAddColorStopRGBA p 0    0     0     0     0.811
-    patternAddColorStopRGBA p 0.64 0.345 0.345 0.345 0.317
-    patternAddColorStopRGBA p 0.84 0.713 0.713 0.713 0.137
-    patternAddColorStopRGBA p 1    1     1     1     0
-    patternSetFilter p FilterFast
-    setSource p
+  withRadialPattern 0.55 0.55 0.25 0.5 0.5 0.525 $ \pattern -> do
+    patternAddColorStopRGBA pattern 0    0     0     0     0.811
+    patternAddColorStopRGBA pattern 0.64 0.345 0.345 0.345 0.317
+    patternAddColorStopRGBA pattern 0.84 0.713 0.713 0.713 0.137
+    patternAddColorStopRGBA pattern 1    1     1     1     0
+    patternSetFilter pattern FilterFast
+    setSource pattern
     arc 0.5 0.5 (142/150) 0 (pi*2)
     fill
 
 drawClockFace True =
-  withLinearPattern 0.5 0 0.5 1 $ \p -> do
-    patternAddColorStopRGB p 0 0.91 0.96 0.93
-    patternAddColorStopRGB p 1 0.65 0.68 0.68
-    patternSetFilter p FilterFast
-    setSource p
+  withLinearPattern 0.5 0 0.5 1 $ \pattern -> do
+    patternAddColorStopRGB pattern 0 0.91 0.96 0.93
+    patternAddColorStopRGB pattern 1 0.65 0.68 0.68
+    patternSetFilter pattern FilterFast
+    setSource pattern
     translate 0.5 0.5
     arc 0 0 (60/150) 0 (pi*2)
     fill
@@ -122,7 +121,7 @@ drawClockFace False = do
 
 drawHourMarks = do
   save
-  forM_ [1..12] $ \_ -> do
+  forM_ ([1..12] :: [Integer]) $ \_ -> do
     rotate (pi/6)
     moveTo (4.5/6) 0
     lineTo (5.0/6) 0
@@ -226,13 +225,13 @@ drawInnerShadow = do
   setOperator OperatorOver
   arc 0 0 (142/150) 0 (pi*2)
   clip
-  withRadialPattern 0.3 0.3 0.1 0 0 0.95 $ \p -> do
-    patternAddColorStopRGBA p 0    1     1     1     0
-    patternAddColorStopRGBA p 0.64 0.713 0.713 0.713 0.137
-    patternAddColorStopRGBA p 0.84 0.345 0.345 0.345 0.317
-    patternAddColorStopRGBA p 1    0     0     0     0.811
-    patternSetFilter p FilterFast
-    setSource p
+  withRadialPattern 0.3 0.3 0.1 0 0 0.95 $ \pattern -> do
+    patternAddColorStopRGBA pattern 0    1     1     1     0
+    patternAddColorStopRGBA pattern 0.64 0.713 0.713 0.713 0.137
+    patternAddColorStopRGBA pattern 0.84 0.345 0.345 0.345 0.317
+    patternAddColorStopRGBA pattern 1    0     0     0     0.811
+    patternSetFilter pattern FilterFast
+    setSource pattern
     arc 0 0 (142/150) 0 (pi*2)
     fill
   restore
@@ -257,20 +256,20 @@ drawReflection = do
 
 drawFrame True = do
   save
-  withRadialPattern (-0.1) (-0.1) 0.8 0 0 1.5 $ \p -> do
-    patternAddColorStopRGB p 0   0.4  0.4  0.4
-    patternAddColorStopRGB p 0.2 0.95 0.95 0.95
-    patternSetFilter p FilterFast
-    setSource p
+  withRadialPattern (-0.1) (-0.1) 0.8 0 0 1.5 $ \pattern -> do
+    patternAddColorStopRGB pattern 0   0.4  0.4  0.4
+    patternAddColorStopRGB pattern 0.2 0.95 0.95 0.95
+    patternSetFilter pattern FilterFast
+    setSource pattern
     setLineWidth (10/75)
     arc 0 0 (142/150) 0 (pi*2)
     stroke
 
-  withRadialPattern (-0.1) (-0.1) 0.8 0 0 1.5 $ \p -> do
-    patternAddColorStopRGB p 0   0.9  0.9  0.9
-    patternAddColorStopRGB p 0.2 0.35 0.35 0.35
-    patternSetFilter p FilterFast
-    setSource p
+  withRadialPattern (-0.1) (-0.1) 0.8 0 0 1.5 $ \pattern -> do
+    patternAddColorStopRGB pattern 0   0.9  0.9  0.9
+    patternAddColorStopRGB pattern 0.2 0.35 0.35 0.35
+    patternSetFilter pattern FilterFast
+    setSource pattern
     setLineWidth (10/75)
     arc 0 0 (150/150) 0 (pi*2)
     stroke
@@ -286,63 +285,141 @@ drawFrame False = do
 initialSize :: Int
 initialSize = 256
 
-drawCanvasHandler :: GTK.IsWidget widget => widget -> Render Bool
-drawCanvasHandler widget =  
-  do drawClockBackground widget True
-     drawClockHands widget True 
-     return True
-
 main :: IO ()
 main = do
-  GTK.init Nothing
-  window <- GTK.windowNew GTK.WindowTypeToplevel 
-  GTK.windowSetPosition window GTK.WindowPositionCenterAlways
+  _ <- Gtk.init Nothing
 
-  GTK.widgetSetAppPaintable window True
+  window <- new Gtk.Window
+            [ #decorated      := False
+            , #resizable      := True
+            , #windowPosition := Gtk.WindowPositionCenterAlways
+            , #appPaintable   := True
+            , #icon           :=> GP.pixbufNewFromFile "cairo-clock-icon.png"
+            , #title          := "Haskell-gi Cairo Clock"
+            , #defaultWidth   := fromIntegral initialSize
+            , #defaultHeight  := fromIntegral initialSize
+            ]
 
-  GTK.windowSetDefaultSize window (fromIntegral initialSize) 
-                                  (fromIntegral initialSize)
+  geometry <- new Gdk.Geometry [ #minWidth  := 32
+                               , #minHeight := 32
+                               , #maxWidth  := 512
+                               , #maxHeight := 512 ]
+  #setGeometryHints window (Just window) (Just geometry)
+                        [Gdk.WindowHintsMinSize, Gdk.WindowHintsMaxSize]
 
-  geometry <- GDK.newZeroGeometry
-  GDK.setGeometryMaxWidth  geometry 512
-  GDK.setGeometryMaxHeight geometry 512
-  GDK.setGeometryMinWidth  geometry 32
-  GDK.setGeometryMinHeight geometry 32 
-  GDK.setGeometryMinAspect geometry 1
-  GDK.setGeometryMaxAspect geometry 1
+  screen <- window `get` #screen
+  visual <- #getRgbaVisual screen
+  #setVisual window visual
 
-  GTK.windowSetGeometryHints window (Just window) (Just geometry) []
+  on window #keyPressEvent $ \event -> do
+    name <- event `get` #keyval >>= Gdk.keyvalName
+    when (name == Just "Escape") Gtk.mainQuit
+    return False
 
-  GTK.onWidgetKeyPressEvent window $ \keyPressInfo -> do 
-    keyVal <- GDK.getEventKeyKeyval keyPressInfo
-    keyName <- fromMaybe Text.empty <$> GDK.keyvalName keyVal
-    case Text.unpack keyName of
-      "Escape" -> do GTK.mainQuit
-                     return True
-      _        -> return False
+  on window #buttonPressEvent $ \event -> do
+    button <- event `get` #button
+    time <- event `get` #time
+    x <- event `get` #xRoot
+    y <- event `get` #yRoot
+    case button of
+      1 -> do
+        #beginMoveDrag window 1 (round x) (round y) time
+        return True
+      3 -> do
+        #beginResizeDrag window Gdk.WindowEdgeSouthEast 3
+                         (round x) (round y) time
+        return True
+      _ -> return False
 
-  GTK.onWidgetButtonPressEvent window $ \button -> do
-    btnNo <- GDK.getEventButtonButton button
-    x     <- GDK.getEventButtonX button  
-    y     <- GDK.getEventButtonY button
-    time  <- GDK.getEventButtonTime button
-    case btnNo of
-      1  -> do GTK.windowBeginMoveDrag window 1 (round x) (round y) time  -- left button
-               return True
-      2  -> do GTK.windowBeginResizeDrag window GDK.WindowEdgeSouthEast 2 -- middle button
-                                         (round x) (round y) time 
-               return True
-      _  -> return False 
+  GLib.timeoutAdd GLib.PRIORITY_DEFAULT 1000
+          (#queueDraw window >> return True)
 
-  canvas <- GTK.drawingAreaNew
-  GTK.containerAdd window canvas 
+  backgroundRef <- newIORef (Just undefined)
+  foregroundRef <- newIORef (Just undefined)
 
-  GTK.setWindowDecorated window False
-  GTK.setWindowResizable window True
-  GTK.setWindowTitle window (pack "Cairo Clock")
+  let redrawStaticLayers = do
+        (width32, height32) <- #getSize window
+        let (width, height) = (fromIntegral width32, fromIntegral height32)
+        background <- createImageSurface FormatARGB32 width height
+        foreground <- createImageSurface FormatARGB32 width height
+        let clear = do
+              save
+              setOperator OperatorClear
+              paint
+              restore
+        renderWith background $ do
+          clear
+          drawClockBackground True width height
+        renderWith foreground $ do
+          clear
+          drawClockForeground True width height
+        writeIORef backgroundRef (Just background)
+        writeIORef foregroundRef (Just foreground)
 
-  GTK.onWidgetDraw canvas $ renderWithContext (drawCanvasHandler canvas) 
+  on window #realize redrawStaticLayers
 
-  GTK.widgetShowAll window
-  timeoutAdd GI.GLib.PRIORITY_DEFAULT 1000 (GTK.widgetQueueDraw window >> return True)
-  GTK.main
+  sizeRef <- newIORef (initialSize, initialSize)
+  timeoutHandlerRef <- newIORef Nothing
+  on window #configureEvent $ \event -> do
+    w <- fromIntegral <$> event `get` #width
+    h <- fromIntegral <$> event `get` #height
+
+    size <- readIORef sizeRef
+    writeIORef sizeRef (w,h)
+    when (size /= (w,h)) $ do
+
+      background <- readIORef backgroundRef
+      foreground <- readIORef foregroundRef
+      maybe (return ()) surfaceFinish background
+      maybe (return ()) surfaceFinish foreground
+
+      writeIORef backgroundRef Nothing
+      writeIORef foregroundRef Nothing
+
+      timeoutHandler <- readIORef timeoutHandlerRef
+      _ <- maybe (return True) GLib.sourceRemove timeoutHandler
+
+      handler <- GLib.timeoutAdd GLib.PRIORITY_DEFAULT_IDLE 300
+                 (do
+                   writeIORef timeoutHandlerRef Nothing
+                   redrawStaticLayers
+                   #queueDraw window
+                   return False
+                 )
+      writeIORef timeoutHandlerRef (Just handler)
+
+    return False
+
+  on window #draw $ \context -> do
+    width <- fromIntegral <$> #getAllocatedWidth window
+    height <- fromIntegral <$> #getAllocatedHeight window
+
+    background <- readIORef backgroundRef
+    foreground <- readIORef foregroundRef
+
+    renderWithContext context $ do
+      save
+      setOperator OperatorSource
+      setSourceRGBA 0 0 0 0
+      paint
+      restore
+
+      case background of
+        Nothing -> drawClockBackground False width height
+        Just background -> do
+          setSourceSurface background 0 0
+          paint
+
+      drawClockHands (isJust background) width height
+
+      case foreground of
+        Nothing -> drawClockForeground False width height
+        Just foreground -> do
+          setSourceSurface foreground 0 0
+          paint
+
+    return True
+
+  #showAll window
+
+  Gtk.main 

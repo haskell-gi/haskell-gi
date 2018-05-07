@@ -37,10 +37,17 @@ script:
  - cabal clean
  - cabal check
 
+ - pushd cairo
+ - cabal install -dependencies-only
+ - cabal configure
+ - cabal build
+ - cabal install
+ - popd
+
  - cd bindings
  - cabal install --dependencies-only
  - cabal run genBuildInfo `./PKGS.sh`
- - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
+ - cabal install -j3 ./GLib ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
  - cabal install -j1 ./Gtk
  - cabal install -j3 ./GtkSource
  - cd ../test

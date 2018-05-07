@@ -1,5 +1,3 @@
-
-
 {- |
 Copyright  : Will Thompson, Iñaki García Etxebarria and Jonas Platte
 License    : LGPL-2.1
