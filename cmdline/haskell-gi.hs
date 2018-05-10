@@ -38,7 +38,7 @@ import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
 import Data.GI.CodeGen.OverloadedSignals (genOverloadedSignalConnectors)
 import Data.GI.CodeGen.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups, pkgConfigMap)
 import Data.GI.CodeGen.ProjectInfo (licenseText)
-import Data.GI.CodeGen.Util (ucFirst, utf8ReadFile, utf8WriteFile, terror)
+import Data.GI.CodeGen.Util (ucFirst, utf8WriteFile, terror)
 
 data Mode = GenerateCode | Dump | Labels | Signals | Help
 
@@ -232,9 +232,9 @@ dump options ovs name = do
 process :: Options -> [Text] -> IO ()
 process options names = do
   let extraPaths = optSearchPaths options
-  configs <- traverse utf8ReadFile (optOverridesFiles options)
   setupTypelibSearchPath (optSearchPaths options)
-  parseOverridesFile (concatMap T.lines configs) >>= \case
+  configs <- traverse parseOverridesFile (optOverridesFiles options)
+  case mconcat <$> sequence configs of
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"
       hPutStr stderr (T.unpack errorMsg)
