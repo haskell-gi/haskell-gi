@@ -84,6 +84,8 @@ instance Monoid Overrides where
 instance Sem.Semigroup Overrides where
   (<>) = concatOverrides
 
+-- | Addition of overrides is meaningful.
+concatOverrides :: Overrides -> Overrides -> Overrides
 concatOverrides a b = Overrides {
       ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
       sealedStructs = sealedStructs a <> sealedStructs b,

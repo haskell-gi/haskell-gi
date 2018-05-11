@@ -47,7 +47,7 @@ Library
     build-depends: semigroups == 0.18.*
 
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
-  ghc-options:         -Wall -fno-warn-missing-signatures -fwarn-incomplete-patterns -fno-warn-name-shadowing
+  ghc-options:         -Wall -fwarn-incomplete-patterns -fno-warn-name-shadowing -Wcompat
   c-sources:           lib/c/enumStorage.c
 
   build-tools:         hsc2hs
@@ -124,7 +124,7 @@ executable haskell-gi
   hs-source-dirs:      cmdline
 
   extensions:          CPP, OverloadedStrings, LambdaCase
-  ghc-options:         -Wall -fno-warn-name-shadowing
+  ghc-options:         -Wall -Wcompat -fno-warn-name-shadowing
 
   build-depends:       base >= 4.7 && < 5,
                        text >= 1.0,
