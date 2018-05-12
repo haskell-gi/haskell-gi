@@ -108,3 +108,6 @@ set-attr Gdk/threads_add_timeout_seconds/@parameters/data nullable 1
 set-attr Gdk/threads_add_timeout_seconds_full/@parameters/data nullable 1
 set-attr Gdk/threads_add_timeout_seconds_full/@parameters/notify nullable 1
 set-attr Gdk/utf8_to_string_target/@return-value nullable 1
+
+set-attr cairo/FontOptions glib:get-type cairo_gobject_font_options_get_type
+
