@@ -1,5 +1,8 @@
 namespace PangoCairo
 
+# https://github.com/haskell-gi/haskell-gi/issues/148
+set-attr cairo/FontOptions glib:get-type cairo_gobject_font_options_get_type
+
 # These are constructors, but not marked as such, so fix the return
 # type to be the most specific one possible. See
 # https://github.com/haskell-gi/haskell-gi/issues/77
