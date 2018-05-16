@@ -1,11 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
-#if MIN_VERSION_base(4,9,0)
-{-# LANGUAGE OverloadedLabels #-}
-#endif
-#if !MIN_VERSION_base(4,9,0)
-{-# LANGUAGE PatternSynonyms #-}
-#endif
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, OverloadedLabels, LambdaCase #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Prelude hiding (error, (++), putStrLn, show)
 import qualified Prelude as P
@@ -16,9 +9,6 @@ import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
 import qualified GI.GLib as GLib
 
-import GI.OverloadedLabels
-import GI.Signals
-
 import Foreign.C
 
 import System.Mem (performGC)
@@ -26,10 +16,6 @@ import System.Mem (performGC)
 import Control.Monad (when, replicateM_, forM_)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString (ByteString)
-#if !MIN_VERSION_base(4,8,0)
-import Data.Monoid (Monoid)
-import Control.Applicative ((<$>))
-#endif
 import Data.Monoid ((<>))
 import Data.Text (pack, unpack, Text)
 import Data.Text.IO (putStrLn)
@@ -69,11 +55,11 @@ testConstructible = do
   performGC
   putStrLn "*** Constructible test"
   replicateM_ 100 $ do
-    rgba <- new Gdk.RGBA [_red := 0.7, _alpha := 1] -- boxed
+    rgba <- new Gdk.RGBA [ #red := 0.7, #alpha := 1] -- boxed
     Gdk.rGBAToString rgba >>=
            \s -> when (s /= "rgb(179,0,0)") $
                  error $ "Unexpected RGBA: " <> show s
-    -- We could also use "_red" here, but this serves as a test of the
+    -- We could also use "#red" here, but this serves as a test of the
     -- namespaced attributes.
     rgba `get` Gdk.rGBA_red >>=
          -- Here it is fine to compare doubles for equality, since we
@@ -109,8 +95,8 @@ testInitiallyOwned = do
   performGC
   putStrLn "*** Initially owned allocation test"
   replicateM_ 100 $ do
-    eb <- new EntryBuffer [_text := "Hello, this is a test"]
-    t <- eb `get` _text
+    eb <- new EntryBuffer [ #text := "Hello, this is a test"]
+    t <- eb `get` #text
     when (t /= "Hello, this is a test") $
          error "Test text did not match!"
   performGC
@@ -198,7 +184,7 @@ testImportedLenses = do
   performGC
   putStrLn "*** Imported lenses test"
   address <- Gio.inetAddressNewFromString "173.194.40.51"
-  print =<< address `get` _family
+  print =<< address `get` #family
   performGC
   putStrLn "+++ Imported lenses test done"
 
@@ -207,13 +193,13 @@ testPolymorphicLenses parent message = do
   performGC
   putStrLn "*** Polymorphic lenses test"
   messageBox <- new MessageDialog
-                [ _buttons := ButtonsTypeYesNo, -- ConstructOnly
-                  _text := message,
-                  _title := "Important message",
-                  _transientFor := parent,
-                  _iconName := "dialog-information"]
+                [ #buttons := ButtonsTypeYesNo, -- ConstructOnly
+                  #text := message,
+                  #title := "Important message",
+                  #transientFor := parent,
+                  #iconName := "dialog-information"]
 
-  get messageBox _messageArea >>= castTo Box >>= \case
+  get messageBox #messageArea >>= castTo Box >>= \case
     Just _ -> return ()
     Nothing -> error "Could not convert message area to Box"
 
@@ -225,25 +211,25 @@ testPolymorphicLenses parent message = do
 {-
     • Unknown attribute "authors" for object "MessageDialog".
 -}
-  -- set messageBox [ _authors := undefined ]
+  -- set messageBox [ #authors := undefined ]
 
   -- Should fail to compile, with
 {-
     • Attribute "MessageDialog::message-area" is not settable.
 -}
-  -- set messageBox [_messageArea := undefined]
+  -- set messageBox [ #messageArea := undefined]
 
   -- Should fail to compile, with
 {-
     • Attribute "MessageDialog::buttons" is not settable.
 -}
-  -- set messageBox [_buttons := ButtonsTypeYesNo]
+  -- set messageBox [ #buttons := ButtonsTypeYesNo]
 
   -- This should fail to compile with
 {-
     • Attribute "Container::child" is not gettable.
 -}
-  -- get messageBox _child
+  -- get messageBox #child
 
   result <- dialogRun messageBox
   putStrLn $ " >>> " ++ show ((toEnum . fromIntegral) result :: ResponseType)
@@ -323,8 +309,8 @@ buildPopupMenu :: IO Menu
 buildPopupMenu = do
   performGC
   putStrLn "*** Building popup menu"
-  menuitem <- new MenuItem [_label := "TestAsync"]
-  on menuitem Activate $ putStrLn "Menuitem activated!"
+  menuitem <- new MenuItem [ #label := "TestAsync"]
+  on menuitem #activate $ putStrLn "Menuitem activated!"
   menu <- new Menu []
   menuShellAppend menu menuitem
   widgetShowAll menu
@@ -434,9 +420,7 @@ testArrayOfArrays :: IO ()
 testArrayOfArrays = do
   performGC
   putStrLn "*** Array of array test"
-#if !defined(mingw32_HOST_OS)
   Gio.desktopAppInfoSearch "text" >>= print
-#endif
   performGC
   putStrLn "+++ Array of array test done"
 
@@ -454,7 +438,6 @@ testConstantPatternMatching = do
             checkDigits GLib.CSET_DIGITS = True
             checkDigits _                = False
 
-#if MIN_VERSION_base(4,9,0)
 testOverloadedLabels :: IO ()
 testOverloadedLabels = do
   performGC
@@ -470,7 +453,6 @@ testOverloadedLabels = do
        error $ "Got unexpected socket family from method: " ++ show family
   performGC
   putStrLn "+++ Overloaded labels test done"
-#endif
 
 main :: IO ()
 main = do
@@ -502,57 +484,55 @@ main = do
                putStrLn "** GC done"
                return True
 
-        -- Here "_type" is a polymorphic lens, valid for any object
+        -- Here "#type" is a polymorphic lens, valid for any object
         -- with a "type" (GObject) property. If one wants to be more
         -- specific it is possible to prefix the property with the
         -- type that declared it, for instance "windowType" in this
         -- case. Specifying also makes the type errors in case
         -- something goes wrong easier to understand.
-        win <- new Window [_type := WindowTypeToplevel,
-                           _iconName := "applications-haskell"]
-        on win Destroy $ do
+        win <- new Window [ #type := WindowTypeToplevel,
+                            #iconName := "applications-haskell"]
+        on win #destroy $ do
                   putStrLn "Closing the program"
                   mainQuit
 
-        grid <- new Grid [_orientation := OrientationVertical]
-        set win [_child := grid]
+        grid <- new Grid [ #orientation := OrientationVertical]
+        set win [ #child := grid]
 
-        label <- new Label [_label := "Test"]
-        on label ActivateLink $ \uri -> do
+        label <- new Label [ #label := "Test"]
+        on label #activateLink $ \uri -> do
           testPolymorphicLenses win ("Link " ++ uri ++ " clicked, thanks!")
           return True -- Link processed, do not open with the browser
-        _add grid label
+        #add grid label
 
-        button <- new Button [_label := "_Click me!",
-                              _useUnderline := True]
-        on button Clicked $ do
-                set label [_label := "This is <a href=\"http://www.gnome.org\">a test</a>",
-                           _useMarkup := True ]
+        button <- new Button [ #label := "_Click me!",
+                               #useUnderline := True]
+        on button #clicked $ do
+                set label [ #label := "This is <a href=\"http://www.gnome.org\">a test</a>",
+                            #useMarkup := True ]
                 -- set button [widgetSensitive := False, ...] would be
                 -- more natural, but this serves as a test of
                 -- attribute updating functions.
                 set button [widgetSensitive :~ not,
-                            _relief := ReliefStyleNone,
-                            _label := "Thanks for clicking!"]
-                sensitive <- get button _sensitive
-                newLabel <- get button _label
+                            #relief := ReliefStyleNone,
+                            #label := "Thanks for clicking!"]
+                sensitive <- get button #sensitive
+                newLabel <- get button #label
                 putStrLn $ "New button text is "
                              ++ show newLabel
                              ++ " and sensitive is " ++ show sensitive
-        _add grid button
+        #add grid button
 
-        popupButton <- new Button [_label := "_Pop-up menu",
-                                   _useUnderline := True]
+        popupButton <- new Button [ #label := "_Pop-up menu",
+                                    #useUnderline := True]
         menu <- buildPopupMenu
-        on popupButton Clicked (testMenuPopup menu)
-        _add grid popupButton
+        on popupButton #clicked (testMenuPopup menu)
+        #add grid popupButton
 
         testAllocations
         testBoxedOutArgs
         testGio
-#if !defined(mingw32_HOST_OS)
         testExceptions
-#endif
         testNullableArgs
         testOutArgs
         testBoxed
@@ -567,11 +547,9 @@ main = do
         testCast
         testArrayOfArrays
         testConstantPatternMatching
-#if MIN_VERSION_base(4,9,0)
         testOverloadedLabels
-#endif
         testConstructible
 
-        _showAll win
+        #showAll win
 
         Gtk.main
