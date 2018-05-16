@@ -2,7 +2,6 @@ sudo: required
 dist: trusty
 
 env:
- - CABALVER=2.2 GHCVER=7.10.3
  - CABALVER=2.2 GHCVER=8.0.2
  - CABALVER=2.2 GHCVER=8.4.1
 
@@ -30,9 +29,6 @@ script:
  - cabal install --enable-tests --dependencies-only
  - cabal configure
  - cabal build
- # For building the test program later, doing it now avoids a recompilation
- - cabal run haskell-gi -- -l -O test Gtk Gdk
- - cabal run haskell-gi -- -c -O test Gtk
  - cabal test
  - cabal clean
  - cabal check
