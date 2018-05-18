@@ -27,19 +27,19 @@ import Data.GI.Base (withManagedPtr)
 
 {#context lib="cairo" prefix="cairo"#}
 
-{#fun pattern_add_color_stop_rgb  as patternAddColorStopRGB  { `Pattern', `Double', `Double', `Double', `Double' } -> `()'#}
-{#fun pattern_add_color_stop_rgba as patternAddColorStopRGBA { `Pattern', `Double', `Double', `Double', `Double', `Double' } -> `()'#}
-{#fun pattern_create_rgb          as patternCreateRGB        { `Double', `Double', `Double' } -> `Pattern' #}
-{#fun pattern_create_rgba         as patternCreateRGBA       { `Double', `Double', `Double', `Double' } -> `Pattern' #}
-{#fun pattern_create_for_surface  as patternCreateForSurface { withManagedPtr* `Surface' } -> `Pattern'#}
-{#fun pattern_create_linear       as patternCreateLinear     { `Double', `Double', `Double', `Double' } -> `Pattern'#}
-{#fun pattern_create_radial       as patternCreateRadial     { `Double', `Double', `Double', `Double', `Double', `Double' } -> `Pattern'#}
-{#fun pattern_destroy    as patternDestroy   { `Pattern' } -> `()'#}
-{#fun pattern_reference  as patternReference { `Pattern' } -> `Pattern' #}
-{#fun pattern_status     as patternStatus    { `Pattern' } -> `Status' cToEnum#}
-{#fun pattern_set_extend as patternSetExtend { `Pattern', cFromEnum `Extend' } -> `()'#}
-{#fun pattern_get_extend as patternGetExtend { `Pattern' } -> `Extend' cToEnum#}
-{#fun pattern_set_filter as patternSetFilter { `Pattern', cFromEnum `Filter' } -> `()'#}
-{#fun pattern_get_filter as patternGetFilter { `Pattern' } -> `Filter' cToEnum#}
-{#fun pattern_set_matrix as patternSetMatrix { `Pattern', with* `Matrix' } -> `()'#}
-{#fun pattern_get_matrix as patternGetMatrix { `Pattern', alloca- `Matrix' peek*} -> `()'#}
+{#fun pattern_add_color_stop_rgb  as patternAddColorStopRGB  { withManagedPtr* `Pattern', `Double', `Double', `Double', `Double' } -> `()'#}
+{#fun pattern_add_color_stop_rgba as patternAddColorStopRGBA { withManagedPtr* `Pattern', `Double', `Double', `Double', `Double', `Double' } -> `()'#}
+{#fun pattern_create_rgb          as patternCreateRGB        { `Double', `Double', `Double' } -> `Pattern' mkPattern*#}
+{#fun pattern_create_rgba         as patternCreateRGBA       { `Double', `Double', `Double', `Double' } -> `Pattern' mkPattern*#}
+{#fun pattern_create_for_surface  as patternCreateForSurface { withManagedPtr* `Surface' } -> `Pattern' mkPattern* #}
+{#fun pattern_create_linear       as patternCreateLinear     { `Double', `Double', `Double', `Double' } -> `Pattern' mkPattern*#}
+{#fun pattern_create_radial       as patternCreateRadial     { `Double', `Double', `Double', `Double', `Double', `Double' } -> `Pattern' mkPattern*#}
+{#fun pattern_destroy    as patternDestroy   { withManagedPtr* `Pattern' } -> `()'#}
+{#fun pattern_reference  as patternReference { withManagedPtr* `Pattern' } -> `Pattern' mkPattern*#}
+{#fun pattern_status     as patternStatus    { withManagedPtr* `Pattern' } -> `Status' cToEnum#}
+{#fun pattern_set_extend as patternSetExtend { withManagedPtr* `Pattern', cFromEnum `Extend' } -> `()'#}
+{#fun pattern_get_extend as patternGetExtend { withManagedPtr* `Pattern' } -> `Extend' cToEnum#}
+{#fun pattern_set_filter as patternSetFilter { withManagedPtr* `Pattern', cFromEnum `Filter' } -> `()'#}
+{#fun pattern_get_filter as patternGetFilter { withManagedPtr* `Pattern' } -> `Filter' cToEnum#}
+{#fun pattern_set_matrix as patternSetMatrix { withManagedPtr* `Pattern', with* `Matrix' } -> `()'#}
+{#fun pattern_get_matrix as patternGetMatrix { withManagedPtr* `Pattern', alloca- `Matrix' peek*} -> `()'#}

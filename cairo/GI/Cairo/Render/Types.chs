@@ -22,9 +22,10 @@ module GI.Cairo.Render.Types (
   , module GI.Cairo.Structs.Context
   , module GI.Cairo.Structs.FontOptions
   , module GI.Cairo.Structs.Surface
+  , module GI.Cairo.Structs.Pattern
   , ContextPtr
   , SurfacePtr, mkSurface
-  , Pattern(Pattern), unPattern
+  , PatternPtr(..), mkPattern
   , Status(..)
   , Operator(..)
   , Antialias(..)
@@ -76,7 +77,8 @@ import Control.Monad (liftM)
 
 import GI.Cairo.Structs.FontOptions(FontOptions(..))
 import GI.Cairo.Structs.Surface(Surface(..))
-import GI.Cairo.Structs.Context(Context(..)) 
+import GI.Cairo.Structs.Context(Context(..))
+import GI.Cairo.Structs.Pattern(Pattern(..))  
 
 {#context lib="cairo" prefix="cairo"#}
 
@@ -95,8 +97,9 @@ mkSurface = wrapBoxed Surface
 -- 'fill' and paint operations. These operations composite the current pattern
 -- with the target surface using the currently selected 'Operator'.
 --
-{#pointer *pattern_t as Pattern newtype#}
-unPattern (Pattern x) = x
+{#pointer *pattern_t as PatternPtr -> Pattern #}
+mkPattern :: Ptr Pattern -> IO Pattern
+mkPattern = wrapBoxed Pattern 
 
 -- | Cairo status.
 --

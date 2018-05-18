@@ -30,13 +30,13 @@ import Foreign.C
 {#fun get_target         as getTarget        { withManagedPtr* `Context' } -> `Surface' mkSurface*#}
 {#fun push_group              as ^           { withManagedPtr* `Context' } -> `()' #}
 {#fun push_group_with_content as ^           { withManagedPtr* `Context', cFromEnum `Content' } -> `()' #}
-{#fun pop_group               as ^           { withManagedPtr* `Context' } -> `Pattern' #}
+{#fun pop_group               as ^           { withManagedPtr* `Context' } -> `Pattern' mkPattern*#}
 {#fun pop_group_to_source     as ^           { withManagedPtr* `Context' } -> `()' #}
 {#fun set_source_rgb     as setSourceRGB     { withManagedPtr* `Context', `Double', `Double', `Double' } -> `()'#}
 {#fun set_source_rgba    as setSourceRGBA    { withManagedPtr* `Context', `Double', `Double', `Double', `Double' } -> `()'#}
-{#fun set_source         as setSource        { withManagedPtr* `Context', `Pattern' } -> `()'#}
+{#fun set_source         as setSource        { withManagedPtr* `Context', withManagedPtr* `Pattern' } -> `()'#}
 {#fun set_source_surface as setSourceSurface { withManagedPtr* `Context', withManagedPtr* `Surface', `Double', `Double' } -> `()'#}
-{#fun get_source         as getSource        { withManagedPtr* `Context' } -> `Pattern' #}
+{#fun get_source         as getSource        { withManagedPtr* `Context' } -> `Pattern' mkPattern* #}
 {#fun set_antialias      as setAntialias     { withManagedPtr* `Context', cFromEnum `Antialias' } -> `()'#}
 {#fun get_antialias      as getAntialias     { withManagedPtr* `Context' } -> `Antialias' cToEnum#}
 setDash context xs offset = 
@@ -65,7 +65,7 @@ setDash context xs offset =
 {#fun fill_preserve      as fillPreserve     { withManagedPtr* `Context' } -> `()'#}
 {#fun fill_extents       as fillExtents      { withManagedPtr* `Context', alloca- `Double' peekFloatConv*, alloca- `Double' peekFloatConv*, alloca- `Double' peekFloatConv*, alloca- `Double' peekFloatConv* } -> `()'#}
 {#fun in_fill            as inFill           { withManagedPtr* `Context', `Double', `Double' } -> `Bool' cToBool#}
-{#fun mask               as mask             { withManagedPtr* `Context', `Pattern' } -> `()'#}
+{#fun mask               as mask             { withManagedPtr* `Context', withManagedPtr* `Pattern' } -> `()'#}
 {#fun mask_surface       as maskSurface      { withManagedPtr* `Context', withManagedPtr* `Surface', `Double', `Double' } -> `()'#}
 {#fun paint              as paint            { withManagedPtr* `Context' } -> `()'#}
 {#fun paint_with_alpha   as paintWithAlpha   { withManagedPtr* `Context', `Double' } -> `()'#}
