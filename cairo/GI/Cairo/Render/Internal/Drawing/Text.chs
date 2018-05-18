@@ -35,7 +35,7 @@ selectFontFace c string slant weight =
 {#fun set_font_size    as setFontSize    { withManagedPtr* `Context', `Double' } -> `()'#}
 {#fun set_font_matrix  as setFontMatrix  { withManagedPtr* `Context', with* `Matrix' } -> `()'#}
 {#fun get_font_matrix  as getFontMatrix  { withManagedPtr* `Context', alloca- `Matrix' peek*} -> `()'#}
-{#fun set_font_options as setFontOptions { withManagedPtr* `Context',  withFontOptions* `FontOptions' } -> `()'#}
+{#fun set_font_options as setFontOptions { withManagedPtr* `Context',  withManagedPtr* `FontOptions' } -> `()'#}
 
 showText :: CairoString string => Context -> string -> IO ()
 showText c string =

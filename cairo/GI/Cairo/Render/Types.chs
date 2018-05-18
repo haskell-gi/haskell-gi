@@ -20,6 +20,7 @@ module GI.Cairo.Render.Types (
     PixelData
   , Matrix(Matrix), MatrixPtr
   , module GI.Cairo.Structs.Context
+  , module GI.Cairo.Structs.FontOptions
   , ContextPtr
   , Surface(Surface), SurfacePtr, withSurface, mkSurface, manageSurface
   , Pattern(Pattern), unPattern
@@ -41,7 +42,7 @@ module GI.Cairo.Render.Types (
   , SubpixelOrder(..)
   , HintStyle(..)
   , HintMetrics(..)
-  , FontOptions(..), FontOptionsPtr, withFontOptions, mkFontOptions
+  , FontOptionsPtr, mkFontOptions
   , Path(..), unPath
 #if CAIRO_CHECK_VERSION(1,10,0)
   , RectangleInt(..), RectangleIntPtr
@@ -66,12 +67,14 @@ module GI.Cairo.Render.Types (
 
 {#import GI.Cairo.Render.Matrix#}
 
-import Data.GI.Base (ManagedPtr, BoxedObject(..), GType(..))
+import Data.GI.Base (ManagedPtr, BoxedObject(..), GType(..), withManagedPtr, wrapBoxed)
 import GI.Cairo.Structs.Context(Context(..))
 import Foreign hiding (rotate)
 import Foreign.C
 
 import Control.Monad (liftM)
+
+import GI.Cairo.Structs.FontOptions
 
 {#context lib="cairo" prefix="cairo"#}
 
@@ -311,18 +314,9 @@ instance Storable FontExtents where
 {#enum hint_metrics_t as HintMetrics {underscoreToCase} deriving(Eq,Show)#}
 
 -- | Specifies how to render text.
-newtype FontOptions = FontOptions { unFontOption :: ForeignPtr FontOptions }
 {#pointer *font_options_t as FontOptionsPtr -> FontOptions #}
-
-withFontOptions fptr = withForeignPtr $ unFontOption fptr
-
 mkFontOptions :: Ptr FontOptions -> IO FontOptions
-mkFontOptions fontOptionsPtr = do
-  fontOptionsForeignPtr <- newForeignPtr fontOptionsDestroy fontOptionsPtr
-  return (FontOptions fontOptionsForeignPtr)
-
-foreign import ccall unsafe "&cairo_font_options_destroy"
-  fontOptionsDestroy :: FinalizerPtr FontOptions
+mkFontOptions fontOptionsPtr = wrapBoxed FontOptions fontOptionsPtr
 
 -- XXX: pathToList :: Path -> [PathData]
 --
