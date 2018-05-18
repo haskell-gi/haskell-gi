@@ -41,11 +41,11 @@ import qualified Foreign.Ptr as FP
 
 -- | Memory-managed wrapper type.
 newtype Matrix = Matrix (ManagedPtr Matrix)
--- XXX Wrapping a foreign struct/union with no known destructor or size, leak?
-instance WrappedPtr Matrix where
-    wrappedPtrCalloc = return nullPtr
-    wrappedPtrCopy = return
-    wrappedPtrFree = Nothing
+foreign import ccall "cairo_gobject_matrix_get_type" c_cairo_gobject_matrix_get_type :: 
+    IO GType
+
+instance BoxedObject Matrix where
+    boxedType _ = c_cairo_gobject_matrix_get_type
 
 -- | A convenience alias for `Nothing` :: `Maybe` `Matrix`.
 noMatrix :: Maybe Matrix
