@@ -795,6 +795,8 @@ isoHaskellType t@(TInterface n) = do
     _ -> haskellType t
 isoHaskellType t = haskellType t
 
+-- | Foreign (C) type associated to one of the basic types.
+foreignBasicType :: BasicType -> TypeRep
 foreignBasicType TBoolean  = "CInt" `con` []
 foreignBasicType TUTF8     = "CString" `con` []
 foreignBasicType TFileName = "CString" `con` []

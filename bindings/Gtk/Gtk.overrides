@@ -75,6 +75,9 @@ set-attr Gtk/Widget/intersect/@parameters/intersection nullable 0
 # https://github.com/haskell-gi/haskell-gi/issues/143
 set-attr Gtk/Application/new/@return-value nullable 1
 
+# https://github.com/haskell-gi/haskell-gi/issues/148
+set-attr cairo/FontOptions glib:get-type cairo_gobject_font_options_get_type
+
 # Generated from gtk+ 3.22.11 with xsltproc Nullable.xslt Gtk-3.0.gir
 set-attr Gtk/AboutDialog/set_comments/@parameters/comments nullable 1
 set-attr Gtk/AboutDialog/set_copyright/@parameters/copyright nullable 1

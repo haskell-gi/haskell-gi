@@ -236,6 +236,7 @@ data CGState = CGState {
   }
 
 -- | Clean slate for `CGState`.
+emptyCGState :: CGState
 emptyCGState = CGState {
   cgsCPPConditionals = []
   }

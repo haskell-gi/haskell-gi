@@ -1,0 +1,3 @@
+packages: build-tools.cabal
+          ../base/haskell-gi-base.cabal
+          ../haskell-gi.cabal

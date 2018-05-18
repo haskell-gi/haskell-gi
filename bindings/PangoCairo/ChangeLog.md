@@ -1,3 +1,7 @@
+### 1.0.17
+
++ Add an override to make sure that [`Cairo.FontOptions`](https://hackage.haskell.org/package/gi-cairo/docs/GI-Cairo-Structs-FontOptions.html) is always treated as boxed.
+
 ### 1.0.16
 
 + Remove enable-overloading flags, and use instead explicit CPP checks for 'haskell-gi-overloading-1.0', see [how to disable overloading](https://github.com/haskell-gi/haskell-gi/wiki/Overloading\#disabling-overloading).

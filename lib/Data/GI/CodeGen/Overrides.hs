@@ -30,7 +30,7 @@ import qualified System.Info as SI
 import Data.GI.CodeGen.API
 import qualified Text.XML as XML
 import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
-import Data.GI.CodeGen.Util (tshow)
+import Data.GI.CodeGen.Util (tshow, utf8ReadFile)
 import Data.GI.GIR.XMLUtils (xmlLocalName, xmlNSName,
                              GIRXMLNamespace(CGIRNS, GLibGIRNS))
 
@@ -84,6 +84,8 @@ instance Monoid Overrides where
 instance Sem.Semigroup Overrides where
   (<>) = concatOverrides
 
+-- | Addition of overrides is meaningful.
+concatOverrides :: Overrides -> Overrides -> Overrides
 concatOverrides a b = Overrides {
       ignoredAPIs = ignoredAPIs a <> ignoredAPIs b,
       sealedStructs = sealedStructs a <> sealedStructs b,
@@ -130,14 +132,14 @@ withFlags p = do
 -- encode this in a monad.
 type Parser a = WriterT Overrides (StateT ParserState (ExceptT Text IO)) a
 
--- | Parse the given config file (as a set of lines) for a given
--- introspection namespace, filling in the configuration as needed. In
--- case the parsing fails we return a description of the error
--- instead.
-parseOverridesFile :: [Text] -> IO (Either Text Overrides)
-parseOverridesFile ls =
-    runExceptT $ flip evalStateT emptyParserState $ execWriterT $
-              mapM (parseOneLine . T.strip) ls
+-- | Parse the given overrides file, filling in the configuration as
+-- needed. In case the parsing fails we return a description of the
+-- error instead.
+parseOverridesFile :: FilePath -> IO (Either Text Overrides)
+parseOverridesFile fname = do
+  overrides <- utf8ReadFile fname
+  runExceptT $ flip evalStateT emptyParserState $ execWriterT $
+    mapM (parseOneLine . T.strip) (T.lines overrides)
 
 -- | Parse a single line of the config file, modifying the
 -- configuration as appropriate.
@@ -170,6 +172,7 @@ parseOneLine (T.stripPrefix "C-docs-url " -> Just u) =
     withFlags $ parseDocsUrl u
 parseOneLine (T.stripPrefix "if " -> Just s) = parseIf s
 parseOneLine (T.stripPrefix "endif" -> Just s) = parseEndif s
+parseOneLine (T.stripPrefix "include " -> Just s) = parseInclude s
 parseOneLine l = throwError $ "Could not understand \"" <> l <> "\"."
 
 -- | Ignored elements.
@@ -387,6 +390,13 @@ parseEndif rest = case T.words rest of
             case flags s of
               _:rest -> put (s {flags = rest})
               [] -> throwError ("'endif' with no matching 'if'.")
+
+-- | Parse the given overrides file, and merge into the given context.
+parseInclude :: Text -> Parser ()
+parseInclude fname = liftIO (parseOverridesFile $ T.unpack fname) >>= \case
+  Left err -> throwError ("Error when parsing included '"
+                         <> fname <> "': " <> err)
+  Right ovs -> tell ovs
 
 -- | Filter a set of named objects based on a lookup list of names to
 -- ignore.

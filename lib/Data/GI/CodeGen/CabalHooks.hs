@@ -19,7 +19,7 @@ import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
                                   filterAPIsAndDeps)
-import Data.GI.CodeGen.Util (ucFirst, utf8ReadFile)
+import Data.GI.CodeGen.Util (ucFirst)
 
 import Control.Monad (when, void)
 
@@ -47,10 +47,9 @@ confCodeGenHook name version verbosity overrides outputDir
                 defaultConfHook (gpd, hbi) flags = do
   setupTypelibSearchPath []
 
-  ovsData <- case overrides of
-               Nothing -> return ""
-               Just fname -> utf8ReadFile fname
-  ovs <- parseOverridesFile (T.lines ovsData) >>= \case
+  ovs <- case overrides of
+    Nothing -> return mempty
+    Just fname -> parseOverridesFile fname >>= \case
          Left err -> error $ "Error when parsing overrides file: "
                      ++ T.unpack err
          Right ovs -> return ovs

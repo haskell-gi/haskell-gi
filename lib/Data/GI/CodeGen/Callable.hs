@@ -261,15 +261,17 @@ freeInArgs' freeFn callable nameMap = concat <$> actions
                          _ -> undefined
           Nothing -> badIntroError $ "freeInArgs: do not understand " <> tshow arg
 
--- Return the list of actions freeing the memory associated with the
+-- | Return the list of actions freeing the memory associated with the
 -- callable variables. This is run if the call to the C function
 -- succeeds, if there is an error freeInArgsOnError below is called
 -- instead.
+freeInArgs :: Callable -> Map.Map Text Text -> ExcCodeGen [Text]
 freeInArgs = freeInArgs' freeInArg
 
--- Return the list of actions freeing the memory associated with the
+-- | Return the list of actions freeing the memory associated with the
 -- callable variables. This is run in case there is an error during
 -- the call.
+freeInArgsOnError :: Callable -> Map.Map Text Text -> ExcCodeGen [Text]
 freeInArgsOnError = freeInArgs' freeInArgOnError
 
 -- Marshall the haskell arguments into their corresponding C
