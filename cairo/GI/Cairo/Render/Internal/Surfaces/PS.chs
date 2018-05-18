@@ -21,6 +21,8 @@ module GI.Cairo.Render.Internal.Surfaces.PS where
 import Foreign
 import Foreign.C
 
+import Data.GI.Base (withManagedPtr)  
+
 {#context lib="cairo" prefix="cairo"#}
 
 #ifdef CAIRO_HAS_PS_SURFACE
@@ -28,7 +30,7 @@ import Foreign.C
 {#fun ps_surface_create  as psSurfaceCreate { withCAString* `FilePath', `Double', `Double' } -> `Surface' mkSurface*#}
 
 #if CAIRO_CHECK_VERSION(1,2,0)
-{#fun cairo_ps_surface_set_size as psSurfaceSetSize { withSurface* `Surface', `Double', `Double' } -> `()'#}
+{#fun cairo_ps_surface_set_size as psSurfaceSetSize { withManagedPtr* `Surface', `Double', `Double' } -> `()'#}
 #endif
 
 #endif

@@ -23,13 +23,15 @@ import qualified Foreign.C.Types as C2HSImp
 import qualified Foreign.Ptr as C2HSImp
 import qualified Foreign.Storable as C2HSImp 
 
+import Data.GI.Base (withManagedPtr) 
+
 {#context lib="cairo" prefix="cairo"#}
 
 {#fun pattern_add_color_stop_rgb  as patternAddColorStopRGB  { `Pattern', `Double', `Double', `Double', `Double' } -> `()'#}
 {#fun pattern_add_color_stop_rgba as patternAddColorStopRGBA { `Pattern', `Double', `Double', `Double', `Double', `Double' } -> `()'#}
 {#fun pattern_create_rgb          as patternCreateRGB        { `Double', `Double', `Double' } -> `Pattern' #}
 {#fun pattern_create_rgba         as patternCreateRGBA       { `Double', `Double', `Double', `Double' } -> `Pattern' #}
-{#fun pattern_create_for_surface  as patternCreateForSurface { withSurface* `Surface' } -> `Pattern'#}
+{#fun pattern_create_for_surface  as patternCreateForSurface { withManagedPtr* `Surface' } -> `Pattern'#}
 {#fun pattern_create_linear       as patternCreateLinear     { `Double', `Double', `Double', `Double' } -> `Pattern'#}
 {#fun pattern_create_radial       as patternCreateRadial     { `Double', `Double', `Double', `Double', `Double', `Double' } -> `Pattern'#}
 {#fun pattern_destroy    as patternDestroy   { `Pattern' } -> `()'#}

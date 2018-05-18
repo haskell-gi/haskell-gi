@@ -27,14 +27,14 @@ import Data.GI.Base (withManagedPtr)
 
 {#context lib="cairo" prefix="cairo"#}
 
-{#fun surface_create_similar       as surfaceCreateSimilar      { withSurface* `Surface', cFromEnum `Content', `Int', `Int' } -> `Surface' mkSurface*#}
-{#fun surface_destroy              as surfaceDestroy            { withSurface* `Surface' } -> `()'#}
-{#fun surface_finish               as surfaceFinish             { withSurface* `Surface' } -> `()'#}
-{#fun surface_flush                as surfaceFlush              { withSurface* `Surface' } -> `()'#}
-{#fun surface_get_font_options     as surfaceGetFontOptions     { withSurface* `Surface', withManagedPtr* `FontOptions'} -> `()'#}
-{#fun surface_get_content          as surfaceGetContent         { withSurface* `Surface' } -> `Content' cToEnum#}
-{#fun surface_mark_dirty           as surfaceMarkDirty          { withSurface* `Surface' } -> `()'#}
-{#fun surface_mark_dirty_rectangle as surfaceMarkDirtyRectangle { withSurface* `Surface', `Int', `Int', `Int', `Int' } -> `()'#}
-{#fun surface_reference            as surfaceReference          { withSurface* `Surface' } -> `()'#}
-{#fun surface_set_device_offset    as surfaceSetDeviceOffset    { withSurface* `Surface', `Double', `Double' } -> `()'#}
-{#fun surface_status               as surfaceStatus             { withSurface* `Surface' } -> `Status' cToEnum#}
+{#fun surface_create_similar       as surfaceCreateSimilar      { withManagedPtr* `Surface', cFromEnum `Content', `Int', `Int' } -> `Surface' mkSurface*#}
+{#fun surface_destroy              as surfaceDestroy            { withManagedPtr* `Surface' } -> `()'#}
+{#fun surface_finish               as surfaceFinish             { withManagedPtr* `Surface' } -> `()'#}
+{#fun surface_flush                as surfaceFlush              { withManagedPtr* `Surface' } -> `()'#}
+{#fun surface_get_font_options     as surfaceGetFontOptions     { withManagedPtr* `Surface', withManagedPtr* `FontOptions'} -> `()'#}
+{#fun surface_get_content          as surfaceGetContent         { withManagedPtr* `Surface' } -> `Content' cToEnum#}
+{#fun surface_mark_dirty           as surfaceMarkDirty          { withManagedPtr* `Surface' } -> `()'#}
+{#fun surface_mark_dirty_rectangle as surfaceMarkDirtyRectangle { withManagedPtr* `Surface', `Int', `Int', `Int', `Int' } -> `()'#}
+{#fun surface_reference            as surfaceReference          { withManagedPtr* `Surface' } -> `()'#}
+{#fun surface_set_device_offset    as surfaceSetDeviceOffset    { withManagedPtr* `Surface', `Double', `Double' } -> `()'#}
+{#fun surface_status               as surfaceStatus             { withManagedPtr* `Surface' } -> `Status' cToEnum#}

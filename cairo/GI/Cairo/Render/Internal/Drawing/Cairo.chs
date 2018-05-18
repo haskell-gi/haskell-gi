@@ -23,7 +23,7 @@ import Foreign.C
 
 {#context lib="cairo" prefix="cairo"#}
 
-{#fun create                                 { withSurface* `Surface' } -> `ContextPtr' #}
+{#fun create                                 { withManagedPtr* `Surface' } -> `ContextPtr' #}
 {#fun save                                   { withManagedPtr* `Context' } -> `()' #}
 {#fun restore                                { withManagedPtr* `Context' } -> `()' #}
 {#fun status             as status           { withManagedPtr* `Context' } -> `Status' cToEnum#}
@@ -35,7 +35,7 @@ import Foreign.C
 {#fun set_source_rgb     as setSourceRGB     { withManagedPtr* `Context', `Double', `Double', `Double' } -> `()'#}
 {#fun set_source_rgba    as setSourceRGBA    { withManagedPtr* `Context', `Double', `Double', `Double', `Double' } -> `()'#}
 {#fun set_source         as setSource        { withManagedPtr* `Context', `Pattern' } -> `()'#}
-{#fun set_source_surface as setSourceSurface { withManagedPtr* `Context', withSurface* `Surface', `Double', `Double' } -> `()'#}
+{#fun set_source_surface as setSourceSurface { withManagedPtr* `Context', withManagedPtr* `Surface', `Double', `Double' } -> `()'#}
 {#fun get_source         as getSource        { withManagedPtr* `Context' } -> `Pattern' #}
 {#fun set_antialias      as setAntialias     { withManagedPtr* `Context', cFromEnum `Antialias' } -> `()'#}
 {#fun get_antialias      as getAntialias     { withManagedPtr* `Context' } -> `Antialias' cToEnum#}
@@ -66,7 +66,7 @@ setDash context xs offset =
 {#fun fill_extents       as fillExtents      { withManagedPtr* `Context', alloca- `Double' peekFloatConv*, alloca- `Double' peekFloatConv*, alloca- `Double' peekFloatConv*, alloca- `Double' peekFloatConv* } -> `()'#}
 {#fun in_fill            as inFill           { withManagedPtr* `Context', `Double', `Double' } -> `Bool' cToBool#}
 {#fun mask               as mask             { withManagedPtr* `Context', `Pattern' } -> `()'#}
-{#fun mask_surface       as maskSurface      { withManagedPtr* `Context', withSurface* `Surface', `Double', `Double' } -> `()'#}
+{#fun mask_surface       as maskSurface      { withManagedPtr* `Context', withManagedPtr* `Surface', `Double', `Double' } -> `()'#}
 {#fun paint              as paint            { withManagedPtr* `Context' } -> `()'#}
 {#fun paint_with_alpha   as paintWithAlpha   { withManagedPtr* `Context', `Double' } -> `()'#}
 {#fun stroke             as stroke           { withManagedPtr* `Context' } -> `()'#}

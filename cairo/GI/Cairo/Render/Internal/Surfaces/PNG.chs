@@ -21,6 +21,8 @@ module GI.Cairo.Render.Internal.Surfaces.PNG where
 import Foreign
 import Foreign.C
 
+import Data.GI.Base (withManagedPtr)  
+
 {#context lib="cairo" prefix="cairo"#}
 
 #ifdef CAIRO_HAS_PNG_FUNCTIONS
@@ -31,6 +33,6 @@ imageSurfaceCreateFromPNG filename =
   {#call unsafe image_surface_create_from_png#} filenamePtr
   >>= mkSurface
 
-{#fun surface_write_to_png as surfaceWriteToPNG { withSurface* `Surface', withCAString* `FilePath' } -> `Status' cToEnum#}
+{#fun surface_write_to_png as surfaceWriteToPNG { withManagedPtr* `Surface', withCAString* `FilePath' } -> `Status' cToEnum#}
 
 #endif

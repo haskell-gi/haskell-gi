@@ -21,8 +21,9 @@ module GI.Cairo.Render.Types (
   , Matrix(Matrix), MatrixPtr
   , module GI.Cairo.Structs.Context
   , module GI.Cairo.Structs.FontOptions
+  , module GI.Cairo.Structs.Surface
   , ContextPtr
-  , Surface(Surface), SurfacePtr, withSurface, mkSurface, manageSurface
+  , SurfacePtr, mkSurface
   , Pattern(Pattern), unPattern
   , Status(..)
   , Operator(..)
@@ -68,13 +69,14 @@ module GI.Cairo.Render.Types (
 {#import GI.Cairo.Render.Matrix#}
 
 import Data.GI.Base (ManagedPtr, BoxedObject(..), GType(..), withManagedPtr, wrapBoxed)
-import GI.Cairo.Structs.Context(Context(..))
 import Foreign hiding (rotate)
 import Foreign.C
 
 import Control.Monad (liftM)
 
-import GI.Cairo.Structs.FontOptions
+import GI.Cairo.Structs.FontOptions(FontOptions(..))
+import GI.Cairo.Structs.Surface(Surface(..))
+import GI.Cairo.Structs.Context(Context(..)) 
 
 {#context lib="cairo" prefix="cairo"#}
 
@@ -83,21 +85,10 @@ type PixelData = Ptr CUChar
 {#pointer *cairo_t as ContextPtr -> Context#}
         
 -- | The medium to draw on.
-newtype Surface = Surface { unSurface :: ForeignPtr Surface }
 {#pointer *surface_t as SurfacePtr -> Surface #}
-withSurface = withForeignPtr . unSurface 
 
 mkSurface :: Ptr Surface -> IO Surface
-mkSurface surfacePtr = do
-  surfaceForeignPtr <- newForeignPtr_ surfacePtr
-  return (Surface surfaceForeignPtr)
-
-manageSurface :: Surface -> IO ()
-manageSurface (Surface surfaceForeignPtr) = do
-  addForeignPtrFinalizer surfaceDestroy surfaceForeignPtr
-
-foreign import ccall unsafe "&cairo_surface_destroy"
-  surfaceDestroy :: FinalizerPtr Surface
+mkSurface = wrapBoxed Surface
 
 -- | Patterns can be simple solid colors, various kinds of gradients or
 -- bitmaps. The current pattern for a 'Render' context is used by the 'stroke',
@@ -316,7 +307,7 @@ instance Storable FontExtents where
 -- | Specifies how to render text.
 {#pointer *font_options_t as FontOptionsPtr -> FontOptions #}
 mkFontOptions :: Ptr FontOptions -> IO FontOptions
-mkFontOptions fontOptionsPtr = wrapBoxed FontOptions fontOptionsPtr
+mkFontOptions = wrapBoxed FontOptions
 
 -- XXX: pathToList :: Path -> [PathData]
 --

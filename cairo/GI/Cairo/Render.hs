@@ -312,7 +312,7 @@ module GI.Cairo.Render (
 
   ) where
 
-import Data.GI.Base (wrapBoxed)
+import Data.GI.Base (wrapBoxed, touchManagedPtr)
 import Control.Monad (unless, when)
 import Control.Monad.Reader (ReaderT(runReaderT), ask, MonadIO, liftIO)
 import Control.Exception (bracket)
@@ -1598,7 +1598,6 @@ createSimilarSurface ::
   -> IO Surface
 createSimilarSurface surface contentType width height = do
   surface <- Internal.surfaceCreateSimilar surface contentType width height
-  Internal.manageSurface surface
   return surface
 
 -- | Create a temporary surface that is compatible with the current target
@@ -1763,8 +1762,7 @@ createImageSurface ::
   -> IO Surface
 createImageSurface format width height = do
   surface <- Internal.imageSurfaceCreate format width height
-  Internal.manageSurface surface
-  return surface
+  return surface 
 
 -- | Like 'withImageSurface' but creating a surface to target external
 -- data pointed to by 'PixelData'.
@@ -1798,8 +1796,7 @@ createImageSurfaceForData ::
   -> IO Surface
 createImageSurfaceForData pixels format width height stride = do
   surface <- Internal.imageSurfaceCreateForData pixels format width height stride
-  Internal.manageSurface surface
-  return surface
+  return surface 
 
 -- | Get the width of the image surface in pixels.
 --
@@ -1921,12 +1918,12 @@ instance Storable e => MArray SurfaceData e IO where
   {-# INLINE unsafeRead #-}
   unsafeRead (SurfaceData (Surface pb) pixPtr _ _) idx = do
       e <- peekElemOff pixPtr idx
-      touchForeignPtr pb
+      touchManagedPtr pb
       return e
   {-# INLINE unsafeWrite #-}
   unsafeWrite (SurfaceData (Surface pb) pixPtr _ _) idx elem = do
       pokeElemOff pixPtr idx elem
-      touchForeignPtr pb
+      touchManagedPtr pb
 #if __GLASGOW_HASKELL__ >= 605
   {-# INLINE getBounds #-}
   getBounds (SurfaceData _ _ bd _) = return bd
