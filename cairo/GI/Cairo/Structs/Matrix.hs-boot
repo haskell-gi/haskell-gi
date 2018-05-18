@@ -20,4 +20,4 @@ import qualified Data.Map as Map
 import qualified Foreign.Ptr as FP
 
 newtype Matrix = Matrix (ManagedPtr Matrix)
-instance WrappedPtr Matrix where
+instance BoxedObject Matrix where
