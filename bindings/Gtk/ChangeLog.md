@@ -1,3 +1,7 @@
+### 3.0.23
+
++ Add an override to make sure that [`Cairo.FontOptions`](https://hackage.haskell.org/package/gi-cairo/docs/GI-Cairo-Structs-FontOptions.html) is always treated as boxed.
+
 ### 3.0.22
 
 + The return value of [`applicationNew`](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-Application.html#v:applicationNew) can be null, but it is not marked as such in the introspection data, leading to a rather confusing error message (see [issue 142](https://github.com/haskell-gi/haskell-gi/issues/142) and [issue 143](https://github.com/haskell-gi/haskell-gi/issues/143)).

@@ -1,8 +1,7 @@
 sudo: required
-dist: trusty
+language: haskell
 
 env:
- - CABALVER=2.2 GHCVER=7.10.3
  - CABALVER=2.2 GHCVER=8.0.2
  - CABALVER=2.2 GHCVER=8.4.1
 
@@ -20,33 +19,11 @@ install:
 
 # Here starts the actual work to be performed for the package under test; any command which exits with a non-zero exit code causes the build to fail.
 script:
- - pushd base
- - cabal update
- - cabal install --dependencies-only
- - cabal configure
- - cabal build
- - cabal install
+ - pushd bindings
+ - cabal new-run genBuildInfo $(./PKGS.sh)
  - popd
- - cabal install --enable-tests --dependencies-only
- - cabal configure
- - cabal build
- # For building the test program later, doing it now avoids a recompilation
- - cabal run haskell-gi -- -l -O test Gtk Gdk
- - cabal run haskell-gi -- -c -O test Gtk
- - cabal test
- - cabal clean
- - cabal check
-
- - cd bindings
- - cabal install --dependencies-only
- - cabal run genBuildInfo `./PKGS.sh`
- - cabal install -j3 ./GLib ./cairo ./Pango ./Gdk ./Gio ./GObject ./GdkPixbuf ./Atk
- - cabal install -j1 ./Gtk
- - cabal install -j3 ./GtkSource
- - cd ../test
- - cabal install --dependencies-only
- - cabal configure
- - cabal build
+ - cabal new-build all
+ - cabal new-test
 notifications:
   irc:
     channels: "irc.freenode.net#gtk2hs"

@@ -1,0 +1,4 @@
+namespace cairo
+
+set-attr cairo/FontOptions glib:get-type cairo_gobject_font_options_get_type
+set-attr cairo/Matrix glib:get-type cairo_gobject_matrix_get_type 
