@@ -242,6 +242,7 @@ type family AttrOpAllowed (tag :: AttrOpTag) (info :: *) (useType :: *) :: Const
 
 -- | Possible operations on an attribute.
 data AttrOpTag = AttrGet | AttrSet | AttrConstruct | AttrClear
+  deriving (Eq, Ord, Enum, Bounded, Show)
 
 #if MIN_VERSION_base(4,9,0)
 -- | A user friendly description of the `AttrOpTag`, useful when
