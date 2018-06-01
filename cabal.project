@@ -13,3 +13,6 @@ packages: base/haskell-gi-base.cabal
           bindings/GdkPixbuf/gi-gdkpixbuf.cabal
           bindings/Gdk/gi-gdk.cabal
           bindings/Gtk/gi-gtk.cabal
+          bindings/JavaScriptCore-4.0/gi-javascriptcore.cabal
+          bindings/WebKit2/gi-webkit2.cabal
+          bindings/WebKit2WebExtension/gi-webkit2webextension.cabal
