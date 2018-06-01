@@ -32,7 +32,7 @@ import qualified Text.XML as XML
 import Data.GI.CodeGen.PkgConfig (tryPkgConfig)
 import Data.GI.CodeGen.Util (tshow, utf8ReadFile)
 import Data.GI.GIR.XMLUtils (xmlLocalName, xmlNSName,
-                             GIRXMLNamespace(CGIRNS, GLibGIRNS))
+                             GIRXMLNamespace(CGIRNS, GLibGIRNS, CoreGIRNS))
 
 data Overrides = Overrides {
       -- | Ignored elements of a given API.
@@ -319,6 +319,7 @@ parseXMLName a = case T.splitOn ":" a of
                    [n] -> return (xmlLocalName n)
                    ["c", n] -> return (xmlNSName CGIRNS n)
                    ["glib", n] -> return (xmlNSName GLibGIRNS n)
+                   ["core", n] -> return (xmlNSName CoreGIRNS n)
                    _ -> throwError ("Could not understand xml name \""
                                     <> a <> "\".")
 

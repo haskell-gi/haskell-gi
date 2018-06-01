@@ -66,13 +66,14 @@ lookupAttr :: Name -> Element -> Maybe Text
 lookupAttr attr element = M.lookup attr (elementAttributes element)
 
 -- | GIR namespaces we know about.
-data GIRXMLNamespace = GLibGIRNS | CGIRNS
+data GIRXMLNamespace = GLibGIRNS | CGIRNS | CoreGIRNS
                      deriving Show
 
 -- | Return the text representation of the known GIR namespaces.
 girNamespace :: GIRXMLNamespace -> Text
 girNamespace GLibGIRNS = "http://www.gtk.org/introspection/glib/1.0"
 girNamespace CGIRNS = "http://www.gtk.org/introspection/c/1.0"
+girNamespace CoreGIRNS = "http://www.gtk.org/introspection/core/1.0"
 
 -- | Lookup an attribute for an element, given the namespace where it lives.
 lookupAttrWithNamespace :: GIRXMLNamespace -> Name -> Element -> Maybe Text

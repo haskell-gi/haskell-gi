@@ -489,20 +489,29 @@ girSetAttr _ _ n = n
 
 -- | Add the given subnode to any nodes matching the given path
 girAddNode :: GIRPath -> XML.Name -> XML.Node -> XML.Node
-girAddNode (spec:rest) newNode n@(XML.NodeElement elem) =
+girAddNode (spec:rest) newNode n@(XML.NodeElement element) =
   if specMatch spec n
   then case rest of
     -- Matched the full path, add the new child node.
     [] -> let newElement = XML.Element { elementName = newNode
                                        , elementAttributes = M.empty
                                        , elementNodes = [] }
-          in XML.NodeElement (elem {XML.elementNodes =
-                                    XML.elementNodes elem <>
+              -- We only insert if not present, see #171. For
+              -- convenience when writing the override files, we
+              -- ignore the namespace when comparing.
+              nodeElementName (XML.NodeElement e) =
+                (Just . nameLocalName . elementName) e
+              nodeElementName _ = Nothing
+              nodeNames = mapMaybe nodeElementName (XML.elementNodes element)
+          in if nameLocalName newNode `elem` nodeNames
+             then n
+             else XML.NodeElement (element {XML.elementNodes =
+                                    XML.elementNodes element <>
                                      [XML.NodeElement newElement]})
     -- Still some selectors to apply.
-    _ -> XML.NodeElement (elem {XML.elementNodes =
+    _ -> XML.NodeElement (element {XML.elementNodes =
                                 map (girAddNode rest newNode)
-                                 (XML.elementNodes elem)})
+                                 (XML.elementNodes element)})
   else n
 girAddNode _ _ n = n
 
