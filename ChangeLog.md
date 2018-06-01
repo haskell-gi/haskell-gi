@@ -1,3 +1,7 @@
+### 0.21.3
+
++ Do not add nodes in overrides if a node with the same name already exists, fixes [#171](https://github.com/haskell-gi/haskell-gi/issues/171).
+
 ### 0.21.2
 
 + Do not free `Ptr Word8` types after performing the call to C,
