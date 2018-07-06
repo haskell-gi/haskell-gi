@@ -33,6 +33,10 @@ ignore base64_encode_close
 # Return type (correctly) marked as nullable since 2.54 at least.
 set-attr GLib/TimeVal/to_iso8601/@return-value nullable 1
 
+# The return value does not have its refcount incremented
+# See https://github.com/haskell-gi/haskell-gi/issues/173
+set-attr GLib/Thread/self/@return-value transfer-ownership none
+
 if windows
    # Windows only macros in glib/gfileutils.h
    set-attr GLib/file_get_contents c:identifier g_file_get_contents_utf8
