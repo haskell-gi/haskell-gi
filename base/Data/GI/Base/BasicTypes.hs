@@ -63,6 +63,8 @@ import Data.GI.Base.GType
 -- the foreign ptr.
 data ManagedPtr a = ManagedPtr {
       managedForeignPtr :: ForeignPtr a
+    , managedPtrAllocCallStack :: Maybe CallStack
+    -- ^ `CallStack` for the call that created the pointer.
     , managedPtrIsDisowned :: IORef (Maybe CallStack)
     -- ^ When disowned, the `CallStack` for the disowning call.
     }

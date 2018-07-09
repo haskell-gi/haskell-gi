@@ -3,25 +3,13 @@
 /* GHC's semi-public Rts API */
 #include <Rts.h>
 
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <glib-object.h>
 #include <glib.h>
-
-int check_object_type(void *instance, GType type)
-{
-  int result;
-
-  if (instance != NULL) {
-     result = !!G_TYPE_CHECK_INSTANCE_TYPE(instance, type);
-  } else {
-    result = 0;
-    fprintf(stderr, "Check failed: got a null pointer\n");
-  }
-
-  return result;
-}
 
 static int print_debug_info ()
 {
@@ -32,6 +20,69 @@ static int print_debug_info ()
   }
 
   return __print_debug_info;
+}
+
+/*
+  A mutex protecting the log file handle. We make it recursive,
+  i.e. refcounted, so it is OK to lock repeatedly in the same thread.
+*/
+static pthread_mutex_t log_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+
+/* Give the current thread exclusive access to the log */
+static void lock_log()
+{
+  pthread_mutex_lock(&log_mutex);
+}
+
+/* Decrease the refcount of the mutex protecting access to the log
+   from other threads */
+static void unlock_log()
+{
+  pthread_mutex_unlock(&log_mutex);
+}
+
+/* Print the given message to the log. The passed in string does not
+   need to be zero-terminated. The message is only printed if the
+   HASKELL_GI_DEBUG_MEM variable is set. */
+void dbg_log_with_len (const char *msg, int len)
+{
+  if (print_debug_info()) {
+    lock_log();
+    fwrite(msg, len, 1, stderr);
+    unlock_log();
+  }
+}
+
+/* Print the given printf-style message to the log. The message is
+   only printed if the HASKELL_GI_DEBUG_MEM variable is set. */
+__attribute__ ((format (gnu_printf, 1, 2)))
+static void dbg_log (const char *msg, ...)
+{
+  va_list args;
+
+  va_start(args, msg);
+
+  if (print_debug_info()) {
+    lock_log();
+    vfprintf(stderr, msg, args);
+    unlock_log();
+  }
+
+  va_end(args);
+}
+
+int check_object_type(void *instance, GType type)
+{
+  int result;
+
+  if (instance != NULL) {
+     result = !!G_TYPE_CHECK_INSTANCE_TYPE(instance, type);
+  } else {
+    result = 0;
+    dbg_log("Check failed: got a null pointer\n");
+  }
+
+  return result;
 }
 
 /* Information about a boxed type to free */
@@ -48,16 +99,17 @@ static gboolean main_loop_boxed_free_helper (gpointer _info)
 
   if (print_debug_info()) {
     GThread *self = g_thread_self ();
-
-    fprintf(stderr, "Freeing a boxed object at %p from idle callback [thread: %p]\n",
+    lock_log();
+    dbg_log("Freeing a boxed object at %p from idle callback [thread: %p]\n",
             info->boxed, self);
-    fprintf(stderr, "\tIt is of type %s\n", g_type_name(info->gtype));
+    dbg_log("\tIt is of type %s\n", g_type_name(info->gtype));
   }
 
   g_boxed_free (info->gtype, info->boxed);
 
   if (print_debug_info()) {
-    fprintf(stderr, "\tdone\n");
+    dbg_log("\tdone freeing %p.\n", info->boxed);
+    unlock_log();
   }
 
   g_free(info);
@@ -80,12 +132,13 @@ void dbg_g_object_disown (GObject *obj)
   GType gtype;
 
   if (print_debug_info()) {
+    lock_log();
     GThread *self = g_thread_self();
-    fprintf(stderr, "Disowning a GObject at %p [thread: %p]\n", obj, self);
+    dbg_log("Disowning a GObject at %p [thread: %p]\n", obj, self);
     gtype = G_TYPE_FROM_INSTANCE (obj);
-    fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
-    fprintf(stderr, "\tIts refcount before disowning is %d\n",
-            (int)obj->ref_count);
+    dbg_log("\tIt is of type %s\n", g_type_name(gtype));
+    dbg_log("\tIts refcount before disowning is %d\n", (int)obj->ref_count);
+    unlock_log();
   }
 }
 
@@ -94,11 +147,10 @@ static void print_object_dbg_info (GObject *obj)
   GThread *self = g_thread_self();
   GType gtype;
 
-  fprintf(stderr, "Unref of %p from idle callback [thread: %p]\n", obj, self);
+  dbg_log("Unref of %p from idle callback [thread: %p]\n", obj, self);
   gtype = G_TYPE_FROM_INSTANCE (obj);
-  fprintf(stderr, "\tIt is of type %s\n", g_type_name(gtype));
-  fprintf(stderr, "\tIts refcount before unref is %d\n",
-          (int)obj->ref_count);
+  dbg_log("\tIt is of type %s\n", g_type_name(gtype));
+  dbg_log("\tIts refcount before unref is %d\n", (int)obj->ref_count);
 }
 
 /*
@@ -111,6 +163,7 @@ static gboolean
 g_object_unref_in_main_loop (gpointer obj)
 {
   if (print_debug_info()) {
+    lock_log();
     print_object_dbg_info ((GObject*)obj);
   }
 
@@ -118,6 +171,7 @@ g_object_unref_in_main_loop (gpointer obj)
 
   if (print_debug_info()) {
     fprintf(stderr, "\tUnref done\n");
+    unlock_log();
   }
 
   return FALSE; /* Do not invoke again */
@@ -151,7 +205,8 @@ gpointer dbg_g_object_new (GType gtype, guint n_props,
   if (print_debug_info()) {
     GThread *self = g_thread_self();
 
-    fprintf(stderr, "Creating a new GObject of type %s [thread: %p]\n",
+    lock_log();
+    dbg_log("Creating a new GObject of type %s [thread: %p]\n",
             g_type_name(gtype), self);
   }
 
@@ -187,7 +242,8 @@ gpointer dbg_g_object_new (GType gtype, guint n_props,
   }
 
   if (print_debug_info()) {
-    fprintf(stderr, "\tdone, got a pointer at %p\n", result);
+    dbg_log("\tdone, got a pointer at %p\n", result);
+    unlock_log();
   }
 
   return result;

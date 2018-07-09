@@ -50,7 +50,7 @@ import Control.Monad (when, void)
 
 import Data.Coerce (coerce)
 import Data.IORef (newIORef, readIORef, writeIORef, IORef)
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, isJust)
 
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
@@ -63,28 +63,50 @@ import Data.GI.Base.CallStack (CallStack, HasCallStack,
                                prettyCallStack, callStack)
 import Data.GI.Base.Utils
 
+import qualified Data.Text as T
+
 import System.IO (hPutStrLn, stderr)
+import System.Environment (lookupEnv)
 
 -- | Thin wrapper over `Foreign.Concurrent.newForeignPtr`.
-newManagedPtr :: Ptr a -> IO () -> IO (ManagedPtr a)
+newManagedPtr :: HasCallStack => Ptr a -> IO () -> IO (ManagedPtr a)
 newManagedPtr ptr finalizer = do
-  let ownedFinalizer :: IORef (Maybe CallStack) -> IO ()
-      ownedFinalizer callStackRef = do
-        cs <- readIORef callStackRef
-        when (isNothing cs) finalizer
   isDisownedRef <- newIORef Nothing
-  fPtr <- FC.newForeignPtr ptr (ownedFinalizer isDisownedRef)
+  dbgMode <- isJust <$> lookupEnv "HASKELL_GI_DEBUG_MEM"
+  let dbgCallStack = if dbgMode
+                     then Just callStack
+                     else Nothing
+  fPtr <- FC.newForeignPtr ptr (ownedFinalizer finalizer ptr dbgCallStack isDisownedRef)
   return $ ManagedPtr {
                managedForeignPtr = fPtr
+             , managedPtrAllocCallStack = dbgCallStack
              , managedPtrIsDisowned = isDisownedRef
              }
+
+-- | Run the finalizer for an owned pointer, assuming it has now been
+-- disowned.
+ownedFinalizer :: IO () -> Ptr a -> Maybe CallStack -> IORef (Maybe CallStack)
+               -> IO ()
+ownedFinalizer finalizer ptr allocCallStack callStackRef = do
+  cs <- readIORef callStackRef
+  -- cs will be @Just cs@ whenever the pointer has been disowned.
+  when (isNothing cs) $ do
+    maybe (return ()) (printAllocDebug ptr) allocCallStack
+    finalizer
+
+-- | Print some debug diagnostics for an allocation.
+printAllocDebug :: Ptr a -> CallStack -> IO ()
+printAllocDebug ptr allocCS =
+  (dbgLog . T.pack) ("Releasing <" <> show ptr <> ">. "
+                     <> "Callstack for allocation was:\n"
+                     <> prettyCallStack allocCS <> "\n\n")
 
 foreign import ccall "dynamic"
    mkFinalizer :: FinalizerPtr a -> Ptr a -> IO ()
 
 -- | Version of `newManagedPtr` taking a `FinalizerPtr` and a
 -- corresponding `Ptr`, as in `Foreign.ForeignPtr.newForeignPtr`.
-newManagedPtr' :: FinalizerPtr a -> Ptr a -> IO (ManagedPtr a)
+newManagedPtr' :: HasCallStack => FinalizerPtr a -> Ptr a -> IO (ManagedPtr a)
 newManagedPtr' finalizer ptr = newManagedPtr ptr (mkFinalizer finalizer ptr)
 
 -- | Thin wrapper over `Foreign.Concurrent.newForeignPtr_`.
@@ -94,6 +116,7 @@ newManagedPtr_ ptr = do
   fPtr <- newForeignPtr_ ptr
   return $ ManagedPtr {
                managedForeignPtr = fPtr
+             , managedPtrAllocCallStack = Nothing
              , managedPtrIsDisowned = isDisownedRef
              }
 
@@ -257,8 +280,10 @@ foreign import ccall unsafe "dbg_g_object_unref"
 -- | Decrease the reference count of the given 'GObject'. The memory
 -- associated with the object may be released if the reference count
 -- reaches 0.
-unrefObject :: GObject a => a -> IO ()
-unrefObject obj = withManagedPtr obj dbg_g_object_unref
+unrefObject :: (HasCallStack, GObject a) => a -> IO ()
+unrefObject obj = withManagedPtr obj $ \ptr -> do
+  dbgDealloc obj
+  dbg_g_object_unref ptr
 
 -- | Print some debug info (if the right environment valiable is set)
 -- about the object being disowned.
@@ -268,10 +293,11 @@ foreign import ccall "dbg_g_object_disown"
 -- | Disown a GObject, that is, do not unref the associated foreign
 -- GObject when the Haskell object gets garbage collected. Returns the
 -- pointer to the underlying GObject.
-disownObject :: GObject a => a -> IO (Ptr b)
+disownObject :: (HasCallStack, GObject a) => a -> IO (Ptr b)
 disownObject obj = withManagedPtr obj $ \ptr -> do
-                     dbg_g_object_disown ptr
-                     castPtr <$> disownManagedPtr obj
+  dbgDealloc obj
+  dbg_g_object_disown ptr
+  castPtr <$> disownManagedPtr obj
 
 -- It is fine to use unsafe here, since all this does is schedule an
 -- idle callback. The scheduling itself will never block for a long
@@ -284,7 +310,7 @@ foreign import ccall "g_boxed_copy" g_boxed_copy ::
 
 -- | Construct a Haskell wrapper for the given boxed object. We make a
 -- copy of the object.
-newBoxed :: forall a. BoxedObject a => (ManagedPtr a -> a) -> Ptr a -> IO a
+newBoxed :: forall a. (HasCallStack, BoxedObject a) => (ManagedPtr a -> a) -> Ptr a -> IO a
 newBoxed constructor ptr = do
   GType gtype <- boxedType (undefined :: a)
   ptr' <- g_boxed_copy gtype ptr
@@ -293,14 +319,14 @@ newBoxed constructor ptr = do
 
 -- | Like 'newBoxed', but we do not make a copy (we "steal" the passed
 -- object, so now it is managed by the Haskell runtime).
-wrapBoxed :: forall a. BoxedObject a => (ManagedPtr a -> a) -> Ptr a -> IO a
+wrapBoxed :: forall a. (HasCallStack, BoxedObject a) => (ManagedPtr a -> a) -> Ptr a -> IO a
 wrapBoxed constructor ptr = do
   GType gtype <- boxedType (undefined :: a)
   fPtr <- newManagedPtr ptr (boxed_free_helper gtype ptr)
   return $! constructor fPtr
 
 -- | Make a copy of the given boxed object.
-copyBoxed :: forall a. BoxedObject a => a -> IO (Ptr a)
+copyBoxed :: forall a. (HasCallStack, BoxedObject a) => a -> IO (Ptr a)
 copyBoxed b = do
   GType gtype <- boxedType b
   withManagedPtr b (g_boxed_copy gtype)
@@ -321,6 +347,7 @@ freeBoxed :: forall a. (HasCallStack, BoxedObject a) => a -> IO ()
 freeBoxed boxed = do
   GType gtype <- boxedType (undefined :: a)
   ptr <- disownManagedPtr boxed
+  dbgDealloc boxed
   g_boxed_free gtype ptr
 
 -- | Disown a boxed object, that is, do not free the associated
@@ -330,7 +357,7 @@ disownBoxed :: (HasCallStack, BoxedObject a) => a -> IO (Ptr a)
 disownBoxed = disownManagedPtr
 
 -- | Wrap a pointer, taking ownership of it.
-wrapPtr :: WrappedPtr a => (ManagedPtr a -> a) -> Ptr a -> IO a
+wrapPtr :: (HasCallStack, WrappedPtr a) => (ManagedPtr a -> a) -> Ptr a -> IO a
 wrapPtr constructor ptr = do
   fPtr <- case wrappedPtrFree of
             Nothing -> newManagedPtr_ ptr
@@ -338,7 +365,7 @@ wrapPtr constructor ptr = do
   return $! constructor fPtr
 
 -- | Wrap a pointer, making a copy of the data.
-newPtr :: WrappedPtr a => (ManagedPtr a -> a) -> Ptr a -> IO a
+newPtr :: (HasCallStack, WrappedPtr a) => (ManagedPtr a -> a) -> Ptr a -> IO a
 newPtr constructor ptr = do
   tmpWrap <- newManagedPtr_ ptr
   ptr' <- wrappedPtrCopy (constructor tmpWrap)
@@ -351,3 +378,25 @@ copyBytes size ptr = do
   ptr' <- wrappedPtrCalloc
   memcpy ptr' ptr size
   return ptr'
+
+foreign import ccall unsafe "g_thread_self" g_thread_self :: IO (Ptr ())
+
+-- | Print a debug message for deallocs if the @HASKELL_GI_DEBUG_MEM@
+-- environment variable has been set.
+dbgDealloc :: (HasCallStack, ManagedPtrNewtype a) => a -> IO ()
+dbgDealloc m = do
+  env <- lookupEnv "HASKELL_GI_DEBUG_MEM"
+  case env of
+    Nothing -> return ()
+    Just _ -> do
+      let mPtr = coerce m :: ManagedPtr ()
+          ptr = (unsafeForeignPtrToPtr . managedForeignPtr) mPtr
+      threadPtr <- g_thread_self
+      hPutStrLn stderr ("Releasing <" ++ show ptr ++ "> from thread ["
+                         ++ show threadPtr ++ "].\n"
+                         ++ (case managedPtrAllocCallStack mPtr of
+                               Just allocCS -> "• Callstack for allocation:\n"
+                                               ++ prettyCallStack allocCS ++ "\n\n"
+                               Nothing -> "")
+                         ++ "• CallStack for deallocation:\n"
+                         ++ prettyCallStack callStack ++ "\n")

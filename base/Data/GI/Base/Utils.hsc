@@ -24,6 +24,7 @@ module Data.GI.Base.Utils
     , maybeReleaseFunPtr
     , checkUnexpectedReturnNULL
     , checkUnexpectedNothing
+    , dbgLog
     ) where
 
 #include <glib-object.h>
@@ -35,11 +36,12 @@ import Control.Exception (throwIO)
 import Control.Monad (void)
 
 import qualified Data.Text as T
+import qualified Data.Text.Foreign as TF
 import Data.Monoid ((<>))
 import Data.Word
 
 import Foreign (peek)
-import Foreign.C.Types (CSize(..))
+import Foreign.C.Types (CSize(..), CChar)
 import Foreign.Ptr (Ptr, nullPtr, FunPtr, nullFunPtr, freeHaskellFunPtr)
 import Foreign.Storable (Storable(..))
 
@@ -204,3 +206,11 @@ checkUnexpectedNothing fnName action = do
                                      "This is a bug in the introspection data, please report it at\nhttps://github.com/haskell-gi/haskell-gi/issues\n" <>
                                      T.pack (prettyCallStack callStack)
                  })
+
+foreign import ccall unsafe "dbg_log_with_len" dbg_log_with_len ::
+        Ptr CChar -> Int -> IO ()
+
+-- | Print a string to the debug log in an atomic way (so the output
+-- of different threads does not get intermingled).
+dbgLog :: T.Text -> IO ()
+dbgLog msg = TF.withCStringLen msg $ \(ptr, len) -> dbg_log_with_len ptr len
