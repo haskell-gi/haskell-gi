@@ -1,3 +1,7 @@
+### 3.0.24
+
++ Mark the return value of [applicationGetActiveWindow](https://hackage.haskell.org/package/gi-gtk-3.0.24/docs/GI-Gtk-Objects-Application.html#v:applicationGetActiveWindow) as nullable, see [issue 176](https://github.com/haskell-gi/haskell-gi/issues/176).
+
 ### 3.0.23
 
 + Add an override to make sure that [`Cairo.FontOptions`](https://hackage.haskell.org/package/gi-cairo/docs/GI-Cairo-Structs-FontOptions.html) is always treated as boxed.
