@@ -8,7 +8,7 @@ uploadDocs()
         pushd $modName > /dev/null
 	rm -rf GI
 	cabal clean
-	cabal upload -d
+	cabal upload --publish -d
         popd > /dev/null
     done
 }
