@@ -215,7 +215,7 @@ formatDocumentation c2h docBase doc = do
         Nothing -> "/No description available in the introspection data./"
   description <> case sinceVersion doc of
                    Nothing -> ""
-                   Just ver -> "\n\n@since " <> ver
+                   Just ver -> "\n\n/Since: " <> ver <> "/"
 
 -- | Write the given documentation into generated code.
 writeDocumentation :: RelativeDocPosition -> Documentation -> CodeGen ()
