@@ -51,6 +51,9 @@ import Control.Monad (when, void)
 import Data.Coerce (coerce)
 import Data.IORef (newIORef, readIORef, writeIORef, IORef)
 import Data.Maybe (isNothing, isJust)
+#if !MIN_VERSION_base(4,11,0)
+import Data.Monoid ((<>))
+#endif
 
 import Foreign.C (CInt(..))
 import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
