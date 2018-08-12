@@ -26,7 +26,6 @@ module Data.GI.CodeGen.Conversions
     , maybeNullConvert
     , nullPtrForType
 
-    , getIsScalar
     , typeAllocInfo
     , TypeAllocInfo(..)
 
@@ -378,7 +377,7 @@ hToF (TCArray zt _ _ t@(TCArray{})) transfer = do
   hToF_PackedType t (packer <> "PtrArray") transfer
 
 hToF (TCArray zt _ _ t@(TInterface _)) transfer = do
-  isScalar <- getIsScalar t
+  isScalar <- typeIsEnumOrFlag t
   let packer = if zt
                then "packZeroTerminated"
                else "pack"
@@ -562,7 +561,7 @@ fToH t@(TCArray False (-1) (-1) _) _ =
 fToH (TCArray True _ _ t@(TCArray{})) transfer =
   fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
 fToH (TCArray True _ _ t@(TInterface _)) transfer = do
-  isScalar <- getIsScalar t
+  isScalar <- typeIsEnumOrFlag t
   if isScalar
   then fToH_PackedType t "unpackZeroTerminatedStorableArray" transfer
   else fToH_PackedType t "unpackZeroTerminatedPtrArray" transfer
@@ -642,7 +641,7 @@ unpackCArray length (TCArray False _ _ t) transfer =
                          "unpackStorableArrayWithLength " <> length
     TInterface _ -> do
            a <- findAPI t
-           isScalar <- getIsScalar t
+           isScalar <- typeIsEnumOrFlag t
            hType <- haskellType t
            fType <- foreignType t
            innerConstructor <- fToH' t a hType fType transfer
@@ -843,21 +842,24 @@ foreignType (TInterface (Name "GObject" "Closure")) =
 foreignType (TInterface (Name "GObject" "Value")) =
   return $ ptr $ "GValue" `con` []
 foreignType t@(TInterface n) = do
-  isScalar <- getIsScalar t
-  if isScalar
-  then return $ "CUInt" `con` []
-  else do
-    api <- getAPI t
-    case api of
-      APICallback _ -> do
-         tname <- qualifiedSymbol (callbackCType $ name n) n
-         return (funptr $ tname `con` [])
-      _ -> do
-         tname <- qualifiedAPI n
-         return (ptr $ tname `con` [])
+  api <- getAPI t
+  let enumIsSigned e = any (< 0) (map enumMemberValue (enumMembers e))
+      ctypeForEnum e = if enumIsSigned e
+                       then "CInt"
+                       else "CUInt"
+  case api of
+    APIEnum e -> return $ (ctypeForEnum e) `con` []
+    APIFlags (Flags e) -> return $ (ctypeForEnum e) `con` []
+    APICallback _ -> do
+      tname <- qualifiedSymbol (callbackCType $ name n) n
+      return (funptr $ tname `con` [])
+    _ -> do
+      tname <- qualifiedAPI n
+      return (ptr $ tname `con` [])
 
-getIsScalar :: Type -> CodeGen Bool
-getIsScalar t = do
+-- | Whether the give type corresponds to an enum or flag.
+typeIsEnumOrFlag :: Type -> CodeGen Bool
+typeIsEnumOrFlag t = do
   a <- findAPI t
   case a of
     Nothing -> return False
