@@ -6,3 +6,7 @@ ignore Terminal.event_check_gregex_simple
 
 # Wrong introspection data.
 ignore Terminal.event_check_regex_simple
+
+# The return value is nullable, but it is not properly annotated as such
+# https://github.com/haskell-gi/haskell-gi/issues/179
+set-attr Vte/Terminal/get_current_directory_uri/@return-value nullable 1
