@@ -1,3 +1,7 @@
+### 0.21.4
+
++ Try to guess signedness of enums and flags on the C side, fixes [#184](https://github.com/haskell-gi/haskell-gi/issues/184).
+
 ### 0.21.3
 
 + Do not add nodes in overrides if a node with the same name already exists, fixes [#171](https://github.com/haskell-gi/haskell-gi/issues/171).
