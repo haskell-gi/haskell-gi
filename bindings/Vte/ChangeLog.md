@@ -1,3 +1,7 @@
+### 2.91.19
+
++ Properly annotate the return value of [terminalGetWindowTitle](https://hackage.haskell.org/package/gi-vte-2.91.19/docs/GI-Vte-Objects-Terminal.html#v:terminalGetWindowTitle) as nullable.
+
 ### 2.91.18
 
 + Properly annotate the return value of [terminalGetCurrentDirectoryUri](https://hackage.haskell.org/package/gi-vte-2.91.18/docs/GI-Vte-Objects-Terminal.html#v:terminalGetCurrentDirectoryUri) as nullable.
