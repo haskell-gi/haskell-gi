@@ -121,6 +121,7 @@ set-attr Gst/Element/provide_clock/@return-value nullable 1
 set-attr Gst/Element/request_new_pad/@return-value nullable 1
 set-attr Gst/Element/request_new_pad/@parameters/name nullable 1
 set-attr Gst/Element/request_new_pad/@parameters/caps nullable 1
+set-attr Gst/Element/get_bus/@return-value nullable 1
 set-attr Gst/Element/get_compatible_pad/@return-value nullable 1
 set-attr Gst/Element/get_compatible_pad/@parameters/caps nullable 1
 set-attr Gst/Element/get_compatible_pad_template/@return-value nullable 1
