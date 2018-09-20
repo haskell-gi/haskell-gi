@@ -109,7 +109,7 @@ writeStackYaml fname =
     B.writeFile fname $ TE.encodeUtf8 $ T.unlines
          [ "packages:"
          , "- '.'"
-         , "resolver: lts-9.21"
+         , "resolver: lts-12.10"
          ]
 
 writeReadme :: FilePath -> ProjectInfo -> IO ()
