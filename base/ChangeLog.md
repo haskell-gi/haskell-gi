@@ -1,6 +1,10 @@
+### 0.21.2
+
++ Export [newManagedPtr_](https://hackage.haskell.org/package/haskell-gi-base-0.21.2/docs/Data-GI-Base-ManagedPtr.html#v:newManagedPtr_).
+
 ### 0.21.1
 
-+ Remove the `::=` and `::~` constructors in `AttrOp`, since they cannot really be used for anything, since they are pure functions.
++ Remove the `::=` and `::~` constructors in `AttrOp`, since they cannot really be used for anything, as they are pure functions.
 
 ### 0.21.0
 
