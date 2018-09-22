@@ -4,6 +4,7 @@ language: haskell
 env:
  - CABALVER=2.2 GHCVER=8.0.2
  - CABALVER=2.2 GHCVER=8.4.1
+ - CABALVER=2.4 GHCVER=8.6.1
 
 before_install:
  - travis_retry sudo add-apt-repository -y ppa:webkit-team/ppa
