@@ -14,6 +14,7 @@ module Data.GI.Base.ManagedPtr
     -- * Managed pointers
       newManagedPtr
     , newManagedPtr'
+    , newManagedPtr_
     , withManagedPtr
     , maybeWithManagedPtr
     , withManagedPtrList
