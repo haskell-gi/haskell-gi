@@ -1,3 +1,7 @@
+### 2.91.20
+
++ Update stack version to 12.10
+
 ### 2.91.19
 
 + Properly annotate the return value of [terminalGetWindowTitle](https://hackage.haskell.org/package/gi-vte-2.91.19/docs/GI-Vte-Objects-Terminal.html#v:terminalGetWindowTitle) as nullable.

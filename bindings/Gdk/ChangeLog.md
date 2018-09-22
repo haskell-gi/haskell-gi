@@ -1,3 +1,7 @@
+### 3.0.17
+
++ Update stack version to 12.10
+
 ### 3.0.16
 
 + Enable override for cairo/FontOptions, due to wrong cairo-1.0.gir file 

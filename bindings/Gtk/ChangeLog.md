@@ -1,3 +1,9 @@
+### 3.0.25
+
++ Update stack version to 12.10
+
++ Add missing nullable return annotation to [treePathGetIndices](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Structs-TreePath.html#v:treePathGetIndices), see [issue 192](https://github.com/haskell-gi/haskell-gi/issues/192).
+
 ### 3.0.24
 
 + Mark the return value of [applicationGetActiveWindow](https://hackage.haskell.org/package/gi-gtk-3.0.24/docs/GI-Gtk-Objects-Application.html#v:applicationGetActiveWindow) as nullable, see [issue 176](https://github.com/haskell-gi/haskell-gi/issues/176).

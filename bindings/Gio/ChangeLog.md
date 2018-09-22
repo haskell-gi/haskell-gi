@@ -1,3 +1,7 @@
+### 2.0.19
+
++ Update stack version to 12.10
+
 ### 2.0.18
 
 + The `parameter` parameter for the [`activate`](https://hackage.haskell.org/package/gi-gio-2.0.18/docs/GI-Gio-Callbacks.html#t:ActionEntryActivateFieldCallback) callback of `ActionEntry` is nullable, but it is not marked as such in the introspection data.

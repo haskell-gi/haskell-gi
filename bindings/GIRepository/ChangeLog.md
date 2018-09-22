@@ -1,3 +1,7 @@
+### 1.0.17
+
++ Update stack version to 12.10
+
 ### 1.0.16
 
 + Add a missing dependency on `gi-glib`, needed for newer versions.

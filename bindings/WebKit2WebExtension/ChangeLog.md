@@ -1,3 +1,7 @@
+### 4.0.18
+
++ Update stack version to 12.10
+
 ### 4.0.17
 
 + Add multiple missing nullable annotations.

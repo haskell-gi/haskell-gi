@@ -1,3 +1,7 @@
+### 1.0.17
+
++ Update stack version to 12.10
+
 ### 1.0.16
 
 + Fix nullable return annotation for [elementGetBus](https://hackage.haskell.org/package/gi-gst/docs/GI-Gst-Objects-Element.html#v:elementGetBus).

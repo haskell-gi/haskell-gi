@@ -1,3 +1,7 @@
+### 1.0.17
+
++ Update stack version to 12.10
+
 ### 1.0.16
 
 + Do not generate bindings for `VideoOverlay.installProperties`, since we don't support class structures yet.

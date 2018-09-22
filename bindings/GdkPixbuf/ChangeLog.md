@@ -1,3 +1,7 @@
+### 2.0.17
+
++ Update stack version to 12.10
+
 ### 2.0.16
 
 + Fix introspection data for the `filename` parameters of [`pixbufAnimationNewFromFile`](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-PixbufAnimation.html#v:pixbufAnimationNewFromFile), [`pixbufNewFromFile`](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-Pixbuf.html#v:pixbufNewFromFile), [`pixbufNewFromFileAtSize`](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-Pixbuf.html#v:pixbufNewFromFileAtSize), [`pixbufNewFromFileAtScale`](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-Pixbuf.html#v:pixbufNewFromFileAtScale), [`pixbufGetFileInfo`](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-Pixbuf.html#v:pixbufGetFileInfo), [`pixbufGetFileInfoAsync`](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-Pixbuf.html#v:pixbufGetFileInfoAsync) and [`pixbufSavev`](https://hackage.haskell.org/package/gi-gdkpixbuf/docs/GI-GdkPixbuf-Objects-Pixbuf.html#v:pixbufSavev). Fixes [issue #160](https://github.com/haskell-gi/haskell-gi/issues/160).

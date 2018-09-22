@@ -1,3 +1,7 @@
+### 2.4.17
+
++ Update stack version to 12.10
+
 ### 2.4.16
 
 + The return value of [`cookieGetExpires`](https://hackage.haskell.org/package/gi-soup/docs/GI-Soup-Structs-Cookie.html#v:cookieGetExpires) is nullable, but was not marked as such in the introspection data.

@@ -1,3 +1,7 @@
+### 1.0.18
+
++ Update stack version to 12.10
+
 ### 1.0.17
 
 + Add an override for [`Cairo.Matrix`](https://hackage.haskell.org/package/gi-cairo/docs/GI-Cairo-Structs-Matrix.html): it is a boxed type, but it was not properly annotated as such in the introspection data.
