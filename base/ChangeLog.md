@@ -1,3 +1,7 @@
+### 0.21.3
+
++ Fix a compilation error on Windows, see [issue 193](https://github.com/haskell-gi/haskell-gi/issues/193).
+
 ### 0.21.2
 
 + Export [newManagedPtr_](https://hackage.haskell.org/package/haskell-gi-base-0.21.2/docs/Data-GI-Base-ManagedPtr.html#v:newManagedPtr_).
