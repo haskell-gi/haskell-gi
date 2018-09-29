@@ -23,6 +23,7 @@ module Data.GI.CodeGen.Conversions
     , isManaged
     , typeIsNullable
     , typeIsPtr
+    , typeIsCallback
     , maybeNullConvert
     , nullPtrForType
 
@@ -775,6 +776,15 @@ haskellType t@(TInterface n) = do
 -- style arguments).
 callableHasClosures :: Callable -> Bool
 callableHasClosures = any (/= -1) . map argClosure . args
+
+-- | Check whether the given type corresponds to a callback.
+typeIsCallback :: Type -> CodeGen Bool
+typeIsCallback t@(TInterface _) = do
+  api <- findAPI t
+  case api of
+    Just (APICallback _) -> return True
+    _ -> return False
+typeIsCallback _ = return False
 
 -- | Basically like `haskellType`, but for types which admit a "isomorphic"
 -- version of the Haskell type distinct from the usual Haskell type.

@@ -24,6 +24,7 @@ module Data.GI.Base.Properties
     , setObjectPropertyByteArray
     , setObjectPropertyPtrGList
     , setObjectPropertyHash
+    , setObjectPropertyCallback
 
     , getObjectPropertyString
     , getObjectPropertyStringArray
@@ -48,6 +49,7 @@ module Data.GI.Base.Properties
     , getObjectPropertyByteArray
     , getObjectPropertyPtrGList
     , getObjectPropertyHash
+    , getObjectPropertyCallback
 
     , constructObjectPropertyString
     , constructObjectPropertyStringArray
@@ -72,6 +74,7 @@ module Data.GI.Base.Properties
     , constructObjectPropertyByteArray
     , constructObjectPropertyPtrGList
     , constructObjectPropertyHash
+    , constructObjectPropertyCallback
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -90,7 +93,8 @@ import Data.GI.Base.GValue
 import Data.GI.Base.GVariant (newGVariantFromPtr)
 import Data.GI.Base.Utils (freeMem, convertIfNonNull)
 
-import Foreign (Ptr, Int32, Word32, Int64, Word64, nullPtr)
+import Foreign (Ptr, FunPtr, Int32, Word32, Int64, Word64, nullPtr,
+                castFunPtrToPtr, castPtrToFunPtr)
 import Foreign.C (CString, withCString)
 import Foreign.C.Types (CInt, CUInt, CLong, CULong)
 
@@ -519,3 +523,19 @@ constructObjectPropertyHash =
 getObjectPropertyHash :: GObject a => a -> String -> IO b
 getObjectPropertyHash =
     error $ "Getting GHashTable properties not supported yet."
+
+setObjectPropertyCallback :: GObject a => a -> String -> FunPtr b -> IO ()
+setObjectPropertyCallback obj propName funPtr =
+    setObjectProperty obj propName (castFunPtrToPtr funPtr) set_pointer gtypePointer
+
+constructObjectPropertyCallback :: String -> FunPtr b -> IO (GValueConstruct o)
+constructObjectPropertyCallback propName funPtr =
+  constructObjectProperty propName (castFunPtrToPtr funPtr) set_pointer gtypePointer
+
+getObjectPropertyCallback :: GObject a => a -> String ->
+                             (FunPtr b -> c) -> IO (Maybe c)
+getObjectPropertyCallback obj propName wrapper = do
+  ptr <- getObjectProperty obj propName get_pointer gtypePointer
+  if ptr /= nullPtr
+    then return . Just . wrapper $ castPtrToFunPtr ptr
+    else return Nothing

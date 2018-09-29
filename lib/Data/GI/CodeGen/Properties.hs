@@ -25,7 +25,8 @@ import Data.GI.CodeGen.Haddock (addSectionDocumentation, writeHaddock,
 import Data.GI.CodeGen.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
 import Data.GI.CodeGen.SymbolNaming (lowerName, upperName,
                                      classConstraint, typeConstraint,
-                                     hyphensToCamelCase, qualifiedSymbol)
+                                     hyphensToCamelCase, qualifiedSymbol,
+                                     callbackDynamicWrapper)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
 
@@ -64,6 +65,7 @@ propTypeStr t = case t of
      case api of
        APIEnum _ -> return "Enum"
        APIFlags _ -> return "Flags"
+       APICallback _ -> return "Callback"
        APIStruct s -> if structIsBoxed s
                       then return "Boxed"
                       else error $ "Unboxed struct property : " ++ show t
@@ -87,8 +89,14 @@ propTypeStr t = case t of
 -- the type variables for the object and its value.
 attrType :: Property -> CodeGen ([Text], Text)
 attrType prop = do
-  (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
-  return (constraints, t)
+  isCallback <- typeIsCallback (propType prop)
+  if isCallback
+    then do
+      ftype <- foreignType (propType prop)
+      return ([], typeShow ftype)
+    else do
+      (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
+      return (constraints, t)
 
 -- | Generate documentation for the given setter.
 setterDoc :: Name -> Property -> Text
@@ -105,6 +113,7 @@ genPropertySetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertySetter setter n docSection prop = group $ do
   (constraints, t) <- attrType prop
   isNullable <- typeIsNullable (propType prop)
+  isCallback <- typeIsCallback (propType prop)
   cls <- classConstraint n
   let constraints' = "MonadIO m":(cls <> " o"):constraints
   tStr <- propTypeStr $ propType prop
@@ -113,7 +122,7 @@ genPropertySetter setter n docSection prop = group $ do
            <> ") => o -> " <> t <> " -> m ()"
   line $ setter <> " obj val = liftIO $ setObjectProperty" <> tStr
            <> " obj \"" <> propName prop
-           <> if isNullable
+           <> if isNullable && (not isCallback)
               then "\" (Just val)"
               else "\" val"
   export docSection setter
@@ -132,25 +141,34 @@ genPropertyGetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyGetter getter n docSection prop = group $ do
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
-  constructorType <- haskellType (propType prop)
+  constructorType <- isoHaskellType (propType prop)
   tStr <- propTypeStr $ propType prop
   cls <- classConstraint n
   let constraints = "(MonadIO m, " <> cls <> " o)"
       outType = if isMaybe
                 then maybeT constructorType
                 else constructorType
+      returnType = typeShow $ "m" `con` [outType]
       getProp = if isNullable && not isMaybe
                 then "checkUnexpectedNothing \"" <> getter
                          <> "\" $ getObjectProperty" <> tStr
                 else "getObjectProperty" <> tStr
+  -- Some property getters require in addition a constructor, which
+  -- will convert the foreign value to the wrapped Haskell one.
+  constructorArg <-
+    if tStr `elem` ["Object", "Boxed"]
+    then return $ " " <> typeShow constructorType
+    else (if tStr == "Callback"
+          then do
+             callbackType <- haskellType (propType prop)
+             return $ " " <> callbackDynamicWrapper (typeShow callbackType)
+          else return "")
+
   writeHaddock DocBeforeSymbol (getterDoc n prop)
   line $ getter <> " :: " <> constraints <>
-                " => o -> " <> typeShow ("m" `con` [outType])
+                " => o -> " <> returnType
   line $ getter <> " obj = liftIO $ " <> getProp
-           <> " obj \"" <> propName prop <> "\"" <>
-           if tStr `elem` ["Object", "Boxed"]
-           then " " <> typeShow constructorType -- These require the constructor.
-           else ""
+           <> " obj \"" <> propName prop <> "\"" <> constructorArg
   export docSection getter
 
 -- | Generate documentation for the given constructor.
@@ -164,6 +182,7 @@ genPropertyConstructor constructor n docSection prop = group $ do
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
   isNullable <- typeIsNullable (propType prop)
+  isCallback <- typeIsCallback (propType prop)
   cls <- classConstraint n
   let constraints' = (cls <> " o") : constraints
       pconstraints = parenthesize (T.intercalate ", " constraints') <> " => "
@@ -172,7 +191,7 @@ genPropertyConstructor constructor n docSection prop = group $ do
            <> t <> " -> IO (GValueConstruct o)"
   line $ constructor <> " val = constructObjectProperty" <> tStr
            <> " \"" <> propName prop
-           <> if isNullable
+           <> if isNullable && (not isCallback)
               then "\" (Just val)"
               else "\" val"
   export docSection constructor
@@ -189,16 +208,19 @@ clearDoc prop = T.unlines [
 
 genPropertyClear :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyClear clear n docSection prop = group $ do
-  nothingType <- typeShow . maybeT <$> haskellType (propType prop)
   cls <- classConstraint n
   let constraints = ["MonadIO m", cls <> " o"]
   tStr <- propTypeStr $ propType prop
   writeHaddock DocBeforeSymbol (clearDoc prop)
+  nothingType <- typeShow . maybeT <$> haskellType (propType prop)
+  isCallback <- typeIsCallback (propType prop)
+  let nothing = if isCallback
+                then "FP.nullFunPtr"
+                else "(Nothing :: " <> nothingType <> ")"
   line $ clear <> " :: (" <> T.intercalate ", " constraints
            <> ") => o -> m ()"
   line $ clear <> " obj = liftIO $ setObjectProperty" <> tStr
-           <> " obj \"" <> propName prop <> "\" (Nothing :: "
-           <> nothingType <> ")"
+           <> " obj \"" <> propName prop <> "\" " <> nothing
   export docSection clear
 
 -- | The property name as a lexically valid Haskell identifier. Note
@@ -300,8 +322,8 @@ genOneProperty owner prop = do
              then return "()"
              else do
                sOutType <- if isNullable && propReadNullable prop /= Just False
-                           then typeShow . maybeT <$> haskellType (propType prop)
-                           else typeShow <$> haskellType (propType prop)
+                           then typeShow . maybeT <$> isoHaskellType (propType prop)
+                           else typeShow <$> isoHaskellType (propType prop)
                return $ if T.any (== ' ') sOutType
                         then parenthesize sOutType
                         else sOutType
@@ -312,7 +334,10 @@ genOneProperty owner prop = do
     inConstraint <- if writable || constructOnly
                     then do
                       inIsGO <- isGObject (propType prop)
-                      hInType <- typeShow <$> haskellType (propType prop)
+                      isCallback <- typeIsCallback (propType prop)
+                      hInType <- if isCallback
+                                 then typeShow <$> foreignType (propType prop)
+                                 else typeShow <$> haskellType (propType prop)
                       if inIsGO
                          then typeConstraint (propType prop)
                          else return $ "(~) " <> if T.any (== ' ') hInType
