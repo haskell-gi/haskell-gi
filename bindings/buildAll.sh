@@ -8,9 +8,9 @@ build()
         pushd $mod > /dev/null
         rm -rf GI
         rm -rf dist
-        cabal configure
-	cabal build
-        cabal install --force-reinstalls
+        cabal v1-configure
+	cabal v1-build
+        cabal v1-install --force-reinstalls
         popd > /dev/null
     done
 }
