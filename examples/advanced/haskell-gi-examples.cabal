@@ -15,20 +15,6 @@ source-repository head
   type: git
   location: git://github.com/haskell-gi/haskell-gi.git
 
-executable SimpleBrowser
-  main-is:             SimpleBrowser.hs
-  build-depends:       base >= 4.7 && < 5,
-                       haskell-gi-base == 0.21.*,
-                       gi-glib == 2.0.*,
-                       gi-gtk == 3.0.*,
-                       gi-webkit2 == 4.0.*,
-                       text >= 1.0
-  default-language:    Haskell2010
-  other-extensions:    OverloadedStrings
-  ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -threaded -with-rtsopts=-N
-  other-modules:       GI.OverloadedLabels,
-                       GI.Signals
-
 executable Cairo
   main-is:              Cairo.hs
   build-depends:        base >= 4.7 && < 5,
@@ -82,7 +68,7 @@ executable GstGtkX11
 
 executable gtk-emit-signal
   main-is:            GtkEmitSignal.hs
-  build-depends:        base >= 4.7 && < 4.10
+  build-depends:        base >= 4.7 && < 5
                       , haskell-gi-base == 0.21.*
                       , gi-gobject
                       , gi-glib

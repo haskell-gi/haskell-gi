@@ -1,0 +1,29 @@
+name:                webkit-example
+version:             0.1
+synopsis:            An example of using gi-webkit2
+description:         An example of using gi-webkit2
+homepage:            https://github.com/haskell-gi/haskell-gi
+license:             LGPL-3
+author:              Iñaki García Etxebarria
+maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+stability:           Experimental
+category:            Development
+build-type:          Simple
+cabal-version:       >=1.10
+
+source-repository head
+  type: git
+  location: git://github.com/haskell-gi/haskell-gi.git
+
+executable SimpleBrowser
+  main-is:             SimpleBrowser.hs
+  build-depends:       base >= 4.7 && < 5,
+                       haskell-gi-base == 0.21.*,
+                       gi-glib == 2.0.*,
+                       gi-gtk == 3.0.*,
+                       gi-webkit2 == 4.0.*,
+                       text >= 1.0
+  default-language:    Haskell2010
+  other-extensions:    OverloadedStrings, OverloadedLabels
+  ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -threaded -with-rtsopts=-N
+
