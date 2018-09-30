@@ -1,10 +1,14 @@
-{-# LANGUAGE OverloadedLabels, OverloadedStrings #-}
+{-# LANGUAGE OverloadedLabels, OverloadedStrings, CPP #-}
 
 module Main where
 
 import           System.Exit  (die)
 import qualified GI.Gtk       as Gtk
 import           Data.GI.Base (new, on, AttrOp((:=)), unsafeCastTo)
+
+#if !MIN_VERSION_base(4,10,0)
+import Data.Monoid ((<>))
+#endif
 
 main :: IO ()
 main = do
