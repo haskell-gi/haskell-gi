@@ -1,0 +1,36 @@
+name:                haskell-gi-cmd
+version:             0.21.4
+synopsis:            Command-line interface for haskell-gi, for debugging purposes.
+description:         Command-line interface for haskell-gi, for debugging purposes.
+homepage:            https://github.com/haskell-gi/haskell-gi
+license:             LGPL-2.1
+                     -- or above
+author:              Iñaki García Etxebarria
+maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+stability:           Experimental
+category:            Development
+build-type:          Simple
+tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1, GHC == 8.4.1, GHC == 8.6.1
+cabal-version:       >=1.8
+
+source-repository head
+  type: git
+  location: git://github.com/haskell-gi/haskell-gi.git
+
+executable haskell-gi
+  main-is:             haskell-gi.hs
+
+  extensions:          CPP, OverloadedStrings, LambdaCase
+  ghc-options:         -Wall -fno-warn-name-shadowing
+
+  if impl(ghc >= 8.0)
+     ghc-options: -Wcompat
+
+  build-depends:       base >= 4.7 && < 5,
+                       text >= 1.0,
+                       filepath,
+                       containers,
+                       directory,
+                       pretty-show,
+                       haskell-gi,
+                       haskell-gi-base

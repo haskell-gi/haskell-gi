@@ -1,5 +1,6 @@
 packages: base/haskell-gi-base.cabal
           haskell-gi.cabal
+          cmdline/haskell-gi-cmd.cabal
           test/haskell-gi-test.cabal
           examples/introductory/introductory-examples.cabal
           examples/internationalization/haskell-gi-i18n.cabal

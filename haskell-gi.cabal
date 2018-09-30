@@ -14,7 +14,7 @@ maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
 stability:           Experimental
 category:            Development
 build-type:          Simple
-tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1, GHC == 8.4.1
+tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1, GHC == 8.4.1, GHC == 8.6.1
 cabal-version:       >=1.8
 
 extra-source-files: ChangeLog.md
@@ -122,22 +122,3 @@ test-suite doctests
   build-depends: base
                , process
                , doctest >= 0.8
-
-executable haskell-gi
-  main-is:             haskell-gi.hs
-  hs-source-dirs:      cmdline
-
-  extensions:          CPP, OverloadedStrings, LambdaCase
-  ghc-options:         -Wall -fno-warn-name-shadowing
-
-  if impl(ghc >= 8.0)
-     ghc-options: -Wcompat
-
-  build-depends:       base >= 4.7 && < 5,
-                       text >= 1.0,
-                       filepath,
-                       containers,
-                       directory,
-                       pretty-show,
-                       haskell-gi,
-                       haskell-gi-base
