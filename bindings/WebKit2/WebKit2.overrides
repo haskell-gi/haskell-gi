@@ -23,6 +23,10 @@ set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array c:type
 set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array/@type name utf8
 set-attr WebKit2/NetworkProxySettings/new/@parameters/ignore_hosts/@array/@type c:type gchar**
 
+# In older versions this parameter had type "gpointer", which was
+# corrected later.
+set-attr WebKit2/WebView/load-failed/@parameters/error/@type name GLib.Error
+
 # https://github.com/haskell-gi/haskell-gi/issues/155
 # Even get_current_item can return null if no page has ever been loaded
 set-attr WebKit2/BackForwardList/get_current_item/@return-value nullable 1
