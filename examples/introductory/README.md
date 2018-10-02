@@ -7,8 +7,8 @@ haskell-gi introductory examples inspired by [GTK+ documentation](https://develo
 3. __Packed widgets:__ [Packing example of GTK+ documents](https://developer.gnome.org/gtk3/3.12/ch01s02.html).
 4. __Builder:__ [Packing buttons with GtkBuilder example of GTK+ documents](https://developer.gnome.org/gtk3/stable/ch01s03.html).
 
-    In this example we should get the .ui path from the command arguments or construct a path to the same directory of the executable.
-    You should either copy `builder.ui` file to the same directory of the executable, or give the full path to the `builder.ui` as the only argument to the program.
+    In this example we get the .ui path from the command argument or, if no arguments are given, we try to find the .ui file in the current directory.
+
 5. __Search Bar:__ [search-bar.c example in GTK repository](https://gitlab.gnome.org/GNOME/gtk/blob/master/examples/search-bar.c)
 
     Although only `window` and `searchBar` `#show`ed in the original code but this results in a blank and unresponsive window. `#show`ing all components individually or `#showAll` of them at once at the end of the function solves the problem. I don't know whether this is a haskell-gi or the original code problem.

@@ -5,8 +5,7 @@
 import Data.Monoid ((<>))
 import qualified Data.Text.IO as T
 import Data.Text (Text, pack)
-import System.Environment (getArgs, getExecutablePath)
-import System.FilePath ((</>), dropFileName)
+import System.Environment (getArgs)
 
 import qualified GI.Gtk as Gtk
 import Data.GI.Base
@@ -47,11 +46,10 @@ main = do
 
   Gtk.init $ Just targs
 
-  filename <- case targs of
-    [] -> do
-      path <- (getExecutablePath >>= return . dropFileName)
-      return $ pack $ path </> "builder.ui"
-    arg:_ -> return arg
+  let filename = case targs of
+                   [] -> "builder.ui"
+                   arg:[] -> arg
+                   _ -> error "Too many command line arguments."
   T.putStrLn $ "filename=\"" <> filename <> "\""
 
   builder <- new Gtk.Builder []

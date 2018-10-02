@@ -58,8 +58,6 @@ executable basic
 
 executable builder
   main-is: builder.hs
-  other-modules:
-      Paths_introductory_examples
   hs-source-dirs:
       src
   ghc-options: -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
