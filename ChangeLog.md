@@ -1,3 +1,7 @@
+### 0.21.5
+
++ Add support for callback-valued properties.
+
 ### 0.21.4
 
 + Try to guess signedness of enums and flags on the C side, fixes [#184](https://github.com/haskell-gi/haskell-gi/issues/184).
