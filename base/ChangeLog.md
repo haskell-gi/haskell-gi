@@ -1,3 +1,7 @@
+### 0.21.4
+
++ Add support for callback-valued properties.
+
 ### 0.21.3
 
 + Fix a compilation error on Windows, see [issue 193](https://github.com/haskell-gi/haskell-gi/issues/193).
