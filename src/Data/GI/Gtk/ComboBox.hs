@@ -186,8 +186,10 @@ comboBoxSetModelText combo = liftIO $ do
 --
 comboBoxGetModelText :: (MonadIO m, IsComboBox self) => self -> m (SeqStore Text)
 comboBoxGetModelText self = do
-  (Just store) <- objectGetAttributeUnsafe self comboQuark
-  return store
+  maybeStore <- objectGetAttributeUnsafe self comboQuark
+  case maybeStore of
+    Just store -> return store
+    Nothing -> error "Could not get required attribute"
 
 -- | Appends @string@ to the list of strings stored in @comboBox@. Note that
 -- you can only use this function with combo boxes constructed with
