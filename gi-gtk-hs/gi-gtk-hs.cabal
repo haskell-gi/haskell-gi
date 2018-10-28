@@ -1,0 +1,51 @@
+name:                gi-gtk-hs
+version:             0.3.6.3
+synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
+description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
+homepage:            https://github.com/haskell-gi/gi-gtk-hs
+license:             LGPL-2.1
+license-file:        LICENSE
+author:              Jonas Platte,
+                     Duncan Coutts,
+                     Axel Simon,
+                     Hamish Mackenzie
+maintainer:          mail@jonasplatte.de
+category:            Graphics
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  cbits/Gtk2HsStore.h
+
+library
+  exposed-modules:     Data.GI.Gtk,
+                       Data.GI.Gtk.BuildFn
+                       Data.GI.Gtk.Threading
+                       Data.GI.Gtk.ModelView.Types
+                       Data.GI.Gtk.ModelView.CellLayout
+                       Data.GI.Gtk.ModelView.CustomStore
+                       Data.GI.Gtk.ModelView.SeqStore
+                       Data.GI.Gtk.ModelView.ForestStore
+                       Data.GI.Gtk.ModelView.TreeModel
+                       Data.GI.Gtk.ComboBox
+
+  build-depends:       base >=4.7 && <5,
+                       base-compat >=0.9.0 && <0.11,
+                       mtl >=2.1 && <2.3,
+                       transformers >=0.3.0.0 && <0.6,
+                       containers >=0.5.5.1 && <0.7,
+                       text >=1.2 && <1.3,
+                       haskell-gi-base >=0.21.2 && <0.22,
+                       gi-glib >=2.0.6 && <2.1,
+                       gi-gobject >=2.0.6 && <2.1,
+                       gi-gdk >=3.0.6 && <3.1,
+                       gi-gtk >=3.0.25 && <3.1,
+                       gi-gdkpixbuf >=2.0.6 && <2.1
+
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  c-sources:
+        cbits/Gtk2HsStore.c
+  if os(osx)
+        c-sources:
+            cbits/quartzfix.c
+  include-dirs: cbits
+
