@@ -172,7 +172,11 @@ treePathNewFromIndices' x = do
 treePathGetIndices' :: MonadIO m => TreePath -> m [Int32]
 treePathGetIndices' path = treePathGetDepth path >>= \case
                                 0 -> return []
-                                _ -> treePathGetIndices path
+                                _ -> do
+                                  indices <- treePathGetIndices path
+                                  case indices of
+                                    Just ixs -> return ixs
+                                    Nothing -> return []
 
 withTreePath :: MonadIO m => [Int32] -> (TreePath -> m a) -> m a
 withTreePath tp act = treePathNewFromIndices' tp >>= act
