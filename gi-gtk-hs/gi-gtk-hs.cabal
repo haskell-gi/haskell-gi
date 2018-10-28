@@ -1,5 +1,5 @@
 name:                gi-gtk-hs
-version:             0.3.6.2
+version:             0.3.6.3
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 homepage:            https://github.com/haskell-gi/gi-gtk-hs
