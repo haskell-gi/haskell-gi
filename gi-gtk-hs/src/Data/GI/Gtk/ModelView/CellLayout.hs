@@ -149,9 +149,10 @@ cellLayoutSetDataFunc' :: (MonadIO m,
  -> model  -- ^ @model@ - A model from which to draw data.
  -> (TreeIter -> IO ()) -- ^ Function to set attributes on the cell renderer.
  -> m ()
-cellLayoutSetDataFunc' self cell model func = liftIO $
-  cellLayoutSetCellDataFunc self cell . Just $ \_ (CellRenderer cellPtr') model' iter -> do
-    iter <- convertIterFromParentToChildModel iter model' =<< toTreeModel model
+cellLayoutSetDataFunc' self cell model func = liftIO $ do
+  cellLayoutSetCellDataFunc self cell . Just $ \_ (CellRenderer cellPtr') model' iter _ -> do
+    castModel <- toTreeModel model
+    iter <- convertIterFromParentToChildModel iter model' castModel
     CellRenderer cellPtr <- toCellRenderer cell
     if managedForeignPtr cellPtr /= managedForeignPtr cellPtr' then
       error ("cellLayoutSetAttributeFunc: attempt to set attributes of "++
