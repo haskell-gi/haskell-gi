@@ -221,7 +221,7 @@ processMod options ovs extraPaths name = do
     putStrLn "\t\t+ Setup.hs"
     utf8WriteFile (p "Setup.hs") setupHs
     putStrLn "\t\t+ LICENSE"
-    utf8WriteFile (p "LICENSE") licenseText
+    utf8WriteFile (p "LICENSE") (licenseText name)
 
 dump :: Options -> Overrides -> Text -> IO ()
 dump options ovs name = do

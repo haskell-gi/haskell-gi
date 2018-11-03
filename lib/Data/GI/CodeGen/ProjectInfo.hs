@@ -14,6 +14,7 @@ module Data.GI.CodeGen.ProjectInfo
     , standardDeps
     ) where
 
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T (unlines)
 
@@ -66,8 +67,25 @@ standardDeps = ["bytestring >= 0.10 && < 1",
 category :: Text
 category = "Bindings"
 
-licenseText :: Text
-licenseText = T.unlines
+staticLinkingException :: Text -> Text
+staticLinkingException name = T.unlines
+ ["The " <> name <> " library and included works are provided under the terms of the"
+ ,"GNU Library General Public License (LGPL) version 2.1 with the following"
+ ,"exception:"
+ ,""
+ ,"Static linking of applications or any other source to the " <> name <> " library"
+ ,"does not constitute a modified or derivative work and does not require"
+ ,"the author(s) to provide source code for said work, to link against the"
+ ,"shared " <> name <> " libraries, or to link their applications against a"
+ ,"user-supplied version of " <> name <> ". If you link applications to a modified"
+ ,"version of " <> name <> ", then the changes to " <> name <> " must be provided under the"
+ ,"terms of the LGPL."
+ ,""
+ ,"----------------------------------------------------------------------------"
+ ,""]
+
+licenseText :: Text -> Text
+licenseText name = staticLinkingException name <> T.unlines
  ["                  GNU LESSER GENERAL PUBLIC LICENSE"
  ,"                       Version 2.1, February 1999"
  ,""

@@ -101,8 +101,8 @@ writeSetup fname info =
     where tshow :: Show a => a -> Text
           tshow = T.pack . show
 
-writeLicense :: FilePath -> IO ()
-writeLicense fname = B.writeFile fname (TE.encodeUtf8 PI.licenseText)
+writeLicense :: FilePath -> ProjectInfo -> IO ()
+writeLicense fname info = B.writeFile fname (TE.encodeUtf8 $ PI.licenseText (name info))
 
 writeStackYaml :: FilePath -> IO ()
 writeStackYaml fname =
@@ -138,6 +138,6 @@ main = do
          info <- readGIRInfo (dir </> "pkg.info")
          writeCabal (dir </> T.unpack (name info) <.> "cabal") info
          writeSetup (dir </> "Setup.hs") info
-         writeLicense (dir </> "LICENSE")
+         writeLicense (dir </> "LICENSE") info
          writeStackYaml (dir </> "stack.yaml")
          writeReadme (dir </> "README.md") info
