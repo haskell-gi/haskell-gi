@@ -1,3 +1,17 @@
+The haskell-gi library and included works are provided under the terms of the
+GNU Library General Public License (LGPL) version 2.1 with the following
+exception:
+
+Static linking of applications or any other source to the haskell-gi library
+does not constitute a modified or derivative work and does not require the
+author(s) to provide source code for said work, to link against the shared
+haskell-gi libraries, or to link their applications against a user-supplied
+version of haskell-gi. If you link applications to a modified version of
+haskell-gi, then the changes to haskell-gi must be provided under the terms of
+the LGPL.
+
+----------------------------------------------------------------------------
+
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
 
