@@ -150,7 +150,7 @@ cellLayoutSetDataFunc' :: (MonadIO m,
  -> (TreeIter -> IO ()) -- ^ Function to set attributes on the cell renderer.
  -> m ()
 cellLayoutSetDataFunc' self cell model func = liftIO $ do
-  cellLayoutSetCellDataFunc self cell . Just $ \_ (CellRenderer cellPtr') model' iter _ -> do
+  cellLayoutSetCellDataFunc self cell . Just $ \_ (CellRenderer cellPtr') model' iter -> do
     castModel <- toTreeModel model
     iter <- convertIterFromParentToChildModel iter model' castModel
     CellRenderer cellPtr <- toCellRenderer cell

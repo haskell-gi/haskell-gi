@@ -1,5 +1,5 @@
 name:                gi-gtk-hs
-version:             0.3.6.3
+version:             0.3.6.4
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 homepage:            https://github.com/haskell-gi/gi-gtk-hs
@@ -8,7 +8,8 @@ license-file:        LICENSE
 author:              Jonas Platte,
                      Duncan Coutts,
                      Axel Simon,
-                     Hamish Mackenzie
+                     Hamish Mackenzie,
+                     Iñaki García Etxebarria
 maintainer:          mail@jonasplatte.de
 category:            Graphics
 build-type:          Simple
@@ -36,8 +37,8 @@ library
                        haskell-gi-base >=0.21.2 && <0.22,
                        gi-glib >=2.0.6 && <2.1,
                        gi-gobject >=2.0.6 && <2.1,
-                       gi-gdk >=3.0.6 && <3.1,
-                       gi-gtk >=3.0.25 && <3.1,
+                       gi-gdk >= 3.0.6 && <3.1,
+                       gi-gtk >= 3.0.26 && <3.1,
                        gi-gdkpixbuf >=2.0.6 && <2.1
 
   hs-source-dirs:      src
