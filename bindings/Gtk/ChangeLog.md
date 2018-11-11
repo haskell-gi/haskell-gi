@@ -1,3 +1,7 @@
+### 3.0.26
+
++ Make sure that the 'data' argument of [CellLayoutDataFunc](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Callbacks.html#t:CellLayoutDataFunc) is properly anotated as a closure argument.
+
 ### 3.0.25
 
 + Update stack version to 12.10

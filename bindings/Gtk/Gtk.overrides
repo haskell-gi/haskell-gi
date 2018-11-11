@@ -18,6 +18,9 @@ ignore WidgetPath.iter_add_qclass
 # https://github.com/haskell-gi/haskell-gi/issues/104
 set-attr Gtk/Builder/add_callback_symbol/@parameters/callback_symbol scope notified
 
+# Not properly annotated in older versions of gtk
+set-attr Gtk/CellLayoutDataFunc/@parameters/data closure 4
+
 # Missing nullable return annotation, see
 # https://github.com/haskell-gi/haskell-gi/issues/192
 set-attr Gtk/TreePath/get_indices_with_depth/@return-value nullable 1
