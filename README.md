@@ -21,6 +21,16 @@ sudo apt-get install libgirepository1.0-dev libwebkit2gtk-4.0-dev libgtksourcevi
 sudo pacman -S gobject-introspection gobject-introspection-runtime gtksourceview3 webkit2gtk
 ```
 
+### Mac OSX
+
+Install [Homebrew](https://brew.sh/) and install GTK+ and GObject Introspection:
+
+```
+brew install gobject-introspection gtk+ gtk+3
+```
+Ensure the path to libffi (probably `/usr/local/opt/libffi/lib/pkgconfig`) is in the PKG_CONFIG_PATH environment variable.
+
+
 ### Windows
 
 Please see [here](https://github.com/haskell-gi/haskell-gi/wiki/Using-haskell-gi-in-Windows) for detailed installation instructions in Windows.
