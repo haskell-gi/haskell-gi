@@ -138,4 +138,6 @@ The bindings in `haskell-gi` aim for complete coverage of the bound APIs, but as
 
 * [Haskell at Work screencast: GTK+ Programming with Haskell](https://haskell-at-work.com/episodes/2018-11-13-gtk-programming-with-haskell.html)
 
+---
+
 [![Build Status](https://travis-ci.org/haskell-gi/haskell-gi.svg?branch=master)](https://travis-ci.org/haskell-gi/haskell-gi) [![Join the chat at https://gitter.im/haskell-gi/haskell-gi](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/haskell-gi/haskell-gi?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
