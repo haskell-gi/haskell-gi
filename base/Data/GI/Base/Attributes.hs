@@ -13,6 +13,14 @@
 -- attribute, but we can also have attributes for types not descending
 -- from `Data.GI.Base.BasicTypes.GObject`).
 --
+-- If you're wondering what the possible attributes of a GObject are,
+-- look at the list of properties in the documentation, e.g. the
+-- Properties heading of the docs for 'GI.Gtk.Objects.Button' lists
+-- properties such as @image@ and @relief@. Parent classes may also
+-- introduce properties, so since a Button is an instance of
+-- @IsActionable@, it inherits properties like @actionName@ from
+-- 'GI.Gtk.Interfaces.Actionable' too.
+--
 -- As an example consider a @button@ widget and a property (of the
 -- Button class, or any of its parent classes or implemented
 -- interfaces) called "label". The simplest way of getting the value
