@@ -14,5 +14,5 @@
         "gi-cairo == 1.0.*",
         "gi-xlib == 2.0.*"
     ],
-    "pkgconfigDepends": "gdk-x11-3.0 >= 3.22"
+    "pkgconfigDepends": "gdk-x11-3.0"
 }
