@@ -25,7 +25,7 @@ authors :: Text
 authors = "Will Thompson, Iñaki García Etxebarria and Jonas Platte"
 
 maintainers :: Text
-maintainers = "Iñaki García Etxebarria (garetxe@gmail.com)"
+maintainers = "Iñaki García Etxebarria (inaki@blueleaf.cc)"
 
 license :: Text
 license = "LGPL-2.1"

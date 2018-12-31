@@ -6,7 +6,7 @@ homepage:            https://github.com/haskell-gi/haskell-gi
 license:             LGPL-2.1
                      -- or above
 author:              Iñaki García Etxebarria
-maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+maintainer:          Iñaki García Etxebarria (inaki@blueleaf.cc)
 stability:           Experimental
 category:            Development
 build-type:          Simple

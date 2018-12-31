@@ -9,7 +9,7 @@ license-file:        LICENSE
 author:              Will Thompson,
                      Iñaki García Etxebarria,
                      Jonas Platte
-maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
+maintainer:          Iñaki García Etxebarria (inaki@blueleaf.cc)
 stability:           Experimental
 category:            Development
 build-type:          Simple
