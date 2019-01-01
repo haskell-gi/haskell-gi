@@ -3,12 +3,10 @@
 module Main where
 
 import           Data.Int
-import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
 import           Data.Text (Text)
 
 import           Data.GI.Base
-import qualified GI.Gdk as Gdk
 import qualified GI.Gtk as Gtk
 
 tooltipMarkup :: Text
@@ -48,30 +46,21 @@ appActivate app = do
   buf <- tv `get` #buffer
   iter <- #getStartIter buf
   #insertMarkup buf iter tooltipMarkup $ toEnum $ Text.length tooltipMarkup
-  #add appWin tv 
-  scWidth <- ( `get` #width) =<< getMonitorGeometry appWin
+  #add appWin tv
+  let scWidth = 640 :: Double
   -- after construction you can...
                  -- assign normal values
   appWin `set` [ #opacity := 0.50
                  -- assign return values of pure functions
-               , #defaultWidth :~ \_ -> scWidth `div` 2
+               , #defaultWidth :~ \_ -> round scWidth
                -- additionally you can
                  -- assign IO wrapped values and ...
                , #tooltipMarkup :=> getTextValue "Enter window tooltip text (enter Pango markup if you dare!)"
                  -- return values of monadic functions
-               , #defaultHeight :~> (\_ -> min <$> (( `get` #height) =<< getMonitorGeometry appWin)
-                                               <*> (return . fromInteger . round $ ((fromIntegral scWidth)::Double) / 2.0 / goldenRatio)
-                                    )
+               , #defaultHeight :~> (\_ -> return . round $ (scWidth / goldenRatio))
                ]
   #showAll appWin
   return ()
-
-getMonitorGeometry :: Gtk.IsWidget a => a -> IO Gdk.Rectangle
-getMonitorGeometry wdg = return . fromJust
-                       =<<  Gdk.getMonitorGeometry
-                       =<< return . fromJust
-                       =<< (flip Gdk.displayGetMonitor $ 0)
-                       =<< Gtk.widgetGetDisplay wdg
 
 getTextValue ::Text -> IO Text
 getTextValue prompt = do
