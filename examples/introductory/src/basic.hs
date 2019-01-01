@@ -27,7 +27,7 @@ activateApp app = do
 main :: IO ()
 main = do
   app <- new Gtk.Application [ #applicationId := "haskell-gi.examples.basic"
-                             , #flags := [ Gio.ApplicationFlagsFlagsNone ]
+                             , #flags := [Gio.ApplicationFlagsFlagsNone] -- <-- this flag is the default. no need to pass
                              ]
   on app #activate $ do { activateApp app; return () }
   Gio.applicationRun app Nothing

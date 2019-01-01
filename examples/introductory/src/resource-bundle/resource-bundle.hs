@@ -46,9 +46,7 @@ appActivate app = do
 
 main :: IO ()
 main = do
-  app <- new Gtk.Application [ #applicationId := "haskell-gi.examples.resource-bundle"
-                             , #flags := [Gio.ApplicationFlagsFlagsNone]
-                             ]
+  app <- new Gtk.Application [#applicationId := "haskell-gi.examples.resource-bundle"]
   on app #activate $ appActivate app
 
   #run app Nothing
