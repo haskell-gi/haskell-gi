@@ -89,6 +89,9 @@ set-attr Gtk/Application/new/@return-value nullable 1
 # https://github.com/haskell-gi/haskell-gi/issues/148
 set-attr cairo/FontOptions glib:get-type cairo_gobject_font_options_get_type
 
+# Marked as gsize, which is unsigned, but the function accepts (-1)
+set-attr Gtk/Builder/add_from_string/@parameters/length/@type name gssize
+
 # Generated from gtk+ 3.22.11 with xsltproc Nullable.xslt Gtk-3.0.gir
 set-attr Gtk/AboutDialog/set_comments/@parameters/comments nullable 1
 set-attr Gtk/AboutDialog/set_copyright/@parameters/copyright nullable 1
