@@ -13,6 +13,10 @@ if windows
    endif
 endif
 
+# The return value is nullable, but not marked as such, see
+# https://github.com/haskell-gi/haskell-gi/issues/210
+set-attr GdkPixbuf/PixbufLoader/get_pixbuf/@return-value nullable 1
+
 # See https://github.com/haskell-gi/haskell-gi/issues/16
 set-attr GdkPixbuf/PixbufAnimation/new_from_file/@parameters/filename/@type name filename
 set-attr GdkPixbuf/PixbufAnimation/new_from_file_utf8/@parameters/filename/@type name filename
