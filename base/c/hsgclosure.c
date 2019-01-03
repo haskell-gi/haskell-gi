@@ -26,13 +26,21 @@ static int print_debug_info ()
   A mutex protecting the log file handle. We make it recursive,
   i.e. refcounted, so it is OK to lock repeatedly in the same thread.
 */
-static pthread_mutex_t log_mutex =
+static pthread_mutex_t log_mutex
 #if defined(PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
-  PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+  = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
 #elif defined(PTHREAD_RECURSIVE_MUTEX_INITIALIZER)
-  PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+  = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
 #else
-  #error "Recursive mutex initializers not supported on this platform."
+  ;
+__attribute__ ((constructor)) static void init_log_mutex()
+{
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&log_mutex, &attr);
+  pthread_mutexattr_destroy(&attr);
+}
 #endif
 
 /* Give the current thread exclusive access to the log */
