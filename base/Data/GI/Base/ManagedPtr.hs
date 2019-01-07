@@ -31,6 +31,7 @@ module Data.GI.Base.ManagedPtr
     -- * Wrappers
     , newObject
     , wrapObject
+    , releaseObject
     , unrefObject
     , disownObject
     , newBoxed
@@ -274,6 +275,17 @@ wrapObject constructor ptr = do
   when (ptr == nullPtr) (nullPtrWarning "wrapObject" callStack)
   fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
+
+-- | Unref the given `GObject` and disown it. Use this if you want to
+-- manually release the memory associated to a given `GObject`
+-- (assuming that no other reference to the underlying C object exists)
+-- before the garbage collector does it. It is typically not safe to
+-- access the `GObject` after calling this function.
+releaseObject :: (HasCallStack, GObject a) => a -> IO ()
+releaseObject obj = do
+  ptr <- disownObject obj
+  dbgDealloc obj
+  dbg_g_object_unref ptr
 
 -- It is fine to use unsafe here, since all this does is schedule an
 -- idle callback. The scheduling itself will never block for a long
