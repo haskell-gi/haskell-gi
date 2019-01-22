@@ -2,10 +2,10 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e6f6db491a99dcf45d0302edc32fa9e8c395dd34135ce97c3c5ca6beceb56d0e
+-- hash: 5e4dbd9dbeb55f715c3cab20e2f010437dd1b5a776e10ebec174d843f6c4f5d5
 
 name:           introductory-examples
-version:        0.1.0.0
+version:        0.3.1.1
 synopsis:       haskell-gi introductory program examples based on examples in GTK+ documents
 description:    Please see the README on Github at <https://github.com/githubuser/exercises#readme>
 author:         Murat Özsöyler
@@ -77,6 +77,8 @@ executable basic
 
 executable builder
   main-is: builder.hs
+  other-modules:
+      Paths_introductory_examples
   hs-source-dirs:
       src
   ghc-options: -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
@@ -101,6 +103,26 @@ executable hello-world
   ghc-options: -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , filepath
+    , gi-cairo
+    , gi-gdk
+    , gi-gdkpixbuf
+    , gi-gio
+    , gi-gtk
+    , haskell-gi-base
+    , text
+  default-language: Haskell2010
+
+executable lazy-file-tree
+  main-is: lazy-file-tree.hs
+  other-modules:
+      Paths_introductory_examples
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , directory
     , filepath
     , gi-cairo
     , gi-gdk
@@ -138,6 +160,8 @@ executable resource-bundle
       src
       src/resource-bundle
   ghc-options: -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
+  c-sources:
+      src/resource-bundle/resources.c
   build-depends:
       base >=4.7 && <5
     , filepath
@@ -148,9 +172,6 @@ executable resource-bundle
     , gi-gtk
     , haskell-gi-base
     , text
-  -- External resource bundles Step 3: Comment out following 4 lines
-  c-sources:
-      src/resource-bundle/resources.c
   pkgconfig-depends:
       glib-2.0 >= 2.32
   default-language: Haskell2010
