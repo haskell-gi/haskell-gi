@@ -9,6 +9,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
+
 -- -*-haskell-*-
 --  GIMP Toolkit (GTK) CustomStore TreeModel
 --
@@ -137,7 +139,7 @@ instance GObject (TypedTreeModelSort row) where
 #if !MIN_VERSION_haskell_gi_base(0,20,1)
     gobjectIsInitiallyUnowned _ = False
 #endif
-    gobjectType _ = gobjectType (undefined :: TreeModelSort)
+    gobjectType = gobjectType @TreeModelSort
 
 unsafeTreeModelSortToGeneric :: TreeModelSort -> TypedTreeModelSort row
 unsafeTreeModelSortToGeneric = unsafeCoerce#

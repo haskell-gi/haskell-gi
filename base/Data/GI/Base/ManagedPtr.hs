@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 -- For HasCallStack compatibility
 {-# LANGUAGE ImplicitParams, KindSignatures, ConstraintKinds #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | We wrap most objects in a "managed pointer", which is basically a
 -- 'ForeignPtr' of the appropriate type together with a notion of
@@ -217,7 +218,7 @@ castTo :: forall o o'. (GObject o, GObject o') =>
           (ManagedPtr o' -> o') -> o -> IO (Maybe o')
 castTo constructor obj =
     withManagedPtr obj $ \objPtr -> do
-      GType t <- gobjectType (undefined :: o')
+      GType t <- gobjectType @o'
       if c_check_object_type objPtr t /= 1
         then return Nothing
         else Just <$> newObject constructor objPtr
@@ -228,11 +229,11 @@ unsafeCastTo :: forall o o'. (HasCallStack, GObject o, GObject o') =>
                 (ManagedPtr o' -> o') -> o -> IO o'
 unsafeCastTo constructor obj =
   withManagedPtr obj $ \objPtr -> do
-    GType t <- gobjectType (undefined :: o')
+    GType t <- gobjectType @o'
     if c_check_object_type objPtr t /= 1
       then do
-      srcType <- gobjectType obj >>= gtypeName
-      destType <- gobjectType (undefined :: o') >>= gtypeName
+      srcType <- gobjectType @o >>= gtypeName
+      destType <- gobjectType @o' >>= gtypeName
       error $ "unsafeCastTo :: invalid conversion from " ++ srcType ++ " to "
         ++ destType ++ " requested."
       else newObject constructor objPtr

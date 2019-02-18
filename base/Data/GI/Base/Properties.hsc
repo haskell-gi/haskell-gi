@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
 module Data.GI.Base.Properties
     ( setObjectPropertyString
@@ -332,21 +332,21 @@ getObjectPropertyGType obj propName =
 setObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
                            a -> String -> Maybe b -> IO ()
 setObjectPropertyObject obj propName maybeObject = do
-  gtype <- gobjectType (undefined :: b)
+  gtype <- gobjectType @b
   maybeWithManagedPtr maybeObject $ \objectPtr ->
       setObjectProperty obj propName objectPtr set_object gtype
 
 constructObjectPropertyObject :: forall a o. GObject a =>
                                  String -> Maybe a -> IO (GValueConstruct o)
 constructObjectPropertyObject propName maybeObject = do
-  gtype <- gobjectType (undefined :: a)
+  gtype <- gobjectType @a
   maybeWithManagedPtr maybeObject $ \objectPtr ->
       constructObjectProperty propName objectPtr set_object gtype
 
 getObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
                            a -> String -> (ManagedPtr b -> b) -> IO (Maybe b)
 getObjectPropertyObject obj propName constructor = do
-  gtype <- gobjectType (undefined :: b)
+  gtype <- gobjectType @b
   getObjectProperty obj propName
                         (\val -> (get_object val :: IO (Ptr b))
                             >>= flip convertIfNonNull (newObject constructor))

@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, DataKinds, TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables, DataKinds, TypeFamilies, FlexibleContexts, AllowAmbiguousTypes, TypeApplications #-}
 
 module Data.GI.Base.GObject
     ( constructGObject
@@ -9,13 +9,20 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Proxy (Proxy(..))
 
 import Foreign.C (CUInt(..), CString, newCString)
+import Foreign.Ptr (FunPtr, castPtr)
+import Foreign.StablePtr (newStablePtr, castStablePtrToPtr)
 import Foreign
+
+import Data.Text (Text)
 
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
                                 attrConstruct)
-import Data.GI.Base.BasicTypes (GType(..), GObject(..), ManagedPtr)
+import Data.GI.Base.BasicTypes (CGType, GType(..), GObject(..), ManagedPtr)
+import Data.GI.Base.BasicConversions (withTextCString)
+import Data.GI.Base.CallStack (HasCallStack)
 import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
-import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject)
+import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
+                                newObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
 
 #include <glib-object.h>
@@ -49,7 +56,7 @@ doConstructGObject constructor props = liftIO $ do
   names <- mallocBytes (nprops * sizeOf nullPtr)
   values <- mallocBytes (nprops * gvalueSize)
   fill names values props
-  gtype <- gobjectType (undefined :: o)
+  gtype <- gobjectType @o
   result <- g_object_new gtype (fromIntegral nprops) names values
   freeStrings nprops names
   free values

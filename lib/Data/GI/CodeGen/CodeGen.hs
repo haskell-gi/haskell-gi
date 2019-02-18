@@ -246,7 +246,7 @@ genGObjectCasts n cn_ parents = do
   group $ do
     bline $ "instance GObject " <> name' <> " where"
     indent $ group $ do
-            line $ "gobjectType _ = c_" <> cn_
+            line $ "gobjectType = c_" <> cn_
 
   className <- classConstraint n
   group $ do

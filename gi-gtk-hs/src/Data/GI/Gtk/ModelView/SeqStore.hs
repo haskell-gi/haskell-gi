@@ -2,6 +2,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+
 -- -*-haskell-*-
 --  GIMP Toolkit (GTK) CustomStore TreeModel
 --
@@ -113,7 +115,7 @@ instance GObject (SeqStore a) where
 #if !MIN_VERSION_haskell_gi_base(0,20,1)
     gobjectIsInitiallyUnowned _ = False
 #endif
-    gobjectType _ = gobjectType (undefined :: TreeModel)
+    gobjectType = gobjectType @TreeModel
 
 instance IsTypedTreeModel SeqStore
 

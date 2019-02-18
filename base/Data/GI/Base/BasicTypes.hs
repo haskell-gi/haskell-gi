@@ -1,11 +1,8 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances,
   DeriveDataTypeable, TypeFamilies, ScopedTypeVariables #-}
-#if !MIN_VERSION_base(4,8,0)
-{-# LANGUAGE OverlappingInstances #-}
-#endif
-#if MIN_VERSION_base(4,9,0)
 {-# LANGUAGE DataKinds, TypeOperators, UndecidableInstances #-}
-#endif
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 -- | Basic types used in the bindings.
 module Data.GI.Base.BasicTypes
     (
@@ -21,7 +18,6 @@ module Data.GI.Base.BasicTypes
     , GObject(..)
     , WrappedPtr(..)
     , UnexpectedNullPointerReturn(..)
-    , NullToNothing(..)
 
     -- * Basic GLib \/ GObject types
     , GVariant(..)
@@ -42,11 +38,7 @@ module Data.GI.Base.BasicTypes
     , GDestroyNotify
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
-import Control.Exception (Exception, catch)
-import Control.Monad.IO.Class (MonadIO(..))
+import Control.Exception (Exception)
 import Data.Coerce (Coercible)
 import Data.IORef (IORef)
 import Data.Proxy (Proxy)
@@ -109,7 +101,7 @@ class ManagedPtrNewtype a => WrappedPtr a where
 -- | A wrapped `GObject`.
 class ManagedPtrNewtype a => GObject a where
     -- | The `GType` for this object.
-    gobjectType :: a -> IO GType
+    gobjectType :: IO GType
 
 -- | A common omission in the introspection data is missing (nullable)
 -- annotations for return types, when they clearly are nullable. (A
@@ -126,37 +118,6 @@ instance Show UnexpectedNullPointerReturn where
   show r = T.unpack (nullPtrErrorMsg r)
 
 instance Exception UnexpectedNullPointerReturn
-
-type family UnMaybe a :: * where
-    UnMaybe (Maybe a) = a
-    UnMaybe a         = a
-
-{-# DEPRECATED nullToNothing ["This will be removed in future versions of haskell-gi.", "If you know of wrong introspection data in a binding please report it as an issue at", "http://github.com/haskell-gi/haskell-gi", "so that it can be fixed."] #-}
-class NullToNothing a where
-    -- | Some functions are not marked as having a nullable return type
-    -- in the introspection data.  The result is that they currently do
-    -- not return a Maybe type.  This functions lets you work around this
-    -- in a way that will not break when the introspection data is fixed.
-    --
-    -- When you want to call a `someHaskellGIFunction` that may return null
-    -- wrap the call like this.
-    --
-    -- > nullToNothing (someHaskellGIFunction x y)
-    --
-    -- The result will be a Maybe type even if the introspection data has
-    -- not been fixed for `someHaskellGIFunction` yet.
-    nullToNothing :: MonadIO m => IO a -> m (Maybe (UnMaybe a))
-
-instance
-#if MIN_VERSION_base(4,8,0)
-    {-# OVERLAPPABLE #-}
-#endif
-    a ~ UnMaybe a => NullToNothing a where
-        nullToNothing f = liftIO $
-            (Just <$> f) `catch` (\(_::UnexpectedNullPointerReturn) -> return Nothing)
-
-instance NullToNothing (Maybe a) where
-    nullToNothing = liftIO
 
 -- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "Data.GI.Base.GVariant" for further methods.
 newtype GVariant = GVariant (ManagedPtr GVariant)
