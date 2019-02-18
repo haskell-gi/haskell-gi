@@ -72,3 +72,8 @@ executables:
     # External resource bundles Step 3: Comment out the 2 lines below
     c-sources: src/resource-bundle/resources.c
     pkg-config-dependencies: glib-2.0 >= 2.32
+
+  lazy-file-tree:
+    main: lazy-file-tree.hs
+    dependencies:
+      - directory
