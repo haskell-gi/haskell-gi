@@ -51,9 +51,9 @@ writeCabal fname info =
            Nothing -> "\nextra-source-files: " <> commonFiles <> "\n"
            Just ov -> "\nextra-source-files: " <> commonFiles <> " " <> ov <> "\n"
        , "custom-setup"
-       , "      setup-depends: base >= 4.7 && < 5,"
+       , "      setup-depends: base >= 4.9 && < 5,"
        , "                     Cabal >= 1.24,"
-       , "                     haskell-gi >= 0.21.1 && < 0.22"
+       , "                     haskell-gi >= 0.22.0 && < 0.23"
        , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
@@ -65,11 +65,11 @@ writeCabal fname info =
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([ baseVersion info
-               , "haskell-gi-base == 0.21.*"
+               , "haskell-gi-base == 0.22.*"
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi >= 0.21.1 && < 0.22"
+               , "haskell-gi >= 0.22.0 && < 0.23"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
@@ -109,7 +109,7 @@ writeStackYaml fname =
     B.writeFile fname $ TE.encodeUtf8 $ T.unlines
          [ "packages:"
          , "- '.'"
-         , "resolver: lts-12.10"
+         , "resolver: lts-13.7"
          ]
 
 writeReadme :: FilePath -> ProjectInfo -> IO ()

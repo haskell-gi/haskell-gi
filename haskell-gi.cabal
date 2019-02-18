@@ -1,5 +1,5 @@
 name:                haskell-gi
-version:             0.21.5
+version:             0.22.0
 synopsis:            Generate Haskell bindings for GObject Introspection capable libraries
 description:         Generate Haskell bindings for GObject Introspection capable libraries. This includes most notably
                      Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
@@ -25,8 +25,8 @@ source-repository head
 
 Library
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.32, gobject-2.0 >= 2.32
-  build-depends:       base >= 4.7 && < 5,
-                       haskell-gi-base == 0.21.*,
+  build-depends:       base >= 4.9 && < 5,
+                       haskell-gi-base == 0.22.*,
                        Cabal >= 1.24,
                        attoparsec == 0.13.*,
                        containers,
@@ -43,14 +43,12 @@ Library
                        regex-tdfa >= 1.2,
                        text >= 1.0
 
-  if !impl(ghc >= 8.0)
-    build-depends: semigroups == 0.18.*
+  build-depends: semigroups == 0.18.*
 
   extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
   ghc-options:         -Wall -fwarn-incomplete-patterns -fno-warn-name-shadowing
 
-  if impl(ghc >= 8.0)
-     ghc-options: -Wcompat
+  ghc-options: -Wcompat
 
   c-sources:           lib/c/enumStorage.c
 

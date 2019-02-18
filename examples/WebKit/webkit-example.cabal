@@ -18,7 +18,7 @@ source-repository head
 executable SimpleBrowser
   main-is:             SimpleBrowser.hs
   build-depends:       base >= 4.7 && < 5,
-                       haskell-gi-base == 0.21.*,
+                       haskell-gi-base == 0.22.*,
                        gi-glib == 2.0.*,
                        gi-gtk == 3.0.*,
                        gi-webkit2 == 4.0.*,

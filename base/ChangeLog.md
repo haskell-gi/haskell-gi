@@ -1,3 +1,11 @@
+### 0.22.0
+
++ Require base >= 0.4.9 (GHC version >= 8.0), so that we can use TypeApplications.
+
+### 0.21.5
+
++ Add [releaseObject](https://hackage.haskell.org/package/haskell-gi-base-0.21.5/docs/Data-GI-Base-ManagedPtr.html#v:releaseObject), a function useful for manually releasing memory associated to GObjects.
+
 ### 0.21.4
 
 + Add support for callback-valued properties.
