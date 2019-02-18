@@ -23,5 +23,6 @@ packages: base/haskell-gi-base.cabal
           bindings/Gtk/gi-gtk.cabal
           bindings/GtkSource/gi-gtksource.cabal
           bindings/JavaScriptCore-4.0/gi-javascriptcore.cabal
+          bindings/Soup/gi-soup.cabal
           bindings/WebKit2/gi-webkit2.cabal
           bindings/WebKit2WebExtension/gi-webkit2webextension.cabal
