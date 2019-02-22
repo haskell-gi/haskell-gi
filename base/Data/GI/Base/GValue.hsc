@@ -73,6 +73,7 @@ import Data.GI.Base.BasicConversions (cstringToText, textToCString)
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Utils (callocBytes, freeMem)
 
+-- | Haskell-side representation of a @GValue@.
 newtype GValue = GValue (ManagedPtr GValue)
 
 -- | A convenience alias for @`Nothing` :: `Maybe` `GValue`@.

@@ -95,7 +95,7 @@
 -- 'IO' monad rather than being pure.
 --
 -- Attributes can also be set during construction of a
--- `Data.GI.Base.BasicTypes.GObject` using `Data.GI.Base.Properties.new`
+-- `Data.GI.Base.BasicTypes.GObject` using `Data.GI.Base.Constructible.new`
 --
 -- > button <- new Button [_label := "Can't touch this!", _sensitive := False]
 --
@@ -204,7 +204,7 @@ class AttrInfo (info :: *) where
     -- attributes).
     attrClear :: AttrBaseTypeConstraint info o =>
                  Proxy info -> o -> IO ()
-    -- | Build a `GValue` representing the attribute.
+    -- | Build a `Data.GI.Base.GValue.GValue` representing the attribute.
     attrConstruct :: (AttrBaseTypeConstraint info o,
                       AttrSetTypeConstraint info b) =>
                      Proxy info -> b -> IO (GValueConstruct o)
@@ -271,8 +271,8 @@ type AttrSetC info obj attr value = (HasAttributeList obj,
                                      AttrOpAllowed 'AttrSet info obj,
                                      (AttrSetTypeConstraint info) value)
 
--- | Constraint on a @obj@\/@value@ pair so that `new` works on values
--- of type @@value@.
+-- | Constraint on a @obj@\/@value@ pair so that
+-- `Data.GI.Base.Constructible.new` works on values of type @value@.
 type AttrConstructC info obj attr value = (HasAttributeList obj,
                                            info ~ ResolveAttribute attr obj,
                                            AttrInfo info,

@@ -1,8 +1,20 @@
 {-# LANGUAGE ScopedTypeVariables, DataKinds, TypeFamilies, FlexibleContexts, AllowAmbiguousTypes, TypeApplications #-}
 
+-- | This module constains helpers for dealing with `GObject`-derived
+-- types.
+
 module Data.GI.Base.GObject
-    ( constructGObject
-    , new'
+    ( -- * Constructing new `GObject`s
+      constructGObject
+
+    -- * Deriving new object types
+    , DerivedGObject(..)
+    , registerGType
+    , gobjectGetPrivateData
+    , gobjectSetPrivateData
+
+    , GObjectClass
+    , gtypeFromClass
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -31,7 +43,8 @@ foreign import ccall "dbg_g_object_new" g_object_new ::
     GType -> CUInt -> Ptr CString -> Ptr a -> IO (Ptr b)
 
 -- | Construct a GObject given the constructor and a list of settable
--- attributes.
+-- attributes. See `Data.GI.Base.Constructible.new` for a more general
+-- version.
 constructGObject :: forall o m. (GObject o, MonadIO m)
     => (ManagedPtr o -> o)
     -> [AttrOp o 'AttrConstruct]
@@ -96,10 +109,82 @@ doConstructGObject constructor props = liftIO $ do
         do peek namePtr >>= free
            freeStrings (n-1) (namePtr `plusPtr` sizeOf nullPtr)
 
--- | Construct the given `GObject`, given a set of actions
--- constructing desired `GValue`s to set at construction time.
-new' :: (MonadIO m, GObject o) =>
-        (ManagedPtr o -> o) -> [IO (GValueConstruct o)] -> m o
-new' constructor actions = do
-  props <- liftIO $ sequence (actions)
-  doConstructGObject constructor props
+-- | Opaque wrapper around @GObjectClass@ on the C-side.
+newtype GObjectClass = GObjectClass (Ptr GObjectClass)
+
+-- | This typeclass contains the data necessary for defining a new
+-- `GObject` type.
+class GObject a => DerivedGObject a where
+  -- | The parent type
+  type GObjectParentType a
+  -- | Type of the private data for each instance.
+  type GObjectPrivateData a
+
+  -- | Name of the type, it should be unique.
+  objectTypeName     :: Text
+  -- | Code to run when the class is inited. This is a good place to
+  -- register signals and properties for the type.
+  objectClassInit    :: GObjectClass -> IO ()
+  -- | Code to run when each instance of the type is
+  -- constructed. Returns the private data to be associated with the
+  -- new instance (use `gobjectGetPrivateData` and
+  -- `gobjectSetPrivateData` to manipulate this further).
+  objectInstanceInit :: GObjectClass -> a -> IO (GObjectPrivateData a)
+
+type CGTypeClassInit = GObjectClass -> IO ()
+foreign import ccall "wrapper"
+        mkClassInit :: CGTypeClassInit -> IO (FunPtr CGTypeClassInit)
+
+type CGTypeInstanceInit = GObjectClass -> Ptr () -> IO ()
+foreign import ccall "wrapper"
+        mkInstanceInit :: CGTypeInstanceInit -> IO (FunPtr CGTypeInstanceInit)
+
+foreign import ccall "g_type_from_name" g_type_from_name ::
+        CString -> IO CGType
+
+foreign import ccall "haskell_gi_register_gtype" register_gtype ::
+        CGType -> CString -> FunPtr CGTypeClassInit ->
+        FunPtr CGTypeInstanceInit -> IO CGType
+
+foreign import ccall unsafe "haskell_gi_gtype_from_class" gtype_from_class ::
+        GObjectClass -> IO CGType
+
+-- | Find the `GType` associated to a given `GObjectClass`.
+gtypeFromClass :: GObjectClass -> IO GType
+gtypeFromClass klass = GType <$> gtype_from_class klass
+
+-- | Register the given type into the @GObject@ type system and return
+-- the resulting `GType`, if it has not been registered already. If
+-- the type has been registered already the existing `GType` will be
+-- returned instead.
+--
+-- Note that for this function to work the type must be an instance of
+-- `DerivedGObject`.
+registerGType :: forall o. (HasCallStack, DerivedGObject o, GObject (GObjectParentType o)) =>
+                 (ManagedPtr o -> o) -> IO GType
+registerGType cons = withTextCString (objectTypeName @o) $ \cTypeName -> do
+  cgtype <- g_type_from_name cTypeName
+  if cgtype /= 0
+    then return (GType cgtype)  -- Already registered
+    else do
+      classInit <- mkClassInit (objectClassInit @o)
+      instanceInit <- mkInstanceInit (unwrapInstanceInit $ objectInstanceInit @o)
+      (GType parentCGType) <- gobjectType @(GObjectParentType o)
+      GType <$> register_gtype parentCGType cTypeName classInit instanceInit
+
+   where
+     unwrapInstanceInit :: (GObjectClass -> o -> IO (GObjectPrivateData o)) ->
+                           CGTypeInstanceInit
+     unwrapInstanceInit instanceInit klass objPtr = do
+       obj <- newObject @_ @o cons (castPtr objPtr)
+       privateData <- instanceInit klass obj
+       gobjectSetPrivateData obj privateData
+       return ()
+
+-- | Get the private data associated with the given object.
+gobjectGetPrivateData :: DerivedGObject o => o -> IO (GObjectPrivateData o)
+gobjectGetPrivateData = undefined
+
+-- | Set the private data associated with the given object.
+gobjectSetPrivateData :: DerivedGObject o => o -> GObjectPrivateData o -> IO ()
+gobjectSetPrivateData = undefined

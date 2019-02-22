@@ -20,7 +20,8 @@ import Data.GI.Base.GObject (constructGObject)
 
 -- | Constructible types, i.e. those which can be allocated by `new`.
 class Constructible a (tag :: AttrOpTag) where
-    new :: MonadIO m => (ManagedPtr a -> a) -> [AttrOp a tag] -> m a
+  -- | Allocate a new instance of the given type, with the given attributes.
+  new :: MonadIO m => (ManagedPtr a -> a) -> [AttrOp a tag] -> m a
 
 -- | Default instance, assuming we have a `GObject`.
 instance

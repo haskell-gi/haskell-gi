@@ -271,3 +271,44 @@ void safeFreeFunPtr(void *ptr)
   if (ptr != NULL)
     freeHaskellFunctionPtr(ptr);
 }
+
+/* Returns the GType associated to a class instance */
+GType haskell_gi_gtype_from_class (gpointer klass)
+{
+  return G_TYPE_FROM_CLASS (klass);
+}
+
+static pthread_mutex_t gtypes_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Register a new type into the GObject class hierarchy, if it has not
+   been registered already */
+GType haskell_gi_register_gtype (GType parent, const char *name,
+                                 GClassInitFunc class_init,
+                                 GInstanceInitFunc instance_init)
+{
+  GType result;
+
+  /* We lock here in order to make sure that we don't try to register
+     the same type twice. */
+  pthread_mutex_lock(&gtypes_mutex);
+  result = g_type_from_name (name);
+
+  if (result == 0) {
+    /* Note that class_init and instance_init are HsFunPtrs, which we
+       keep alive for the duration of the program. */
+    GTypeQuery query;
+    g_type_query (parent, &query);
+    result = g_type_register_static_simple (parent, name,
+                                            query.class_size, class_init,
+                                            query.instance_size, instance_init,
+                                            0);
+  } else {
+    /* Free the memory associated with the HsFunPtrs that we are
+       given, to avoid a (small) memory leak. */
+    hs_free_fun_ptr ((HsFunPtr)class_init);
+    hs_free_fun_ptr ((HsFunPtr)instance_init);
+  }
+  pthread_mutex_unlock(&gtypes_mutex);
+
+  return result;
+}

@@ -148,7 +148,7 @@ instance KnownSymbol propName =>
   type HaskellCallbackType (GObjectNotifySignalInfo propName) = GObjectNotifyCallback
   connectSignal = connectGObjectNotify (symbolVal (Proxy :: Proxy propName))
 
--- | Type for a `GObject` `notify` callback.
+-- | Type for a `GObject` "notify" callback.
 type GObjectNotifyCallback = GParamSpec -> IO ()
 
 gobjectNotifyCallbackWrapper ::
