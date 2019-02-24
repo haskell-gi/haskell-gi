@@ -32,6 +32,7 @@ library
                        Data.GI.Base.GError,
                        Data.GI.Base.GHashTable,
                        Data.GI.Base.GObject,
+                       Data.GI.Base.GQuark,
                        Data.GI.Base.GType,
                        Data.GI.Base.GValue,
                        Data.GI.Base.GVariant,
