@@ -69,8 +69,8 @@ import Foreign.Marshal (fromBool)
 import Foreign.Storable (peek, poke, peekByteOff)
 import System.IO.Unsafe (unsafePerformIO)
 import Data.GI.Base.BasicTypes
-       (ManagedPtr(..), GObject(..), GType, CGType(..), gtypeToCGType,
-        gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
+       (ManagedPtr(..), GObject(..), GType, CGType(..), gtypeToCGType)
+import Data.GI.Base.GType (gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
 import Data.GI.Base.ManagedPtr (newObject, withManagedPtr, newManagedPtr_)
 import Data.GI.Base.GValue (GValue(..))

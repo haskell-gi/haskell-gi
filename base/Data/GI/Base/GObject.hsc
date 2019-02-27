@@ -38,6 +38,7 @@ import Foreign.StablePtr (newStablePtr, deRefStablePtr,
                           castStablePtrToPtr, castPtrToStablePtr)
 import Foreign
 
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 

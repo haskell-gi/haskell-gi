@@ -120,7 +120,7 @@ genPropertySetter setter n docSection prop = group $ do
   writeHaddock DocBeforeSymbol (setterDoc n prop)
   line $ setter <> " :: (" <> T.intercalate ", " constraints'
            <> ") => o -> " <> t <> " -> m ()"
-  line $ setter <> " obj val = liftIO $ setObjectProperty" <> tStr
+  line $ setter <> " obj val = liftIO $ B.Properties.setObjectProperty" <> tStr
            <> " obj \"" <> propName prop
            <> if isNullable && (not isCallback)
               then "\" (Just val)"
@@ -151,8 +151,8 @@ genPropertyGetter getter n docSection prop = group $ do
       returnType = typeShow $ "m" `con` [outType]
       getProp = if isNullable && not isMaybe
                 then "checkUnexpectedNothing \"" <> getter
-                         <> "\" $ getObjectProperty" <> tStr
-                else "getObjectProperty" <> tStr
+                         <> "\" $ B.Properties.getObjectProperty" <> tStr
+                else "B.Properties.getObjectProperty" <> tStr
   -- Some property getters require in addition a constructor, which
   -- will convert the foreign value to the wrapped Haskell one.
   constructorArg <-
@@ -189,7 +189,7 @@ genPropertyConstructor constructor n docSection prop = group $ do
   writeHaddock DocBeforeSymbol (constructorDoc prop)
   line $ constructor <> " :: " <> pconstraints
            <> t <> " -> IO (GValueConstruct o)"
-  line $ constructor <> " val = constructObjectProperty" <> tStr
+  line $ constructor <> " val = B.Properties.constructObjectProperty" <> tStr
            <> " \"" <> propName prop
            <> if isNullable && (not isCallback)
               then "\" (Just val)"
@@ -219,7 +219,7 @@ genPropertyClear clear n docSection prop = group $ do
                 else "(Nothing :: " <> nothingType <> ")"
   line $ clear <> " :: (" <> T.intercalate ", " constraints
            <> ") => o -> m ()"
-  line $ clear <> " obj = liftIO $ setObjectProperty" <> tStr
+  line $ clear <> " obj = liftIO $ B.Properties.setObjectProperty" <> tStr
            <> " obj \"" <> propName prop <> "\" " <> nothing
   export docSection clear
 
