@@ -90,6 +90,7 @@ import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.GValue
+import Data.GI.Base.GType
 import Data.GI.Base.GVariant (newGVariantFromPtr)
 import Data.GI.Base.Utils (freeMem, convertIfNonNull)
 

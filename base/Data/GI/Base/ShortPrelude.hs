@@ -29,7 +29,6 @@ module Data.GI.Base.ShortPrelude
     , module Data.GI.Base.GVariant
     , module Data.GI.Base.GValue
     , module Data.GI.Base.ManagedPtr
-    , module Data.GI.Base.Properties
     , module Data.GI.Base.Signals
     , module Data.GI.Base.Utils
 
@@ -87,7 +86,6 @@ import Data.GI.Base.GParamSpec
 import Data.GI.Base.GVariant
 import Data.GI.Base.GValue
 import Data.GI.Base.ManagedPtr
-import Data.GI.Base.Properties
 import Data.GI.Base.Signals (SignalConnectMode(..), connectSignalFunPtr, SignalHandlerId, SignalInfo(..), GObjectNotifySignalInfo)
 import Data.GI.Base.Utils
 

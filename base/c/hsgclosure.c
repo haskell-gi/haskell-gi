@@ -312,3 +312,37 @@ GType haskell_gi_register_gtype (GType parent, const char *name,
 
   return result;
 }
+
+static pthread_mutex_t stablePtr_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static GType stablePtr_gtype = 0;
+
+GType haskell_gi_Boxed_StablePtr_GType (void)
+{
+  return stablePtr_gtype;
+}
+
+/* Register the Haskell StablePtr type as a boxed type. */
+GType haskell_gi_register_Boxed_HsStablePtr
+        (const char *typeName, HsStablePtr (*duplicator)(HsStablePtr))
+{
+  GType result;
+
+  /* Lock so that we avoid trying to register twice, which would give
+     rise to a small memory leak for the duplicator FunPtr */
+  pthread_mutex_lock(&stablePtr_mutex);
+
+  if (stablePtr_gtype != 0) {
+    hs_free_fun_ptr ((HsFunPtr)duplicator);
+    result = stablePtr_gtype;
+  } else {
+    result = g_boxed_type_register_static (typeName, duplicator,
+                                           hs_free_stable_ptr);
+    stablePtr_gtype = result;
+  }
+
+  pthread_mutex_unlock(&stablePtr_mutex);
+
+  return result;
+}
+

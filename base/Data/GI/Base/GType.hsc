@@ -1,11 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | Basic `GType`s.
 module Data.GI.Base.GType
-    ( GType(..)
-    , CGType
-
-    , gtypeName
-
-    , gtypeString
+    ( gtypeString
     , gtypePointer
     , gtypeInt
     , gtypeUInt
@@ -23,26 +20,20 @@ module Data.GI.Base.GType
     , gtypeVariant
     , gtypeByteArray
     , gtypeInvalid
+
+    , gtypeStablePtr
     ) where
 
-import Data.Word
-import Foreign.C.String (CString, peekCString)
+import Control.Monad ((>=>))
+
+import Foreign.C.String (CString)
+import Foreign.Ptr (FunPtr)
+import Foreign.StablePtr (StablePtr, newStablePtr, deRefStablePtr)
+
+import Data.GI.Base.BasicConversions (withTextCString)
+import Data.GI.Base.BasicTypes (GType(..), CGType)
 
 #include <glib-object.h>
-
--- | A type identifier in the GLib type system. This is the low-level
--- type associated with the representation in memory, when using this
--- on the Haskell side use `GType` below.
-type CGType = #type GType
-
--- | A newtype for use on the haskell side.
-newtype GType = GType {gtypeToCGType :: CGType}
-
-foreign import ccall "g_type_name" g_type_name :: GType -> IO CString
-
--- | Get the name assigned to the given `GType`.
-gtypeName :: GType -> IO String
-gtypeName gtype = g_type_name gtype >>= peekCString
 
 {-| [Note: compile-time vs run-time GTypes]
 
@@ -140,3 +131,28 @@ foreign import ccall "g_byte_array_get_type" g_byte_array_get_type :: CGType
 -- | `GType` for a boxed type holding a `GByteArray`.
 gtypeByteArray :: GType
 gtypeByteArray = GType g_byte_array_get_type
+
+-- | `GType` for a boxed `StablePtr`
+-- | Given a `Ptr` to a `StablePtr`, make a new `StablePtr` to the
+-- same underlying Haskell value.
+duplicateStablePtr :: StablePtr a -> IO (StablePtr a)
+duplicateStablePtr = deRefStablePtr >=> newStablePtr
+
+foreign import ccall "wrapper"
+  mkStablePtrDuplicator :: (StablePtr a -> IO (StablePtr a)) ->
+                            IO (FunPtr (StablePtr a -> IO (StablePtr a)))
+
+foreign import ccall haskell_gi_register_Boxed_HsStablePtr ::
+  CString -> FunPtr (StablePtr a -> IO (StablePtr a)) -> IO GType
+
+foreign import ccall haskell_gi_Boxed_StablePtr_GType :: IO CGType
+
+-- | The `GType` for boxed `StablePtr`s.
+gtypeStablePtr :: IO GType
+gtypeStablePtr = withTextCString "Boxed-HsStablePtr" $ \cTypeName -> do
+  cgtype <- haskell_gi_Boxed_StablePtr_GType
+  if cgtype /= 0
+    then return (GType cgtype) -- Already registered
+    else do
+      duplicator <- mkStablePtrDuplicator duplicateStablePtr
+      haskell_gi_register_Boxed_HsStablePtr cTypeName duplicator

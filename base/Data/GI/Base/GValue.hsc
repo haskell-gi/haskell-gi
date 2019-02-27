@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Data.GI.Base.GValue
     (
     -- * Constructing GValues
@@ -49,13 +50,12 @@ module Data.GI.Base.GValue
     , get_enum
     , set_flags
     , get_flags
+    , set_stablePtr
+    , get_stablePtr
+    , take_stablePtr
     ) where
 
 #include <glib-object.h>
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
 
 import Data.Coerce (coerce)
 import Data.Word
@@ -66,10 +66,11 @@ import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..),
                         CLong(..), CULong(..))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr, nullPtr)
+import Foreign.StablePtr (StablePtr, castStablePtrToPtr, castPtrToStablePtr)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions (cstringToText, textToCString)
-
+import Data.GI.Base.GType
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Utils (callocBytes, freeMem)
 
@@ -175,6 +176,12 @@ instance IsGValue Bool where
 instance IsGValue GType where
     toGValue = buildGValue gtypeGType set_gtype
     fromGValue = get_gtype
+
+instance IsGValue (StablePtr a) where
+    toGValue val = do
+      gtype <- gtypeStablePtr
+      buildGValue gtype set_stablePtr val
+    fromGValue = get_stablePtr
 
 foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
@@ -385,3 +392,17 @@ set_flags gv f = withManagedPtr gv $ flip _set_flags f
 
 get_flags :: GValue -> IO CUInt
 get_flags gv = withManagedPtr gv _get_flags
+
+-- | Set the value of `GValue` containing a `StablePtr`
+set_stablePtr :: GValue -> StablePtr a -> IO ()
+set_stablePtr gv ptr = withManagedPtr gv $ flip _set_boxed (castStablePtrToPtr ptr)
+
+foreign import ccall g_value_take_boxed :: Ptr GValue -> StablePtr a -> IO ()
+
+-- | Like `set_stablePtr`, but the `GValue` takes ownership of the `StablePtr`
+take_stablePtr :: Ptr GValue -> StablePtr a -> IO ()
+take_stablePtr = g_value_take_boxed
+
+-- | Get the value of a `GValue` containing a `StablePtr`
+get_stablePtr :: GValue -> IO (StablePtr a)
+get_stablePtr gv = castPtrToStablePtr <$> withManagedPtr gv _get_boxed

@@ -6,22 +6,23 @@
 -- | Basic types used in the bindings.
 module Data.GI.Base.BasicTypes
     (
-      -- * GType related
-      module Data.GI.Base.GType         -- reexported for convenience
-
      -- * Memory management
-    , ManagedPtr(..)
+      ManagedPtr(..)
     , ManagedPtrNewtype
     , BoxedObject(..)
     , BoxedEnum(..)
     , BoxedFlags(..)
-    , GObject(..)
     , WrappedPtr(..)
     , UnexpectedNullPointerReturn(..)
 
     -- * Basic GLib \/ GObject types
+    , GObject(..)
+    , GType(..)
+    , CGType
+    , gtypeName
     , GVariant(..)
     , GParamSpec(..)
+    , noGParamSpec
 
     , GArray(..)
     , GPtrArray(..)
@@ -39,16 +40,21 @@ module Data.GI.Base.BasicTypes
     ) where
 
 import Control.Exception (Exception)
+
 import Data.Coerce (Coercible)
 import Data.IORef (IORef)
 import Data.Proxy (Proxy)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
+import Data.Word
+
+import Foreign.C (CString, peekCString)
 import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr)
 
 import Data.GI.Base.CallStack (CallStack)
-import Data.GI.Base.GType
+
+#include <glib-object.h>
 
 -- | Thin wrapper over `ForeignPtr`, supporting the extra notion of
 -- `disowning`, that is, not running the finalizers associated with
@@ -96,12 +102,26 @@ class ManagedPtrNewtype a => WrappedPtr a where
     -- | A pointer to a function for freeing the given pointer, or
     -- `Nothing` is the memory associated to the pointer does not need
     -- to be freed.
-    wrappedPtrFree   :: Maybe (FunPtr (Ptr a -> IO ()))
+    wrappedPtrFree   :: Maybe (GDestroyNotify a)
 
 -- | A wrapped `GObject`.
 class ManagedPtrNewtype a => GObject a where
     -- | The `GType` for this object.
     gobjectType :: IO GType
+
+-- | A type identifier in the GLib type system. This is the low-level
+-- type associated with the representation in memory, when using this
+-- on the Haskell side use `GType` below.
+type CGType = #type GType
+
+-- | A newtype for use on the haskell side.
+newtype GType = GType {gtypeToCGType :: CGType}
+
+foreign import ccall "g_type_name" g_type_name :: GType -> IO CString
+
+-- | Get the name assigned to the given `GType`.
+gtypeName :: GType -> IO String
+gtypeName gtype = g_type_name gtype >>= peekCString
 
 -- | A common omission in the introspection data is missing (nullable)
 -- annotations for return types, when they clearly are nullable. (A
@@ -124,6 +144,10 @@ newtype GVariant = GVariant (ManagedPtr GVariant)
 
 -- | A <https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html GParamSpec>. See "Data.GI.Base.GParamSpec" for further methods.
 newtype GParamSpec = GParamSpec (ManagedPtr GParamSpec)
+
+-- | A convenient synonym for @Nothing :: Maybe GParamSpec@.
+noGParamSpec :: Maybe GParamSpec
+noGParamSpec = Nothing
 
 -- | An enum usable as a flag for a function.
 class Enum a => IsGFlag a

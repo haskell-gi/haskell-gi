@@ -1,4 +1,11 @@
-{-# LANGUAGE ScopedTypeVariables, DataKinds, TypeFamilies, FlexibleContexts, AllowAmbiguousTypes, TypeApplications #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | This module constains helpers for dealing with `GObject`-derived
 -- types.
@@ -15,6 +22,11 @@ module Data.GI.Base.GObject
 
     , GObjectClass
     , gtypeFromClass
+
+    -- * Installing properties for derived objects
+    , gobjectInstallProperty
+    , gobjectInstallCIntProperty
+    , gobjectInstallCStringProperty
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -22,20 +34,31 @@ import Data.Proxy (Proxy(..))
 
 import Foreign.C (CUInt(..), CString, newCString)
 import Foreign.Ptr (FunPtr, castPtr)
-import Foreign.StablePtr (newStablePtr, castStablePtrToPtr)
+import Foreign.StablePtr (newStablePtr, deRefStablePtr,
+                          castStablePtrToPtr, castPtrToStablePtr)
 import Foreign
 
 import Data.Text (Text)
+import qualified Data.Text as T
 
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
                                 attrConstruct)
-import Data.GI.Base.BasicTypes (CGType, GType(..), GObject(..), ManagedPtr)
-import Data.GI.Base.BasicConversions (withTextCString)
+import Data.GI.Base.BasicTypes (CGType, GType(..), GObject(..),
+                                GDestroyNotify, ManagedPtr, GParamSpec(..),
+                                gtypeName)
+import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
 import Data.GI.Base.CallStack (HasCallStack)
+import Data.GI.Base.GParamSpec (PropertyInfo(..),
+                                gParamSpecValue,
+                                CIntPropertyInfo(..), CStringPropertyInfo(..),
+                                gParamSpecCInt, gParamSpecCString,
+                                getGParamSpecGetterSetter,
+                                PropGetSetter(..))
 import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
                                 newObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
+import Data.GI.Base.Utils (dbgLog)
 
 #include <glib-object.h>
 
@@ -113,7 +136,7 @@ doConstructGObject constructor props = liftIO $ do
 newtype GObjectClass = GObjectClass (Ptr GObjectClass)
 
 -- | This typeclass contains the data necessary for defining a new
--- `GObject` type.
+-- `GObject` type from Haskell.
 class GObject a => DerivedGObject a where
   -- | The parent type
   type GObjectParentType a
@@ -139,19 +162,31 @@ type CGTypeInstanceInit = GObjectClass -> Ptr () -> IO ()
 foreign import ccall "wrapper"
         mkInstanceInit :: CGTypeInstanceInit -> IO (FunPtr CGTypeInstanceInit)
 
-foreign import ccall "g_type_from_name" g_type_from_name ::
-        CString -> IO CGType
+foreign import ccall g_type_from_name :: CString -> IO CGType
 
 foreign import ccall "haskell_gi_register_gtype" register_gtype ::
         CGType -> CString -> FunPtr CGTypeClassInit ->
         FunPtr CGTypeInstanceInit -> IO CGType
 
-foreign import ccall unsafe "haskell_gi_gtype_from_class" gtype_from_class ::
+foreign import ccall "haskell_gi_gtype_from_class" gtype_from_class ::
         GObjectClass -> IO CGType
 
 -- | Find the `GType` associated to a given `GObjectClass`.
 gtypeFromClass :: GObjectClass -> IO GType
 gtypeFromClass klass = GType <$> gtype_from_class klass
+
+foreign import ccall g_param_spec_get_name ::
+   Ptr GParamSpec -> IO CString
+
+type CPropertyGetter o = Ptr o -> CUInt -> Ptr GValue -> Ptr GParamSpec -> IO ()
+
+foreign import ccall "wrapper"
+        mkPropertyGetter :: CPropertyGetter o -> IO (FunPtr (CPropertyGetter o))
+
+type CPropertySetter o = Ptr o -> CUInt -> Ptr GValue -> Ptr GParamSpec -> IO ()
+
+foreign import ccall "wrapper"
+        mkPropertySetter :: CPropertySetter o -> IO (FunPtr (CPropertySetter o))
 
 -- | Register the given type into the @GObject@ type system and return
 -- the resulting `GType`, if it has not been registered already. If
@@ -167,7 +202,7 @@ registerGType cons = withTextCString (objectTypeName @o) $ \cTypeName -> do
   if cgtype /= 0
     then return (GType cgtype)  -- Already registered
     else do
-      classInit <- mkClassInit (objectClassInit @o)
+      classInit <- mkClassInit (unwrapClassInit $ objectClassInit @o)
       instanceInit <- mkInstanceInit (unwrapInstanceInit $ objectInstanceInit @o)
       (GType parentCGType) <- gobjectType @(GObjectParentType o)
       GType <$> register_gtype parentCGType cTypeName classInit instanceInit
@@ -181,10 +216,110 @@ registerGType cons = withTextCString (objectTypeName @o) $ \cTypeName -> do
        gobjectSetPrivateData obj privateData
        return ()
 
+     unwrapClassInit :: (GObjectClass -> IO ()) -> CGTypeClassInit
+     unwrapClassInit classInit klass@(GObjectClass klassPtr) = do
+       getFunPtr <- mkPropertyGetter marshallGetter
+       (#poke GObjectClass, get_property) klassPtr getFunPtr
+       setFunPtr <- mkPropertySetter marshallSetter
+       (#poke GObjectClass, set_property) klassPtr setFunPtr
+       classInit klass
+
+     marshallSetter :: CPropertySetter o
+     marshallSetter objPtr _ gvPtr pspecPtr = do
+       maybeGetSet <- getGParamSpecGetterSetter pspecPtr
+       case maybeGetSet of
+         Nothing -> do
+           pspecName <- g_param_spec_get_name pspecPtr >>= cstringToText
+           typeName <- gobjectType @o >>= gtypeName
+           dbgLog $ "WARNING: Attempting to set unknown property \""
+                    <> pspecName <> "\" of type \"" <> T.pack typeName <> "\"."
+         Just pgs -> (propSetter pgs) objPtr gvPtr
+
+     marshallGetter :: CPropertyGetter o
+     marshallGetter objPtr _ destGValuePtr pspecPtr = do
+       maybeGetSet <- getGParamSpecGetterSetter pspecPtr
+       case maybeGetSet of
+         Nothing -> do
+           pspecName <- g_param_spec_get_name pspecPtr >>= cstringToText
+           typeName <- gobjectType @o >>= gtypeName
+           dbgLog $ "WARNING: Attempting to get unknown property \""
+                    <> pspecName <> "\" of type \"" <> T.pack typeName <> "\"."
+         Just pgs -> (propGetter pgs) objPtr destGValuePtr
+
+-- | Name of the private key for the given type.
+privateKey :: forall o. DerivedGObject o => Text
+privateKey = objectTypeName @o <> "::haskell-gi-private-data"
+
+foreign import ccall g_object_get_data ::
+   Ptr a -> CString -> IO (Ptr b)
+
+-- | Get the value (which should be a `StablePtr` to a Haskell object
+-- of the right type) of a given key for the object.
+gobjectGetUserData :: (HasCallStack, GObject o) => o -> Text -> IO (Maybe a)
+gobjectGetUserData obj key = do
+  dataPtr <- withTextCString key $ \ckey ->
+               withManagedPtr obj $ \objPtr ->
+                 g_object_get_data objPtr ckey
+  if dataPtr /= nullPtr
+    then Just <$> deRefStablePtr (castPtrToStablePtr dataPtr)
+    else return Nothing
+
 -- | Get the private data associated with the given object.
-gobjectGetPrivateData :: DerivedGObject o => o -> IO (GObjectPrivateData o)
-gobjectGetPrivateData = undefined
+gobjectGetPrivateData :: forall o. (HasCallStack, DerivedGObject o) =>
+                         o -> IO (GObjectPrivateData o)
+gobjectGetPrivateData obj = do
+  maybePrivate <- gobjectGetUserData obj (privateKey @o)
+  case maybePrivate of
+    Just private -> return private
+    Nothing -> error "Could not find private data for the given GObject!"
+
+foreign import ccall "&hs_free_stable_ptr" ptr_to_hs_free_stable_ptr ::
+        FunPtr (GDestroyNotify a)
+
+foreign import ccall g_object_set_data_full ::
+        Ptr a -> CString -> Ptr () -> FunPtr (GDestroyNotify ()) -> IO ()
+
+-- | Set the value of the user data for the given `GObject` to a
+-- `StablePtr` to the given Haskell object. The `StablePtr` will be
+-- freed when the object is destroyed, or the value of the key is
+-- replaced.
+gobjectSetUserData :: (HasCallStack, GObject o) => o -> Text -> a -> IO ()
+gobjectSetUserData obj key value = do
+  stablePtr <- newStablePtr value
+  withTextCString key $ \ckey ->
+    withManagedPtr obj $ \objPtr ->
+      g_object_set_data_full objPtr ckey (castStablePtrToPtr stablePtr)
+                             ptr_to_hs_free_stable_ptr
 
 -- | Set the private data associated with the given object.
-gobjectSetPrivateData :: DerivedGObject o => o -> GObjectPrivateData o -> IO ()
-gobjectSetPrivateData = undefined
+gobjectSetPrivateData :: forall o. DerivedGObject o =>
+                         o -> GObjectPrivateData o -> IO ()
+gobjectSetPrivateData obj value =
+  gobjectSetUserData obj (privateKey @o) value
+
+foreign import ccall g_object_class_install_property ::
+   GObjectClass -> CUInt -> Ptr GParamSpec -> IO ()
+
+-- | Add a Haskell object-valued property to the given object class.
+gobjectInstallProperty :: DerivedGObject o =>
+                            GObjectClass -> PropertyInfo o a -> IO ()
+gobjectInstallProperty klass propInfo = do
+  pspec <- gParamSpecValue propInfo
+  withManagedPtr pspec $ \pspecPtr ->
+    g_object_class_install_property klass 1 pspecPtr
+
+-- | Add a `Foreign.C.CInt`-valued property to the given object class.
+gobjectInstallCIntProperty :: DerivedGObject o =>
+                              GObjectClass -> CIntPropertyInfo o -> IO ()
+gobjectInstallCIntProperty klass propInfo = do
+  pspec <- gParamSpecCInt propInfo
+  withManagedPtr pspec $ \pspecPtr ->
+    g_object_class_install_property klass 1 pspecPtr
+
+-- | Add a `CString`-valued property to the given object class.
+gobjectInstallCStringProperty :: DerivedGObject o =>
+                              GObjectClass -> CStringPropertyInfo o -> IO ()
+gobjectInstallCStringProperty klass propInfo = do
+  pspec <- gParamSpecCString propInfo
+  withManagedPtr pspec $ \pspecPtr ->
+    g_object_class_install_property klass 1 pspecPtr
