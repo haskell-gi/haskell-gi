@@ -3,6 +3,7 @@ packages: base/haskell-gi-base.cabal
           cmdline/haskell-gi-cmd.cabal
           test/haskell-gi-test.cabal
           examples/introductory/introductory-examples.cabal
+          examples/advanced/haskell-gi-examples.cabal
           examples/internationalization/haskell-gi-i18n.cabal
           examples/WebKit/webkit-example.cabal
           examples/GtkSourceView/gtksourceview-example.cabal
@@ -20,6 +21,12 @@ packages: base/haskell-gi-base.cabal
           bindings/GdkPixbuf/gi-gdkpixbuf.cabal
           bindings/Gdk/gi-gdk.cabal
 	  bindings/GdkX11/gi-gdkx11.cabal
+          bindings/Gst/gi-gst.cabal
+          bindings/GstBase/gi-gstbase.cabal
+          bindings/GstAudio/gi-gstaudio.cabal
+          bindings/GstVideo/gi-gstvideo.cabal
+          bindings/GstTag/gi-gsttag.cabal
+          bindings/GstPbutils/gi-gstpbutils.cabal
           bindings/Gtk/gi-gtk.cabal
           bindings/GtkSource/gi-gtksource.cabal
           bindings/JavaScriptCore-4.0/gi-javascriptcore.cabal

@@ -17,8 +17,8 @@ source-repository head
 
 executable Cairo
   main-is:              Cairo.hs
-  build-depends:        base >= 4.7 && < 5,
-                        haskell-gi-base == 0.21.*,
+  build-depends:        base >= 4.9 && < 5,
+                        haskell-gi-base == 0.22.*,
                         gi-glib == 2.0.*,
                         gi-cairo == 1.0.*,
                         gi-gdk == 3.0.*,
@@ -33,8 +33,8 @@ executable Cairo
 
 executable DBusServer
   main-is:              DBusServer.hs
-  build-depends:        base >= 4.7 && < 5,
-                        haskell-gi-base == 0.21.*,
+  build-depends:        base >= 4.9 && < 5,
+                        haskell-gi-base == 0.22.*,
                         gi-glib == 2.0.*,
                         gi-gio == 2.0.*,
                         text == 1.2.*
@@ -44,8 +44,8 @@ executable DBusServer
 
 executable GstHelloWorld
   main-is:              GstHelloWorld.hs
-  build-depends:        base >= 4.7 && < 5,
-                        haskell-gi-base == 0.21.*,
+  build-depends:        base >= 4.9 && < 5,
+                        haskell-gi-base == 0.22.*,
                         gi-glib,
                         gi-gst,
                         text
@@ -55,21 +55,21 @@ executable GstHelloWorld
 
 executable GstGtkX11
   main-is:              GstGtkX11.hs
-  build-depends:        base >= 4.7 && < 5
+  build-depends:        base >= 4.9 && < 5
                       , gi-gst == 1.0.*
                       , gi-gtk == 3.0.*
                       , gi-xlib
                       , gi-gstvideo
                       , gi-gdkx11
-                      , haskell-gi-base == 0.21.*
+                      , haskell-gi-base == 0.22.*
   default-language:     Haskell2010
   other-extensions:     OverloadedStrings
   ghc-options:          -O -threaded -with-rtsopts=-N -Wall
 
 executable gtk-emit-signal
   main-is:            GtkEmitSignal.hs
-  build-depends:        base >= 4.7 && < 5
-                      , haskell-gi-base == 0.21.*
+  build-depends:        base >= 4.9 && < 5
+                      , haskell-gi-base == 0.22.*
                       , gi-gobject
                       , gi-glib
                       , gi-gtk

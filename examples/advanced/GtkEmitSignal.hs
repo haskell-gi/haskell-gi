@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-
   A minimal example of how to emit a signal to a GTK widget.
@@ -37,6 +38,7 @@
   EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 
+import Data.GI.Base.GType (gtypeString)
 import Data.GI.Base.GValue
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base
@@ -65,7 +67,7 @@ main = do
   _ <- on entry #realize $ do
 
     -- Get the GType for the GtkEntry
-    gtype <- gobjectType entry
+    gtype <- gobjectType @GI.Gtk.Entry
 
     -- Get the signal ID and Quark detail
     -- based on the `insert-at-cursor` signal name
