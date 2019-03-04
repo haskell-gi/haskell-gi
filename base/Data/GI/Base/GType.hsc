@@ -132,7 +132,6 @@ foreign import ccall "g_byte_array_get_type" g_byte_array_get_type :: CGType
 gtypeByteArray :: GType
 gtypeByteArray = GType g_byte_array_get_type
 
--- | `GType` for a boxed `StablePtr`
 -- | Given a `Ptr` to a `StablePtr`, make a new `StablePtr` to the
 -- same underlying Haskell value.
 duplicateStablePtr :: StablePtr a -> IO (StablePtr a)

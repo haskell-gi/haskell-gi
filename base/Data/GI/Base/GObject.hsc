@@ -14,6 +14,10 @@ module Data.GI.Base.GObject
     ( -- * Constructing new `GObject`s
       constructGObject
 
+    -- * User data
+    , gobjectGetUserData
+    , gobjectSetUserData
+
     -- * Deriving new object types
     , DerivedGObject(..)
     , registerGType
@@ -30,10 +34,12 @@ module Data.GI.Base.GObject
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
+
 import Data.Proxy (Proxy(..))
+import Data.Coerce (coerce)
 
 import Foreign.C (CUInt(..), CString, newCString)
-import Foreign.Ptr (FunPtr, castPtr)
+import Foreign.Ptr (FunPtr)
 import Foreign.StablePtr (newStablePtr, deRefStablePtr,
                           castStablePtrToPtr, castPtrToStablePtr)
 import Foreign
@@ -45,19 +51,19 @@ import qualified Data.Text as T
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
                                 attrConstruct)
 import Data.GI.Base.BasicTypes (CGType, GType(..), GObject(..),
-                                GDestroyNotify, ManagedPtr, GParamSpec(..),
+                                GDestroyNotify, ManagedPtr(..), GParamSpec(..),
                                 gtypeName)
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
-import Data.GI.Base.CallStack (HasCallStack)
+import Data.GI.Base.CallStack (HasCallStack, prettyCallStack)
 import Data.GI.Base.GParamSpec (PropertyInfo(..),
                                 gParamSpecValue,
                                 CIntPropertyInfo(..), CStringPropertyInfo(..),
                                 gParamSpecCInt, gParamSpecCString,
                                 getGParamSpecGetterSetter,
                                 PropGetSetter(..))
+import Data.GI.Base.GQuark (GQuark(..), gQuarkFromString)
 import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
-import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
-                                newObject)
+import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
 import Data.GI.Base.Utils (dbgLog)
 
@@ -153,21 +159,21 @@ class GObject a => DerivedGObject a where
   -- constructed. Returns the private data to be associated with the
   -- new instance (use `gobjectGetPrivateData` and
   -- `gobjectSetPrivateData` to manipulate this further).
-  objectInstanceInit :: GObjectClass -> a -> IO (GObjectPrivateData a)
+  objectInstanceInit :: GObjectClass -> IO (GObjectPrivateData a)
 
 type CGTypeClassInit = GObjectClass -> IO ()
 foreign import ccall "wrapper"
         mkClassInit :: CGTypeClassInit -> IO (FunPtr CGTypeClassInit)
 
-type CGTypeInstanceInit = GObjectClass -> Ptr () -> IO ()
+type CGTypeInstanceInit o = Ptr o -> GObjectClass -> IO ()
 foreign import ccall "wrapper"
-        mkInstanceInit :: CGTypeInstanceInit -> IO (FunPtr CGTypeInstanceInit)
+        mkInstanceInit :: CGTypeInstanceInit o -> IO (FunPtr (CGTypeInstanceInit o))
 
 foreign import ccall g_type_from_name :: CString -> IO CGType
 
 foreign import ccall "haskell_gi_register_gtype" register_gtype ::
         CGType -> CString -> FunPtr CGTypeClassInit ->
-        FunPtr CGTypeInstanceInit -> IO CGType
+        FunPtr (CGTypeInstanceInit o) -> IO CGType
 
 foreign import ccall "haskell_gi_gtype_from_class" gtype_from_class ::
         GObjectClass -> IO CGType
@@ -196,9 +202,10 @@ foreign import ccall "wrapper"
 --
 -- Note that for this function to work the type must be an instance of
 -- `DerivedGObject`.
-registerGType :: forall o. (HasCallStack, DerivedGObject o, GObject (GObjectParentType o)) =>
+registerGType :: forall o. (HasCallStack, DerivedGObject o,
+                            GObject (GObjectParentType o)) =>
                  (ManagedPtr o -> o) -> IO GType
-registerGType cons = withTextCString (objectTypeName @o) $ \cTypeName -> do
+registerGType _ = withTextCString (objectTypeName @o) $ \cTypeName -> do
   cgtype <- g_type_from_name cTypeName
   if cgtype /= 0
     then return (GType cgtype)  -- Already registered
@@ -209,13 +216,11 @@ registerGType cons = withTextCString (objectTypeName @o) $ \cTypeName -> do
       GType <$> register_gtype parentCGType cTypeName classInit instanceInit
 
    where
-     unwrapInstanceInit :: (GObjectClass -> o -> IO (GObjectPrivateData o)) ->
-                           CGTypeInstanceInit
-     unwrapInstanceInit instanceInit klass objPtr = do
-       obj <- newObject @_ @o cons (castPtr objPtr)
-       privateData <- instanceInit klass obj
-       gobjectSetPrivateData obj privateData
-       return ()
+     unwrapInstanceInit :: (GObjectClass -> IO (GObjectPrivateData o)) ->
+                           CGTypeInstanceInit o
+     unwrapInstanceInit instanceInit objPtr klass = do
+       privateData <- instanceInit klass
+       instanceSetPrivateData objPtr privateData
 
      unwrapClassInit :: (GObjectClass -> IO ()) -> CGTypeClassInit
      unwrapClassInit classInit klass@(GObjectClass klassPtr) = do
@@ -247,56 +252,76 @@ registerGType cons = withTextCString (objectTypeName @o) $ \cTypeName -> do
                     <> pspecName <> "\" of type \"" <> T.pack typeName <> "\"."
          Just pgs -> (propGetter pgs) objPtr destGValuePtr
 
--- | Name of the private key for the given type.
-privateKey :: forall o. DerivedGObject o => Text
-privateKey = objectTypeName @o <> "::haskell-gi-private-data"
+-- | Quark with the key to the private data for this object type.
+privateKey :: forall o. DerivedGObject o => IO (GQuark (GObjectPrivateData o))
+privateKey = gQuarkFromString $ objectTypeName @o <> "::haskell-gi-private-data"
 
-foreign import ccall g_object_get_data ::
-   Ptr a -> CString -> IO (Ptr b)
+-- | Get the private data associated with the given object.
+gobjectGetPrivateData :: forall o. (HasCallStack, DerivedGObject o) =>
+                            o -> IO (GObjectPrivateData o)
+gobjectGetPrivateData obj = do
+  key <- privateKey @o
+  maybePriv <- gobjectGetUserData obj key
+  case maybePriv of
+    Just priv -> return priv
+    Nothing -> do
+      case managedPtrAllocCallStack (coerce obj) of
+        Nothing -> error ("Failed to get private data pointer!\n"
+                          <> "Set the env var HASKELL_GI_DEBUG_MEM=1 to get more info.")
+        Just cs -> withManagedPtr obj $ \objPtr -> do
+          let errMsg = "Failed to get private data pointer for" <> show objPtr <> "!\n"
+                       <> "Callstack for allocation was:\n"
+                       <> prettyCallStack cs <> "\n\n"
+          error errMsg
 
--- | Get the value (which should be a `StablePtr` to a Haskell object
--- of the right type) of a given key for the object.
-gobjectGetUserData :: (HasCallStack, GObject o) => o -> Text -> IO (Maybe a)
+foreign import ccall g_object_get_qdata ::
+   Ptr a -> GQuark b -> IO (Ptr c)
+
+-- | Get the value of a given key for the object.
+gobjectGetUserData :: (HasCallStack, GObject o) => o -> GQuark a -> IO (Maybe a)
 gobjectGetUserData obj key = do
-  dataPtr <- withTextCString key $ \ckey ->
-               withManagedPtr obj $ \objPtr ->
-                 g_object_get_data objPtr ckey
+  dataPtr <- withManagedPtr obj $ \objPtr ->
+                 g_object_get_qdata objPtr key
   if dataPtr /= nullPtr
     then Just <$> deRefStablePtr (castPtrToStablePtr dataPtr)
     else return Nothing
 
--- | Get the private data associated with the given object.
-gobjectGetPrivateData :: forall o. (HasCallStack, DerivedGObject o) =>
-                         o -> IO (GObjectPrivateData o)
-gobjectGetPrivateData obj = do
-  maybePrivate <- gobjectGetUserData obj (privateKey @o)
-  case maybePrivate of
-    Just private -> return private
-    Nothing -> error "Could not find private data for the given GObject!"
-
 foreign import ccall "&hs_free_stable_ptr" ptr_to_hs_free_stable_ptr ::
         FunPtr (GDestroyNotify a)
 
-foreign import ccall g_object_set_data_full ::
-        Ptr a -> CString -> Ptr () -> FunPtr (GDestroyNotify ()) -> IO ()
+foreign import ccall g_object_set_qdata_full ::
+        Ptr a -> GQuark b -> Ptr () -> FunPtr (GDestroyNotify ()) -> IO ()
 
 -- | Set the value of the user data for the given `GObject` to a
 -- `StablePtr` to the given Haskell object. The `StablePtr` will be
--- freed when the object is destroyed, or the value of the key is
--- replaced.
-gobjectSetUserData :: (HasCallStack, GObject o) => o -> Text -> a -> IO ()
-gobjectSetUserData obj key value = do
+-- freed when the object is destroyed, or the value is replaced.
+gobjectSetUserData :: (HasCallStack, GObject o) =>
+                   o -> GQuark a -> a -> IO ()
+gobjectSetUserData obj key value = withManagedPtr obj $ \objPtr ->
+  instanceSetUserData objPtr key value
+
+-- | Like `gobjectSetUserData`, but it works on the raw object pointer
+-- (so this is unsafe, unless used in a context where we are sure that
+-- the GC will not release the object while we run).
+instanceSetUserData :: (HasCallStack, GObject o) =>
+                    Ptr o -> GQuark a -> a -> IO ()
+instanceSetUserData objPtr key value = do
   stablePtr <- newStablePtr value
-  withTextCString key $ \ckey ->
-    withManagedPtr obj $ \objPtr ->
-      g_object_set_data_full objPtr ckey (castStablePtrToPtr stablePtr)
+  g_object_set_qdata_full objPtr key (castStablePtrToPtr stablePtr)
                              ptr_to_hs_free_stable_ptr
 
 -- | Set the private data associated with the given object.
-gobjectSetPrivateData :: forall o. DerivedGObject o =>
+gobjectSetPrivateData :: forall o. (HasCallStack, DerivedGObject o) =>
                          o -> GObjectPrivateData o -> IO ()
-gobjectSetPrivateData obj value =
-  gobjectSetUserData obj (privateKey @o) value
+gobjectSetPrivateData obj value = withManagedPtr obj $ \objPtr ->
+  instanceSetPrivateData objPtr value
+
+-- | Set the private data for a given instance.
+instanceSetPrivateData :: forall o. (HasCallStack, DerivedGObject o) =>
+                          Ptr o -> GObjectPrivateData o -> IO ()
+instanceSetPrivateData objPtr priv = do
+  key <- privateKey @o
+  instanceSetUserData objPtr key priv
 
 foreign import ccall g_object_class_install_property ::
    GObjectClass -> CUInt -> Ptr GParamSpec -> IO ()
