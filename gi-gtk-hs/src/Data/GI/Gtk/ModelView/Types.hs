@@ -91,6 +91,7 @@ import Data.GI.Base.BasicTypes
        (ManagedPtr(..), ManagedPtrNewtype, UnexpectedNullPointerReturn,
         GObject(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr)
+import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.GI.Base.GValue (GValue)
 import GI.GObject.Objects.Object (Object(..))
 import GI.Gtk.Interfaces.TreeModel (TreeModel, IsTreeModel(..))
@@ -131,9 +132,8 @@ instance IsTypedTreeModel TypedTreeModel
 
 newtype TypedTreeModelSort row = TypedTreeModelSort (ManagedPtr (TypedTreeModelSort row))
 
-instance IsTreeModelSort (TypedTreeModelSort row)
-instance IsTreeSortable (TypedTreeModelSort row)
-instance IsTreeModel (TypedTreeModelSort row)
+instance HasParentTypes (TypedTreeModelSort row)
+type instance ParentTypes (TypedTreeModelSort row) = '[TreeSortable, TreeModel, TreeModelSort]
 
 instance GObject (TypedTreeModelSort row) where
 #if !MIN_VERSION_haskell_gi_base(0,20,1)

@@ -91,6 +91,7 @@ import GI.Gtk.Structs.TreeIter
        (setTreeIterUserData3, setTreeIterUserData2, setTreeIterStamp,
         setTreeIterUserData, getTreeIterUserData, TreeIter(..))
 import Data.GI.Base (get, new)
+import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.Word (Word32)
 import Unsafe.Coerce (unsafeCoerce)
 import Foreign.Ptr (nullPtr)
@@ -109,7 +110,8 @@ newtype SeqStore a = SeqStore (ManagedPtr (CustomStore (IORef (Seq a)) a))
 mkSeqStore :: CustomStore (IORef (Seq a)) a -> SeqStore a
 mkSeqStore (CustomStore ptr) = SeqStore ptr
 
-instance IsTreeModel (SeqStore a)
+instance HasParentTypes (SeqStore a)
+type instance ParentTypes (SeqStore a) = '[TreeModel]
 
 instance GObject (SeqStore a) where
 #if !MIN_VERSION_haskell_gi_base(0,20,1)

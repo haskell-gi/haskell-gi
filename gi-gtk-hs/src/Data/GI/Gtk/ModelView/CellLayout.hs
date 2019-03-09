@@ -1,6 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE MonoLocalBinds #-}
+
 -- -*-haskell-*-
 --  GIMP Toolkit (GTK) Interface CellLayout
 --

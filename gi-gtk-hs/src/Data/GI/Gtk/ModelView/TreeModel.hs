@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 -- -*-haskell-*-
 --  GIMP Toolkit (GTK) TreeModel
 --
@@ -17,6 +16,10 @@
 --  but WITHOUT ANY WARRANTY; without even the implied warranty of
 --  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 --  Lesser General Public License for more details.
+
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MonoLocalBinds #-}
+
 --
 -- |
 -- Stability   : provisional

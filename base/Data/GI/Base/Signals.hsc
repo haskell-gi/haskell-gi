@@ -34,8 +34,7 @@ import Data.GI.Base.Attributes (AttrLabelProxy, AttrInfo(AttrLabel))
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.GParamSpec (newGParamSpecFromPtr)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
-import Data.GI.Base.Overloading (ResolveSignal,
-                                 IsLabelProxy(..), ResolveAttribute)
+import Data.GI.Base.Overloading (ResolveSignal, ResolveAttribute)
 import Data.GI.Base.Utils (safeFreeFunPtrPtr)
 
 #if MIN_VERSION_base(4,9,0)
@@ -47,10 +46,6 @@ import Data.GI.Base.Overloading (HasSignal)
 -- | Type of a `GObject` signal handler id.
 type SignalHandlerId = CULong
 
--- | A class that provides a constraint satisfied by every type.
-class NoConstraint a
-instance NoConstraint a
-
 -- | Support for overloaded signal connectors.
 data SignalProxy (object :: *) (info :: *) where
     SignalProxy :: SignalProxy o info
@@ -61,21 +56,11 @@ data SignalProxy (object :: *) (info :: *) where
                       SignalProxy o (GObjectNotifySignalInfo pl)
 
 -- | Support for overloaded labels.
-instance
-#if !MIN_VERSION_base(4,9,0)
-    -- This gives better error reporting in ghc < 8.0.
-       (HasSignal slot object, info ~ ResolveSignal slot object)
-#else
-       info ~ ResolveSignal slot object
-#endif
-    => IsLabelProxy slot (SignalProxy object info) where
-    fromLabelProxy _ = SignalProxy
-
 #if MIN_VERSION_base(4,10,0)
 instance info ~ ResolveSignal slot object =>
     IsLabel slot (SignalProxy object info) where
     fromLabel = SignalProxy
-#elif MIN_VERSION_base(4,9,0)
+#else
 instance info ~ ResolveSignal slot object =>
     IsLabel slot (SignalProxy object info) where
     fromLabel _ = SignalProxy

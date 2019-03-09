@@ -74,6 +74,7 @@ import Data.GI.Base.GType (gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
 import Data.GI.Base.ManagedPtr (newObject, withManagedPtr, newManagedPtr_)
 import Data.GI.Base.GValue (GValue(..))
+import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import GI.GObject (Object)
 import GI.GdkPixbuf.Objects (Pixbuf(..))
 import GI.Gtk.Flags (TreeModelFlags(..))
@@ -110,7 +111,9 @@ treeIterOverwrite iterOut iterIn = do
 --   models 'Data.GI.Gtk.ModelView.ListStore.ListStore' or
 --   'Data.GI.Gtk.ModelView.TreeStore.TreeStore'.
 newtype CustomStore private row = CustomStore (ManagedPtr (CustomStore private row))
-instance IsTreeModel (CustomStore private row)
+
+instance HasParentTypes (CustomStore private row)
+type instance ParentTypes (CustomStore private row) = '[ TreeModel ]
 
 instance GObject (CustomStore private row) where
 #if !MIN_VERSION_haskell_gi_base(0,20,1)

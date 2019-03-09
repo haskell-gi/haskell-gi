@@ -53,6 +53,7 @@ import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr)
 
 import Data.GI.Base.CallStack (CallStack)
+import Data.GI.Base.Overloading (HasParentTypes)
 
 #include <glib-object.h>
 
@@ -105,7 +106,7 @@ class ManagedPtrNewtype a => WrappedPtr a where
     wrappedPtrFree   :: Maybe (GDestroyNotify a)
 
 -- | A wrapped `GObject`.
-class ManagedPtrNewtype a => GObject a where
+class (ManagedPtrNewtype a, HasParentTypes a) => GObject a where
     -- | The `GType` for this object.
     gobjectType :: IO GType
 

@@ -28,19 +28,12 @@ genMethodResolver :: Text -> CodeGen ()
 genMethodResolver n = do
   group $ do
     line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
-          <> "O.MethodInfo info " <> n <> " p) => O.IsLabelProxy t ("
-          <> n <> " -> p) where"
-    indent $ line $ "fromLabelProxy _ = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
-  group $ do
-    line $ "#if MIN_VERSION_base(4,9,0)"
-    line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
-          <> "O.MethodInfo info " <> n <> " p) => O.IsLabel t ("
+          <> "O.MethodInfo info " <> n <> " p) => OL.IsLabel t ("
           <> n <> " -> p) where"
     line $ "#if MIN_VERSION_base(4,10,0)"
     indent $ line $ "fromLabel = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
     line $ "#else"
     indent $ line $ "fromLabel _ = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
-    line $ "#endif"
     line $ "#endif"
 
 -- | Generate the `MethodList` instance given the list of methods for

@@ -862,7 +862,8 @@ moduleImports = T.unlines [
                 , "import qualified Data.Text as T"
                 , "import qualified Data.ByteString.Char8 as B"
                 , "import qualified Data.Map as Map"
-                , "import qualified Foreign.Ptr as FP" ]
+                , "import qualified Foreign.Ptr as FP"
+                , "import qualified GHC.OverloadedLabels as OL" ]
 
 -- | Like `dotModulePath`, but add a "GI." prefix.
 dotWithPrefix :: ModulePath -> Text

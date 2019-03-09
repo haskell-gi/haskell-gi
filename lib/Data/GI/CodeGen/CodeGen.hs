@@ -39,7 +39,7 @@ import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
                   genWrappedPtr)
 import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName,
-                                     submoduleLocation, lowerName)
+                                     submoduleLocation, lowerName, qualifiedAPI)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -253,16 +253,23 @@ genGObjectCasts n cn_ parents = do
     exportDecl className
     writeHaddock DocBeforeSymbol (classDoc name')
 
-    bline $ "class GObject o => " <> className <> " o"
-    line $ "#if MIN_VERSION_base(4,9,0)"
-    line $ "instance {-# OVERLAPPABLE #-} (GObject a, O.UnknownAncestorError "
-             <> name' <> " a) =>"
-    line $ "    " <> className <> " a"
-    line $ "#endif"
-    bline $ "instance " <> className <> " " <> name'
-    forM_ parents $ \parent -> do
-        pcls <- classConstraint parent
-        line $ "instance " <> pcls <> " " <> name'
+    -- Create the IsX constraint. We cannot simply say
+    --
+    -- > type IsX o = (GObject o, ...)
+    --
+    -- since we sometimes need to refer to @IsX@ itself, without
+    -- applying it. We instead use the trick of creating a class with
+    -- a universal instance.
+    let constraints = "(GObject o, O.IsDescendantOf " <> name' <> " o)"
+    bline $ "class " <> constraints <> " => " <> className <> " o"
+    bline $ "instance " <> constraints <> " => " <> className <> " o"
+
+    blank
+
+    qualifiedParents <- mapM qualifiedAPI parents
+    bline $ "instance O.HasParentTypes " <> name'
+    line $ "type instance O.ParentTypes " <> name' <> " = '["
+      <> T.intercalate ", " qualifiedParents <> "]"
 
   -- Safe downcasting.
   group $ do

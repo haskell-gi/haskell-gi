@@ -55,16 +55,10 @@ genOverloadedSignalConnectors allAPIs = do
   signalNames <- findSignalNames allAPIs
   forM_ signalNames $ \sn -> group $ do
     let camelName = hyphensToCamelCase sn
-    line $ "#if MIN_VERSION_base(4,8,0)"
     line $ "pattern " <> camelName <>
              " :: SignalProxy object (ResolveSignal \""
              <> lcFirst camelName <> "\" object)"
     line $ "pattern " <> camelName <> " = SignalProxy"
-    line $ "#else"
-    line $ "pattern " <> camelName <> " = SignalProxy :: forall info object. "
-             <> "info ~ ResolveSignal \"" <> lcFirst camelName
-             <> "\" object => SignalProxy object info"
-    line $ "#endif"
     exportDecl $ "pattern " <> camelName
 
 -- | Qualified name for the "(sigName, info)" tag for a given signal.

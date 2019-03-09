@@ -150,29 +150,22 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Proxy (Proxy(..))
 
 import Data.GI.Base.GValue (GValueConstruct)
-import Data.GI.Base.Overloading (HasAttributeList,
-                                 ResolveAttribute, IsLabelProxy(..))
+import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute)
 
 import GHC.TypeLits
 import GHC.Exts (Constraint)
 
-#if MIN_VERSION_base(4,9,0)
 import GHC.OverloadedLabels (IsLabel(..))
-#endif
 
 infixr 0 :=,:~,:=>,:~>
 
 -- | A proxy for attribute labels.
 data AttrLabelProxy (a :: Symbol) = AttrLabelProxy
 
--- | Support for overloaded labels.
-instance a ~ x => IsLabelProxy x (AttrLabelProxy a) where
-    fromLabelProxy _ = AttrLabelProxy
-
 #if MIN_VERSION_base(4,10,0)
 instance a ~ x => IsLabel x (AttrLabelProxy a) where
     fromLabel = AttrLabelProxy
-#elif MIN_VERSION_base(4,9,0)
+#else
 instance a ~ x => IsLabel x (AttrLabelProxy a) where
     fromLabel _ = AttrLabelProxy
 #endif

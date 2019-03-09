@@ -79,6 +79,7 @@ import Foreign.ForeignPtr (ForeignPtr)
 import Data.GI.Base.BasicTypes
        (ManagedPtr(..), GObject(..), GObject)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
+import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 
 import Data.GI.Gtk.ModelView.Types
 import Data.GI.Gtk.ModelView.CustomStore
@@ -134,7 +135,8 @@ newtype ForestStore a = ForestStore (ManagedPtr (CustomStore (IORef (Store a)) a
 mkForestStore :: CustomStore (IORef (Store a)) a -> ForestStore a
 mkForestStore (CustomStore ptr) = ForestStore ptr
 
-instance IsTreeModel (ForestStore a)
+instance HasParentTypes (ForestStore a)
+type instance ParentTypes (ForestStore a) = '[TreeModel]
 
 instance GObject (ForestStore a) where
 #if !MIN_VERSION_haskell_gi_base(0,20,1)

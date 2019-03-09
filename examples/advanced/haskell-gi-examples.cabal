@@ -78,11 +78,9 @@ executable gtk-emit-signal
 
 executable CustomGObject
   main-is:            CustomGObject.hs
+  other-modules:      CustomButton
   build-depends:        base >= 4.9 && < 5
                       , haskell-gi-base == 0.22.*
-                      , gi-atk == 2.0.*
-                      , gi-gobject == 2.0.*
-                      , gi-glib == 2.0.*
                       , gi-gtk == 3.0.*
   default-language:   Haskell2010
   ghc-options:        -Wall -threaded -with-rtsopts=-N -Wall
