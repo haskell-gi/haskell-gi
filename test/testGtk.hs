@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, OverloadedLabels, LambdaCase #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Prelude hiding (error, (++), putStrLn, show)
 import qualified Prelude as P
