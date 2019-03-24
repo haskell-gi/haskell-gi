@@ -17,6 +17,7 @@ module Data.GI.Base.Signals
     , SignalProxy(..)
     , SignalConnectMode(..)
     , connectSignalFunPtr
+    , disconnectSignalHandler
     , SignalHandlerId
     , SignalInfo(..)
     , GObjectNotifySignalInfo
@@ -123,6 +124,14 @@ connectSignalFunPtr object signal fn mode = do
   withCString signal $ \csignal ->
     withManagedPtr object $ \objPtr ->
         g_signal_connect_data objPtr csignal fn (castFunPtrToPtr fn) safeFreeFunPtrPtr flags
+
+foreign import ccall g_signal_handler_disconnect :: Ptr o -> SignalHandlerId -> IO ()
+
+-- | Disconnect a previously connected signal.
+disconnectSignalHandler :: GObject o => o -> SignalHandlerId -> IO ()
+disconnectSignalHandler obj handlerId =
+  withManagedPtr obj $ \objPtr ->
+        g_signal_handler_disconnect objPtr handlerId
 
 -- | Connection information for a "notify" signal indicating that a
 -- specific property changed (see `PropertyNotify` for the relevant

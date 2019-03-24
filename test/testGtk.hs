@@ -4,6 +4,8 @@
 import Prelude hiding (error, (++), putStrLn, show)
 import qualified Prelude as P
 
+import Data.GI.Base.Signals (disconnectSignalHandler)
+
 import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
@@ -14,7 +16,7 @@ import Foreign.C
 
 import System.Mem (performGC)
 
-import Control.Monad (when, replicateM_, forM_)
+import Control.Monad (when, replicateM_, forM_, forM)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString (ByteString)
 import Data.Monoid ((<>))
@@ -455,6 +457,16 @@ testOverloadedLabels = do
   performGC
   putStrLn "+++ Overloaded labels test done"
 
+testSignalsDisconnect :: Button -> IO ()
+testSignalsDisconnect button = do
+  performGC
+  putStrLn "*** Signals connect/disconnect test"
+  handlers <- forM [1..100 :: Int] $ \id -> on button #clicked (print id)
+  performGC
+  mapM_ (disconnectSignalHandler button) handlers
+  performGC
+  putStrLn "+++ Signals connect/disconnect test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -550,6 +562,7 @@ main = do
         testConstantPatternMatching
         testOverloadedLabels
         testConstructible
+        testSignalsDisconnect button
 
         #showAll win
 
