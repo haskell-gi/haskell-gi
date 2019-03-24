@@ -346,3 +346,16 @@ GType haskell_gi_register_Boxed_HsStablePtr
   return result;
 }
 
+/* Release the FunPtr allocated for a Haskell signal handler */
+void
+haskell_gi_release_signal_closure (gpointer unused,
+                                   GCClosure *closure)
+{
+  lock_log();
+  dbg_log("Releasing a signal closure %p\n", closure->callback);
+
+  hs_free_fun_ptr (closure->callback);
+
+  dbg_log("\tDone.\n");
+  unlock_log();
+}

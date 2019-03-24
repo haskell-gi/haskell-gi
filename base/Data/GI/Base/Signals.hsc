@@ -28,6 +28,7 @@ import Data.Proxy (Proxy(..))
 
 import Foreign
 import Foreign.C
+import Foreign.Ptr (nullPtr)
 
 import GHC.TypeLits
 
@@ -36,7 +37,6 @@ import Data.GI.Base.BasicTypes
 import Data.GI.Base.GParamSpec (newGParamSpecFromPtr)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import Data.GI.Base.Overloading (ResolveSignal, ResolveAttribute)
-import Data.GI.Base.Utils (safeFreeFunPtrPtr)
 
 #if MIN_VERSION_base(4,9,0)
 import GHC.OverloadedLabels (IsLabel(..))
@@ -105,7 +105,7 @@ after :: forall object info m.
 after o p c = liftIO $ connectSignal p o c SignalConnectAfter
 
 -- Connecting GObjects to signals
-foreign import ccall "g_signal_connect_data" g_signal_connect_data ::
+foreign import ccall g_signal_connect_data ::
     Ptr a ->                            -- instance
     CString ->                          -- detailed_signal
     FunPtr b ->                         -- c_handler
@@ -113,6 +113,10 @@ foreign import ccall "g_signal_connect_data" g_signal_connect_data ::
     FunPtr c ->                         -- destroy_data
     CUInt ->                            -- connect_flags
     IO SignalHandlerId
+
+-- Releasing the `FunPtr` for the signal handler.
+foreign import ccall "& haskell_gi_release_signal_closure"
+    ptr_to_release_closure :: FunPtr (Ptr () -> Ptr () -> IO ())
 
 -- | Connect a signal to a handler, given as a `FunPtr`.
 connectSignalFunPtr :: GObject o =>
@@ -123,7 +127,7 @@ connectSignalFunPtr object signal fn mode = do
                 SignalConnectBefore -> 0
   withCString signal $ \csignal ->
     withManagedPtr object $ \objPtr ->
-        g_signal_connect_data objPtr csignal fn (castFunPtrToPtr fn) safeFreeFunPtrPtr flags
+      g_signal_connect_data objPtr csignal fn nullPtr ptr_to_release_closure flags
 
 foreign import ccall g_signal_handler_disconnect :: Ptr o -> SignalHandlerId -> IO ()
 
