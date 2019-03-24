@@ -278,6 +278,12 @@ GType haskell_gi_gtype_from_class (gpointer klass)
   return G_TYPE_FROM_CLASS (klass);
 }
 
+/* Returns the GType associated to a given instance */
+GType haskell_gi_gtype_from_instance (gpointer instance)
+{
+  return G_TYPE_FROM_INSTANCE (instance);
+}
+
 static pthread_mutex_t gtypes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Register a new type into the GObject class hierarchy, if it has not

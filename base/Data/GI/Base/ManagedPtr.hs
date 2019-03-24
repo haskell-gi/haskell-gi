@@ -28,6 +28,7 @@ module Data.GI.Base.ManagedPtr
     -- * Safe casting
     , castTo
     , unsafeCastTo
+    , checkInstanceType
 
     -- * Wrappers
     , newObject
@@ -208,7 +209,13 @@ touchManagedPtr m = let c = coerce m :: ManagedPtr ()
 
 -- Safe casting machinery
 foreign import ccall unsafe "check_object_type"
-    c_check_object_type :: Ptr o -> CGType -> CInt
+    c_check_object_type :: Ptr o -> CGType -> IO CInt
+
+-- | Check whether the given object is an instance of the given type.
+checkInstanceType :: GObject o => o -> GType -> IO Bool
+checkInstanceType obj (GType cgtype) = withManagedPtr obj $ \objPtr -> do
+  check <- c_check_object_type objPtr cgtype
+  return $ check /= 0
 
 -- | Cast to the given type, checking that the cast is valid. If it is
 -- not, we return `Nothing`. Usage:
@@ -216,12 +223,12 @@ foreign import ccall unsafe "check_object_type"
 -- > maybeWidget <- castTo Widget label
 castTo :: forall o o'. (GObject o, GObject o') =>
           (ManagedPtr o' -> o') -> o -> IO (Maybe o')
-castTo constructor obj =
-    withManagedPtr obj $ \objPtr -> do
-      GType t <- gobjectType @o'
-      if c_check_object_type objPtr t /= 1
-        then return Nothing
-        else Just <$> newObject constructor objPtr
+castTo constructor obj = withManagedPtr obj $ \objPtr -> do
+  gtype <- gobjectType @o'
+  isInstance <- checkInstanceType obj gtype
+  if isInstance
+    then Just <$> newObject constructor objPtr
+    else return Nothing
 
 -- | Cast to the given type, assuming that the cast will succeed. This
 -- function will call `error` if the cast is illegal.
@@ -229,8 +236,9 @@ unsafeCastTo :: forall o o'. (HasCallStack, GObject o, GObject o') =>
                 (ManagedPtr o' -> o') -> o -> IO o'
 unsafeCastTo constructor obj =
   withManagedPtr obj $ \objPtr -> do
-    GType t <- gobjectType @o'
-    if c_check_object_type objPtr t /= 1
+    gtype <- gobjectType @o'
+    isInstance <- checkInstanceType obj gtype
+    if not isInstance
       then do
       srcType <- gobjectType @o >>= gtypeName
       destType <- gobjectType @o' >>= gtypeName

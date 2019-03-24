@@ -26,6 +26,7 @@ module Data.GI.Base.GObject
 
     , GObjectClass
     , gtypeFromClass
+    , gtypeFromInstance
 
     -- * Installing properties for derived objects
     , gobjectInstallProperty
@@ -181,6 +182,14 @@ foreign import ccall "haskell_gi_gtype_from_class" gtype_from_class ::
 -- | Find the `GType` associated to a given `GObjectClass`.
 gtypeFromClass :: GObjectClass -> IO GType
 gtypeFromClass klass = GType <$> gtype_from_class klass
+
+foreign import ccall "haskell_gi_gtype_from_instance" gtype_from_instance ::
+        Ptr o -> IO CGType
+
+-- | Find the `GType` for a given `GObject`.
+gtypeFromInstance :: GObject o => o -> IO GType
+gtypeFromInstance obj = withManagedPtr obj $ \objPtr ->
+                            (GType <$> gtype_from_instance objPtr)
 
 foreign import ccall g_param_spec_get_name ::
    Ptr GParamSpec -> IO CString
