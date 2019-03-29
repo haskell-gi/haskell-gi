@@ -149,8 +149,8 @@ genClosure subsec cb callback name isSignal = group $ do
   export (NamedSubsection SignalSection subsec) closure
   writeHaddock DocBeforeSymbol closureDoc
   group $ do
-      line $ closure <> " :: " <> callback <> " -> IO Closure"
-      line $ closure <> " cb = do"
+      line $ closure <> " :: MonadIO m => " <> callback <> " -> m Closure"
+      line $ closure <> " cb = liftIO $ do"
       indent $ do
             wrapped <- genWrappedCallback cb "cb" callback isSignal
             line $ callbackWrapperAllocator callback <> " " <> wrapped
