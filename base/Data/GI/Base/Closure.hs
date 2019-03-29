@@ -7,9 +7,10 @@ module Data.GI.Base.Closure
 
 import Foreign
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
+
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.ManagedPtr (wrapBoxed)
-import Data.GI.Base.Utils (safeFreeFunPtrPtr)
 
 newtype Closure = Closure (ManagedPtr Closure)
 
@@ -32,9 +33,17 @@ foreign import ccall "g_closure_ref" g_closure_ref
 foreign import ccall "g_closure_sink" g_closure_sink
     :: Ptr Closure -> IO ()
 
-newCClosure :: FunPtr a -> IO Closure
-newCClosure ptr = do
-  closure <- g_cclosure_new ptr nullPtr safeFreeFunPtrPtr
+-- Releasing the `FunPtr` for the signal handler.
+foreign import ccall "& haskell_gi_release_signal_closure"
+    ptr_to_release_closure :: FunPtr (Ptr () -> Ptr () -> IO ())
+
+-- | Create a new `Closure` holding the given `FunPtr`. Note that
+-- after calling this the `FunPtr` will be freed whenever the
+-- `Closure` is garbage collected, so it is generally not safe to
+-- refer to the generated `FunPtr` after this function returns.
+newCClosure :: MonadIO m => FunPtr a -> m Closure
+newCClosure ptr = liftIO $ do
+  closure <- g_cclosure_new ptr nullPtr ptr_to_release_closure
   -- The Haskell runtime will manage the memory associated to the
   -- closure, so ref and sink to let GLib know this.
   g_closure_ref closure >>= g_closure_sink
