@@ -15,6 +15,24 @@ source-repository head
   type: git
   location: git://github.com/haskell-gi/haskell-gi.git
 
+foreign-library simple-webextension
+  type:                native-shared
+  lib-version-info:    0:0:1
+
+  if os(Windows)
+    options: standalone
+
+  pkgconfig-depends: webkit2gtk-web-extension-4.0
+
+  ghc-options: -Wall -threaded
+
+  other-modules:       SimpleExtension
+  build-depends:       base >=4.7 && <5,
+                       haskell-gi-base == 0.22.*,
+                       gi-webkit2webextension == 4.0.*
+  c-sources:           SimpleExtensionInit.c
+  default-language:    Haskell2010
+
 executable SimpleBrowser
   main-is:             SimpleBrowser.hs
   build-depends:       base >= 4.7 && < 5,

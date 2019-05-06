@@ -35,7 +35,20 @@ main = do
                          #defaultHeight := 768]
   on win #destroy Gtk.mainQuit
 
-  view <- new WK.WebView []
+  context <- new WK.WebContext []
+  on context #initializeWebExtensions $ do
+    -- This loads any extensions in the current directory. These are
+    -- ".so" files in Linux. For an example of an extension, see
+    -- "SimpleExtension.hs". After building it with
+    --
+    -- > cabal new-build simple-webextension
+    --
+    -- you can link it to the current directory, and WebKit will pick
+    -- it up. Alternatively, one can set this to the directory where
+    -- the extensions are built into.
+    #setWebExtensionsDirectory context "."
+
+  view <- new WK.WebView [#webContext := context]
   on view #close $ #destroy win
   #loadUri view "http://www.haskell.org"
 
