@@ -29,7 +29,8 @@ foreign-library simple-webextension
   other-modules:       SimpleExtension
   build-depends:       base >=4.7 && <5,
                        haskell-gi-base == 0.22.*,
-                       gi-webkit2webextension == 4.0.*
+                       gi-webkit2webextension == 4.0.*,
+                       text >= 1.0
   c-sources:           SimpleExtensionInit.c
   default-language:    Haskell2010
 

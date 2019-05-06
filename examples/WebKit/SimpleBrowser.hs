@@ -11,6 +11,7 @@ import System.Mem (performGC)
 
 import Data.Monoid ((<>))
 import qualified Data.Text as T
+import Data.Int (Int64)
 import System.Environment (getProgName, getArgs)
 
 main :: IO ()
@@ -47,6 +48,14 @@ main = do
     -- it up. Alternatively, one can set this to the directory where
     -- the extensions are built into.
     #setWebExtensionsDirectory context "."
+
+    -- We can pass arbitrary data to the WebExtension (which runs into
+    -- a different process), as long as it fits into a
+    -- `GVariant`. Here we set the data to be passed. `toGVariant`
+    -- works for any type which is an instance of `IsGVariant`:
+    -- https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-GVariant.html#t:IsGVariant
+    userData <- toGVariant ("Hi, extension!" :: T.Text, 57 :: Int64)
+    #setWebExtensionsInitializationUserData context userData
 
   view <- new WK.WebView [#webContext := context]
   on view #close $ #destroy win
