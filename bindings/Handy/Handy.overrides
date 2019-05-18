@@ -1,26 +1,3 @@
 namespace Handy
 
-# Generated from libhandy-0.0.9 with xsltproc Nullable.xslt
-set-attr Handy/ActionRow/add_action/@parameters/widget nullable 1
-set-attr Handy/ActionRow/add_prefix/@parameters/widget nullable 1
-set-attr Handy/ActionRow/get_activatable_widget/@return-value nullable 1
-set-attr Handy/ActionRow/set_activatable_widget/@parameters/widget nullable 1
-set-attr Handy/ComboRow/bind_model/@parameters/model nullable 1
-set-attr Handy/ComboRow/bind_model/@parameters/create_list_widget_func nullable 1
-set-attr Handy/ComboRow/bind_model/@parameters/create_current_widget_func nullable 1
-set-attr Handy/ComboRow/bind_model/@parameters/user_data nullable 1
-set-attr Handy/ComboRow/bind_name_model/@parameters/model nullable 1
-set-attr Handy/ComboRow/bind_name_model/@parameters/get_name_func nullable 1
-set-attr Handy/ComboRow/bind_name_model/@parameters/user_data nullable 1
-set-attr Handy/ComboRow/get_model/@return-value nullable 1
-set-attr Handy/ComboRow/set_for_enum/@parameters/get_name_func nullable 1
-set-attr Handy/ComboRow/set_for_enum/@parameters/user_data nullable 1
-set-attr Handy/ComboRowGetEnumValueNameFunc/@parameters/user_data nullable 1
-set-attr Handy/ComboRowGetNameFunc/@parameters/user_data nullable 1
-set-attr Handy/DialerButton/new/@parameters/symbols nullable 1
-set-attr Handy/HeaderGroup/get_focus/@return-value nullable 1
-set-attr Handy/HeaderGroup/set_focus/@parameters/header_bar nullable 1
-set-attr Handy/enum_value_row_name/@parameters/user_data nullable 1
-set-attr Handy/init/@parameters/argv nullable 1
-set-attr Handy/list_box_separator_header/@parameters/before nullable 1
-set-attr Handy/list_box_separator_header/@parameters/unused_user_data nullable 1
+set-attr Handy/HeaderGroup/focus nullable 1
