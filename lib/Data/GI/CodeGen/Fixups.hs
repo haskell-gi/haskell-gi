@@ -3,10 +3,12 @@ module Data.GI.CodeGen.Fixups
     ( dropMovedItems
     , guessPropertyNullability
     , detectGObject
+    , dropDuplicatedFields
     ) where
 
 import Data.Maybe (isNothing, isJust)
 import Data.Monoid ((<>))
+import qualified Data.Set as S
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
@@ -130,3 +132,21 @@ detectGObject (n, APIInterface iface) =
                                         gobject : ifPrerequisites iface}))
   else (n, APIInterface iface)
 detectGObject api = api
+
+-- | Drop any fields whose name coincides with that of a previous
+-- element. Note that this function keeps ordering.
+dropDuplicatedEnumFields :: Enumeration -> Enumeration
+dropDuplicatedEnumFields enum =
+  enum{enumMembers = dropDuplicates S.empty (enumMembers enum)}
+  where dropDuplicates :: S.Set T.Text -> [EnumerationMember] -> [EnumerationMember]
+        dropDuplicates _        []     = []
+        dropDuplicates previous (m:ms) =
+          if enumMemberName m `S.member` previous
+          then dropDuplicates previous ms
+          else m : dropDuplicates (S.insert (enumMemberName m) previous) ms
+
+-- | Some libraries include duplicated flags by mistake, drop those.
+dropDuplicatedFields :: (Name, API) -> (Name, API)
+dropDuplicatedFields (n, APIFlags (Flags enum)) =
+  (n, APIFlags (Flags $ dropDuplicatedEnumFields enum))
+dropDuplicatedFields (n, api) = (n, api)

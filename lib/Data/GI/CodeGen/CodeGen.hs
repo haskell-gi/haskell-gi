@@ -22,7 +22,7 @@ import Data.GI.CodeGen.Constant (genConstant)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
 import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability,
-                               detectGObject)
+                               detectGObject, dropDuplicatedFields)
 import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation,
                                 writeHaddock,
@@ -456,6 +456,9 @@ genModule' apis = do
             -- Not every interface providing signals or properties is
             -- correctly annotated as descending from GObject, fix this.
           $ map detectGObject
+            -- Some APIs contain duplicated fields by mistake, drop
+            -- the duplicates.
+          $ map dropDuplicatedFields
           $ M.toList
           $ apis
 
