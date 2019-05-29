@@ -8,7 +8,7 @@ module Data.GI.Base
     ( module Data.GI.Base.Attributes
     , module Data.GI.Base.BasicConversions
     , module Data.GI.Base.BasicTypes
-    , module Data.GI.Base.Closure
+    , module Data.GI.Base.GClosure
     , module Data.GI.Base.Constructible
     , module Data.GI.Base.GError
     , module Data.GI.Base.GHashTable
@@ -21,7 +21,7 @@ module Data.GI.Base
 import Data.GI.Base.Attributes (get, set, AttrOp(..))
 import Data.GI.Base.BasicConversions
 import Data.GI.Base.BasicTypes
-import Data.GI.Base.Closure
+import Data.GI.Base.GClosure (GClosure)
 import Data.GI.Base.Constructible (new)
 import Data.GI.Base.GError
 import Data.GI.Base.GHashTable

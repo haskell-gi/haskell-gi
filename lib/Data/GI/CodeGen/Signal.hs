@@ -149,15 +149,15 @@ genClosure subsec cb callback name isSignal = group $ do
   export (NamedSubsection SignalSection subsec) closure
   writeHaddock DocBeforeSymbol closureDoc
   group $ do
-      line $ closure <> " :: MonadIO m => " <> callback <> " -> m Closure"
+      line $ closure <> " :: MonadIO m => " <> callback <> " -> m GClosure"
       line $ closure <> " cb = liftIO $ do"
       indent $ do
             wrapped <- genWrappedCallback cb "cb" callback isSignal
             line $ callbackWrapperAllocator callback <> " " <> wrapped
-                     <> " >>= newCClosure"
+                     <> " >>= B.GClosure.newGClosure"
   where
     closureDoc :: Text
-    closureDoc = "Wrap the callback into a `Closure`."
+    closureDoc = "Wrap the callback into a `GClosure`."
 
 -- Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.

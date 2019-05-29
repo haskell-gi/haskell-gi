@@ -100,6 +100,12 @@ parseHashTable = parseTypeElements >>= \case
                  other -> parseError $ "Unsupported hash type: "
                                        <> T.pack (show other)
 
+-- | Parse a `GClosure` declaration.
+parseClosure :: Parser Type
+parseClosure = queryAttr "closure-type" >>= \case
+                Just t -> (TGClosure . Just) <$> parseTypeName t
+                Nothing -> return $ TGClosure Nothing
+
 -- | For GLists and GSLists there is sometimes no information about
 -- the type of the elements. In these cases we report them as
 -- pointers.
@@ -116,8 +122,21 @@ parseFundamentalType "GLib" "HashTable" = parseHashTable
 parseFundamentalType "GLib" "Error" = return TError
 parseFundamentalType "GLib" "Variant" = return TVariant
 parseFundamentalType "GObject" "ParamSpec" = return TParamSpec
+parseFundamentalType "GObject" "Closure" = parseClosure
 -- A TInterface type (basically, everything that is not of a known type).
 parseFundamentalType ns n = resolveQualifiedTypeName (Name ns n)
+
+-- | Parse a type given as a string.
+parseTypeName :: Text -> Parser Type
+parseTypeName typeName = case nameToBasicType typeName of
+    Just b -> return (TBasicType b)
+    Nothing -> case T.split ('.' ==) typeName of
+                 [ns, n] -> parseFundamentalType ns n
+                 [n] -> do
+                   ns <- currentNamespace
+                   parseFundamentalType ns n
+                 _ -> parseError $ "Unsupported type form: \""
+                                   <> typeName <> "\""
 
 -- | Parse information on a "type" element. Returns either a `Type`,
 -- or `Nothing` indicating that the name of the type in the
@@ -127,15 +146,7 @@ parseTypeInfo = do
   typeName <- getAttr "name"
   if typeName == "none"
   then return Nothing
-  else Just <$> case nameToBasicType typeName of
-    Just b -> return (TBasicType b)
-    Nothing -> case T.split ('.' ==) typeName of
-                 [ns, n] -> parseFundamentalType ns n
-                 [n] -> do
-                   ns <- currentNamespace
-                   parseFundamentalType ns n
-                 _ -> parseError $ "Unsupported type form: \""
-                                   <> typeName <> "\""
+  else Just <$> parseTypeName typeName
 
 -- | Find the children giving the type of the given element.
 parseTypeElements :: Parser [Maybe Type]

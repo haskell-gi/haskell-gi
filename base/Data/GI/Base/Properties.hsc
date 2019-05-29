@@ -20,6 +20,7 @@ module Data.GI.Base.Properties
     , setObjectPropertyBoxed
     , setObjectPropertyEnum
     , setObjectPropertyFlags
+    , setObjectPropertyClosure
     , setObjectPropertyVariant
     , setObjectPropertyByteArray
     , setObjectPropertyPtrGList
@@ -45,6 +46,7 @@ module Data.GI.Base.Properties
     , getObjectPropertyBoxed
     , getObjectPropertyEnum
     , getObjectPropertyFlags
+    , getObjectPropertyClosure
     , getObjectPropertyVariant
     , getObjectPropertyByteArray
     , getObjectPropertyPtrGList
@@ -70,6 +72,7 @@ module Data.GI.Base.Properties
     , constructObjectPropertyBoxed
     , constructObjectPropertyEnum
     , constructObjectPropertyFlags
+    , constructObjectPropertyClosure
     , constructObjectPropertyVariant
     , constructObjectPropertyByteArray
     , constructObjectPropertyPtrGList
@@ -91,6 +94,7 @@ import Data.GI.Base.BasicConversions
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.GValue
 import Data.GI.Base.GType
+import Data.GI.Base.GClosure (GClosure(..))
 import Data.GI.Base.GVariant (newGVariantFromPtr)
 import Data.GI.Base.Utils (freeMem, convertIfNonNull)
 
@@ -447,6 +451,18 @@ getObjectPropertyFlags obj propName = do
   getObjectProperty obj propName
                         (\val -> wordToGFlags <$> get_flags val)
                         gtype
+
+setObjectPropertyClosure :: forall a. GObject a =>
+                          a -> String -> Maybe GClosure -> IO ()
+setObjectPropertyClosure = setObjectPropertyBoxed
+
+constructObjectPropertyClosure :: String -> Maybe GClosure -> IO (GValueConstruct o)
+constructObjectPropertyClosure = constructObjectPropertyBoxed
+
+getObjectPropertyClosure :: forall a. GObject a =>
+                            a -> String -> IO (Maybe GClosure)
+getObjectPropertyClosure obj propName =
+  getObjectPropertyBoxed obj propName GClosure
 
 setObjectPropertyVariant :: GObject a =>
                             a -> String -> Maybe GVariant -> IO ()

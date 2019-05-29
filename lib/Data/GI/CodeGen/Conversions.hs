@@ -212,6 +212,12 @@ hParamSpecToF transfer =
   then return $ M "B.GParamSpec.disownGParamSpec"
   else return $ M "unsafeManagedPtrGetPtr"
 
+hClosureToF :: Transfer -> CodeGen Constructor
+hClosureToF transfer =
+  if transfer == TransferEverything
+  then return $ M "B.GClosure.disownGClosure"
+  else return $ M "unsafeManagedPtrGetPtr"
+
 hBoxedToF :: Transfer -> CodeGen Constructor
 hBoxedToF transfer =
   if transfer == TransferEverything
@@ -245,6 +251,7 @@ hToF' t a hType fType transfer
     | TError <- t = hBoxedToF transfer
     | TVariant <- t = hVariantToF transfer
     | TParamSpec <- t = hParamSpecToF transfer
+    | TGClosure _ <- t = hClosureToF transfer
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
     | Just (APIFlags _) <- a = return "gflagsToWord"
     | Just (APIObject _) <- a = hObjectToF t transfer
@@ -460,6 +467,12 @@ fParamSpecToH transfer =
                   TransferEverything -> "B.GParamSpec.wrapGParamSpecPtr"
                   _ -> "B.GParamSpec.newGParamSpecFromPtr"
 
+fClosureToH :: Transfer -> CodeGen Constructor
+fClosureToH transfer =
+  return $ M $ case transfer of
+                  TransferEverything -> "B.GClosure.wrapGClosurePtr"
+                  _ -> "B.GClosure.newGClosureFromPtr"
+
 fToH' :: Type -> Maybe API -> TypeRep -> TypeRep -> Transfer
          -> ExcCodeGen Constructor
 fToH' t a hType fType transfer
@@ -469,6 +482,7 @@ fToH' t a hType fType transfer
     | TError <- t = boxedForeignPtr "GError" transfer
     | TVariant <- t = fVariantToH transfer
     | TParamSpec <- t = fParamSpecToH transfer
+    | TGClosure _ <- t = fClosureToH transfer
     | Just (APIStruct s) <- a = structForeignPtr s hType transfer
     | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
     | Just (APIObject _) <- a = fObjectToH t hType transfer
@@ -763,7 +777,7 @@ haskellType (TGHash a b) = do
 haskellType TError = return $ "GError" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
 haskellType TParamSpec = return $ "GParamSpec" `con` []
-haskellType (TInterface (Name "GObject" "Closure")) = return $ "Closure" `con` []
+haskellType (TGClosure _) = return $ "GClosure" `con` []
 haskellType (TInterface (Name "GObject" "Value")) = return $ "GValue" `con` []
 haskellType t@(TInterface n) = do
   api <- getAPI t
@@ -847,8 +861,7 @@ foreignType (TGHash a b) = do
 foreignType t@TError = ptr <$> haskellType t
 foreignType t@TVariant = ptr <$> haskellType t
 foreignType t@TParamSpec = ptr <$> haskellType t
-foreignType (TInterface (Name "GObject" "Closure")) =
-    return $ ptr $ "Closure" `con` []
+foreignType t@(TGClosure _) = ptr <$> haskellType t
 foreignType (TInterface (Name "GObject" "Value")) =
   return $ ptr $ "GValue" `con` []
 foreignType t@(TInterface n) = do
@@ -903,6 +916,7 @@ isManaged   :: Type -> CodeGen Bool
 isManaged TError = return True
 isManaged TVariant = return True
 isManaged TParamSpec = return True
+isManaged (TGClosure _) = return True
 isManaged t@(TInterface _) = do
   a <- findAPI t
   case a of

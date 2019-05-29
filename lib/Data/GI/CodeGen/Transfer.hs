@@ -42,6 +42,7 @@ basicFreeFn (TGHash _ _) = Just "unrefGHashTable"
 basicFreeFn (TError) = Nothing
 basicFreeFn (TVariant) = Nothing
 basicFreeFn (TParamSpec) = Nothing
+basicFreeFn (TGClosure _) = Nothing
 
 -- Basic free primitives in the case that an error occured. This is
 -- run in the exception handler, so any type which we ref/allocate
@@ -58,6 +59,10 @@ basicFreeFnOnError TVariant transfer =
 basicFreeFnOnError TParamSpec transfer =
     return $ if transfer == TransferEverything
              then Just "unrefGParamSpec"
+             else Nothing
+basicFreeFnOnError (TGClosure _) transfer =
+    return $ if transfer == TransferEverything
+             then Just "B.GClosure.unrefGClosure"
              else Nothing
 basicFreeFnOnError t@(TInterface _) transfer = do
   api <- findAPI t

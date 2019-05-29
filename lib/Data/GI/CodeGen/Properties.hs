@@ -39,6 +39,7 @@ propTypeStr t = case t of
    TGHash _ _ -> return "Hash"
    TVariant -> return "Variant"
    TParamSpec -> return "ParamSpec"
+   TGClosure _ -> return "Closure"
    TBasicType TInt -> case sizeOf (0 :: CInt) of
                         4 -> return "Int32"
                         n -> error ("Unsupported `gint' type length: " ++
