@@ -312,30 +312,21 @@ buildPopupMenu :: IO Menu
 buildPopupMenu = do
   performGC
   putStrLn "*** Building popup menu"
-  menuitem <- new MenuItem [ #label := "TestAsync"]
-  on menuitem #activate $ putStrLn "Menuitem activated!"
   menu <- new Menu []
-  menuShellAppend menu menuitem
+  forM_ [1..3 :: Integer] $ \i -> do
+    menuitem <- new MenuItem [ #label := "Menu entry " <> show i]
+    on menuitem #activate $ putStrLn ("Menuitem " <> show i <> " activated.")
+    #append menu menuitem
   widgetShowAll menu
   performGC
   putStrLn "+++ Menu constructed"
   return menu
 
--- ScopeTypeAsync callback test
-testMenuPopup :: Menu -> IO ()
-testMenuPopup menu = do
+testMenuPopup :: Gtk.IsWidget a => Menu -> a -> IO ()
+testMenuPopup menu parent = do
   performGC
-  putStrLn "*** ScopeTypeAsync test"
-  curtime <- getCurrentEventTime
-  menuPopup menu noWidget noWidget (Just positionFunc) 0 curtime
+  #popupAtWidget menu parent Gdk.GravityNorthWest Gdk.GravityNorthWest Nothing
   performGC
-  putStrLn "+++ ScopeTypeAsync test done"
-      where positionFunc _ _ _ = do
-                  putStrLn "+++ Pos func"
-                  posx <- GLib.randomIntRange 000 200
-                  posy <- GLib.randomIntRange 000 200
-                  putStrLn "+++ Pos func done"
-                  return (posx, posy, False)
 
 -- ScopeTypeCall callback test
 testForeach :: IsContainer a => a -> IO ()
@@ -539,7 +530,7 @@ main = do
         popupButton <- new Button [ #label := "_Pop-up menu",
                                     #useUnderline := True]
         menu <- buildPopupMenu
-        on popupButton #clicked (testMenuPopup menu)
+        on popupButton #clicked (testMenuPopup menu popupButton)
         #add grid popupButton
 
         testAllocations
