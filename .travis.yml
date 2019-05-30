@@ -25,6 +25,8 @@ install:
 script:
  # The version of Ubuntu in Travis does not have libhandy
  - grep -v Handy cabal.project > cabal.project.new; mv cabal.project.new cabal.project
+ # And its gtk version is ancient, so testGtk does not build anymore
+ - grep -v haskell-gi-test cabal.project > cabal.project.new; mv cabal.project.new cabal.project
  - pushd bindings
  - cabal new-run genBuildInfo $(./PKGS.sh)
  - popd
