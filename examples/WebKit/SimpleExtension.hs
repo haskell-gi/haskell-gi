@@ -6,6 +6,7 @@ module SimpleExtension where
 
 import Control.Monad (void)
 import Data.Int (Int64)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import Foreign.Ptr (Ptr)
 
