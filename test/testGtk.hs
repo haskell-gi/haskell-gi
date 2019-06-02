@@ -19,6 +19,7 @@ import System.Mem (performGC)
 import Control.Monad (when, replicateM_, forM_, forM)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString (ByteString)
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Text (pack, unpack, Text)
 import Data.Text.IO (putStrLn)
@@ -458,6 +459,23 @@ testSignalsDisconnect button = do
   performGC
   putStrLn "+++ Signals connect/disconnect test done"
 
+testTypedClosures :: Window -> IO ()
+testTypedClosures win = do
+  performGC
+  putStrLn "*** Typed closures test"
+  ag <- new Gtk.AccelGroup []
+  closure <- genClosure_AccelGroupActivate
+    (\_accelGroup _object keyval mods -> do
+        maybeName <- Gdk.keyvalName keyval
+        putStrLn $ "Got a key press for <" <> fromMaybe "(unknown)" maybeName
+          <> ">, mods are " <> show mods
+        return False)
+  #connect ag Gdk.KEY_z [] [] closure
+
+  #addAccelGroup win ag
+  performGC
+  putStrLn "+++ Typed closures test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -554,6 +572,7 @@ main = do
         testOverloadedLabels
         testConstructible
         testSignalsDisconnect button
+        testTypedClosures win
 
         #showAll win
 
