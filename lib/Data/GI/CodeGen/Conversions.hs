@@ -796,12 +796,18 @@ haskellType (TGHash a b) = do
 haskellType TError = return $ "GError" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
 haskellType TParamSpec = return $ "GParamSpec" `con` []
-haskellType (TGClosure Nothing) = do
+haskellType (TGClosure (Just inner@(TInterface n))) = do
+  innerAPI <- getAPI inner
+  case innerAPI of
+    APICallback _ -> do
+      tname <- qualifiedSymbol (callbackCType $ name n) n
+      return $ "GClosure" `con` [con0 tname]
+    -- The given inner type does not make sense, so we treat it as an
+    -- untyped closure.
+    _ -> haskellType (TGClosure Nothing)
+haskellType (TGClosure _) = do
   tyvar <- getFreshTypeVariable
   return $ "GClosure" `con` [con0 tyvar]
-haskellType (TGClosure (Just t)) = do
-  inner <- haskellType t
-  return $ "GClosure" `con` [inner]
 haskellType (TInterface (Name "GObject" "Value")) = return $ "GValue" `con` []
 haskellType t@(TInterface n) = do
   api <- getAPI t
