@@ -128,8 +128,8 @@ buildFieldReader n field = group $ do
                  then return Nothing
                  else maybeNullConvert (fieldType field)
   hType <- typeShow <$> if isJust nullConvert
-                        then maybeT <$> isoHaskellType (fieldType field)
-                        else isoHaskellType (fieldType field)
+                        then maybeT <$> inboundHaskellType (fieldType field)
+                        else inboundHaskellType (fieldType field)
   fType <- typeShow <$> foreignType (fieldType field)
 
   writeHaddock DocBeforeSymbol (getterDoc n field)
@@ -254,8 +254,8 @@ genAttrInfo owner field = do
   embedded <- isEmbedded field
   isNullable <- typeIsNullable (fieldType field)
   outType <- typeShow <$> if not embedded && isNullable
-                          then maybeT <$> isoHaskellType (fieldType field)
-                          else isoHaskellType (fieldType field)
+                          then maybeT <$> inboundHaskellType (fieldType field)
+                          else inboundHaskellType (fieldType field)
   inType <- if isPtr
             then typeShow <$> foreignType (fieldType field)
             else typeShow <$> haskellType (fieldType field)

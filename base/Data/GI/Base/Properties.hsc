@@ -452,15 +452,15 @@ getObjectPropertyFlags obj propName = do
                         (\val -> wordToGFlags <$> get_flags val)
                         gtype
 
-setObjectPropertyClosure :: forall a. GObject a =>
-                          a -> String -> Maybe GClosure -> IO ()
+setObjectPropertyClosure :: forall a b. GObject a =>
+                          a -> String -> Maybe (GClosure b) -> IO ()
 setObjectPropertyClosure = setObjectPropertyBoxed
 
-constructObjectPropertyClosure :: String -> Maybe GClosure -> IO (GValueConstruct o)
+constructObjectPropertyClosure :: String -> Maybe (GClosure a) -> IO (GValueConstruct o)
 constructObjectPropertyClosure = constructObjectPropertyBoxed
 
-getObjectPropertyClosure :: forall a. GObject a =>
-                            a -> String -> IO (Maybe GClosure)
+getObjectPropertyClosure :: forall a b. GObject a =>
+                            a -> String -> IO (Maybe (GClosure b))
 getObjectPropertyClosure obj propName =
   getObjectPropertyBoxed obj propName GClosure
 

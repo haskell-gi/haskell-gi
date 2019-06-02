@@ -25,7 +25,7 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM, forM_, when, void)
 import Data.Bool (bool)
-import Data.List (nub, (\\))
+import Data.List (nub)
 import Data.Maybe (isJust)
 import Data.Monoid ((<>))
 import Data.Tuple (swap)
@@ -123,16 +123,16 @@ wrapMaybe arg = if mayBeNull arg
 -- Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
 inArgInterfaces :: [Arg] -> ExcCodeGen ([Text], [Text])
-inArgInterfaces inArgs = consAndTypes (['a'..'z'] \\ ['m']) inArgs
-  where
-    consAndTypes :: [Char] -> [Arg] -> ExcCodeGen ([Text], [Text])
-    consAndTypes _ [] = return ([], [])
-    consAndTypes letters (arg:args) = do
-      (ls, t, cons) <- argumentType letters $ argType arg
-      t' <- wrapMaybe arg >>= bool (return t)
-                                   (return $ "Maybe (" <> t <> ")")
-      (restCons, restTypes) <- consAndTypes ls args
-      return (cons <> restCons, t' : restTypes)
+inArgInterfaces args = do
+  resetTypeVariableScope
+  go args
+  where go [] = return ([], [])
+        go (arg:args) = do
+          (t, cons) <- argumentType (argType arg)
+          t' <- wrapMaybe arg >>= bool (return t)
+            (return $ "Maybe (" <> t <> ")")
+          (restCons, restTypes) <- go args
+          return (cons <> restCons, t' : restTypes)
 
 -- Given a callable, return a list of (array, length) pairs, where in
 -- each pair "length" is the argument holding the length of the

@@ -23,8 +23,7 @@ import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Haddock (addSectionDocumentation, writeHaddock,
                                 RelativeDocPosition(DocBeforeSymbol))
 import Data.GI.CodeGen.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
-import Data.GI.CodeGen.SymbolNaming (lowerName, upperName,
-                                     classConstraint, typeConstraint,
+import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, classConstraint,
                                      hyphensToCamelCase, qualifiedSymbol,
                                      callbackDynamicWrapper)
 import Data.GI.CodeGen.Type
@@ -90,13 +89,14 @@ propTypeStr t = case t of
 -- the type variables for the object and its value.
 attrType :: Property -> CodeGen ([Text], Text)
 attrType prop = do
+  resetTypeVariableScope
   isCallback <- typeIsCallback (propType prop)
   if isCallback
     then do
       ftype <- foreignType (propType prop)
       return ([], typeShow ftype)
     else do
-      (_,t,constraints) <- argumentType ['a'..'l'] $ propType prop
+      (t,constraints) <- argumentType $ propType prop
       return (constraints, t)
 
 -- | Generate documentation for the given setter.
@@ -142,7 +142,7 @@ genPropertyGetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyGetter getter n docSection prop = group $ do
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
-  constructorType <- isoHaskellType (propType prop)
+  constructorType <- inboundHaskellType (propType prop)
   tStr <- propTypeStr $ propType prop
   cls <- classConstraint n
   let constraints = "(MonadIO m, " <> cls <> " o)"
@@ -323,8 +323,8 @@ genOneProperty owner prop = do
              then return "()"
              else do
                sOutType <- if isNullable && propReadNullable prop /= Just False
-                           then typeShow . maybeT <$> isoHaskellType (propType prop)
-                           else typeShow <$> isoHaskellType (propType prop)
+                           then typeShow . maybeT <$> inboundHaskellType (propType prop)
+                           else typeShow <$> inboundHaskellType (propType prop)
                return $ if T.any (== ' ') sOutType
                         then parenthesize sOutType
                         else sOutType
@@ -333,17 +333,7 @@ genOneProperty owner prop = do
   cppIf CPPOverloading $ do
     cls <- classConstraint owner
     inConstraint <- if writable || constructOnly
-                    then do
-                      inIsGO <- isGObject (propType prop)
-                      isCallback <- typeIsCallback (propType prop)
-                      hInType <- if isCallback
-                                 then typeShow <$> foreignType (propType prop)
-                                 else typeShow <$> haskellType (propType prop)
-                      if inIsGO
-                         then typeConstraint (propType prop)
-                         else return $ "(~) " <> if T.any (== ' ') hInType
-                                                 then parenthesize hInType
-                                                 else hInType
+                    then haskellTypeConstraint (propType prop)
                     else return "(~) ()"
     let allowedOps = (if writable
                       then ["'AttrSet", "'AttrConstruct"]

@@ -13,6 +13,8 @@ module Data.GI.CodeGen.Conversions
     , transientToH
     , haskellType
     , isoHaskellType
+    , inboundHaskellType
+    , haskellTypeConstraint
     , foreignType
 
     , argumentType
@@ -212,8 +214,17 @@ hParamSpecToF transfer =
   then return $ M "B.GParamSpec.disownGParamSpec"
   else return $ M "unsafeManagedPtrGetPtr"
 
-hClosureToF :: Transfer -> CodeGen Constructor
-hClosureToF transfer =
+hClosureToF :: Transfer -> Maybe Type -> CodeGen Constructor
+-- Untyped closures
+hClosureToF transfer Nothing =
+  if transfer == TransferEverything
+  then return $ M "B.GClosure.disownGClosure"
+  -- We cast the point here because the foreign type for untyped
+  -- closures is always represented as Ptr (GClosure ()), while the
+  -- corresponding Haskell type is the parametric "GClosure a".
+  else return $ M "unsafeManagedPtrCastPtr"
+-- Typed closures
+hClosureToF transfer (Just _) =
   if transfer == TransferEverything
   then return $ M "B.GClosure.disownGClosure"
   else return $ M "unsafeManagedPtrGetPtr"
@@ -251,7 +262,7 @@ hToF' t a hType fType transfer
     | TError <- t = hBoxedToF transfer
     | TVariant <- t = hVariantToF transfer
     | TParamSpec <- t = hParamSpecToF transfer
-    | TGClosure _ <- t = hClosureToF transfer
+    | TGClosure c <- t = hClosureToF transfer c
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
     | Just (APIFlags _) <- a = return "gflagsToWord"
     | Just (APIObject _) <- a = hObjectToF t transfer
@@ -467,8 +478,15 @@ fParamSpecToH transfer =
                   TransferEverything -> "B.GParamSpec.wrapGParamSpecPtr"
                   _ -> "B.GParamSpec.newGParamSpecFromPtr"
 
-fClosureToH :: Transfer -> CodeGen Constructor
-fClosureToH transfer =
+fClosureToH :: Transfer -> Maybe Type -> CodeGen Constructor
+-- Untyped closures
+fClosureToH transfer Nothing =
+  return $ M $ case transfer of
+                  TransferEverything ->
+                    parenthesize $ "B.GClosure.wrapGClosurePtr . FP.castPtr"
+                  _ -> parenthesize $ "B.GClosure.newGClosureFromPtr . FP.castPtr"
+-- Typed closures
+fClosureToH transfer (Just _) =
   return $ M $ case transfer of
                   TransferEverything -> "B.GClosure.wrapGClosurePtr"
                   _ -> "B.GClosure.newGClosureFromPtr"
@@ -482,7 +500,7 @@ fToH' t a hType fType transfer
     | TError <- t = boxedForeignPtr "GError" transfer
     | TVariant <- t = fVariantToH transfer
     | TParamSpec <- t = fParamSpecToH transfer
-    | TGClosure _ <- t = fClosureToH transfer
+    | TGClosure c <- t = fClosureToH transfer c
     | Just (APIStruct s) <- a = structForeignPtr s hType transfer
     | Just (APIUnion u) <- a = unionForeignPtr u hType transfer
     | Just (APIObject _) <- a = fObjectToH t hType transfer
@@ -679,15 +697,14 @@ unpackCArray _ _ _ = notImplementedError "unpackCArray : unexpected array type."
 -- | Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
 -- list of typeclass constraints for the type.
-argumentType :: [Char] -> Type -> CodeGen ([Char], Text, [Text])
-argumentType [] _               = error "out of letters"
-argumentType letters (TGList a) = do
-  (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" <> name <> "]", constraints)
-argumentType letters (TGSList a) = do
-  (ls, name, constraints) <- argumentType letters a
-  return (ls, "[" <> name <> "]", constraints)
-argumentType letters@(l:ls) t = do
+argumentType :: Type -> CodeGen (Text, [Text])
+argumentType (TGList a) = do
+  (name, constraints) <- argumentType a
+  return ("[" <> name <> "]", constraints)
+argumentType (TGSList a) = do
+  (name, constraints) <- argumentType a
+  return ("[" <> name <> "]", constraints)
+argumentType t = do
   api <- findAPI t
   s <- typeShow <$> haskellType t
   case api of
@@ -695,22 +712,24 @@ argumentType letters@(l:ls) t = do
     -- we allow for any object descending from it.
     Just (APIInterface _) -> do
       cls <- typeConstraint t
-      return (ls, T.singleton l, [cls <> " " <> T.singleton l])
+      l <- getFreshTypeVariable
+      return (l, [cls <> " " <> l])
     Just (APIObject _) -> do
       isGO <- isGObject t
       if isGO
         then do cls <- typeConstraint t
-                return (ls, T.singleton l, [cls <> " " <> T.singleton l])
-        else return (letters, s, [])
+                l <- getFreshTypeVariable
+                return (l, [cls <> " " <> l])
+        else return (s, [])
     Just (APICallback cb) ->
       -- See [Note: Callables that throw]
       if callableThrows (cbCallable cb)
       then do
         ft <- typeShow <$> foreignType t
-        return (letters, ft, [])
+        return (ft, [])
       else
-        return (letters, s, [])
-    _ -> return (letters, s, [])
+        return (s, [])
+    _ -> return (s, [])
 
 haskellBasicType :: BasicType -> TypeRep
 haskellBasicType TPtr      = ptr $ con0 "()"
@@ -777,7 +796,12 @@ haskellType (TGHash a b) = do
 haskellType TError = return $ "GError" `con` []
 haskellType TVariant = return $ "GVariant" `con` []
 haskellType TParamSpec = return $ "GParamSpec" `con` []
-haskellType (TGClosure _) = return $ "GClosure" `con` []
+haskellType (TGClosure Nothing) = do
+  tyvar <- getFreshTypeVariable
+  return $ "GClosure" `con` [con0 tyvar]
+haskellType (TGClosure (Just t)) = do
+  inner <- haskellType t
+  return $ "GClosure" `con` [inner]
 haskellType (TInterface (Name "GObject" "Value")) = return $ "GValue" `con` []
 haskellType t@(TInterface n) = do
   api <- getAPI t
@@ -785,6 +809,36 @@ haskellType t@(TInterface n) = do
   return $ case api of
              (APIFlags _) -> "[]" `con` [tname `con` []]
              _ -> tname `con` []
+
+-- | For convenience untyped `TGClosure` types have a type variable on
+-- the Haskell side when they are arguments to functions, but we do
+-- not want this when they appear as arguments to callbacks/signals,
+-- or return types of properties, as it would force the type
+-- synonym/type family to depend on the type variable. Note that for
+-- types which are not untyped `TGClosure` this is equivalent to
+-- `isoHaskellType`.
+inboundHaskellType :: Type -> CodeGen TypeRep
+inboundHaskellType (TGClosure Nothing) =
+  return $ "GClosure" `con` [con0 "()"]
+inboundHaskellType t = isoHaskellType t
+
+-- | The constraint for setting the given type in properties.
+haskellTypeConstraint :: Type -> CodeGen Text
+haskellTypeConstraint (TGClosure Nothing) =
+  return $ "(~) " <> parenthesize (typeShow ("GClosure" `con` [con0 "()"]))
+haskellTypeConstraint t = do
+  isGO <- isGObject t
+  if isGO
+    then typeConstraint t
+    else do
+      isCallback <- typeIsCallback t
+      hInType <- if isCallback
+                 then typeShow <$> foreignType t
+                 else typeShow <$> haskellType t
+      return $ "(~) " <> if T.any (== ' ') hInType
+                         then parenthesize hInType
+                         else hInType
+
 
 -- | Whether the callable has closure arguments (i.e. "user_data"
 -- style arguments).
@@ -861,7 +915,8 @@ foreignType (TGHash a b) = do
 foreignType t@TError = ptr <$> haskellType t
 foreignType t@TVariant = ptr <$> haskellType t
 foreignType t@TParamSpec = ptr <$> haskellType t
-foreignType t@(TGClosure _) = ptr <$> haskellType t
+foreignType (TGClosure Nothing) = return $ ptr ("GClosure" `con` [con0 "()"])
+foreignType t@(TGClosure (Just _)) = ptr <$> haskellType t
 foreignType (TInterface (Name "GObject" "Value")) =
   return $ ptr $ "GValue" `con` []
 foreignType t@(TInterface n) = do

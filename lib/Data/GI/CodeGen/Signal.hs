@@ -53,7 +53,7 @@ genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
     line $ "type " <> name' <> " ="
     indent $ do
       forM_ inArgsWithArrows $ \(arrow, arg) -> do
-        ht <- haskellType (argType arg)
+        ht <- inboundHaskellType (argType arg)
         isMaybe <- wrapMaybe arg
         let formattedType = if isMaybe
                             then typeShow (maybeT ht)
@@ -149,7 +149,8 @@ genClosure subsec cb callback name isSignal = group $ do
   export (NamedSubsection SignalSection subsec) closure
   writeHaddock DocBeforeSymbol closureDoc
   group $ do
-      line $ closure <> " :: MonadIO m => " <> callback <> " -> m GClosure"
+      line $ closure <> " :: MonadIO m => " <> callback <> " -> m (GClosure "
+                     <> callbackCType callback <> ")"
       line $ closure <> " cb = liftIO $ do"
       indent $ do
             wrapped <- genWrappedCallback cb "cb" callback isSignal

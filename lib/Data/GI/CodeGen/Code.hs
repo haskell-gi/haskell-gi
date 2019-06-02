@@ -44,6 +44,9 @@ module Data.GI.CodeGen.Code
     , setModuleFlags
     , setModuleMinBase
 
+    , getFreshTypeVariable
+    , resetTypeVariableScope
+
     , exportModule
     , exportDecl
     , export
@@ -233,13 +236,21 @@ data CGError = CGErrorNotImplemented Text
 data CGState = CGState {
   cgsCPPConditionals :: [CPPConditional] -- ^ Active CPP conditionals,
                                          -- outermost condition first.
+  , cgsNextAvailableTyvar :: NamedTyvar -- ^ Next unused type
+                                        -- variable.
   }
+
+-- | The name for a type variable.
+data NamedTyvar = SingleCharTyvar Char
+                -- ^ A single variable type variable: 'a', 'b', etc...
+                | IndexedTyvar Text Integer
+                -- ^ An indexed type variable: 'a17', 'key1', ...
 
 -- | Clean slate for `CGState`.
 emptyCGState :: CGState
-emptyCGState = CGState {
-  cgsCPPConditionals = []
-  }
+emptyCGState = CGState { cgsCPPConditionals = []
+                       , cgsNextAvailableTyvar = SingleCharTyvar 'a'
+                       }
 
 -- | The base type for the code generator monad.
 type BaseCodeGen excType a =
@@ -497,6 +508,28 @@ badIntroError s = throwError $ CGErrorBadIntrospectionInfo s
 missingInfoError :: Text -> ExcCodeGen a
 missingInfoError s = throwError $ CGErrorMissingInfo s
 
+-- | Get a type variable unused in the current scope.
+getFreshTypeVariable :: CodeGen Text
+getFreshTypeVariable = do
+  (cgs@(CGState{cgsNextAvailableTyvar = available}), s) <- get
+  let (tyvar, next) =
+        case available of
+          SingleCharTyvar char -> case char of
+            'z' -> ("z", IndexedTyvar "a" 0)
+            -- 'm' is reserved for the MonadIO constraint in signatures
+            'm' -> ("n", SingleCharTyvar 'o')
+            c -> (T.singleton c, SingleCharTyvar (toEnum $ fromEnum c + 1))
+          IndexedTyvar root index -> (root <> tshow index,
+                                      IndexedTyvar root (index+1))
+  put (cgs {cgsNextAvailableTyvar = next}, s)
+  return tyvar
+
+-- | Introduce a new scope for type variable naming: the next fresh
+-- variable will be called 'a'.
+resetTypeVariableScope :: CodeGen ()
+resetTypeVariableScope =
+  modify' (\(cgs, s) -> (cgs {cgsNextAvailableTyvar = SingleCharTyvar 'a'}, s))
+
 findAPI :: Type -> CodeGen (Maybe API)
 findAPI TError = Just <$> findAPIByName (Name "GLib" "Error")
 findAPI (TInterface n) = Just <$> findAPIByName n
@@ -563,8 +596,8 @@ cppIfBlock cond cg = do
   blank
   return x
     where addConditional :: CGState -> CGState
-          addConditional cgs = CGState {cgsCPPConditionals = CPPIf cond :
-                                         cgsCPPConditionals cgs}
+          addConditional cgs = cgs {cgsCPPConditionals = CPPIf cond :
+                                                         cgsCPPConditionals cgs}
 
 -- | Possible features to test via CPP.
 data CPPGuard = CPPOverloading -- ^ Enable overloading
