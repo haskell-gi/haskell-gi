@@ -1,3 +1,7 @@
+### 2.0.19
+
++ Update to haskell-gi(-base) 0.22
+
 ### 2.0.18
 
 + The return value of [pixbufLoaderGetPixbuf](https://hackage.haskell.org/package/gi-gdkpixbuf-2.0.18/docs/GI-GdkPixbuf-Objects-PixbufLoader.html#v:pixbufLoaderGetPixbuf) is nullable, but was not marked as such.

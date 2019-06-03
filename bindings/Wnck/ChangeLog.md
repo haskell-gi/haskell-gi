@@ -1,3 +1,7 @@
+### 3.0.3
+
++ Update to haskell-gi(-base) 0.22
+
 ### 3.0.2
 
 + Update stack version to 12.10

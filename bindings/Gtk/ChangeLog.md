@@ -1,3 +1,7 @@
+### 3.0.28
+
++ Update to haskell-gi(-base) 0.22
+
 ### 3.0.27
 
 + Mark the 'length' argument of [builderAddFromString](https://hackage.haskell.org/package/gi-gtk-3.0.27/docs/GI-Gtk-Objects-Builder.html#v:builderAddFromString) is marked as signed, so '(-1)' can be passed without a warning. See [issue 209](https://github.com/haskell-gi/haskell-gi/issues/209).
