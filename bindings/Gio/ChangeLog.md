@@ -1,3 +1,7 @@
+### 2.0.21
+
++ Do not try to generate bindings for g_content_type_[gs]et_mime_dirs in OSX, as these are not available there. See https://github.com/haskell-gi/haskell-gi/issues/227.
+
 ### 2.0.20
 
 + Update to haskell-gi(-base) 0.22

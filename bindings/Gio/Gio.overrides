@@ -61,7 +61,14 @@ if windows
    ignore UnixFDList.new_from_array
    ignore DBusProxy.call_with_unix_fd_list_finish
    ignore DBusProxy.call_with_unix_fd_list_sync
-   ignore DBusProxy.call_with_unix_fd_list   
+   ignore DBusProxy.call_with_unix_fd_list
+endif
+
+# Wrongly included in the OSX introspection data, see
+# https://github.com/haskell-gi/haskell-gi/issues/227
+if osx
+   delete-node Gio/content_type_get_mime_dirs
+   delete-node Gio/content_type_set_mime_dirs
 endif
 
 # Generated from gio 2.48.0 with xsltproc Nullable.xslt Gio-2.0.gir
