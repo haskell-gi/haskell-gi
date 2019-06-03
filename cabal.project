@@ -35,3 +35,13 @@ packages: base/haskell-gi-base.cabal
           bindings/Soup/gi-soup.cabal
           bindings/WebKit2/gi-webkit2.cabal
           bindings/WebKit2WebExtension/gi-webkit2webextension.cabal
+          bindings/Vte/gi-vte.cabal
+          bindings/Secret/gi-secret.cabal
+          bindings/Poppler/gi-poppler.cabal
+          bindings/Wnck/gi-wnck.cabal
+          bindings/OSTree/gi-ostree.cabal
+          bindings/Notify/gi-notify.cabal
+          bindings/GIRepository/gi-girepository.cabal
+          bindings/Ggit/gi-ggit.cabal
+          bindings/DbusmenuGtk3/gi-dbusmenugtk3.cabal
+          bindings/Dbusmenu/gi-dbusmenu.cabal
