@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Generate the cabal info for the given subdirectories, assuming
--- the existence of appropriate "GIR.info" files.
+-- the existence of appropriate "pkg.info" files.
 
 import System.Environment (getArgs)
 import System.FilePath ((</>), (<.>))
-import System.IO (hPutStrLn, stderr)
+import System.IO (hPutStrLn, stderr, hFlush, stdout)
 import System.Exit (exitFailure)
 
 import Control.Monad (forM_, when)
@@ -17,6 +17,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
 import Data.Text (Text)
 
+import Data.GI.CodeGen.CabalHooks (configureDryRun)
 import qualified Data.GI.CodeGen.ProjectInfo as PI
 import Data.GI.CodeGen.Util (ucFirst)
 
@@ -31,8 +32,8 @@ readGIRInfo fname = do
     Left err -> error ("Could not parse \"" <> fname <> "\": " <> err)
     Right info -> return info
 
-writeCabal :: FilePath -> ProjectInfo -> IO ()
-writeCabal fname info =
+writeCabal :: FilePath -> ProjectInfo -> [Text] -> IO ()
+writeCabal fname info exposed =
     B.writeFile fname $ TE.encodeUtf8 $ T.unlines $
        [ "name:                 " <> name info
        , "version:              " <> version info
@@ -49,11 +50,12 @@ writeCabal fname info =
        , let commonFiles = "README.md ChangeLog.md stack.yaml"
          in case girOverrides info of
            Nothing -> "\nextra-source-files: " <> commonFiles <> "\n"
-           Just ov -> "\nextra-source-files: " <> commonFiles <> " " <> ov <> "\n"
+           Just ov -> "\nextra-source-files: " <> commonFiles <> " "
+                      <> T.pack ov <> "\n"
        , "custom-setup"
        , "      setup-depends: base >= 4.9 && < 5,"
        , "                     Cabal >= 1.24,"
-       , "                     haskell-gi >= 0.22.0 && < 0.23"
+       , "                     haskell-gi >= 0.21.0 && < 0.23"
        , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
@@ -65,11 +67,11 @@ writeCabal fname info =
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([ baseVersion info
-               , "haskell-gi-base == 0.22.*"
+               , "haskell-gi-base >= 0.21.0 && < 0.23"
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi >= 0.22.0 && < 0.23"
+               , "haskell-gi >= 0.21.0 && < 0.23"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
@@ -81,6 +83,12 @@ writeCabal fname info =
        , "      -- see https://ghc.haskell.org/trac/ghc/ticket/14382"
        , "      if impl(ghc == 8.2.*)"
        , "              build-depends: haskell-gi-overloading == 0.0"
+       , ""
+       -- Note that this is only for documentation purposes, so it
+       -- appears in hackage. The actual list of modules to be built
+       -- will be constructed at configure time.
+       , "      exposed-modules: " <>
+         T.intercalate ",\n                       " exposed
        ]
 
 writeSetup :: FilePath -> ProjectInfo -> IO ()
@@ -100,6 +108,11 @@ writeSetup fname info =
            ]
     where tshow :: Show a => a -> Text
           tshow = T.pack . show
+
+exposedModules :: FilePath -> ProjectInfo -> IO [Text]
+exposedModules dir info =
+  configureDryRun (girName info) (girVersion info)
+                  ((dir </>) <$> girOverrides info)
 
 writeLicense :: FilePath -> ProjectInfo -> IO ()
 writeLicense fname info = B.writeFile fname (TE.encodeUtf8 $ PI.licenseText (name info))
@@ -136,8 +149,12 @@ main = do
 
   forM_ args $ \dir -> do
          info <- readGIRInfo (dir </> "pkg.info")
-         writeCabal (dir </> T.unpack (name info) <.> "cabal") info
+         putStr $ "Generating " <> T.unpack (name info) <> ".cabal ..."
+         hFlush stdout
+         exposed <- exposedModules dir info
+         writeCabal (dir </> T.unpack (name info) <.> "cabal") info exposed
          writeSetup (dir </> "Setup.hs") info
          writeLicense (dir </> "LICENSE") info
          writeStackYaml (dir </> "stack.yaml")
          writeReadme (dir </> "README.md") info
+         putStrLn " done."

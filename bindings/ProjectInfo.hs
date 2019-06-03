@@ -24,7 +24,7 @@ data ProjectInfo = ProjectInfo {
 
     , girName           :: Text         -- ^ GIR file (without version)
     , girVersion        :: Text         -- ^ Its version
-    , girOverrides      :: Maybe Text   -- ^ Possibly an overrides file
+    , girOverrides      :: Maybe FilePath   -- ^ Possibly an overrides file
     } deriving (Show, Generic)
 
 instance A.FromJSON ProjectInfo

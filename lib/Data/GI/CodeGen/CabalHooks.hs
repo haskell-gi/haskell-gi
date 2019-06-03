@@ -2,6 +2,7 @@
 -- bindings.
 module Data.GI.CodeGen.CabalHooks
     ( setupHaskellGIBinding
+    , configureDryRun
     ) where
 
 import qualified Distribution.ModuleName as MN
@@ -12,7 +13,8 @@ import Distribution.Simple (UserHooks(..), simpleUserHooks,
 import Distribution.PackageDescription
 
 import Data.GI.CodeGen.API (loadGIRInfo)
-import Data.GI.CodeGen.Code (genCode, writeModuleTree, listModuleTree)
+import Data.GI.CodeGen.Code (genCode, writeModuleTree, listModuleTree,
+                             ModuleInfo)
 import Data.GI.CodeGen.CodeGen (genModule)
 import Data.GI.CodeGen.Config (Config(..))
 import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
@@ -34,17 +36,13 @@ import System.FilePath ((</>), (<.>))
 type ConfHook = (GenericPackageDescription, HookedBuildInfo) -> ConfigFlags
               -> IO LocalBuildInfo
 
--- | A convenience helper for `confHook`, such that bindings for the
--- given module are generated in the @configure@ step of @cabal@.
-confCodeGenHook :: Text -- ^ name
-                -> Text -- ^ version
-                -> Bool -- ^ verbose
-                -> Maybe FilePath -- ^ overrides file
-                -> Maybe FilePath -- ^ output dir
-                -> ConfHook -- ^ previous `confHook`
-                -> ConfHook
-confCodeGenHook name version verbosity overrides outputDir
-                defaultConfHook (gpd, hbi) flags = do
+-- | Generate the code for the given module.
+genModuleCode :: Text -- ^ name
+              -> Text -- ^ version
+              -> Bool -- ^ verbose
+              -> Maybe FilePath -- ^ overrides file
+              -> IO ModuleInfo
+genModuleCode name version verbosity overrides = do
   setupTypelibSearchPath []
 
   ovs <- case overrides of
@@ -61,7 +59,20 @@ confCodeGenHook name version verbosity overrides outputDir
                     verbose = verbosity,
                     overrides = ovs}
 
-  let m = genCode cfg allAPIs (toModulePath name) (genModule apis)
+  return $ genCode cfg allAPIs (toModulePath name) (genModule apis)
+
+-- | A convenience helper for `confHook`, such that bindings for the
+-- given module are generated in the @configure@ step of @cabal@.
+confCodeGenHook :: Text -- ^ name
+                -> Text -- ^ version
+                -> Bool -- ^ verbose
+                -> Maybe FilePath -- ^ overrides file
+                -> Maybe FilePath -- ^ output dir
+                -> ConfHook -- ^ previous `confHook`
+                -> ConfHook
+confCodeGenHook name version verbosity overrides outputDir
+                defaultConfHook (gpd, hbi) flags = do
+  m <- genModuleCode name version verbosity overrides
 
   let em' = map (MN.fromString . T.unpack) (listModuleTree m)
       ctd' = ((condTreeData . fromJust . condLibrary) gpd) {exposedModules = em'}
@@ -90,3 +101,13 @@ setupHaskellGIBinding name version verbose overridesFile outputDir =
                                        overridesFile outputDir
                                        (confHook simpleUserHooks)
                           })
+
+-- | Return the list of modules that `setupHaskellGIBinding` would create.
+configureDryRun :: Text -- ^ name
+                -> Text -- ^ version
+                -> Maybe FilePath
+                -> IO [Text]
+configureDryRun name version overrides = do
+  m <- genModuleCode name version False overrides
+
+  return (listModuleTree m)
