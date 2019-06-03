@@ -21,17 +21,13 @@ import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.Overrides (parseOverridesFile, girFixups,
                                   filterAPIsAndDeps)
-import Data.GI.CodeGen.Util (ucFirst)
 
-import Control.Monad (when, void)
+import Control.Monad (void)
 
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust)
 import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Data.Text as T
-
-import System.Directory (doesFileExist)
-import System.FilePath ((</>), (<.>))
 
 type ConfHook = (GenericPackageDescription, HookedBuildInfo) -> ConfigFlags
               -> IO LocalBuildInfo
@@ -79,10 +75,7 @@ confCodeGenHook name version verbosity overrides outputDir
       cL' = ((fromJust . condLibrary) gpd) {condTreeData = ctd'}
       gpd' = gpd {condLibrary = Just cL'}
 
-  alreadyDone <- doesFileExist (fromMaybe "" outputDir
-                                </> "GI" </> T.unpack (ucFirst name) <.> "hs")
-  when (not alreadyDone) $ do
-    void $ writeModuleTree verbosity outputDir m
+  void $ writeModuleTree verbosity outputDir m
 
   lbi <- defaultConfHook (gpd', hbi) flags
 
