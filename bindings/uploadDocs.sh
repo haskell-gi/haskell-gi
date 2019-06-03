@@ -2,15 +2,13 @@
 
 set -e
 
-uploadDocs()
-{
-    for modName in $@; do
-        pushd $modName > /dev/null
-	rm -rf GI
-	cabal clean
-	cabal upload --publish -d
-        popd > /dev/null
-    done
-}
+cd ..
 
-uploadDocs $(./PKGS.sh)
+DOCSDIR=dist-newstyle
+
+rm $DOCSDIR/*-docs.tar.gz
+cabal new-haddock --haddock-for-hackage all
+rm $DOCSDIR/gi-gtk-hs-*-docs.tar.gz
+for doc in $DOCSDIR/gi-*-docs.tar.gz; do
+    cabal upload --publish -d $doc
+done
