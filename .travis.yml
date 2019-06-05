@@ -12,7 +12,7 @@ before_install:
  - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
  - travis_retry sudo apt-get update
  - travis_retry sudo apt-get install -y cabal-install-$CABALVER ghc-$GHCVER happy-1.19.5 alex-3.1.7
- - travis_retry sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-dev
+ - travis_retry sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev
  - export PATH=$HOME/.cabal/bin:/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:/opt/alex/3.1.7/bin:/opt/happy/1.19.5/bin:$PATH
  - export HASKELL_GI_TYPELIB_SEARCH_PATH=/usr/lib/x86_64-linux-gnu/girepository-1.0
 
