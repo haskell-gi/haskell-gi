@@ -1,6 +1,7 @@
 # compiled files
 *.hi
 *.o
+*.so
 
 # cabal stuff
 .cabal-sandbox
