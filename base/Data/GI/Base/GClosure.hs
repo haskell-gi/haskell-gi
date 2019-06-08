@@ -9,14 +9,16 @@ module Data.GI.Base.GClosure
     , disownGClosure
     ) where
 
-import Foreign
+import Foreign.Ptr (Ptr, FunPtr, nullPtr)
+import Foreign.C (CInt(..))
 
+import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.CallStack (HasCallStack)
-import Data.GI.Base.ManagedPtr (newBoxed, wrapBoxed, freeBoxed,
-                                disownManagedPtr)
+import Data.GI.Base.ManagedPtr (newBoxed, newManagedPtr',
+                                disownManagedPtr, withManagedPtr)
 
 -- | The basic type. This corresponds to a wrapped @GClosure@ on the C
 -- side, which is a boxed object.
@@ -48,9 +50,24 @@ newGClosure ptr = liftIO $ do
   closure <- g_cclosure_new ptr nullPtr ptr_to_release_closure
   wrapGClosurePtr closure
 
+foreign import ccall g_closure_ref :: Ptr (GClosure a) -> IO (Ptr (GClosure a))
+foreign import ccall g_closure_sink :: Ptr (GClosure a) -> IO ()
+foreign import ccall g_closure_unref :: Ptr (GClosure a) -> IO ()
+foreign import ccall "&g_closure_unref" ptr_to_g_closure_unref ::
+        FunPtr (Ptr (GClosure a) -> IO ())
+
+foreign import ccall "haskell_gi_g_closure_is_floating" g_closure_is_floating ::
+        Ptr (GClosure a) -> IO CInt
+
 -- | Take ownership of a passed in 'Ptr' to a 'GClosure'.
 wrapGClosurePtr :: Ptr (GClosure a) -> IO (GClosure a)
-wrapGClosurePtr = wrapBoxed GClosure
+wrapGClosurePtr closurePtr = do
+  floating <- g_closure_is_floating closurePtr
+  when (floating /= 0) $ do
+    _ <- g_closure_ref closurePtr
+    g_closure_sink closurePtr
+  fPtr <- newManagedPtr' ptr_to_g_closure_unref closurePtr
+  return $! GClosure fPtr
 
 -- | Construct a Haskell wrapper for the 'GClosure', without assuming
 -- ownership.
@@ -60,7 +77,7 @@ newGClosureFromPtr = newBoxed GClosure
 -- | Decrease the reference count of the given 'GClosure'. If the
 -- reference count reaches 0 the memory will be released.
 unrefGClosure :: (HasCallStack, MonadIO m) => GClosure a -> m ()
-unrefGClosure closure = liftIO $ freeBoxed closure
+unrefGClosure closure = liftIO $ withManagedPtr closure g_closure_unref
 
 -- | Disown (that is, remove from te purview of the Haskell Garbage
 -- Collector) the given 'GClosure'.

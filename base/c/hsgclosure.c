@@ -365,3 +365,10 @@ haskell_gi_release_signal_closure (gpointer unused,
   dbg_log("\tDone.\n");
   unlock_log();
 }
+
+/* Check whether the given closure is floating */
+gboolean
+haskell_gi_g_closure_is_floating (GClosure *closure)
+{
+  return !!(closure->floating);
+}
