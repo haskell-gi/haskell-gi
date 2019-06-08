@@ -89,6 +89,9 @@ writeCabal fname info exposed =
        -- will be constructed at configure time.
        , "      exposed-modules: " <>
          T.intercalate ",\n                       " exposed
+       , ""
+       , "      autogen-modules: " <>
+         T.intercalate ",\n                       " exposed
        ]
 
 writeSetup :: FilePath -> ProjectInfo -> IO ()
