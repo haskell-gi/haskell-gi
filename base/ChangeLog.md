@@ -1,6 +1,12 @@
+### 0.22.1
+
++ Fix a memory allocation error in [GClosure](https://hackage.haskell.org/package/haskell-gi-base-0.22.0/docs/Data-GI-Base.html#t:GClosure) that could lead to crashes.
+
 ### 0.22.0
 
 + Require base >= 0.4.9 (GHC version >= 8.0), so that we can use TypeApplications.
+
++ Make [GClosure](https://hackage.haskell.org/package/haskell-gi-base-0.22.0/docs/Data-GI-Base.html#t:GClosure) a primitive type, and make it depend on a phantom parameter to increase type safety.
 
 ### 0.21.5
 
