@@ -5,7 +5,9 @@ module Data.GI.GIR.Field
     , parseFields
     ) where
 
-import Data.Maybe (isJust)
+import Control.Monad.Except (catchError, throwError)
+
+import Data.Maybe (isJust, catMaybes)
 import Data.Monoid ((<>))
 import Data.Text (Text, isSuffixOf)
 
@@ -33,7 +35,7 @@ data FieldInfoFlag = FieldIsReadable | FieldIsWritable
 -- non-introspectable fields too (but set fieldVisible = False for
 -- them), this is necessary since they affect the computation of
 -- offsets of fields and sizes of containing structs.
-parseField :: Parser Field
+parseField :: Parser (Maybe Field)
 parseField = do
   name <- getAttr "name"
   deprecated <- parseDeprecation
@@ -44,7 +46,13 @@ parseField = do
   introspectable <- optionalAttr "introspectable" True parseBool
   private <- optionalAttr "private" False parseBool
   doc <- parseDocumentation
-  (t, isPtr, callback) <-
+  -- Sometimes fields marked as not introspectable contain invalid
+  -- introspection info. We are lenient in these cases with parsing
+  -- errors, and simply ignore the fields.
+  flip catchError (\e -> if (not introspectable) && private
+                         then return Nothing
+                         else throwError e) $ do
+    (t, isPtr, callback) <-
       if introspectable
       then do
         callbacks <- parseChildrenWithLocalName "callback" parseCallback
@@ -68,7 +76,8 @@ parseField = do
                return (t, fmap ("*" `isSuffixOf`) ct, Nothing)
           [n] -> return (TInterface n, Just True, Nothing)
           _ -> parseError "Multiple callbacks in field"
-  return $ Field {
+
+    return $ Just $ Field {
                fieldName = name
              , fieldVisible = introspectable && not private
              , fieldType = t
@@ -83,4 +92,4 @@ parseField = do
           }
 
 parseFields :: Parser [Field]
-parseFields = parseAllChildrenWithLocalName "field" parseField
+parseFields = catMaybes <$> parseAllChildrenWithLocalName "field" parseField
