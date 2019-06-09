@@ -73,7 +73,11 @@ confCodeGenHook name version verbosity overrides outputDir
   let em' = map (MN.fromString . T.unpack) (listModuleTree m)
       lib = ((condTreeData . fromJust . condLibrary) gpd)
       bi = libBuildInfo lib
+#if MIN_VERSION_base(4,11,0)
       bi' = bi {autogenModules = em'}
+#else
+      bi' = bi
+#endif
       lib' = lib {exposedModules = em', libBuildInfo = bi'}
       cL' = ((fromJust . condLibrary) gpd) {condTreeData = lib'}
       gpd' = gpd {condLibrary = Just cL'}
