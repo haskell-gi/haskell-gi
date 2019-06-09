@@ -71,8 +71,11 @@ confCodeGenHook name version verbosity overrides outputDir
   m <- genModuleCode name version verbosity overrides
 
   let em' = map (MN.fromString . T.unpack) (listModuleTree m)
-      ctd' = ((condTreeData . fromJust . condLibrary) gpd) {exposedModules = em'}
-      cL' = ((fromJust . condLibrary) gpd) {condTreeData = ctd'}
+      lib = ((condTreeData . fromJust . condLibrary) gpd)
+      bi = libBuildInfo lib
+      bi' = bi {autogenModules = em'}
+      lib' = lib {exposedModules = em', libBuildInfo = bi'}
+      cL' = ((fromJust . condLibrary) gpd) {condTreeData = lib'}
       gpd' = gpd {condLibrary = Just cL'}
 
   void $ writeModuleTree verbosity outputDir m
