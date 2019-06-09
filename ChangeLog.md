@@ -1,3 +1,7 @@
+### 0.22.3
+
++ Sometimes struct fields marked as not introspectable contain invalid introspection info. We are lenient in these cases with parsing errors, and simply ignore the fields.
+
 ### 0.21.5
 
 + Add support for callback-valued properties.
