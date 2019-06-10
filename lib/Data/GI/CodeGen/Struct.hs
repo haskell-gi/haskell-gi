@@ -32,6 +32,17 @@ ignoreStruct :: Name -> Struct -> Bool
 ignoreStruct (Name _ name) s = isJust (gtypeStructFor s) ||
                                "Private" `T.isSuffixOf` name
 
+-- | Whether the given type corresponds to an ignored struct.
+isIgnoredStructType :: Type -> CodeGen Bool
+isIgnoredStructType t =
+  case t of
+    TInterface n -> do
+      api <- getAPI t
+      case api of
+        APIStruct s -> return (ignoreStruct n s)
+        _ -> return False
+    _ -> return False
+
 -- | Canonical name for the type of a callback type embedded in a
 -- struct field.
 fieldCallbackType :: Text -> Field -> Text
@@ -297,11 +308,19 @@ genAttrInfo owner field = do
 
   return $ "'(\"" <> labelName field <> "\", " <> it <> ")"
 
+-- | Build code for a single field.
 buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe Text)
 buildFieldAttributes n field
     | not (fieldVisible field) = return Nothing
     | privateType (fieldType field) = return Nothing
     | otherwise = group $ do
+
+     -- We don't generate bindings for private and class structs, so
+     -- do not generate bindings for fields pointing to class structs
+     -- either.
+     ignored <- isIgnoredStructType (fieldType field)
+     when ignored $
+      notImplementedError "Field type is an unsupported struct type"
 
      nullPtr <- nullPtrForType (fieldType field)
 
@@ -330,6 +349,7 @@ buildFieldAttributes n field
 
           docSection = NamedSubsection PropertySection $ lcFirst $ fName field
 
+-- | Generate code for the given list of fields.
 genStructOrUnionFields :: Name -> [Field] -> CodeGen ()
 genStructOrUnionFields n fields = do
   let name' = upperName n
