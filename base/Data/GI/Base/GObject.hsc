@@ -13,6 +13,7 @@
 module Data.GI.Base.GObject
     ( -- * Constructing new `GObject`s
       constructGObject
+    , new'
 
     -- * User data
     , gobjectGetUserData
@@ -91,6 +92,14 @@ constructGObject constructor attrs = liftIO $ do
                  IO (GValueConstruct o)
     construct (attr := x) = attrConstruct (resolve attr) x
     construct (attr :=> x) = x >>= attrConstruct (resolve attr)
+
+-- | Construct the given `GObject`, given a set of actions
+-- constructing desired `GValue`s to set at construction time.
+new' :: (MonadIO m, GObject o) =>
+        (ManagedPtr o -> o) -> [IO (GValueConstruct o)] -> m o
+new' constructor actions = do
+  props <- liftIO $ sequence (actions)
+  doConstructGObject constructor props
 
 -- | Construct the `GObject` given the list of `GValueConstruct`s.
 doConstructGObject :: forall o m. (GObject o, MonadIO m)
