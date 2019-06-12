@@ -188,7 +188,8 @@ checkUnexpectedReturnNULL fnName ptr
         throwIO (UnexpectedNullPointerReturn {
                    nullPtrErrorMsg = "Received unexpected nullPtr in \""
                                      <> fnName <> "\".\n" <>
-                                     "This is a bug in the introspection data, please report it at\nhttps://github.com/haskell-gi/haskell-gi/issues\n" <>
+                                     "This might be a bug in the introspection data, or perhaps a use-after-free bug.\n" <>
+                                     "If in doubt, please report it at\n\thttps://github.com/haskell-gi/haskell-gi/issues\n" <>
                                      T.pack (prettyCallStack callStack)
                  })
     | otherwise = return ()
@@ -201,9 +202,10 @@ checkUnexpectedNothing fnName action = do
   case result of
     Just r -> return r
     Nothing -> throwIO (UnexpectedNullPointerReturn {
-                 nullPtrErrorMsg = "Received unexpected nullPtr in \""
+                 nullPtrErrorMsg = "Received unexpected Nothing in \""
                                      <> fnName <> "\".\n" <>
-                                     "This is a bug in the introspection data, please report it at\nhttps://github.com/haskell-gi/haskell-gi/issues\n" <>
+                                     "This might be a bug in the introspection data, or perhaps a use-after-free bug.\n" <>
+                                     "If in doubt, please report it at\n\thttps://github.com/haskell-gi/haskell-gi/issues\n" <>
                                      T.pack (prettyCallStack callStack)
                  })
 
