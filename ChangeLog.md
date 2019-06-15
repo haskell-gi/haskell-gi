@@ -1,3 +1,7 @@
+### 0.22.5
+
++ Add support for inheriting overloading info.
+
 ### 0.22.4
 
 + Do not generate bindings for struct/union fields pointing to private/class structs, which we do not bind.
