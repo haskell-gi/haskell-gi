@@ -1,3 +1,7 @@
+### 0.22.4
+
++ Do not generate bindings for struct/union fields pointing to private/class structs, which we do not bind.
+
 ### 0.22.3
 
 + Sometimes struct fields marked as not introspectable contain invalid introspection info. We are lenient in these cases with parsing errors, and simply ignore the fields.
