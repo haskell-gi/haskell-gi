@@ -36,9 +36,9 @@ import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.OverloadedLabels (genOverloadedLabels)
 import Data.GI.CodeGen.OverloadedSignals (genOverloadedSignalConnectors)
-import Data.GI.CodeGen.Overrides (Overrides, parseOverridesFile, nsChooseVersion, filterAPIsAndDeps, girFixups, pkgConfigMap)
+import Data.GI.CodeGen.Overrides (Overrides, parseOverrides, nsChooseVersion, filterAPIsAndDeps, girFixups, pkgConfigMap)
 import Data.GI.CodeGen.ProjectInfo (licenseText)
-import Data.GI.CodeGen.Util (ucFirst, utf8WriteFile, terror)
+import Data.GI.CodeGen.Util (ucFirst, utf8WriteFile, utf8ReadFile, terror)
 
 data Mode = GenerateCode | Dump | Labels | Signals | Help
 
@@ -233,7 +233,7 @@ process :: Options -> [Text] -> IO ()
 process options names = do
   let extraPaths = optSearchPaths options
   setupTypelibSearchPath (optSearchPaths options)
-  configs <- traverse parseOverridesFile (optOverridesFiles options)
+  configs <- traverse (utf8ReadFile >=> parseOverrides) (optOverridesFiles options)
   case mconcat <$> sequence configs of
     Left errorMsg -> do
       hPutStr stderr "Error when parsing the config file(s):\n"

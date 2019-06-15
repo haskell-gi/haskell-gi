@@ -2,7 +2,7 @@
 module Data.GI.CodeGen.Overrides
     ( Overrides(pkgConfigMap, cabalPkgVersion, nsChooseVersion, girFixups,
                 onlineDocsMap)
-    , parseOverridesFile
+    , parseOverrides
     , filterAPIsAndDeps
     ) where
 
@@ -132,12 +132,11 @@ withFlags p = do
 -- encode this in a monad.
 type Parser a = WriterT Overrides (StateT ParserState (ExceptT Text IO)) a
 
--- | Parse the given overrides file, filling in the configuration as
+-- | Parse the given overrides, filling in the configuration as
 -- needed. In case the parsing fails we return a description of the
 -- error instead.
-parseOverridesFile :: FilePath -> IO (Either Text Overrides)
-parseOverridesFile fname = do
-  overrides <- utf8ReadFile fname
+parseOverrides :: Text -> IO (Either Text Overrides)
+parseOverrides overrides = do
   runExceptT $ flip evalStateT emptyParserState $ execWriterT $
     mapM (parseOneLine . T.strip) (T.lines overrides)
 
@@ -394,10 +393,12 @@ parseEndif rest = case T.words rest of
 
 -- | Parse the given overrides file, and merge into the given context.
 parseInclude :: Text -> Parser ()
-parseInclude fname = liftIO (parseOverridesFile $ T.unpack fname) >>= \case
-  Left err -> throwError ("Error when parsing included '"
-                         <> fname <> "': " <> err)
-  Right ovs -> tell ovs
+parseInclude fname = do
+  includeText <- liftIO $ utf8ReadFile (T.unpack fname)
+  liftIO (parseOverrides includeText) >>= \case
+    Left err -> throwError ("Error when parsing included '"
+                            <> fname <> "': " <> err)
+    Right ovs -> tell ovs
 
 -- | Filter a set of named objects based on a lookup list of names to
 -- ignore.

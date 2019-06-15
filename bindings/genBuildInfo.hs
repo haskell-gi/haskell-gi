@@ -13,6 +13,7 @@ import Control.Monad (forM_, when)
 import qualified Data.Aeson as A
 import qualified Data.ByteString as B
 import Data.Monoid ((<>))
+import qualified Data.Set as S
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -53,9 +54,12 @@ writeCabal fname info exposed =
            Just ov -> "\nextra-source-files: " <> commonFiles <> " "
                       <> T.pack ov <> "\n"
        , "custom-setup"
-       , "      setup-depends: base >= 4.9 && < 5,"
-       , "                     Cabal >= 1.24,"
-       , "                     haskell-gi >= 0.21.0 && < 0.23"
+       , "      setup-depends: " <>
+         T.intercalate ",\n                     "
+           ([ "base >= 4.9 && < 5"
+            , "Cabal >= 1.24"
+            , "haskell-gi >= 0.22.5 && < 0.23"]
+            <> giDepends info)
        , ""
        , "library"
        , "      default-language: " <> PI.defaultLanguage
@@ -67,11 +71,11 @@ writeCabal fname info exposed =
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([ baseVersion info
-               , "haskell-gi-base >= 0.21.0 && < 0.23"
+               , "haskell-gi-base >= 0.22.0 && < 0.23"
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi >= 0.21.0 && < 0.23"
+               , "haskell-gi >= 0.22.5 && < 0.23"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
@@ -84,9 +88,12 @@ writeCabal fname info exposed =
        , "      if impl(ghc == 8.2.*)"
        , "              build-depends: haskell-gi-overloading == 0.0"
        , ""
-       -- Note that this is only for documentation purposes, so it
-       -- appears in hackage. The actual list of modules to be built
-       -- will be constructed at configure time.
+       , "      -- Note that the following list of exposed modules and autogen"
+       , "      -- modules is for documentation purposes only, so that some"
+       , "      -- documentation appears in hackage. The actual list of modules"
+       , "      -- to be built will be built at configure time, based on the"
+       , "      -- available introspection data."
+       , ""
        , "      exposed-modules: " <>
          T.intercalate ",\n                       " exposed
        , ""
@@ -94,28 +101,42 @@ writeCabal fname info exposed =
          T.intercalate ",\n                       " exposed
        ]
 
-writeSetup :: FilePath -> ProjectInfo -> IO ()
-writeSetup fname info =
+writeSetup :: FilePath -> ProjectInfo -> S.Set Text -> IO ()
+writeSetup fname info deps =
     B.writeFile fname $ TE.encodeUtf8 $ T.unlines
            [ "{-# LANGUAGE OverloadedStrings #-}"
            , ""
-           , "import Data.GI.CodeGen.CabalHooks (setupHaskellGIBinding)"
+           , "import Data.GI.CodeGen.CabalHooks (setupBinding, TaggedOverride(..))"
+           , ""
+           , T.unlines (map buildInfo (S.toList deps))
            , ""
            , "main :: IO ()"
-           , "main = setupHaskellGIBinding name version verbose overridesFile outputDir"
+           , "main = setupBinding name version verbose overridesFile inheritedOverrides outputDir"
            , "  where name = " <> tshow (girName info)
            , "        version = " <> tshow (girVersion info)
            , "        overridesFile = " <> tshow (girOverrides info)
            , "        verbose = False"
            , "        outputDir = Nothing"
+           , "        inheritedOverrides = ["
+             <> T.intercalate ", " (map inheritedOverride (S.toList deps))
+             <> "]"
            ]
     where tshow :: Show a => a -> Text
           tshow = T.pack . show
 
-exposedModules :: FilePath -> ProjectInfo -> IO [Text]
-exposedModules dir info =
+          buildInfo :: Text -> Text
+          buildInfo dep = let capDep = ucFirst dep in
+            "import qualified GI." <> capDep <> ".Config as " <> capDep
+
+          inheritedOverride :: Text -> Text
+          inheritedOverride dep = let capDep = ucFirst dep in
+            "TaggedOverride \"inherited:" <> capDep <> "\" "
+                      <> capDep <> ".overrides"
+
+exposedModulesAndDeps :: FilePath -> ProjectInfo -> IO ([Text], S.Set Text)
+exposedModulesAndDeps dir info =
   configureDryRun (girName info) (girVersion info)
-                  ((dir </>) <$> girOverrides info)
+                  ((dir </>) <$> girOverrides info) []
 
 writeLicense :: FilePath -> ProjectInfo -> IO ()
 writeLicense fname info = B.writeFile fname (TE.encodeUtf8 $ PI.licenseText (name info))
@@ -154,9 +175,9 @@ main = do
          info <- readGIRInfo (dir </> "pkg.info")
          putStr $ "Generating " <> T.unpack (name info) <> ".cabal ..."
          hFlush stdout
-         exposed <- exposedModules dir info
+         (exposed, deps) <- exposedModulesAndDeps dir info
          writeCabal (dir </> T.unpack (name info) <.> "cabal") info exposed
-         writeSetup (dir </> "Setup.hs") info
+         writeSetup (dir </> "Setup.hs") info deps
          writeLicense (dir </> "LICENSE") info
          writeStackYaml (dir </> "stack.yaml")
          writeReadme (dir </> "README.md") info
