@@ -1,3 +1,7 @@
+### 0.22.2
+
++ Reinstate the new' method.
+
 ### 0.22.1
 
 + Fix a memory allocation error in [GClosure](https://hackage.haskell.org/package/haskell-gi-base-0.22.0/docs/Data-GI-Base.html#t:GClosure) that could lead to crashes.
