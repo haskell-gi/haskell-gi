@@ -1,3 +1,7 @@
+### 0.4.7
+
++ Add support for inherited dependencies
+
 ### 0.4.6
 
 + Tighten bounds in haskell-gi(-base)

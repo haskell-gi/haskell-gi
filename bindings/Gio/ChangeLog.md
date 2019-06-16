@@ -1,3 +1,9 @@
+### 2.0.24
+
++ Add support for inherited dependencies
+
++ Add a workaround for [issue 218](https://github.com/haskell-gi/haskell-gi/issues/218).
+
 ### 2.0.23
 
 + Tighten bounds in haskell-gi(-base)
