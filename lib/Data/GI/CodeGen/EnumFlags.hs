@@ -7,6 +7,7 @@ module Data.GI.CodeGen.EnumFlags
 import Control.Monad (when, forM_)
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import qualified Data.Set as S
 
 import Foreign.C (CUInt)
 import Foreign.Storable (sizeOf)
@@ -17,6 +18,19 @@ import Data.GI.CodeGen.Haddock (deprecatedPragma, writeDocumentation,
                                 writeHaddock, RelativeDocPosition(..))
 import Data.GI.CodeGen.SymbolNaming (upperName)
 import Data.GI.CodeGen.Util (tshow)
+
+-- | Given a list of named enum members, filter out those that have
+-- the same value as a previous entry in the list.
+dropDuplicated :: [(Text, EnumerationMember)] -> [(Text, EnumerationMember)]
+dropDuplicated namedMembers = go namedMembers enumMemberValue S.empty
+  where go :: Ord c => [(a, b)] -> (b->c) -> S.Set c -> [(a, b)]
+        go [] _ _ = []
+        go ((n, m) : rest) f seen =
+          if S.member (f m) seen
+             -- already seen, discard
+          then go rest f seen
+          else (n,m) : go rest f (S.insert (f m) seen)
+
 
 genEnumOrFlags :: HaddockSection -> Name -> Enumeration -> ExcCodeGen ()
 genEnumOrFlags docSection n@(Name ns name) e = do
@@ -61,7 +75,7 @@ genEnumOrFlags docSection n@(Name ns name) e = do
             line $ "fromEnum (Another" <> name' <> " k) = k"
     blank
     indent $ do
-            forM_ members' $ \(n, m) ->
+            forM_ (dropDuplicated members') $ \(n, m) ->
                 line $ "toEnum " <> tshow (enumMemberValue m) <> " = " <> n
             line $ "toEnum k = Another" <> name' <> " k"
 
