@@ -381,8 +381,17 @@ genInterface n iface = do
     writeHaddock DocBeforeSymbol ("Type class for types which implement `"
                                   <> name' <> "`.")
 
-    bline $ "class ManagedPtrNewtype a => " <> cls <> " a"
-    line $ "instance " <> cls <> " " <> name'
+    -- Create the IsX constraint. We cannot simply say
+    --
+    -- > type IsX o = (ManagedPtrNewtype o, O.IsDescendantOf X o)
+    --
+    -- since we sometimes need to refer to @IsX@ itself, without
+    -- applying it. We instead use the trick of creating a class with
+    -- a universal instance.
+    let constraints = "(ManagedPtrNewtype o, O.IsDescendantOf " <> name' <> " o)"
+    bline $ "class " <> constraints <> " => " <> cls <> " o"
+    bline $ "instance " <> constraints <> " => " <> cls <> " o"
+
     genWrappedPtr n (ifAllocationInfo iface) 0
 
     when (not . null . ifProperties $ iface) $ group $ do

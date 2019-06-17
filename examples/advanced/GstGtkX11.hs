@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 
 {-
   A minimal example of embedding a Gstreamer video into a GTK/X11 window.
@@ -42,6 +44,7 @@ module Main where
 import Foreign.C.Types
 import Data.Maybe
 import Data.GI.Base.Properties
+import qualified Data.GI.Base.Overloading as O
 import qualified GI.Gtk
 import GI.Gst
 import GI.GstVideo
@@ -49,9 +52,11 @@ import GI.GdkX11
 
 -- Playbin implements the Gstreamer VideoOverlay interface, but there
 -- is no Playbin type in the introspection data, so we create a
--- newtype and make it an instance of IsVideoOverlay.
+-- newtype and make it descent from VideoOverlay.
 newtype GstPlaybin = GstPlaybin GI.Gst.Element
-instance GI.GstVideo.IsVideoOverlay GstPlaybin
+
+instance O.HasParentTypes GstPlaybin
+type instance O.ParentTypes GstPlaybin = '[ GI.GstVideo.VideoOverlay ]
 
 main :: IO ()
 main = do
