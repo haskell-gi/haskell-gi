@@ -57,17 +57,40 @@ genFunction n (Function symbol fnMovedTo callable) =
                           export (NamedSubsection MethodSection $ lowerName n) (lowerName n)
                         )
 
+-- | Generate the GValue instances for the given GObject.
+genBoxedGValueInstance :: Name -> Text -> CodeGen ()
+genBoxedGValueInstance n get_type_fn = do
+  let name' = upperName n
+      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue' with 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
+
+  writeHaddock DocBeforeSymbol doc
+
+  group $ do
+    bline $ "instance B.GValue.IsGValue " <> name' <> " where"
+    indent $ group $ do
+      line $ "toGValue o = do"
+      indent $ group $ do
+        line $ "gtype <- " <> get_type_fn
+        line $ "B.ManagedPtr.withManagedPtr o (B.GValue.buildGValue gtype B.GValue.set_boxed)"
+      line $ "fromGValue gv = do"
+      indent $ group $ do
+        line $ "ptr <- B.GValue.get_boxed gv :: IO (Ptr " <> name' <> ")"
+        line $ "B.ManagedPtr.newBoxed " <> name' <> " ptr"
+
 genBoxedObject :: Name -> Text -> CodeGen ()
 genBoxedObject n typeInit = do
   let name' = upperName n
+      get_type_fn = "c_" <> typeInit
 
   group $ do
-    line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
-            typeInit <> " :: "
+    line $ "foreign import ccall \"" <> typeInit <> "\" " <>
+            get_type_fn <> " :: "
     indent $ line "IO GType"
   group $ do
        line $ "instance BoxedObject " <> name' <> " where"
-       indent $ line $ "boxedType _ = c_" <> typeInit
+       indent $ line $ "boxedType _ = " <> get_type_fn
+
+  genBoxedGValueInstance n get_type_fn
 
   hsBoot $ line $ "instance BoxedObject " <> name' <> " where"
 
@@ -234,19 +257,42 @@ genMethod cn m@(Method {
     cppIf CPPOverloading $
          genMethodInfo cn (m {methodCallable = c''})
 
+-- | Generate the GValue instances for the given GObject.
+genGObjectGValueInstance :: Name -> Text -> CodeGen ()
+genGObjectGValueInstance n get_type_fn = do
+  let name' = upperName n
+      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue' with 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
+
+  writeHaddock DocBeforeSymbol doc
+
+  group $ do
+    bline $ "instance B.GValue.IsGValue " <> name' <> " where"
+    indent $ group $ do
+      line $ "toGValue o = do"
+      indent $ group $ do
+        line $ "gtype <- " <> get_type_fn
+        line $ "B.ManagedPtr.withManagedPtr o (B.GValue.buildGValue gtype B.GValue.set_object)"
+      line $ "fromGValue gv = do"
+      indent $ group $ do
+        line $ "ptr <- B.GValue.get_object gv :: IO (Ptr " <> name' <> ")"
+        line $ "B.ManagedPtr.newObject " <> name' <> " ptr"
+
 -- Type casting with type checking
 genGObjectCasts :: Name -> Text -> [Name] -> CodeGen ()
 genGObjectCasts n cn_ parents = do
   let name' = upperName n
+      get_type_fn = "c_" <> cn_
 
   group $ do
     line $ "foreign import ccall \"" <> cn_ <> "\""
-    indent $ line $ "c_" <> cn_ <> " :: IO GType"
+    indent $ line $ get_type_fn <> " :: IO GType"
 
   group $ do
     bline $ "instance GObject " <> name' <> " where"
     indent $ group $ do
-            line $ "gobjectType = c_" <> cn_
+            line $ "gobjectType = " <> get_type_fn
+
+  genGObjectGValueInstance n get_type_fn
 
   className <- classConstraint n
   group $ do
