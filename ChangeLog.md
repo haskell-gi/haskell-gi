@@ -1,3 +1,7 @@
+### 0.22.6
+
++ Fix generated IsX typeclasses for non-GObject interfaces.
+
 ### 0.22.5
 
 + Add support for inheriting overloading info.
