@@ -41,23 +41,20 @@ Unfortunately there is [a bug](https://ghc.haskell.org/trac/ghc/ticket/14382) in
 
 ## Using the generated bindings
 
-The most recent versions of the generated bindings are available from hackage. To install, start by making sure that you have a recent (1.24 or later) version of `cabal-install`:
+The most recent versions of the generated bindings are available from hackage. To install, start by making sure that you have a recent (2.0 or later) version of `cabal-install`, for instance:
 ```sh
 $ cabal install cabal-install
 $ cabal --version
-cabal-install version 1.24.0.0
-compiled using version 1.24.0.0 of the Cabal library 
+cabal-install version 2.4.1.0
+compiled using version 2.4.1.0 of the Cabal library
 ```
 
-Then install the bindings you need. For instance, for the gtk+ bindings you can do:
-```sh
-$ cabal install gi-gtk
-```
-(Note: you may need to run this command twice, due to [a bug in cabal](https://github.com/haskell/cabal/issues/3436)).
-
-That's it! Here is an example "Hello World" program:
+Here is an example "Hello World" program:
 ```haskell
 {-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
+{- cabal:
+build-depends: base, haskell-gi-base, gi-gtk
+-}
 
 import qualified GI.Gtk as Gtk
 import Data.GI.Base
@@ -82,11 +79,8 @@ main = do
   Gtk.main
 ```
 This program uses the new `OverloadedLabels` extension in GHC 8.0, so make sure you have a recent enough version of GHC installed. To run this program, copy it to a file (`hello.hs`, say), and then
-```
-$ cabal sandbox init
-$ cabal install gi-gtk
-$ cabal exec -- ghc hello.hs
-$ ./hello
+```sh
+$ cabal v2-run hello.hs
 ```
 For a more involved example, see for instance [this WebKit example](https://github.com/haskell-gi/haskell-gi/tree/master/examples). Further documentation can be found in [the Wiki](https://github.com/haskell-gi/haskell-gi/wiki).
 
