@@ -96,7 +96,7 @@ attrType prop = do
       ftype <- foreignType (propType prop)
       return ([], typeShow ftype)
     else do
-      (t,constraints) <- argumentType $ propType prop
+      (t,constraints) <- argumentType (propType prop) WithoutClosures
       return (constraints, t)
 
 -- | Generate documentation for the given setter.
@@ -142,7 +142,7 @@ genPropertyGetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
 genPropertyGetter getter n docSection prop = group $ do
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
-  constructorType <- inboundHaskellType (propType prop)
+  constructorType <- isoHaskellType (propType prop)
   tStr <- propTypeStr $ propType prop
   cls <- classConstraint n
   let constraints = "(MonadIO m, " <> cls <> " o)"
@@ -323,8 +323,8 @@ genOneProperty owner prop = do
              then return "()"
              else do
                sOutType <- if isNullable && propReadNullable prop /= Just False
-                           then typeShow . maybeT <$> inboundHaskellType (propType prop)
-                           else typeShow <$> inboundHaskellType (propType prop)
+                           then typeShow . maybeT <$> isoHaskellType (propType prop)
+                           else typeShow <$> isoHaskellType (propType prop)
                return $ if T.any (== ' ') sOutType
                         then parenthesize sOutType
                         else sOutType

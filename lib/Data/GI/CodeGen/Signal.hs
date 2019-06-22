@@ -21,7 +21,7 @@ import Text.Show.Pretty (ppShow)
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Callable (hOutType, wrapMaybe,
                                  fixupCallerAllocates,
-                                 genDynamicCallableWrapper, ExposeClosures(..),
+                                 genDynamicCallableWrapper,
                                  callableHInArgs, callableHOutArgs)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Conversions
@@ -53,7 +53,7 @@ genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
     line $ "type " <> name' <> " ="
     indent $ do
       forM_ inArgsWithArrows $ \(arrow, arg) -> do
-        ht <- inboundHaskellType (argType arg)
+        ht <- isoHaskellType (argType arg)
         isMaybe <- wrapMaybe arg
         let formattedType = if isMaybe
                             then typeShow (maybeT ht)

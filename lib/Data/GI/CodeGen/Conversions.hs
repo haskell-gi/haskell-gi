@@ -13,11 +13,11 @@ module Data.GI.CodeGen.Conversions
     , transientToH
     , haskellType
     , isoHaskellType
-    , inboundHaskellType
     , haskellTypeConstraint
     , foreignType
 
     , argumentType
+    , ExposeClosures(..)
     , elementType
     , elementMap
     , elementTypeAndMap
@@ -694,17 +694,23 @@ unpackCArray length (TCArray False _ _ t) transfer =
 
 unpackCArray _ _ _ = notImplementedError "unpackCArray : unexpected array type."
 
+-- | Whether to expose closures and the associated destroy notify
+-- handlers in the Haskell wrapper.
+data ExposeClosures = WithClosures
+                    | WithoutClosures
+  deriving (Eq)
+
 -- | Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
 -- list of typeclass constraints for the type.
-argumentType :: Type -> CodeGen (Text, [Text])
-argumentType (TGList a) = do
-  (name, constraints) <- argumentType a
+argumentType :: Type -> ExposeClosures -> CodeGen (Text, [Text])
+argumentType (TGList a) expose = do
+  (name, constraints) <- argumentType a expose
   return ("[" <> name <> "]", constraints)
-argumentType (TGSList a) = do
-  (name, constraints) <- argumentType a
+argumentType (TGSList a) expose = do
+  (name, constraints) <- argumentType a expose
   return ("[" <> name <> "]", constraints)
-argumentType t = do
+argumentType t expose = do
   api <- findAPI t
   s <- typeShow <$> haskellType t
   case api of
@@ -728,7 +734,12 @@ argumentType t = do
         ft <- typeShow <$> foreignType t
         return (ft, [])
       else
-        return (s, [])
+        case expose of
+          WithClosures -> do
+            s_withClosures <- typeShow <$> isoHaskellType t
+            return (s_withClosures, [])
+          WithoutClosures ->
+            return (s, [])
     _ -> return (s, [])
 
 haskellBasicType :: BasicType -> TypeRep
@@ -816,18 +827,6 @@ haskellType t@(TInterface n) = do
              (APIFlags _) -> "[]" `con` [tname `con` []]
              _ -> tname `con` []
 
--- | For convenience untyped `TGClosure` types have a type variable on
--- the Haskell side when they are arguments to functions, but we do
--- not want this when they appear as arguments to callbacks/signals,
--- or return types of properties, as it would force the type
--- synonym/type family to depend on the type variable. Note that for
--- types which are not untyped `TGClosure` this is equivalent to
--- `isoHaskellType`.
-inboundHaskellType :: Type -> CodeGen TypeRep
-inboundHaskellType (TGClosure Nothing) =
-  return $ "GClosure" `con` [con0 "()"]
-inboundHaskellType t = isoHaskellType t
-
 -- | The constraint for setting the given type in properties.
 haskellTypeConstraint :: Type -> CodeGen Text
 haskellTypeConstraint (TGClosure Nothing) =
@@ -845,7 +844,6 @@ haskellTypeConstraint t = do
                          then parenthesize hInType
                          else hInType
 
-
 -- | Whether the callable has closure arguments (i.e. "user_data"
 -- style arguments).
 callableHasClosures :: Callable -> Bool
@@ -860,13 +858,21 @@ typeIsCallback t@(TInterface _) = do
     _ -> return False
 typeIsCallback _ = return False
 
--- | Basically like `haskellType`, but for types which admit a "isomorphic"
--- version of the Haskell type distinct from the usual Haskell type.
--- Generally the Haskell type we expose is isomorphic to the foreign
--- type, but in some cases, such as callbacks with closure arguments,
--- this does not hold, as we omit the closure arguments. This function
--- returns a type which is actually isomorphic.
+-- | Basically like `haskellType`, but for types which admit a
+-- "isomorphic" version of the Haskell type distinct from the usual
+-- Haskell type.  Generally the Haskell type we expose is isomorphic
+-- to the foreign type, but in some cases, such as callbacks with
+-- closure arguments, this does not hold, as we omit the closure
+-- arguments. This function returns a type which is actually
+-- isomorphic. There is another case this function deals with: for
+-- convenience untyped `TGClosure` types have a type variable on the
+-- Haskell side when they are arguments to functions, but we do not
+-- want this when they appear as arguments to callbacks/signals, or
+-- return types of properties, as it would force the type synonym/type
+-- family to depend on the type variable.
 isoHaskellType :: Type -> CodeGen TypeRep
+isoHaskellType (TGClosure Nothing) =
+  return $ "GClosure" `con` [con0 "()"]
 isoHaskellType t@(TInterface n) = do
   api <- findAPI t
   case api of

@@ -3,7 +3,6 @@ module Data.GI.CodeGen.Callable
     ( genCCallableWrapper
     , genDynamicCallableWrapper
     , ForeignSymbol(..)
-    , ExposeClosures(..)
 
     , hOutType
     , skipRetVal
@@ -45,11 +44,6 @@ import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
 
 import Text.Show.Pretty (ppShow)
-
--- | Whether to expose closures and the associated destroy notify
--- handlers in the Haskell wrapper.
-data ExposeClosures = WithClosures
-                    | WithoutClosures
 
 hOutType :: Callable -> [Arg] -> ExcCodeGen TypeRep
 hOutType callable outArgs = do
@@ -120,15 +114,15 @@ wrapMaybe arg = if mayBeNull arg
                 then typeIsNullable (argType arg)
                 else return False
 
--- Given the list of arguments returns the list of constraints and the
+-- | Given the list of arguments returns the list of constraints and the
 -- list of types in the signature.
-inArgInterfaces :: [Arg] -> ExcCodeGen ([Text], [Text])
-inArgInterfaces args = do
+inArgInterfaces :: [Arg] -> ExposeClosures -> ExcCodeGen ([Text], [Text])
+inArgInterfaces args expose = do
   resetTypeVariableScope
   go args
   where go [] = return ([], [])
         go (arg:args) = do
-          (t, cons) <- argumentType (argType arg)
+          (t, cons) <- argumentType (argType arg) expose
           t' <- wrapMaybe arg >>= bool (return t)
             (return $ "Maybe (" <> t <> ")")
           (restCons, restTypes) <- go args
@@ -277,8 +271,8 @@ freeInArgsOnError = freeInArgs' freeInArgOnError
 -- Marshall the haskell arguments into their corresponding C
 -- equivalents. omitted gives a list of DirectionIn arguments that
 -- should be ignored, as they will be dealt with separately.
-prepareArgForCall :: [Arg] -> Arg -> ExcCodeGen Text
-prepareArgForCall omitted arg = do
+prepareArgForCall :: [Arg] -> Arg -> ExposeClosures -> ExcCodeGen Text
+prepareArgForCall omitted arg expose = do
   callback <- findAPI (argType arg) >>=
                 \case Just (APICallback c) -> return (Just c)
                       _ -> return Nothing
@@ -293,7 +287,7 @@ prepareArgForCall omitted arg = do
                         Just c -> if callableThrows (cbCallable c)
                                   -- See [Note: Callables that throw]
                                   then return (escapedArgName arg)
-                                  else prepareInCallback arg c
+                                  else prepareInCallback arg c expose
                         Nothing -> prepareInArg arg
     DirectionInout -> prepareInoutArg arg
     DirectionOut -> prepareOutArg arg
@@ -317,8 +311,8 @@ prepareInArg arg = do
                 return maybeName)
 
 -- | Callbacks are a fairly special case, we treat them separately.
-prepareInCallback :: Arg -> Callback -> CodeGen Text
-prepareInCallback arg (Callback {cbCallable = cb}) = do
+prepareInCallback :: Arg -> Callback -> ExposeClosures -> CodeGen Text
+prepareInCallback arg (Callback {cbCallable = cb}) expose = do
   let name = escapedArgName arg
       ptrName = "ptr" <> name
       scope = argScope arg
@@ -327,7 +321,7 @@ prepareInCallback arg (Callback {cbCallable = cb}) = do
       case argType arg of
         TInterface tn@(Name _ n) ->
             do
-              drop <- if callableHasClosures cb
+              drop <- if callableHasClosures cb && expose == WithoutClosures
                       then Just <$> qualifiedSymbol (callbackDropClosures n) tn
                       else return Nothing
               wrapper <- qualifiedSymbol (callbackHaskellToForeign n) tn
@@ -574,9 +568,9 @@ freeCallCallbacks callable nameMap =
             line $ "safeFreeFunPtr $ castFunPtrToPtr " <> name'
 
 -- | Format the signature of the Haskell binding for the `Callable`.
-formatHSignature :: Callable -> ForeignSymbol -> ExcCodeGen ()
-formatHSignature callable symbol = do
-  sig <- callableSignature callable symbol
+formatHSignature :: Callable -> ForeignSymbol -> ExposeClosures -> ExcCodeGen ()
+formatHSignature callable symbol expose = do
+  sig <- callableSignature callable symbol expose
   indent $ do
       let constraints = "B.CallStack.HasCallStack" : signatureConstraints sig
       line $ "(" <> T.intercalate ", " constraints <> ") =>"
@@ -605,13 +599,14 @@ data Signature = Signature { signatureCallable    :: Callable
 
 -- | The Haskell signature for the given callable. It returns a tuple
 -- ([constraints], [(type, argname)]).
-callableSignature :: Callable -> ForeignSymbol -> ExcCodeGen Signature
-callableSignature callable symbol = do
+callableSignature :: Callable -> ForeignSymbol -> ExposeClosures
+                  -> ExcCodeGen Signature
+callableSignature callable symbol expose = do
   let (hInArgs, _) = callableHInArgs callable
                                     (case symbol of
                                        KnownForeignSymbol _ -> WithoutClosures
                                        DynamicForeignSymbol _ -> WithClosures)
-  (argConstraints, types) <- inArgInterfaces hInArgs
+  (argConstraints, types) <- inArgInterfaces hInArgs expose
   let constraints = ("MonadIO m" : argConstraints)
   outType <- hOutType callable (callableHOutArgs callable)
   return $ Signature {
@@ -790,23 +785,24 @@ genHaskellWrapper n symbol callable expose = group $ do
         hOutArgs = callableHOutArgs callable
 
     line $ name <> " ::"
-    formatHSignature callable symbol
+    formatHSignature callable symbol expose
     let argNames = case symbol of
                      KnownForeignSymbol _ -> map escapedArgName hInArgs
                      DynamicForeignSymbol _ ->
                          funPtr : map escapedArgName hInArgs
     line $ name <> " " <> T.intercalate " " argNames <> " = liftIO $ do"
-    indent (genWrapperBody n symbol callable hInArgs hOutArgs omitted)
+    indent (genWrapperBody n symbol callable hInArgs hOutArgs omitted expose)
     return name
 
 -- | Generate the body of the Haskell wrapper for the given foreign symbol.
 genWrapperBody :: Name -> ForeignSymbol -> Callable ->
                   [Arg] -> [Arg] -> [Arg] ->
+                  ExposeClosures ->
                   ExcCodeGen ()
-genWrapperBody n symbol callable hInArgs hOutArgs omitted = do
+genWrapperBody n symbol callable hInArgs hOutArgs omitted expose = do
     readInArrayLengths n callable hInArgs
     inArgNames <- forM (args callable) $ \arg ->
-                  prepareArgForCall omitted arg
+                  prepareArgForCall omitted arg expose
     -- Map from argument names to names passed to the C function
     let nameMap = Map.fromList $ flip zip inArgNames
                                $ map escapedArgName $ args callable

@@ -21,6 +21,7 @@ data Struct = Struct {
     gtypeStructFor :: Maybe Name,
     -- https://bugzilla.gnome.org/show_bug.cgi?id=560248
     structIsDisguised :: Bool,
+    structForceVisible :: Bool,
     structFields :: [Field],
     structMethods :: [Method],
     structDeprecated :: Maybe DeprecationInfo,
@@ -38,6 +39,7 @@ parseStruct = do
   typeInit <- queryAttrWithNamespace GLibGIRNS "get-type"
   maybeCType <- queryCType
   disguised <- optionalAttr "disguised" False parseBool
+  forceVisible <- optionalAttr "haskell-gi-force-visible" False parseBool
   fields <- parseFields
   constructors <- parseChildrenWithLocalName "constructor" (parseMethod Constructor)
   methods <- parseChildrenWithLocalName "method" (parseMethod OrdinaryMethod)
@@ -51,6 +53,7 @@ parseStruct = do
           , structSize = error ("[size] unfixed struct " ++ show name)
           , gtypeStructFor = structFor
           , structIsDisguised = disguised
+          , structForceVisible = forceVisible
           , structFields = fields
           , structMethods = constructors ++ methods ++ functions
           , structDeprecated = deprecated

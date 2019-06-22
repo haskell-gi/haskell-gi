@@ -29,8 +29,9 @@ import Data.GI.CodeGen.Util
 
 -- | Whether (not) to generate bindings for the given struct.
 ignoreStruct :: Name -> Struct -> Bool
-ignoreStruct (Name _ name) s = isJust (gtypeStructFor s) ||
-                               "Private" `T.isSuffixOf` name
+ignoreStruct (Name _ name) s = (isJust (gtypeStructFor s) ||
+                               "Private" `T.isSuffixOf` name) &&
+                               (not $ structForceVisible s)
 
 -- | Whether the given type corresponds to an ignored struct.
 isIgnoredStructType :: Type -> CodeGen Bool
@@ -139,8 +140,8 @@ buildFieldReader n field = group $ do
                  then return Nothing
                  else maybeNullConvert (fieldType field)
   hType <- typeShow <$> if isJust nullConvert
-                        then maybeT <$> inboundHaskellType (fieldType field)
-                        else inboundHaskellType (fieldType field)
+                        then maybeT <$> isoHaskellType (fieldType field)
+                        else isoHaskellType (fieldType field)
   fType <- typeShow <$> foreignType (fieldType field)
 
   writeHaddock DocBeforeSymbol (getterDoc n field)
@@ -265,8 +266,8 @@ genAttrInfo owner field = do
   embedded <- isEmbedded field
   isNullable <- typeIsNullable (fieldType field)
   outType <- typeShow <$> if not embedded && isNullable
-                          then maybeT <$> inboundHaskellType (fieldType field)
-                          else inboundHaskellType (fieldType field)
+                          then maybeT <$> isoHaskellType (fieldType field)
+                          else isoHaskellType (fieldType field)
   inType <- if isPtr
             then typeShow <$> foreignType (fieldType field)
             else typeShow <$> haskellType (fieldType field)
