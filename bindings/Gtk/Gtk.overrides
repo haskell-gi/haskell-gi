@@ -18,6 +18,10 @@ ignore WidgetPath.iter_add_qclass
 # https://github.com/haskell-gi/haskell-gi/issues/104
 set-attr Gtk/Builder/add_callback_symbol/@parameters/callback_symbol scope notified
 
+# It is useful to expose these class structs when deriving new types
+set-attr Gtk/WidgetClass haskell-gi-force-visible 1
+set-attr Gtk/ContainerClass haskell-gi-force-visible 1
+
 # Not properly annotated in older versions of gtk
 set-attr Gtk/CellLayoutDataFunc/@parameters/data closure 4
 
