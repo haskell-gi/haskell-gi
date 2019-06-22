@@ -9,7 +9,6 @@ import           Foreign.Ptr (castPtr)
 
 import           Data.GI.Base
 import qualified GI.Gdk as Gdk
-import qualified GI.Gio as Gio
 import qualified GI.Gtk as Gtk
 
 toEvent :: Gdk.EventKey -> IO Gdk.Event

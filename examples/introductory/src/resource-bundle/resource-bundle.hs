@@ -5,11 +5,11 @@ module Main where
 import           Data.Maybe (fromJust)
 import           Data.Text (Text)
 -- External resource bundles Step 2: Reactivate next 2 lines
+-- import qualified GI.Gio as Gio
 -- import           System.Environment 
 -- import           System.FilePath 
 
 import           Data.GI.Base
-import qualified GI.Gio as Gio 
 import qualified GI.Gtk as Gtk
 
 unsafeGetObjectWithCast :: GObject o => Gtk.Builder -> Text -> (ManagedPtr o -> o) -> IO o
