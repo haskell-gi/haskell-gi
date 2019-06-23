@@ -18,14 +18,16 @@ module Data.GI.Base.GObject
     -- * User data
     , gobjectGetUserData
     , gobjectSetUserData
+    , gobjectModifyUserData
 
     -- * Deriving new object types
     , DerivedGObject(..)
     , registerGType
     , gobjectGetPrivateData
     , gobjectSetPrivateData
+    , gobjectModifyPrivateData
 
-    , GObjectClass
+    , GObjectClass(..)
     , gtypeFromClass
     , gtypeFromInstance
 
@@ -51,7 +53,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
-                                attrConstruct)
+                                attrConstruct, attrTransfer)
 import Data.GI.Base.BasicTypes (CGType, GType(..), GObject(..),
                                 GDestroyNotify, ManagedPtr(..), GParamSpec(..),
                                 gtypeName)
@@ -65,7 +67,8 @@ import Data.GI.Base.GParamSpec (PropertyInfo(..),
                                 PropGetSetter(..))
 import Data.GI.Base.GQuark (GQuark(..), gQuarkFromString)
 import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
-import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject)
+import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
+                                withTransient)
 import Data.GI.Base.Overloading (ResolveAttribute)
 import Data.GI.Base.Utils (dbgLog)
 
@@ -92,6 +95,8 @@ constructGObject constructor attrs = liftIO $ do
                  IO (GValueConstruct o)
     construct (attr := x) = attrConstruct (resolve attr) x
     construct (attr :=> x) = x >>= attrConstruct (resolve attr)
+    construct (attr :&= x) = attrTransfer (resolve attr) (Proxy @o) x >>=
+                             attrConstruct (resolve attr)
 
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.
@@ -149,7 +154,7 @@ doConstructGObject constructor props = liftIO $ do
         do peek namePtr >>= free
            freeStrings (n-1) (namePtr `plusPtr` sizeOf nullPtr)
 
--- | Opaque wrapper around @GObjectClass@ on the C-side.
+-- | Wrapper around @GObjectClass@ on the C-side.
 newtype GObjectClass = GObjectClass (Ptr GObjectClass)
 
 -- | This typeclass contains the data necessary for defining a new
@@ -169,7 +174,7 @@ class GObject a => DerivedGObject a where
   -- constructed. Returns the private data to be associated with the
   -- new instance (use `gobjectGetPrivateData` and
   -- `gobjectSetPrivateData` to manipulate this further).
-  objectInstanceInit :: GObjectClass -> IO (GObjectPrivateData a)
+  objectInstanceInit :: GObjectClass -> a -> IO (GObjectPrivateData a)
 
 type CGTypeClassInit = GObjectClass -> IO ()
 foreign import ccall "wrapper"
@@ -223,7 +228,7 @@ foreign import ccall "wrapper"
 registerGType :: forall o. (HasCallStack, DerivedGObject o,
                             GObject (GObjectParentType o)) =>
                  (ManagedPtr o -> o) -> IO GType
-registerGType _ = withTextCString (objectTypeName @o) $ \cTypeName -> do
+registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
   cgtype <- g_type_from_name cTypeName
   if cgtype /= 0
     then return (GType cgtype)  -- Already registered
@@ -234,10 +239,11 @@ registerGType _ = withTextCString (objectTypeName @o) $ \cTypeName -> do
       GType <$> register_gtype parentCGType cTypeName classInit instanceInit
 
    where
-     unwrapInstanceInit :: (GObjectClass -> IO (GObjectPrivateData o)) ->
+     unwrapInstanceInit :: (GObjectClass -> o -> IO (GObjectPrivateData o)) ->
                            CGTypeInstanceInit o
      unwrapInstanceInit instanceInit objPtr klass = do
-       privateData <- instanceInit klass
+       privateData <- withTransient construct (castPtr objPtr) $ \obj ->
+                          instanceInit klass obj
        instanceSetPrivateData objPtr privateData
 
      unwrapClassInit :: (GObjectClass -> IO ()) -> CGTypeClassInit
@@ -318,9 +324,17 @@ gobjectSetUserData :: (HasCallStack, GObject o) =>
 gobjectSetUserData obj key value = withManagedPtr obj $ \objPtr ->
   instanceSetUserData objPtr key value
 
--- | Like `gobjectSetUserData`, but it works on the raw object pointer
--- (so this is unsafe, unless used in a context where we are sure that
--- the GC will not release the object while we run).
+-- | A combination of `gobjectGetUserData` and `gobjectSetUserData`,
+-- for convenience.
+gobjectModifyUserData :: (HasCallStack, GObject o) =>
+                   o -> GQuark a -> (Maybe a -> a) -> IO ()
+gobjectModifyUserData obj key transform = do
+  userData <- gobjectGetUserData obj key
+  gobjectSetUserData obj key (transform userData)
+
+-- | Like `gobjectSetUserData`, but it works on the raw object pointer.
+-- Note that this is unsafe, unless used in a context where we are sure that
+-- the GC will not release the object while we run.
 instanceSetUserData :: (HasCallStack, GObject o) =>
                     Ptr o -> GQuark a -> a -> IO ()
 instanceSetUserData objPtr key value = do
@@ -343,6 +357,14 @@ instanceSetPrivateData objPtr priv = do
 
 foreign import ccall g_object_class_install_property ::
    GObjectClass -> CUInt -> Ptr GParamSpec -> IO ()
+
+-- | Modify the private data for the given object.
+gobjectModifyPrivateData :: forall o. (HasCallStack, DerivedGObject o) =>
+                         o -> (GObjectPrivateData o -> GObjectPrivateData o)
+                         -> IO ()
+gobjectModifyPrivateData obj transform = do
+  private <- gobjectGetPrivateData obj
+  gobjectSetPrivateData obj (transform private)
 
 -- | Add a Haskell object-valued property to the given object class.
 gobjectInstallProperty :: DerivedGObject o =>

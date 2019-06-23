@@ -24,9 +24,6 @@ class Constructible a (tag :: AttrOpTag) where
   new :: MonadIO m => (ManagedPtr a -> a) -> [AttrOp a tag] -> m a
 
 -- | Default instance, assuming we have a `GObject`.
-instance
-#if MIN_VERSION_base(4,8,0)
-    {-# OVERLAPPABLE #-}
-#endif
+instance {-# OVERLAPPABLE #-}
     (GObject a, tag ~ 'AttrConstruct) => Constructible a tag where
         new = constructGObject

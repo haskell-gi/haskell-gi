@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs, ScopedTypeVariables, DataKinds, KindSignatures,
   TypeFamilies, TypeOperators, MultiParamTypeClasses, ConstraintKinds,
-  UndecidableInstances, FlexibleInstances #-}
+  UndecidableInstances, FlexibleInstances, TypeApplications #-}
 
 -- |
 --
@@ -174,13 +174,18 @@ instance a ~ x => IsLabel x (AttrLabelProxy a) where
 class AttrInfo (info :: *) where
     -- | The operations that are allowed on the attribute.
     type AttrAllowedOps info :: [AttrOpTag]
-    -- | Constraint on the value being set.
-    type AttrSetTypeConstraint info :: * -> Constraint
     -- | Constraint on the type for which we are allowed to
     -- create\/set\/get the attribute.
     type AttrBaseTypeConstraint info :: * -> Constraint
+    -- | Constraint on the value being set.
+    type AttrSetTypeConstraint info :: * -> Constraint
     -- | Type returned by `attrGet`.
     type AttrGetType info
+    -- | Constraint on the value being set, with allocation allowed
+    -- (see ':&=' below).
+    type AttrTransferTypeConstraint info :: * -> Constraint
+    -- | Type resulting from the allocation.
+    type AttrTransferType info :: *
     -- | Name of the attribute.
     type AttrLabel info :: Symbol
     -- | Type which introduces the attribute.
@@ -201,6 +206,13 @@ class AttrInfo (info :: *) where
     attrConstruct :: (AttrBaseTypeConstraint info o,
                       AttrSetTypeConstraint info b) =>
                      Proxy info -> b -> IO (GValueConstruct o)
+    -- | Allocate memory as necessary to generate a settable type from
+    -- the transfer type. This is useful for types which needs
+    -- allocations for marshalling from Haskell to C, this makes the
+    -- allocation explicit.
+    attrTransfer :: (AttrBaseTypeConstraint info o,
+                     AttrTransferTypeConstraint info b) =>
+                Proxy info -> Proxy o -> b -> IO (AttrTransferType info)
 
 -- | Result of checking whether an op is allowed on an attribute.
 data OpAllowed tag attrName definingType useType =
@@ -313,6 +325,22 @@ data AttrOp obj (tag :: AttrOpTag) where
               (AttrSetTypeConstraint info) b,
               a ~ (AttrGetType info)) =>
              AttrLabelProxy (attr :: Symbol) -> (a -> IO b) -> AttrOp obj tag
+    -- | Assign a value to an attribute, allocating any necessary
+    -- memory for representing the Haskell value as a C value. Note
+    -- that it is the responsibility of the caller to make sure that
+    -- the memory is freed when no longer used, otherwise there will
+    -- be a memory leak. In the majority of cases you probably want to
+    -- use ':=' instead, which has no potential memory leaks (at the
+    -- cost of sometimes requiring some explicit Haskell -> C
+    -- marshalling).
+    (:&=) :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
+              AttrInfo info,
+              AttrBaseTypeConstraint info obj,
+              AttrOpAllowed tag info obj,
+              (AttrTransferTypeConstraint info) b,
+              AttrSetTypeConstraint info (AttrTransferType info)) =>
+             AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
 
 -- | Set a number of properties for some object.
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
@@ -327,6 +355,8 @@ set obj = liftIO . mapM_ app
    app (attr :~  f) = attrGet (resolve attr) obj >>=
                       \v -> attrSet (resolve attr) obj (f v)
    app (attr :~> f) = attrGet (resolve attr) obj >>= f >>=
+                      attrSet (resolve attr) obj
+   app (attr :&= x) = attrTransfer (resolve attr) (Proxy @o) x >>=
                       attrSet (resolve attr) obj
 
 -- | Constraints on a @obj@\/@attr@ pair so `get` is possible,

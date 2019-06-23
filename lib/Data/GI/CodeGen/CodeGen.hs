@@ -43,6 +43,10 @@ import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName,
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
+-- | Standard derived instances for newtypes wrapping @ManagedPtr@s.
+newtypeDeriving :: CodeGen ()
+newtypeDeriving = indent $ line $ "deriving (Eq)"
+
 genFunction :: Name -> Function -> CodeGen ()
 genFunction n (Function symbol fnMovedTo callable) =
     -- Only generate the function if it has not been moved.
@@ -103,6 +107,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
    let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
    hsBoot decl
    decl
+   newtypeDeriving
 
    addSectionDocumentation ToplevelSection (structDocumentation s)
 
@@ -146,6 +151,7 @@ genUnion n u = do
   let decl = line $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
   hsBoot decl
   decl
+  newtypeDeriving
 
   addSectionDocumentation ToplevelSection (unionDocumentation u)
 
@@ -349,6 +355,7 @@ genObject n o = do
   else do
     writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
     bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
+    newtypeDeriving
     exportDecl (name' <> "(..)")
 
     addSectionDocumentation ToplevelSection (objDocumentation o)
@@ -393,6 +400,7 @@ genInterface n iface = do
   writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
   deprecatedPragma name' $ ifDeprecated iface
   bline $ "newtype " <> name' <> " = " <> name' <> " (ManagedPtr " <> name' <> ")"
+  newtypeDeriving
   exportDecl (name' <> "(..)")
 
   addSectionDocumentation ToplevelSection (ifDocumentation iface)

@@ -13,7 +13,6 @@ module Data.GI.CodeGen.Conversions
     , transientToH
     , haskellType
     , isoHaskellType
-    , haskellTypeConstraint
     , foreignType
 
     , argumentType
@@ -826,23 +825,6 @@ haskellType t@(TInterface n) = do
   return $ case api of
              (APIFlags _) -> "[]" `con` [tname `con` []]
              _ -> tname `con` []
-
--- | The constraint for setting the given type in properties.
-haskellTypeConstraint :: Type -> CodeGen Text
-haskellTypeConstraint (TGClosure Nothing) =
-  return $ "(~) " <> parenthesize (typeShow ("GClosure" `con` [con0 "()"]))
-haskellTypeConstraint t = do
-  isGO <- isGObject t
-  if isGO
-    then typeConstraint t
-    else do
-      isCallback <- typeIsCallback t
-      hInType <- if isCallback
-                 then typeShow <$> foreignType t
-                 else typeShow <$> haskellType t
-      return $ "(~) " <> if T.any (== ' ') hInType
-                         then parenthesize hInType
-                         else hInType
 
 -- | Whether the callable has closure arguments (i.e. "user_data"
 -- style arguments).

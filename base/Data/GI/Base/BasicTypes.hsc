@@ -68,6 +68,11 @@ data ManagedPtr a = ManagedPtr {
     -- ^ When disowned, the `CallStack` for the disowning call.
     }
 
+-- | Two 'ManagedPtr's are equal if they wrap the same underlying
+-- C 'Ptr'.
+instance Eq (ManagedPtr a) where
+  a == b = managedForeignPtr a == managedForeignPtr b
+
 -- | A constraint ensuring that the given type is coercible to a
 -- ManagedPtr. It will hold for newtypes of the form
 --
