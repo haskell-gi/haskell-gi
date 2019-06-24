@@ -27,14 +27,15 @@ methodInfoName n method =
 -- | Appropriate instances so overloaded labels are properly resolved.
 genMethodResolver :: Text -> CodeGen ()
 genMethodResolver n = do
+  addLanguagePragma "TypeApplications"
   group $ do
     line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
           <> "O.MethodInfo info " <> n <> " p) => OL.IsLabel t ("
           <> n <> " -> p) where"
     line $ "#if MIN_VERSION_base(4,10,0)"
-    indent $ line $ "fromLabel = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
+    indent $ line $ "fromLabel = O.overloadedMethod @info"
     line $ "#else"
-    indent $ line $ "fromLabel _ = O.overloadedMethod (O.MethodProxy :: O.MethodProxy info)"
+    indent $ line $ "fromLabel _ = O.overloadedMethod @info"
     line $ "#endif"
 
 -- | Generate the `MethodList` instance given the list of methods for
@@ -52,6 +53,7 @@ genMethodList n methods = do
               return ((lowerName . methodName) method, mi)
   group $ do
     let resolver = "Resolve" <> name <> "Method"
+    export (NamedSubsection MethodSection "Overloaded methods") resolver
     line $ "type family " <> resolver <> " (t :: Symbol) (o :: *) :: * where"
     indent $ forM_ infos $ \(label, info) -> do
         line $ resolver <> " \"" <> label <> "\" o = " <> info
@@ -89,7 +91,7 @@ genMethodInfo n m =
                  <> ") => O.MethodInfo " <> infoName <> " " <> obj <> " signature where"
         let mn = methodName m
             mangled = lowerName (mn {name = name n <> "_" <> name mn})
-        indent $ line $ "overloadedMethod _ = " <> mangled
+        indent $ line $ "overloadedMethod = " <> mangled
         export (NamedSubsection MethodSection $ lowerName mn) infoName
 
 -- | Generate a method info that is not actually callable, but rather
@@ -100,8 +102,8 @@ genUnsupportedMethodInfo n m = do
   line $ "-- XXX: Dummy instance, since code generation failed.\n"
            <> "-- Please file a bug at http://github.com/haskell-gi/haskell-gi."
   bline $ "data " <> infoName
-  line $ "instance (p ~ (), o ~ O.MethodResolutionFailed \""
+  line $ "instance (p ~ (), o ~ O.UnsupportedMethodError \""
            <> lowerName (methodName m) <> "\" " <> name n
            <> ") => O.MethodInfo " <> infoName <> " o p where"
-  indent $ line $ "overloadedMethod _ = undefined"
+  indent $ line $ "overloadedMethod = undefined"
   export ToplevelSection infoName

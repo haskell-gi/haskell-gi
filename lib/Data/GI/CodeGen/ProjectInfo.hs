@@ -42,7 +42,7 @@ defaultExtensions = ["NoImplicitPrelude", "ScopedTypeVariables", "CPP",
 -- | Extensions that will be used in some modules, but we do not wish
 -- to turn on by default.
 otherExtensions :: [Text]
-otherExtensions = ["PatternSynonyms", "ViewPatterns"]
+otherExtensions = ["PatternSynonyms", "ViewPatterns", "TypeApplications"]
 
 -- | Default options for GHC when compiling generated code.
 ghcOptions :: [Text]

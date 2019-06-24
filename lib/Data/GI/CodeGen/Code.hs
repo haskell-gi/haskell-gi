@@ -40,6 +40,7 @@ module Data.GI.CodeGen.Code
     , hsBoot
     , submodule
     , setLanguagePragmas
+    , addLanguagePragma
     , setGHCOptions
     , setModuleFlags
     , setModuleMinBase
@@ -641,6 +642,12 @@ export s n = exportPartial (Export (ExportSymbol s) n)
 setLanguagePragmas :: [Text] -> CodeGen ()
 setLanguagePragmas ps =
     modify' $ \(cgs, s) -> (cgs, s{modulePragmas = Set.fromList ps})
+
+-- | Add a language pragma for the current module.
+addLanguagePragma :: Text -> CodeGen ()
+addLanguagePragma p =
+  modify' $ \(cgs, s) -> (cgs, s{modulePragmas =
+                                 Set.insert p (modulePragmas s)})
 
 -- | Set the GHC options for compiling this module (in a OPTIONS_GHC pragma).
 setGHCOptions :: [Text] -> CodeGen ()

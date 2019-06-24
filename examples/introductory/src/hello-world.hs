@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
 
+{-# OPTIONS_GHC -fno-warn-unused-do-bind  -fplugin=Data.GI.Base.MapLookup -dcore-lint #-}
+
 {- Hello World example of GTK+ documentation. For information please refer to README -}
 
 module Main where

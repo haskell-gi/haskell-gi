@@ -1,5 +1,5 @@
 name:                haskell-gi
-version:             0.22.6
+version:             0.23.0
 synopsis:            Generate Haskell bindings for GObject Introspection capable libraries
 description:         Generate Haskell bindings for GObject Introspection capable libraries. This includes most notably
                      Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
@@ -14,8 +14,8 @@ maintainer:          Iñaki García Etxebarria (inaki@blueleaf.cc)
 stability:           Experimental
 category:            Development
 build-type:          Simple
-tested-with:         GHC == 7.8.4, GHC == 7.10.3, GHC == 8.0.1, GHC == 8.4.1, GHC == 8.6.1
-cabal-version:       >=1.8
+tested-with:         GHC == 8.0.1, GHC == 8.4.1, GHC == 8.6.1
+cabal-version:       2.0
 
 extra-source-files: ChangeLog.md
 
@@ -24,11 +24,12 @@ source-repository head
   location: git://github.com/haskell-gi/haskell-gi.git
 
 Library
+  default-language:    Haskell2010
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.32, gobject-2.0 >= 2.32
   build-depends:       base >= 4.9 && < 5,
-                       haskell-gi-base == 0.22.*,
+                       haskell-gi-base >= 0.23.0 && <0.24,
                        Cabal >= 1.24,
-                       attoparsec == 0.13.*,
+                       attoparsec >= 0.13,
                        containers,
                        directory,
                        filepath,
@@ -39,11 +40,11 @@ Library
                        safe,
                        bytestring,
                        xdg-basedir,
-                       xml-conduit >= 1.3.0,
+                       xml-conduit >= 1.3,
                        regex-tdfa >= 1.2,
                        text >= 1.0
 
-  extensions:          CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
+  default-extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
   ghc-options:         -Wall -fwarn-incomplete-patterns -fno-warn-name-shadowing
 
   ghc-options: -Wcompat
@@ -113,6 +114,7 @@ Library
 
 test-suite doctests
   type:          exitcode-stdio-1.0
+  default-language: Haskell2010
   ghc-options:   -threaded
   main-is:       DocTests.hs
   build-depends: base

@@ -1,3 +1,7 @@
+### 3.0.7
+
++ Update for haskell-gi(-base)-0.23
+
 ### 3.0.6
 
 + Add support for inherited dependencies
