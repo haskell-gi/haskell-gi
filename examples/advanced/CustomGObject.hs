@@ -5,7 +5,7 @@ import Data.GI.Base
 import qualified GI.Gtk as Gtk
 
 import Data.GI.Base.GObject (gobjectGetPrivateData, gobjectSetPrivateData)
-import CustomButton (CustomButton(..))
+import CustomContainer (CustomContainer(..))
 
 main :: IO ()
 main = do
@@ -15,16 +15,16 @@ main = do
 
   _ <- on win #destroy Gtk.mainQuit
 
-  vbox <- new Gtk.Box [#orientation := Gtk.OrientationVertical]
-  #add win vbox
+  container <- new CustomContainer []
+  #add win container
 
-  button <- new CustomButton [#label := "Check private value"]
+  button <- new Gtk.Button [#label := "Check private value"]
   _ <- on button #clicked $ do
-    priv <- gobjectGetPrivateData button
-    print priv
-    gobjectSetPrivateData button (priv+1)
+    priv <- gobjectGetPrivateData container
+    print $ length priv
+    #remove container button
 
-  #add vbox button
+  #add container button
 
   #showAll win
 
