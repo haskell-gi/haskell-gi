@@ -23,19 +23,24 @@ module CustomContainer
   ) where
 
 import Data.GI.Base (GObject(..), ManagedPtr(..), unsafeCastTo, withTransient,
-                     get, set, new, AttrOp((:=), (:&=)), GType)
+                     get, set, new, AttrOp((:=), (:&=)), GType, toGValue)
+import Data.GI.Base.Attributes (AttrInfo(..), AttrOpTag(..))
+import Data.GI.Base.GValue (GValueConstruct(..))
 
 import Data.GI.Base.GObject (DerivedGObject(..), GObjectClass(..),
-                             registerGType,
-                             gobjectModifyPrivateData, gobjectGetPrivateData,
-                             gobjectSetPrivateData )
+                             registerGType, gobjectInstallCIntProperty,
+                             gobjectModifyPrivateData, gobjectGetPrivateData )
+import Data.GI.Base.GParamSpec (CIntPropertyInfo(..))
 import qualified Data.GI.Base.Overloading as O
 
-import Control.Monad (when, forM_, filterM)
+import Control.Monad (when, forM, forM_, filterM, foldM_)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Coerce (coerce)
 import Data.Int (Int32)
+import qualified Data.Vector as V
+import Data.Vector ((//), (!))
 import Foreign.Ptr (Ptr)
+import Foreign.C (CInt(..))
 
 import GHC.OverloadedLabels as OL
 
@@ -55,6 +60,15 @@ newtype CustomContainer = CustomContainer (ManagedPtr CustomContainer)
 instance GObject CustomContainer where
   gobjectType = registerGType CustomContainer
 
+-- We keep the private data of the CustomContainer here.
+data CustomContainerPrivate =
+  CustomContainerPrivate { ccChildren  :: [Gtk.Widget]
+                           -- ^ List of children of the custom container.
+                         , ccNColumns  :: Maybe Int
+                           -- ^ Number of columns to use when laying
+                           -- out children.
+                         }
+
 -- Information for the type system. This will be picked up by
 -- 'registerGType' above.
 instance DerivedGObject CustomContainer where
@@ -62,7 +76,7 @@ instance DerivedGObject CustomContainer where
   type GObjectParentType  CustomContainer = Gtk.Container
   -- Every custom type has associated private data, which can be of
   -- any type.
-  type GObjectPrivateData CustomContainer = [Gtk.Widget]
+  type GObjectPrivateData CustomContainer = CustomContainerPrivate
 
   -- Name of the type we are about to register. Make sure that it does
   -- not clash with an existing type name. See
@@ -105,10 +119,95 @@ instance (GObject o, O.IsDescendantOf CustomContainer o) => IsCustomContainer o
 toCustomContainer :: (MonadIO m, IsCustomContainer o) => o -> m CustomContainer
 toCustomContainer = liftIO . unsafeCastTo CustomContainer
 
--- Allow the overloaded attribute syntax to work. In this case inherit
--- all attributes of our parent type.
+-- A CInt-valued property allowing to (optionally) fix the number of
+-- columns used for layout).
+numColumnsProperty :: CIntPropertyInfo CustomContainer
+numColumnsProperty =
+  CIntPropertyInfo { name   = "num-columns"
+                   , nick   = "Number of columns"
+                   , defaultValue = 0
+                   , minValue = Just 0
+                   , maxValue = Nothing
+                   , blurb  = "Number of columns to use when laying out the children, or 0 for choosing an automatic value"
+                   , setter = setNumColumnsCInt
+                   , getter = getNumColumnsCInt
+                   , flags  = Nothing
+                   }
+
+-- Set the value of the "num-columns" property using a CInt.
+setNumColumnsCInt :: CustomContainer -> CInt -> IO ()
+setNumColumnsCInt container n =
+  setNumColumns container $ if n <= 0
+                            then Nothing
+                            else Just (fromIntegral n)
+
+-- Set the value of "num-columns" using a Maybe Int.
+setNumColumns :: CustomContainer -> Maybe Int -> IO ()
+setNumColumns container newValue = do
+  oldValue <- ccNColumns <$> gobjectGetPrivateData container
+  if newValue == oldValue
+    then return ()
+    else do
+      gobjectModifyPrivateData container
+                     (\priv -> priv {ccNColumns = newValue})
+      #queueAllocate container
+
+-- Get the value of the "num-columns" property.
+getNumColumnsCInt :: CustomContainer -> IO CInt
+getNumColumnsCInt container = do
+  nCol <- ccNColumns <$> gobjectGetPrivateData container
+  case nCol of
+    Just n -> return (fromIntegral n)
+    Nothing -> return 0
+
+-- Tell the type system about the "num-columns" property, so we can
+-- use the overloading syntax.
+data NumColumnsAttrInfo
+
+-- This instance encodes the information for the property at the type
+-- level.
+instance AttrInfo NumColumnsAttrInfo where
+  -- This is a list of the actions allowed on the attribute: we can
+  -- get, set, and create it when constructing the object.
+  type AttrAllowedOps NumColumnsAttrInfo = '[ 'AttrGet, 'AttrSet, 'AttrConstruct ]
+
+  -- For which types can we get/set the attribute. Anything deriving
+  -- from CustomContainer will do.
+  type AttrBaseTypeConstraint NumColumnsAttrInfo = IsCustomContainer
+
+  -- Which does does 'get' on the property return. By default this is
+  -- also the type that 'set' and 'new' accept.
+  type AttrGetType NumColumnsAttrInfo = Maybe Int
+
+  -- Text description for the attribute, for error messages.
+  type AttrLabel NumColumnsAttrInfo = "num-columns"
+
+  -- Type defining the attribute, for error messages.
+  type AttrOrigin NumColumnsAttrInfo = CustomContainer
+
+  -- Get the value of the attribute. The first argument here, and in
+  -- 'attrSet' and 'attrConstruct', is a Proxy argument, to be
+  -- ignored.
+  attrGet _ container = ccNColumns <$>
+                        gobjectGetPrivateData (coerce container :: CustomContainer)
+
+  -- Set the value of the argument.
+  attrSet _ container val = setNumColumns (coerce container :: CustomContainer) val
+
+  -- Construct a 'GValue' containing the argument, tagged by the
+  -- associated property name.
+  attrConstruct _ val = do
+    newValue <- case val of
+      Just n -> toGValue (fromIntegral n :: CInt)
+      Nothing -> toGValue (0 :: CInt)
+    return $ GValueConstruct "num-columns" newValue
+
+-- Allow the overloaded attribute syntax to work. In this case we
+-- inherit all attributes of our parent type, and add the numColumns
+-- property.
 instance O.HasAttributeList CustomContainer
-type instance O.AttributeList CustomContainer = O.AttributeList Gtk.Container
+type instance O.AttributeList CustomContainer =
+  '("numColumns", NumColumnsAttrInfo) ': O.AttributeList Gtk.Container
 
 -- Support overloaded signals. The following says that we support all
 -- signals of our parent type.
@@ -130,29 +229,6 @@ instance (info ~ ResolveCustomContainerMethod t CustomContainer,
     fromLabel _ = O.overloadedMethod @info
 #endif
 
-{-
-/* Initialize the PSquare class */
-static void
-p_square_class_init(PSquareClass *klass)
-{
-	/* Override GtkWidget methods */
-	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
-	widget_class->get_preferred_width = p_square_get_preferred_width;
-	widget_class->get_preferred_height = p_square_get_preferred_height;
-	widget_class->size_allocate = p_square_size_allocate;
-
-	/* Override GtkContainer methods */
-	GtkContainerClass *container_class = GTK_CONTAINER_CLASS(klass);
-	container_class->child_type = p_square_child_type;
-	container_class->add = p_square_add;
-	container_class->remove = p_square_remove;
-	container_class->forall = p_square_forall;
-
-	/* Add private indirection member */
-	g_type_class_add_private(klass, sizeof(PSquarePrivate));
-}
--}
-
 -- This method is run at class creation time.
 customContainerClassInit :: GObjectClass -> IO ()
 customContainerClassInit klass = do
@@ -169,106 +245,234 @@ customContainerClassInit klass = do
                        , #remove    :&= customContainerRemove
                        , #forall    :&= customContainerForall ]
 
+  -- Install the "num-columns" property.
+  gobjectInstallCIntProperty klass numColumnsProperty
+
   return ()
-
-{-
-/* Initialize a new PSquare instance */
-static void
-p_square_init(PSquare *square)
-{
-	/* This means that PSquare doesn't supply its own GdkWindow */
-	gtk_widget_set_has_window(GTK_WIDGET(square), FALSE);
-	/* Set redraw on allocate to FALSE if the top left corner of your widget
-	 * doesn't change when it's resized; this saves time */
-	/*gtk_widget_set_redraw_on_allocate(GTK_WIDGET(square), FALSE);*/
-
-	/* Initialize private members */
-	PSquarePrivate *priv = P_SQUARE_PRIVATE(square);
-	priv->children = NULL;
-}
--}
 
 -- This method is run for each created instance.
 customContainerInstanceInit :: GObjectClass -> CustomContainer
-                            -> IO [Gtk.Widget]
+                            -> IO CustomContainerPrivate
 customContainerInstanceInit _klass custom = do
   -- We do not create any window ourselves, let Gtk know this.
   #setHasWindow custom False
 
-  -- We have no children yet.
-  return []
+  -- We have no children yet, and the we will set the number of
+  -- columns dynamically..
+  return $ CustomContainerPrivate { ccChildren = []
+                                  , ccNColumns = Nothing }
+
+-- Get the children of the container.
+getChildren :: CustomContainer -> IO [Gtk.Widget]
+getChildren container = ccChildren <$> gobjectGetPrivateData container
+
+getNColumnsAndRows :: CustomContainer -> IO (Int, Int)
+getNColumnsAndRows container = do
+  visibleChildren <- getChildren container >>= filterM (`get` #visible)
+  maybeNCols <- ccNColumns <$> gobjectGetPrivateData container
+
+  let nVisibleChildren = length visibleChildren
+  if nVisibleChildren > 0
+    then let nColumns = case maybeNCols of
+               Nothing -> ceiling . sqrt . fromIntegral @_ @Double $ nVisibleChildren
+               Just n -> n
+             nRows = ceiling (fromIntegral nVisibleChildren / fromIntegral nColumns :: Double)
+         in return (nColumns, nRows)
+    else return (0,0)
+
+data RequestedSize = RequestedSize { rMinimal :: Int32
+                                   , rNatural :: Int32 }
+
+instance Semigroup RequestedSize where
+  (RequestedSize rm rn) <> (RequestedSize sm sn) = RequestedSize (rm+sm) (rn+sn)
+
+getGroupSizes :: CustomContainer -> Gtk.Orientation
+              -> Maybe (V.Vector RequestedSize) -> Int
+              -> IO (V.Vector RequestedSize)
+getGroupSizes container orientation maybePerpSizes nGroups = do
+  visibleChildren <- getChildren container >>= filterM (`get` #visible)
+  childrenSizes <- forM (zip [0..] visibleChildren) $ \(count, child) ->
+    if orientation == Gtk.OrientationHorizontal
+    then let perpGroupNum = count `div` nGroups
+         in case maybePerpSizes of
+              Nothing -> #getPreferredWidth child
+              Just perpSizes -> #getPreferredWidthForHeight child
+                                (rMinimal $ perpSizes!perpGroupNum)
+    else let perpGroupNum = count `mod` nGroups
+         in case maybePerpSizes of
+              Nothing -> #getPreferredHeight child
+              Just perpSizes -> #getPreferredHeightForWidth child
+                                (rMinimal $ perpSizes!perpGroupNum)
+
+  let initialSizes = V.replicate nGroups (0,0)
+      indexedSizes = zip [0..] childrenSizes
+      adjustSizes :: Ord a => V.Vector (a,a) -> (Int, (a,a)) -> V.Vector (a,a)
+      adjustSizes acc (count, (childMinimal, childNatural)) =
+        let groupNum = if orientation ==  Gtk.OrientationHorizontal
+                       then count `mod` nGroups
+                       else count `div` nGroups
+            (prevMin, prevNatural) = acc!groupNum
+        in acc // [(groupNum,
+                    (max prevMin childMinimal, max prevNatural childNatural))]
+      sizes = foldl adjustSizes initialSizes indexedSizes
+
+  return $ V.map (uncurry RequestedSize) sizes
+
+getSize :: CustomContainer -> Gtk.Orientation -> IO RequestedSize
+getSize container orientation = do
+  borderWidth <- fromIntegral <$> container `get` #borderWidth
+
+  let borderSize = RequestedSize (borderWidth * 2) (borderWidth * 2)
+
+  (nGroups, _) <- getNColumnsAndRows container
+  if nGroups == 0
+    then return borderSize
+    else do
+      sizes <- getGroupSizes container orientation Nothing nGroups
+      return $ foldl (<>) borderSize sizes
+
+distributeExtraSpace :: CustomContainer -> V.Vector RequestedSize
+                     -> Int32 -> Int -> IO (V.Vector RequestedSize)
+distributeExtraSpace _container startingSizes extraSpace' nGroups = do
+  (extraSpace, sizes) <-
+    if extraSpace' > 0
+    then do
+      requestedSizes <- V.forM startingSizes $ \r ->
+        new Gtk.RequestedSize [ #minimumSize := rMinimal r
+                              , #naturalSize := rNatural r ]
+      (result, resized) <- Gtk.distributeNaturalAllocation extraSpace'
+                           (V.toList requestedSizes)
+      -- The call to Gtk.distributeNaturalAllocation modifies
+      -- 'requestedSizes', convert the results back to
+      -- `RequestedSize`.
+      newSizes <- forM resized $ \request -> do
+        minimal <- request `get` #minimumSize
+        natural <- request `get` #naturalSize
+        return $ RequestedSize {rMinimal = minimal, rNatural = natural}
+      return (result, V.fromList newSizes)
+    else return (extraSpace', startingSizes)
+
+  let extraPerGroup = extraSpace `div` fromIntegral nGroups
+
+  return $ foldl (adjustSize extraPerGroup) sizes [0 .. nGroups-1]
+
+  where adjustSize :: Int32 -> V.Vector RequestedSize -> Int
+                   -> V.Vector RequestedSize
+        adjustSize extraPerGroup sizes count =
+          let r = sizes!count
+              newMin = (rMinimal r + extraPerGroup)
+              r' = r {rMinimal = newMin}
+              sizes' = sizes // [(count, r')]
+          in if newMin >= 0
+             then sizes'
+             else -- If the above results in a negative width,
+                  -- redistribute pixels from other non-zero columns
+                  -- to this one.
+               redistribute count (count+1) sizes'
+
+        redistribute :: Int -> Int -> V.Vector RequestedSize
+                     -> V.Vector RequestedSize
+        redistribute count count2 sizes
+          | rMinimal (sizes!count) >= 0 = sizes
+          | otherwise = let modCount2 = count2 `mod` fromIntegral nGroups
+                in if count2 == count || rMinimal (sizes!count) < 0
+                   then redistribute count (modCount2+1) sizes
+                   else let r = sizes!count
+                            r2 = sizes!count2
+                            sizes' = sizes //
+                                     [(count, r {rMinimal = rMinimal r  + 1}),
+                                      (count2, r2{rMinimal = rMinimal r2 - 1})]
+                        in redistribute count (modCount2+1) sizes'
+
 
 customContainerGetPreferredWidth :: Gtk.Widget -> IO (Int32, Int32)
-customContainerGetPreferredWidth _container = return (200, 400)
+customContainerGetPreferredWidth container = do
+  RequestedSize minimal natural <- getSize (coerce container)
+                                   Gtk.OrientationHorizontal
+  return (minimal, natural)
 
 customContainerGetPreferredHeight :: Gtk.Widget -> IO (Int32, Int32)
-customContainerGetPreferredHeight _container = return (200, 400)
+customContainerGetPreferredHeight container = do
+  RequestedSize minimal natural <- getSize (coerce container)
+                                   Gtk.OrientationVertical
+  return (minimal, natural)
 
 customContainerSizeAllocate :: Gtk.Widget -> Gdk.Rectangle -> IO ()
-customContainerSizeAllocate container allocation = do
+customContainerSizeAllocate containerAsWidget allocation = do
+  let container = coerce containerAsWidget :: CustomContainer
+
   #setAllocation container allocation
 
-  childAlloc <- new Gdk.Rectangle [ #x := 0, #y := 0,
-                                    #width := 100, #height := 100 ]
-  children <- gobjectGetPrivateData (coerce @_ @CustomContainer container)
+  -- Compute the number of columns and rows
+  (nColumns, nRows) <- getNColumnsAndRows container
+  if nColumns == 0
+    then return ()
+    else do
+      -- Compute how much extra space we need
+      borderWidth <- fromIntegral <$> container `get` #borderWidth
+      allocWidth <- allocation `get` #width
+      allocHeight <- allocation `get` #height
 
-  forM_ children $ \child -> do
-    #sizeAllocate child childAlloc
+      let extraWidth = allocWidth - 2*borderWidth
+          extraHeight = allocHeight - 2*borderWidth
 
-  return ()
+      -- Get the ideal sizes of each column
+      widths <- getGroupSizes container Gtk.OrientationHorizontal Nothing
+                nColumns
 
-{-
-/* Call the function for all the container's children. This function
- * ignores the include_internals argument, because there are no
- * "internal" children. */
-static void
-p_square_forall(GtkContainer *container, gboolean include_internals,
-	GtkCallback callback, gpointer callback_data)
-{
-	PSquarePrivate *priv = P_SQUARE_PRIVATE(container);
-	g_list_foreach(priv->children, (GFunc)callback, callback_data);
-}
--}
+      -- Distribute the extra space per columns
+      let remainingWidth = foldl (-) extraWidth (V.toList $ V.map rMinimal widths)
+      resizedWidths <- distributeExtraSpace container widths remainingWidth
+                       nColumns
+
+      -- Do the same for heights, now that we know widths
+      heights <- getGroupSizes container Gtk.OrientationVertical (Just widths)
+                 nColumns
+
+      -- Distribute the extra space per rows
+      let remainingHeight = foldl (-) extraHeight (V.toList $ V.map rMinimal heights)
+      resizedHeights <- distributeExtraSpace container heights remainingHeight
+                        nRows
+
+      -- Start positioning the items at the container's origin, less
+      -- the border width.
+      allocX <- allocation `get` #x
+      allocY <- allocation `get` #y
+      let x0 = allocX + borderWidth
+          y0 = allocY + borderWidth
+
+      visibleChildren <- getChildren container >>= filterM (`get` #visible)
+
+      let allocChild :: (Int32, Int32) -> (Int, Gtk.Widget) -> IO (Int32, Int32)
+          allocChild (x,y) (count, child) = do
+            let childWidth = rMinimal $ resizedWidths!(count `mod` nColumns)
+                childHeight = rMinimal $ resizedHeights!(count `div` nColumns)
+            childAllocation <- new Gdk.Rectangle [ #x := x
+                                                 , #y := y
+                                                 , #width := childWidth
+                                                 , #height := childHeight ]
+            #sizeAllocate child childAllocation
+
+            if (count+1) `mod` nColumns /= 0
+              then return (x + childWidth, y)
+              else return (x0, y + childHeight)
+
+      foldM_ allocChild (x0,y0) (zip [0..] visibleChildren)
 
 -- Call the given function for all the container's children.
 customContainerForall :: Gtk.Container -> Bool
                       -> Gtk.Callback_WithClosures -> Ptr () -> IO ()
 customContainerForall container _includeInternals callback callback_data = do
-  children <- gobjectGetPrivateData (coerce @_ @CustomContainer container)
+  children <- getChildren (coerce container)
+
   forM_ children $ \child -> do
     callback child callback_data
-
-{-
-/* Remove a child from the container */
-static void
-p_square_remove(GtkContainer *container, GtkWidget *widget)
-{
-	g_return_if_fail(container || P_IS_SQUARE(container));
-	g_return_if_fail(widget || GTK_IS_WIDGET(widget));
-
-	PSquarePrivate *priv = P_SQUARE_PRIVATE(container);
-
-	/* Remove the child from our list of children. 
-	 * Again, all the real work is done in gtk_widget_unparent(). */
-	GList *link = g_list_find(priv->children, widget);
-	if(link) {
-		gboolean was_visible = gtk_widget_get_visible(widget);
-		gtk_widget_unparent(widget);
-
-		priv->children = g_list_delete_link(priv->children, link);
-
-		/* Queue redraw */
-		if(was_visible)
-			gtk_widget_queue_resize(GTK_WIDGET(container));
-	}
-}
--}
 
 -- Remove a child from the container. The real work is done by
 -- widgetUnparent.
 customContainerRemove :: Gtk.Container -> Gtk.Widget -> IO ()
 customContainerRemove container widget = do
-  children <- gobjectGetPrivateData (coerce @_ @CustomContainer container)
+  children <- getChildren (coerce container)
   remaining <- flip filterM children $ \child -> do
     if child /= widget
       then return True
@@ -277,50 +481,22 @@ customContainerRemove container widget = do
         #unparent widget
         when was_visible (#queueResize container)
         return False
-  gobjectSetPrivateData (coerce @_ @CustomContainer container) remaining
-
-{-
-/* Add a child to the container */
-static void
-p_square_add(GtkContainer *container, GtkWidget *widget)
-{
-	g_return_if_fail(container || P_IS_SQUARE(container));
-	g_return_if_fail(widget || GTK_IS_WIDGET(widget));
-	g_return_if_fail(gtk_widget_get_parent(widget) == NULL);
-
-	PSquarePrivate *priv = P_SQUARE_PRIVATE(container);
-
-	/* Add the child to our list of children. 
-	 * All the real work is done in gtk_widget_set_parent(). */
-	priv->children = g_list_append(priv->children, widget);
-	gtk_widget_set_parent(widget, GTK_WIDGET(container));
-
-	/* Queue redraw */
-	if(gtk_widget_get_visible(widget))
-		gtk_widget_queue_resize(GTK_WIDGET(container));
-}
--}
+  gobjectModifyPrivateData (coerce container :: CustomContainer)
+                  (\private -> private {ccChildren = remaining})
 
 -- Add a child to the container
 customContainerAdd :: Gtk.Container -> Gtk.Widget -> IO ()
 customContainerAdd container child = do
   gobjectModifyPrivateData (coerce @Gtk.Container @CustomContainer container)
-                           (++ [child])
+                           (\private -> private {
+                               ccChildren = ccChildren private ++ [child]
+                               })
 
   -- Add the child to our list of children. All the real work is done
   -- in widgetSetParent.
   #setParent child container
   visible <- get child #visible
   when visible (#queueResize container)
-
-{-
-/* Return the type of children this container accepts */
-static GType
-p_square_child_type(GtkContainer *container)
-{
-	return GTK_TYPE_WIDGET;
-}
--}
 
 -- Return the type of children that this container accepts
 customContainerChildType :: Gtk.Container -> IO GType
