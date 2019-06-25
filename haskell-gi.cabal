@@ -120,3 +120,4 @@ test-suite doctests
   build-depends: base
                , process
                , doctest >= 0.8
+               , haskell-gi
