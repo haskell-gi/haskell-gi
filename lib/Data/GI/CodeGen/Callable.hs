@@ -857,7 +857,8 @@ fixupCallerAllocates c =
           fixupDir a = case argType a of
                          TCArray _ _ l _ ->
                              if argCallerAllocates a && l > -1
-                             then a {direction = DirectionInout}
+                             then a { direction = DirectionInout
+                                    , transfer = TransferEverything }
                              else a
                          _ -> a
 

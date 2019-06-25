@@ -230,15 +230,20 @@ freeOut label = return ["freeMem " <> label]
 -- transfer semantics of the callable).
 freeInArg :: Arg -> Text -> Text -> ExcCodeGen [Text]
 freeInArg arg label len = do
-  -- Arguments that we alloc ourselves do not need to be freed, they
-  -- will always be soaked up by the wrapPtr constructor, or they will
-  -- be DirectionIn.
-  if not (argCallerAllocates arg)
-  then case direction arg of
+  -- Arguments that we alloc ourselves do not always need to be freed,
+  -- they will sometimes be soaked up by the wrapPtr constructor, or
+  -- they will be DirectionIn.
+  if willWrap arg
+    then return []
+    else case direction arg of
          DirectionIn -> freeIn (transfer arg) (argType arg) label len
          DirectionOut -> freeOut label
          DirectionInout -> freeOut label
-  else return []
+
+  -- Whether memory ownership of the pointer passed in to the function
+  -- will be assumed by the C->Haskell wrapper.
+  where willWrap :: Arg -> Bool
+        willWrap = argCallerAllocates
 
 -- | Same thing as freeInArg, but called in case the call to C didn't
 -- succeed. We thus free everything we allocated in preparation for
