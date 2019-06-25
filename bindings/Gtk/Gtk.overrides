@@ -99,6 +99,20 @@ set-attr Gtk/Builder/add_from_string/@parameters/length/@type name gssize
 # We know the type of these closures
 set-attr Gtk/AccelGroup/connect/@parameters/closure/@type closure-type AccelGroupActivate
 
+# The sizes argument is an array of RequestedSize, not a pointer to a
+# single one, and the function overwrites it.
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes direction inout
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes caller-allocates 1
+delete-node Gtk/distribute_natural_allocation/@parameters/sizes/@type
+add-node Gtk/distribute_natural_allocation/@parameters/sizes array
+add-node Gtk/distribute_natural_allocation/@parameters/sizes/@array type
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes/@array c:type GtkRequestedSize
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes/@array/@type name RequestedSize
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes/@array/@type name RequestedSize
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes/@array length 1
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes/@array zero-terminated 0
+set-attr Gtk/distribute_natural_allocation/@parameters/sizes/@array/@type c:type GtkRequestedSize
+
 # Generated from gtk+ 3.22.11 with xsltproc Nullable.xslt Gtk-3.0.gir
 set-attr Gtk/AboutDialog/set_comments/@parameters/comments nullable 1
 set-attr Gtk/AboutDialog/set_copyright/@parameters/copyright nullable 1
