@@ -37,6 +37,7 @@ import Control.Monad (when, forM, forM_, filterM, foldM_)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Coerce (coerce)
 import Data.Int (Int32)
+import Data.Semigroup (Semigroup(..))
 import qualified Data.Vector as V
 import Data.Vector ((//), (!))
 import Foreign.Ptr (Ptr)
