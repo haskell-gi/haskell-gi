@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs, ScopedTypeVariables, DataKinds, KindSignatures,
   TypeFamilies, TypeOperators, MultiParamTypeClasses, ConstraintKinds,
-  UndecidableInstances, FlexibleInstances, TypeApplications #-}
+  UndecidableInstances, FlexibleInstances, TypeApplications,
+  DefaultSignatures #-}
 
 -- |
 --
@@ -174,22 +175,33 @@ instance a ~ x => IsLabel x (AttrLabelProxy a) where
 class AttrInfo (info :: *) where
     -- | The operations that are allowed on the attribute.
     type AttrAllowedOps info :: [AttrOpTag]
+
     -- | Constraint on the type for which we are allowed to
     -- create\/set\/get the attribute.
     type AttrBaseTypeConstraint info :: * -> Constraint
+
     -- | Constraint on the value being set.
     type AttrSetTypeConstraint info :: * -> Constraint
+    type AttrSetTypeConstraint info = (~) (AttrGetType info)
+
     -- | Type returned by `attrGet`.
     type AttrGetType info
+
     -- | Constraint on the value being set, with allocation allowed
     -- (see ':&=' below).
     type AttrTransferTypeConstraint info :: * -> Constraint
+    type AttrTransferTypeConstraint info = (~) (AttrTransferType info)
+
     -- | Type resulting from the allocation.
     type AttrTransferType info :: *
+    type AttrTransferType info = AttrGetType info
+
     -- | Name of the attribute.
     type AttrLabel info :: Symbol
+
     -- | Type which introduces the attribute.
     type AttrOrigin info
+
     -- | Get the value of the given attribute.
     attrGet :: AttrBaseTypeConstraint info o =>
                Proxy info -> o -> IO (AttrGetType info)
@@ -198,14 +210,18 @@ class AttrInfo (info :: *) where
     attrSet :: (AttrBaseTypeConstraint info o,
                 AttrSetTypeConstraint info b) =>
                Proxy info -> o -> b -> IO ()
+
     -- | Set the value of the given attribute to @NULL@ (for nullable
     -- attributes).
     attrClear :: AttrBaseTypeConstraint info o =>
                  Proxy info -> o -> IO ()
+    attrClear = undefined
+
     -- | Build a `Data.GI.Base.GValue.GValue` representing the attribute.
     attrConstruct :: (AttrBaseTypeConstraint info o,
                       AttrSetTypeConstraint info b) =>
                      Proxy info -> b -> IO (GValueConstruct o)
+
     -- | Allocate memory as necessary to generate a settable type from
     -- the transfer type. This is useful for types which needs
     -- allocations for marshalling from Haskell to C, this makes the
@@ -213,6 +229,12 @@ class AttrInfo (info :: *) where
     attrTransfer :: (AttrBaseTypeConstraint info o,
                      AttrTransferTypeConstraint info b) =>
                 Proxy info -> Proxy o -> b -> IO (AttrTransferType info)
+    default attrTransfer :: (AttrBaseTypeConstraint info o,
+                             AttrTransferTypeConstraint info b,
+                             b ~ AttrGetType info,
+                             b ~ AttrTransferType info) =>
+                            Proxy info -> Proxy o -> b -> IO (AttrTransferType info)
+    attrTransfer _ _ = return
 
 -- | Result of checking whether an op is allowed on an attribute.
 data OpAllowed tag attrName definingType useType =
