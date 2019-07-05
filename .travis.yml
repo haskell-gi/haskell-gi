@@ -1,6 +1,10 @@
-sudo: required
+sudo: true
 dist: xenial
 language: haskell
+
+cache:
+  directories:
+  - "$HOME/.cabal/store"
 
 env:
  - CABALVER=2.2 GHCVER=8.0.2
