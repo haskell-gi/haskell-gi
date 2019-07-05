@@ -435,14 +435,14 @@ genOneProperty owner prop = do
             line $ "type AttrGetType " <> it <> " = " <> outType
             line $ "type AttrLabel " <> it <> " = \"" <> propName prop <> "\""
             line $ "type AttrOrigin " <> it <> " = " <> name
-            line $ "attrGet _ = " <> getter
-            line $ "attrSet _ = " <> setter
+            line $ "attrGet = " <> getter
+            line $ "attrSet = " <> setter
             if writable || constructOnly
-              then do line $ "attrTransfer _ _ v = do"
+              then do line $ "attrTransfer _ v = do"
                       indent $ genPropTransfer "v" (propType prop)
-              else line $ "attrTransfer _ _ _ = undefined"
-            line $ "attrConstruct _ = " <> constructor
-            line $ "attrClear _ = " <> clear
+              else line $ "attrTransfer _ = undefined"
+            line $ "attrConstruct = " <> constructor
+            line $ "attrClear = " <> clear
 
 -- | Generate a placeholder property for those cases in which code
 -- generation failed.

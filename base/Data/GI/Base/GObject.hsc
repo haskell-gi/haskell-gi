@@ -53,7 +53,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
-                                attrConstruct, attrTransfer)
+                                attrConstruct, attrTransfer,
+                                AttrInfo(..))
 import Data.GI.Base.BasicTypes (CGType, GType(..), GObject(..),
                                 GDestroyNotify, ManagedPtr(..), GParamSpec(..),
                                 gtypeName)
@@ -88,15 +89,27 @@ constructGObject constructor attrs = liftIO $ do
   props <- mapM construct attrs
   doConstructGObject constructor props
   where
-    resolve :: AttrLabelProxy attr -> Proxy (ResolveAttribute attr o)
-    resolve _ = Proxy
+    doConstruct :: forall info attr b. (info ~ ResolveAttribute attr o,
+                    AttrInfo info,
+                    AttrSetTypeConstraint info b,
+                    AttrBaseTypeConstraint info o) =>
+                   AttrLabelProxy attr -> b -> IO (GValueConstruct o)
+    doConstruct _ = attrConstruct @info
+
+    doTransfer :: forall info attr b.
+                  (info ~ ResolveAttribute attr o,
+                   AttrInfo info,
+                   AttrBaseTypeConstraint info o,
+                   AttrTransferTypeConstraint info b) =>
+                  AttrLabelProxy attr -> b -> IO (AttrTransferType info)
+    doTransfer _ = attrTransfer @info (Proxy @o)
 
     construct :: AttrOp o 'AttrConstruct ->
                  IO (GValueConstruct o)
-    construct (attr := x) = attrConstruct (resolve attr) x
-    construct (attr :=> x) = x >>= attrConstruct (resolve attr)
-    construct (attr :&= x) = attrTransfer (resolve attr) (Proxy @o) x >>=
-                             attrConstruct (resolve attr)
+    construct (attr := x) = doConstruct attr x
+    construct (attr :=> x) = x >>= doConstruct attr
+    construct (attr :&= x) = doTransfer attr x >>=
+                             doConstruct attr
 
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.

@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs, ScopedTypeVariables, DataKinds, KindSignatures,
   TypeFamilies, TypeOperators, MultiParamTypeClasses, ConstraintKinds,
   UndecidableInstances, FlexibleInstances, TypeApplications,
-  DefaultSignatures, PolyKinds #-}
+  DefaultSignatures, PolyKinds, AllowAmbiguousTypes #-}
 
 -- |
 --
@@ -148,10 +148,10 @@ module Data.GI.Base.Attributes (
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
-import Data.Proxy (Proxy(..))
-
 import Data.GI.Base.GValue (GValueConstruct)
 import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute)
+
+import Data.Proxy (Proxy(..))
 
 import GHC.TypeLits
 import GHC.Exts (Constraint)
@@ -204,65 +204,65 @@ class AttrInfo (info :: *) where
 
     -- | Get the value of the given attribute.
     attrGet :: AttrBaseTypeConstraint info o =>
-               Proxy info -> o -> IO (AttrGetType info)
+               o -> IO (AttrGetType info)
     default attrGet :: -- Make sure that a non-default method
                        -- implementation is provided if AttrGet
                        -- is set.
                         CheckNotElem 'AttrGet (AttrAllowedOps info)
                          (GetNotProvidedError info) =>
-                       Proxy info -> o -> IO (AttrGetType info)
+                       o -> IO (AttrGetType info)
     attrGet = undefined
 
     -- | Set the value of the given attribute, after the object having
     -- the attribute has already been created.
     attrSet :: (AttrBaseTypeConstraint info o,
                 AttrSetTypeConstraint info b) =>
-               Proxy info -> o -> b -> IO ()
+               o -> b -> IO ()
     default attrSet :: -- Make sure that a non-default method
                         -- implementation is provided if AttrSet
                         -- is set.
                         CheckNotElem 'AttrSet (AttrAllowedOps info)
                          (SetNotProvidedError info) =>
-                       Proxy info -> o -> b -> IO ()
+                       o -> b -> IO ()
     attrSet = undefined
 
     -- | Set the value of the given attribute to @NULL@ (for nullable
     -- attributes).
     attrClear :: AttrBaseTypeConstraint info o =>
-                 Proxy info -> o -> IO ()
+                 o -> IO ()
     default attrClear ::  -- Make sure that a non-default method
                           -- implementation is provided if AttrClear
                           -- is set.
                           CheckNotElem 'AttrClear (AttrAllowedOps info)
                                        (ClearNotProvidedError info) =>
-                      Proxy info -> o -> IO ()
+                      o -> IO ()
     attrClear = undefined
 
     -- | Build a `Data.GI.Base.GValue.GValue` representing the attribute.
     attrConstruct :: (AttrBaseTypeConstraint info o,
                       AttrSetTypeConstraint info b) =>
-                     Proxy info -> b -> IO (GValueConstruct o)
+                     b -> IO (GValueConstruct o)
     default attrConstruct :: -- Make sure that a non-default method
                              -- implementation is provided if AttrConstruct
                              -- is set.
                              CheckNotElem 'AttrConstruct (AttrAllowedOps info)
                                (ConstructNotProvidedError info) =>
-                      Proxy info -> b -> IO (GValueConstruct o)
+                      b -> IO (GValueConstruct o)
     attrConstruct = undefined
 
     -- | Allocate memory as necessary to generate a settable type from
     -- the transfer type. This is useful for types which needs
     -- allocations for marshalling from Haskell to C, this makes the
     -- allocation explicit.
-    attrTransfer :: (AttrBaseTypeConstraint info o,
-                     AttrTransferTypeConstraint info b) =>
-                Proxy info -> Proxy o -> b -> IO (AttrTransferType info)
-    default attrTransfer :: (AttrBaseTypeConstraint info o,
+    attrTransfer :: forall o b. (AttrBaseTypeConstraint info o,
+                               AttrTransferTypeConstraint info b) =>
+                    Proxy o -> b -> IO (AttrTransferType info)
+    default attrTransfer :: forall o b. (AttrBaseTypeConstraint info o,
                              AttrTransferTypeConstraint info b,
                              b ~ AttrGetType info,
                              b ~ AttrTransferType info) =>
-                            Proxy info -> Proxy o -> b -> IO (AttrTransferType info)
-    attrTransfer _ _ = return
+                            Proxy o -> b -> IO (AttrTransferType info)
+    attrTransfer _ = return
 
 -- | Pretty print a type, indicating the parent type that introduced
 -- the attribute, if different.
@@ -439,18 +439,39 @@ data AttrOp obj (tag :: AttrOpTag) where
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
 set obj = liftIO . mapM_ app
  where
-   resolve :: AttrLabelProxy attr -> Proxy (ResolveAttribute attr o)
-   resolve _ = Proxy
+   -- Given a proxy, invoke the corresponding class instance method.
+   doGet :: forall info attr.
+         (info ~ ResolveAttribute attr o,
+          AttrInfo info,
+          AttrBaseTypeConstraint info o) =>
+         AttrLabelProxy attr -> o -> IO (AttrGetType info)
+   doGet _ = attrGet @info
+
+   doSet :: forall info attr b.
+            (info ~ ResolveAttribute attr o,
+             AttrInfo info,
+             AttrBaseTypeConstraint info o,
+             AttrSetTypeConstraint info b) =>
+            AttrLabelProxy attr -> o -> b -> IO ()
+   doSet _ = attrSet @info
+
+   doTransfer :: forall info attr b.
+                 (info ~ ResolveAttribute attr o,
+                   AttrInfo info,
+                   AttrBaseTypeConstraint info o,
+                   AttrTransferTypeConstraint info b) =>
+                  AttrLabelProxy attr -> b -> IO (AttrTransferType info)
+   doTransfer _ = attrTransfer @info (Proxy @o)
 
    app :: AttrOp o 'AttrSet -> IO ()
-   app (attr :=  x) = attrSet (resolve attr) obj x
-   app (attr :=> x) = x >>= attrSet (resolve attr) obj
-   app (attr :~  f) = attrGet (resolve attr) obj >>=
-                      \v -> attrSet (resolve attr) obj (f v)
-   app (attr :~> f) = attrGet (resolve attr) obj >>= f >>=
-                      attrSet (resolve attr) obj
-   app (attr :&= x) = attrTransfer (resolve attr) (Proxy @o) x >>=
-                      attrSet (resolve attr) obj
+   app (attr :=  x) = doSet attr obj x
+   app (attr :=> x) = x >>= doSet attr obj
+   app (attr :~  f) = doGet attr obj >>=
+                      \v -> doSet attr obj (f v)
+   app (attr :~> f) = doGet attr obj >>= f >>=
+                      doSet attr obj
+   app (attr :&= x) = doTransfer attr x >>=
+                      doSet attr obj
 
 -- | Constraints on a @obj@\/@attr@ pair so `get` is possible,
 -- producing a value of type @result@.
@@ -465,7 +486,7 @@ type AttrGetC info obj attr result = (HasAttributeList obj,
 get :: forall info attr obj result m.
        (AttrGetC info obj attr result, MonadIO m) =>
         obj -> AttrLabelProxy (attr :: Symbol) -> m result
-get o _ = liftIO $ attrGet (Proxy :: Proxy info) o
+get o _ = liftIO $ attrGet @info o
 
 -- | Constraint on a @obj@\/@attr@ pair so that `clear` is allowed.
 type AttrClearC info obj attr = (HasAttributeList obj,
@@ -478,4 +499,4 @@ type AttrClearC info obj attr = (HasAttributeList obj,
 clear :: forall info attr obj m.
          (AttrClearC info obj attr, MonadIO m) =>
          obj -> AttrLabelProxy (attr :: Symbol) -> m ()
-clear o _ = liftIO $ attrClear (Proxy :: Proxy info) o
+clear o _ = liftIO $ attrClear @info o

@@ -350,19 +350,19 @@ genAttrInfo owner field = do
     line $ "type AttrGetType " <> it <> " = " <> outType
     line $ "type AttrLabel " <> it <> " = \"" <> fieldName field <> "\""
     line $ "type AttrOrigin " <> it <> " = " <> on
-    line $ "attrGet _ = " <> fieldGetter owner field
-    line $ "attrSet _ = " <> if not embedded
+    line $ "attrGet = " <> fieldGetter owner field
+    line $ "attrSet = " <> if not embedded
                              then fieldSetter owner field
                              else "undefined"
     line $ "attrConstruct = undefined"
-    line $ "attrClear _ = " <> if not embedded && isPtr
+    line $ "attrClear = " <> if not embedded && isPtr
                                then fieldClear owner field
                                else "undefined"
     if not embedded
       then do
-          line $ "attrTransfer _ _ v = do"
+          line $ "attrTransfer _ v = do"
           indent $ genFieldTransfer "v" (fieldType field)
-      else line $ "attrTransfer _ _ = undefined"
+      else line $ "attrTransfer = undefined"
 
   blank
 

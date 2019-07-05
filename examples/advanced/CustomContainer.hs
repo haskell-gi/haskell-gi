@@ -177,28 +177,26 @@ instance AttrInfo NumColumnsAttrInfo where
   -- from CustomContainer will do.
   type AttrBaseTypeConstraint NumColumnsAttrInfo = IsCustomContainer
 
-  -- Which does does 'get' on the property return. By default this is
+  -- Which type does 'get' on the property return. By default this is
   -- also the type that 'set' and 'new' accept.
   type AttrGetType NumColumnsAttrInfo = Maybe Int
 
-  -- Text description for the attribute, for error messages.
+  -- Text description for the attribute, for use in error messages.
   type AttrLabel NumColumnsAttrInfo = "num-columns"
 
-  -- Type defining the attribute, for error messages.
+  -- Type defining the attribute, for use in error messages.
   type AttrOrigin NumColumnsAttrInfo = CustomContainer
 
-  -- Get the value of the attribute. The first argument here, and in
-  -- 'attrSet' and 'attrConstruct', is a Proxy argument, to be
-  -- ignored.
-  attrGet _ container = ccNColumns <$>
-                        gobjectGetPrivateData (coerce container :: CustomContainer)
+  -- Get the value of the attribute.
+  attrGet container = ccNColumns <$>
+                      gobjectGetPrivateData (coerce container :: CustomContainer)
 
   -- Set the value of the argument.
-  attrSet _ container val = setNumColumns (coerce container :: CustomContainer) val
+  attrSet container val = setNumColumns (coerce container :: CustomContainer) val
 
   -- Construct a 'GValue' containing the argument, tagged by the
   -- associated property name.
-  attrConstruct _ val = do
+  attrConstruct val = do
     newValue <- case val of
       Just n -> toGValue (fromIntegral n :: CInt)
       Nothing -> toGValue (0 :: CInt)
