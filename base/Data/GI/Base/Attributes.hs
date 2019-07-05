@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs, ScopedTypeVariables, DataKinds, KindSignatures,
   TypeFamilies, TypeOperators, MultiParamTypeClasses, ConstraintKinds,
   UndecidableInstances, FlexibleInstances, TypeApplications,
-  DefaultSignatures #-}
+  DefaultSignatures, PolyKinds #-}
 
 -- |
 --
@@ -205,22 +205,50 @@ class AttrInfo (info :: *) where
     -- | Get the value of the given attribute.
     attrGet :: AttrBaseTypeConstraint info o =>
                Proxy info -> o -> IO (AttrGetType info)
+    default attrGet :: -- Make sure that a non-default method
+                       -- implementation is provided if AttrGet
+                       -- is set.
+                        CheckNotElem 'AttrGet (AttrAllowedOps info)
+                         (GetNotProvidedError info) =>
+                       Proxy info -> o -> IO (AttrGetType info)
+    attrGet = undefined
+
     -- | Set the value of the given attribute, after the object having
     -- the attribute has already been created.
     attrSet :: (AttrBaseTypeConstraint info o,
                 AttrSetTypeConstraint info b) =>
                Proxy info -> o -> b -> IO ()
+    default attrSet :: -- Make sure that a non-default method
+                        -- implementation is provided if AttrSet
+                        -- is set.
+                        CheckNotElem 'AttrSet (AttrAllowedOps info)
+                         (SetNotProvidedError info) =>
+                       Proxy info -> o -> b -> IO ()
+    attrSet = undefined
 
     -- | Set the value of the given attribute to @NULL@ (for nullable
     -- attributes).
     attrClear :: AttrBaseTypeConstraint info o =>
                  Proxy info -> o -> IO ()
+    default attrClear ::  -- Make sure that a non-default method
+                          -- implementation is provided if AttrClear
+                          -- is set.
+                          CheckNotElem 'AttrClear (AttrAllowedOps info)
+                                       (ClearNotProvidedError info) =>
+                      Proxy info -> o -> IO ()
     attrClear = undefined
 
     -- | Build a `Data.GI.Base.GValue.GValue` representing the attribute.
     attrConstruct :: (AttrBaseTypeConstraint info o,
                       AttrSetTypeConstraint info b) =>
                      Proxy info -> b -> IO (GValueConstruct o)
+    default attrConstruct :: -- Make sure that a non-default method
+                             -- implementation is provided if AttrConstruct
+                             -- is set.
+                             CheckNotElem 'AttrConstruct (AttrAllowedOps info)
+                               (ConstructNotProvidedError info) =>
+                      Proxy info -> b -> IO (GValueConstruct o)
+    attrConstruct = undefined
 
     -- | Allocate memory as necessary to generate a settable type from
     -- the transfer type. This is useful for types which needs
@@ -275,11 +303,55 @@ type family AttrOpAllowed (tag :: AttrOpTag) (info :: *) (useType :: *) :: Const
     AttrOpAllowed tag info useType =
         AttrOpIsAllowed tag (AttrAllowedOps info) (AttrLabel info) (AttrOrigin info) useType ~ 'OpIsAllowed
 
+-- | Error to be raised when an operation is allowed, but an
+-- implementation has not been provided.
+type family OpNotProvidedError (info :: o) (op :: AttrOpTag) (methodName :: Symbol) :: ErrorMessage where
+  OpNotProvidedError info op methodName =
+    'Text "The attribute ‘" ':<>: 'Text (AttrLabel info) ':<>:
+    'Text "’ for type ‘" ':<>:
+    'ShowType (AttrOrigin info) ':<>:
+    'Text "’ is declared as " ':<>:
+    'Text (AttrOpText op) ':<>:
+    'Text ", but no implementation of ‘" ':<>:
+    'Text methodName ':<>:
+    'Text "’ has been provided."
+    ':$$: 'Text "Either provide an implementation of ‘" ':<>:
+    'Text methodName ':<>:
+    'Text "’ or remove ‘" ':<>:
+    'ShowType op ':<>:
+    'Text "’ from ‘AttrAllowedOps’."
+
+-- | Error to be raised when AttrClear is allowed, but an
+-- implementation has not been provided.
+type family ClearNotProvidedError (info :: o) :: ErrorMessage where
+  ClearNotProvidedError info = OpNotProvidedError info 'AttrClear "attrClear"
+
+-- | Error to be raised when AttrGet is allowed, but an
+-- implementation has not been provided.
+type family GetNotProvidedError (info :: o) :: ErrorMessage where
+  GetNotProvidedError info = OpNotProvidedError info 'AttrGet "attrGet"
+
+-- | Error to be raised when AttrSet is allowed, but an
+-- implementation has not been provided.
+type family SetNotProvidedError (info :: o) :: ErrorMessage where
+  SetNotProvidedError info = OpNotProvidedError info 'AttrSet "attrSet"
+
+-- | Error to be raised when AttrConstruct is allowed, but an
+-- implementation has not been provided.
+type family ConstructNotProvidedError (info :: o) :: ErrorMessage where
+  ConstructNotProvidedError info = OpNotProvidedError info 'AttrConstruct "attrConstruct"
+
+-- | Check if the given element is a member, and if so raise the given
+-- error.
+type family CheckNotElem (a :: k) (as :: [k]) (msg :: ErrorMessage) :: Constraint where
+  CheckNotElem a '[] msg = ()
+  CheckNotElem a (a ': rest) msg = TypeError msg
+  CheckNotElem a (other ': rest) msg = CheckNotElem a rest msg
+
 -- | Possible operations on an attribute.
 data AttrOpTag = AttrGet | AttrSet | AttrConstruct | AttrClear
   deriving (Eq, Ord, Enum, Bounded, Show)
 
-#if MIN_VERSION_base(4,9,0)
 -- | A user friendly description of the `AttrOpTag`, useful when
 -- printing type errors.
 type family AttrOpText (tag :: AttrOpTag) :: Symbol where
@@ -287,7 +359,6 @@ type family AttrOpText (tag :: AttrOpTag) :: Symbol where
     AttrOpText 'AttrSet = "settable"
     AttrOpText 'AttrConstruct = "constructible"
     AttrOpText 'AttrClear = "nullable"
-#endif
 
 -- | Constraint on a @obj@\/@attr@ pair so that `set` works on values
 -- of type @value@.

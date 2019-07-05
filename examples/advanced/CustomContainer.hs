@@ -170,7 +170,8 @@ data NumColumnsAttrInfo
 instance AttrInfo NumColumnsAttrInfo where
   -- This is a list of the actions allowed on the attribute: we can
   -- get, set, and create it when constructing the object.
-  type AttrAllowedOps NumColumnsAttrInfo = '[ 'AttrGet, 'AttrSet, 'AttrConstruct ]
+  type AttrAllowedOps NumColumnsAttrInfo = '[ 'AttrGet, 'AttrSet,
+                                              'AttrConstruct ]
 
   -- For which types can we get/set the attribute. Anything deriving
   -- from CustomContainer will do.
