@@ -264,14 +264,8 @@ class AttrInfo (info :: *) where
                             Proxy info -> Proxy o -> b -> IO (AttrTransferType info)
     attrTransfer _ _ = return
 
--- | Result of checking whether an op is allowed on an attribute.
-data OpAllowed tag attrName definingType useType =
-    OpIsAllowed
-#if !MIN_VERSION_base(4,9,0)
-        | AttrOpNotAllowed Symbol tag Symbol definingType Symbol attrName
-#endif
-
-#if MIN_VERSION_base(4,9,0)
+-- | Pretty print a type, indicating the parent type that introduced
+-- the attribute, if different.
 type family TypeOriginInfo definingType useType :: ErrorMessage where
     TypeOriginInfo definingType definingType =
         'Text "‘" ':<>: 'ShowType definingType ':<>: 'Text "’"
@@ -279,29 +273,24 @@ type family TypeOriginInfo definingType useType :: ErrorMessage where
         'Text "‘" ':<>: 'ShowType useType ':<>:
         'Text "’ (inherited from parent type ‘" ':<>:
         'ShowType definingType ':<>: 'Text "’)"
-#endif
 
 -- | Look in the given list to see if the given `AttrOp` is a member,
 -- if not return an error type.
-type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Symbol) (definingType :: *) (useType :: *) :: OpAllowed AttrOpTag Symbol * * where
+type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Symbol) (definingType :: *) (useType :: *) :: Constraint where
     AttrOpIsAllowed tag '[] label definingType useType =
-#if !MIN_VERSION_base(4,9,0)
-        'AttrOpNotAllowed "Error: operation " tag " not allowed for attribute " definingType "." label
-#else
         TypeError ('Text "Attribute ‘" ':<>: 'Text label ':<>:
                    'Text "’ for type " ':<>:
                    TypeOriginInfo definingType useType ':<>:
                    'Text " is not " ':<>:
                    'Text (AttrOpText tag) ':<>: 'Text ".")
-#endif
-    AttrOpIsAllowed tag (tag ': ops) label definingType useType = 'OpIsAllowed
+    AttrOpIsAllowed tag (tag ': ops) label definingType useType = ()
     AttrOpIsAllowed tag (other ': ops) label definingType useType = AttrOpIsAllowed tag ops label definingType useType
 
 -- | Whether a given `AttrOpTag` is allowed on an attribute, given the
 -- info type.
 type family AttrOpAllowed (tag :: AttrOpTag) (info :: *) (useType :: *) :: Constraint where
     AttrOpAllowed tag info useType =
-        AttrOpIsAllowed tag (AttrAllowedOps info) (AttrLabel info) (AttrOrigin info) useType ~ 'OpIsAllowed
+        AttrOpIsAllowed tag (AttrAllowedOps info) (AttrLabel info) (AttrOrigin info) useType
 
 -- | Error to be raised when an operation is allowed, but an
 -- implementation has not been provided.
