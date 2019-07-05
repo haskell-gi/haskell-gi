@@ -180,12 +180,12 @@ class AttrInfo (info :: *) where
     -- create\/set\/get the attribute.
     type AttrBaseTypeConstraint info :: * -> Constraint
 
+    -- | Type returned by `attrGet`.
+    type AttrGetType info
+
     -- | Constraint on the value being set.
     type AttrSetTypeConstraint info :: * -> Constraint
     type AttrSetTypeConstraint info = (~) (AttrGetType info)
-
-    -- | Type returned by `attrGet`.
-    type AttrGetType info
 
     -- | Constraint on the value being set, with allocation allowed
     -- (see ':&=' below).
@@ -338,7 +338,18 @@ type family CheckNotElem (a :: k) (as :: [k]) (msg :: ErrorMessage) :: Constrain
   CheckNotElem a (other ': rest) msg = CheckNotElem a rest msg
 
 -- | Possible operations on an attribute.
-data AttrOpTag = AttrGet | AttrSet | AttrConstruct | AttrClear
+data AttrOpTag = AttrGet
+               -- ^ It is possible to read the value of the attribute
+               -- with `get`.
+               | AttrSet
+               -- ^ It is possible to write the value of the attribute
+               -- with `set`.
+               | AttrConstruct
+               -- ^ It is possible to set the value of the attribute
+               -- in `Data.GI.Base.Constructible.new`.
+               | AttrClear
+               -- ^ It is possible to clear the value of the
+               -- (nullable) attribute with `clear`.
   deriving (Eq, Ord, Enum, Bounded, Show)
 
 -- | A user friendly description of the `AttrOpTag`, useful when
