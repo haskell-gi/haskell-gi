@@ -439,39 +439,24 @@ data AttrOp obj (tag :: AttrOpTag) where
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
 set obj = liftIO . mapM_ app
  where
-   -- Given a proxy, invoke the corresponding class instance method.
-   doGet :: forall info attr.
-         (info ~ ResolveAttribute attr o,
-          AttrInfo info,
-          AttrBaseTypeConstraint info o) =>
-         AttrLabelProxy attr -> o -> IO (AttrGetType info)
-   doGet _ = attrGet @info
-
-   doSet :: forall info attr b.
-            (info ~ ResolveAttribute attr o,
-             AttrInfo info,
-             AttrBaseTypeConstraint info o,
-             AttrSetTypeConstraint info b) =>
-            AttrLabelProxy attr -> o -> b -> IO ()
-   doSet _ = attrSet @info
-
-   doTransfer :: forall info attr b.
-                 (info ~ ResolveAttribute attr o,
-                   AttrInfo info,
-                   AttrBaseTypeConstraint info o,
-                   AttrTransferTypeConstraint info b) =>
-                  AttrLabelProxy attr -> b -> IO (AttrTransferType info)
-   doTransfer _ = attrTransfer @info (Proxy @o)
-
    app :: AttrOp o 'AttrSet -> IO ()
-   app (attr :=  x) = doSet attr obj x
-   app (attr :=> x) = x >>= doSet attr obj
-   app (attr :~  f) = doGet attr obj >>=
-                      \v -> doSet attr obj (f v)
-   app (attr :~> f) = doGet attr obj >>= f >>=
-                      doSet attr obj
-   app (attr :&= x) = doTransfer attr x >>=
-                      doSet attr obj
+   app ((_attr :: AttrLabelProxy label) :=  x) =
+     attrSet @(ResolveAttribute label o) obj x
+
+   app ((_attr :: AttrLabelProxy label) :=> x) =
+     x >>= attrSet @(ResolveAttribute label o) obj
+
+   app ((_attr :: AttrLabelProxy label) :~  f) =
+     attrGet @(ResolveAttribute label o) obj >>=
+     \v -> attrSet @(ResolveAttribute label o) obj (f v)
+
+   app ((_attr :: AttrLabelProxy label) :~> f) =
+     attrGet @(ResolveAttribute label o) obj >>= f >>=
+     attrSet @(ResolveAttribute label o) obj
+
+   app ((_attr :: AttrLabelProxy label) :&= x) =
+     attrTransfer @(ResolveAttribute label o) (Proxy @o) x >>=
+     attrSet @(ResolveAttribute label o) obj
 
 -- | Constraints on a @obj@\/@attr@ pair so `get` is possible,
 -- producing a value of type @result@.

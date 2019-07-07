@@ -89,27 +89,17 @@ constructGObject constructor attrs = liftIO $ do
   props <- mapM construct attrs
   doConstructGObject constructor props
   where
-    doConstruct :: forall info attr b. (info ~ ResolveAttribute attr o,
-                    AttrInfo info,
-                    AttrSetTypeConstraint info b,
-                    AttrBaseTypeConstraint info o) =>
-                   AttrLabelProxy attr -> b -> IO (GValueConstruct o)
-    doConstruct _ = attrConstruct @info
-
-    doTransfer :: forall info attr b.
-                  (info ~ ResolveAttribute attr o,
-                   AttrInfo info,
-                   AttrBaseTypeConstraint info o,
-                   AttrTransferTypeConstraint info b) =>
-                  AttrLabelProxy attr -> b -> IO (AttrTransferType info)
-    doTransfer _ = attrTransfer @info (Proxy @o)
-
     construct :: AttrOp o 'AttrConstruct ->
                  IO (GValueConstruct o)
-    construct (attr := x) = doConstruct attr x
-    construct (attr :=> x) = x >>= doConstruct attr
-    construct (attr :&= x) = doTransfer attr x >>=
-                             doConstruct attr
+    construct ((_attr :: AttrLabelProxy label) := x) =
+      attrConstruct @(ResolveAttribute label o) x
+
+    construct ((_attr :: AttrLabelProxy label) :=> x) =
+      x >>= attrConstruct @(ResolveAttribute label o)
+
+    construct ((_attr :: AttrLabelProxy label) :&= x) =
+      attrTransfer @(ResolveAttribute label o) (Proxy @o) x >>=
+      attrConstruct @(ResolveAttribute label o)
 
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.
