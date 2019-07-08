@@ -9,6 +9,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Routines for connecting `GObject`s to signals.
 module Data.GI.Base.Signals
@@ -21,6 +22,7 @@ module Data.GI.Base.Signals
     , SignalHandlerId
     , SignalInfo(..)
     , GObjectNotifySignalInfo
+    , SignalCodeGenError
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -170,3 +172,12 @@ connectGObjectNotify propName _ obj cb mode = do
   cb' <- mkGObjectNotifyCallback (gobjectNotifyCallbackWrapper cb)
   let signalName = "notify::" ++ propName
   connectSignalFunPtr obj signalName cb' mode
+
+-- | Generate an informative type error whenever one tries to use a
+-- signal for which code generation has failed.
+type family SignalCodeGenError (signalName :: Symbol) :: * where
+  SignalCodeGenError signalName = TypeError
+    ('Text "The signal ‘"
+     ':<>: 'Text signalName
+     ':<>: 'Text "’ is not supported, because haskell-gi failed to generate appropriate bindings."
+    ':$$: 'Text "Please file an issue at https://github.com/haskell-gi/haskell-gi/issues.")

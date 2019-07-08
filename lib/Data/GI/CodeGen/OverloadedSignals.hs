@@ -18,10 +18,9 @@ import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Inheritance (fullObjectSignalList, fullInterfaceSignalList)
 import Data.GI.CodeGen.GObject (apiIsGObject)
-import Data.GI.CodeGen.Signal (signalHaskellName, genSignalConnector)
 import Data.GI.CodeGen.SymbolNaming (upperName, hyphensToCamelCase,
-                                     qualifiedSymbol)
-import Data.GI.CodeGen.Util (lcFirst, ucFirst)
+                                     signalInfoName)
+import Data.GI.CodeGen.Util (lcFirst)
 
 -- A list of distinct signal names for all GObjects appearing in the
 -- given list of APIs.
@@ -61,36 +60,12 @@ genOverloadedSignalConnectors allAPIs = do
     line $ "pattern " <> camelName <> " = SignalProxy"
     exportDecl $ "pattern " <> camelName
 
--- | Qualified name for the "(sigName, info)" tag for a given signal.
-signalInfoName :: Name -> Signal -> CodeGen Text
-signalInfoName n signal = do
-  let infoName = upperName n <> (ucFirst . signalHaskellName . sigName) signal
-                 <> "SignalInfo"
-  qualifiedSymbol infoName n
-
--- | Generate the given signal instance for the given API object.
-genInstance :: Name -> Signal -> CodeGen ()
-genInstance owner signal = group $ do
-  let name = upperName owner
-  let sn = (ucFirst . signalHaskellName . sigName) signal
-  si <- signalInfoName owner signal
-  bline $ "data " <> si
-  line $ "instance SignalInfo " <> si <> " where"
-  indent $ do
-      let signalConnectorName = name <> sn
-          cbHaskellType = signalConnectorName <> "Callback"
-      line $ "type HaskellCallbackType " <> si <> " = " <> cbHaskellType
-      line $ "connectSignal _ obj cb connectMode = do"
-      indent $ genSignalConnector signal cbHaskellType "connectMode"
-  export (NamedSubsection SignalSection $ lcFirst sn) si
-
 -- | Signal instances for (GObject-derived) objects.
 genObjectSignals :: Name -> Object -> CodeGen ()
 genObjectSignals n o = do
   let name = upperName n
   isGO <- apiIsGObject n (APIObject o)
   when isGO $ do
-       mapM_ (genInstance n) (objSignals o)
        infos <- fullObjectSignalList n o >>=
                 mapM (\(owner, signal) -> do
                       si <- signalInfoName owner signal
@@ -106,7 +81,6 @@ genObjectSignals n o = do
 genInterfaceSignals :: Name -> Interface -> CodeGen ()
 genInterfaceSignals n iface = do
   let name = upperName n
-  mapM_ (genInstance n) (ifSignals iface)
   infos <- fullInterfaceSignalList n iface >>=
            mapM (\(owner, signal) -> do
                    si <- signalInfoName owner signal

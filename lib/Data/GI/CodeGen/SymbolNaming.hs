@@ -21,6 +21,9 @@ module Data.GI.CodeGen.SymbolNaming
     , callbackHaskellToForeignWithClosures
     , callbackClosureGenerator
 
+    , signalHaskellName
+    , signalInfoName
+
     , submoduleLocation
     , qualifiedAPI
     , qualifiedSymbol
@@ -235,3 +238,15 @@ escapeReserved s
     | "set_" `T.isPrefixOf` s = s <> "_"
     | "get_" `T.isPrefixOf` s = s <> "_"
     | otherwise = s
+
+-- | Qualified name for the "(sigName, info)" tag for a given signal.
+signalInfoName :: Name -> Signal -> CodeGen Text
+signalInfoName n signal = do
+  let infoName = upperName n <> (ucFirst . signalHaskellName . sigName) signal
+                 <> "SignalInfo"
+  qualifiedSymbol infoName n
+
+-- | Return the name for the signal in Haskell CamelCase conventions.
+signalHaskellName :: Text -> Text
+signalHaskellName sn = let (w:ws) = T.split (== '-') sn
+                       in w <> T.concat (map ucFirst ws)

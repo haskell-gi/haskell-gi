@@ -369,12 +369,7 @@ genObject n o = do
     cppIf CPPOverloading $
          fullObjectMethodList n o >>= genMethodList n
 
-    forM_ (objSignals o) $ \s ->
-     handleCGExc
-     (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
-                     , sigName s
-                     , "\n", "-- Error was : "] <>) . describeCGError)
-     (genSignal s n)
+    forM_ (objSignals o) $ \s -> genSignal s n
 
     genObjectProperties n o
     cppIf CPPOverloading $

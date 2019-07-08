@@ -383,13 +383,48 @@ genCallback n (Callback {cbCallable = cb, cbDocumentation = cbDoc }) = do
         genClosure name' cb' name' name' False
         genCallbackWrapper name' cb' name' False
 
--- | Return the name for the signal in Haskell CamelCase conventions.
-signalHaskellName :: Text -> Text
-signalHaskellName sn = let (w:ws) = T.split (== '-') sn
-                       in w <> T.concat (map ucFirst ws)
+-- | Generate the given signal instance for the given API object.
+genSignalInfoInstance :: Name -> Signal -> CodeGen ()
+genSignalInfoInstance owner signal = group $ do
+  let name = upperName owner
+  let sn = (ucFirst . signalHaskellName . sigName) signal
+  si <- signalInfoName owner signal
+  bline $ "data " <> si
+  line $ "instance SignalInfo " <> si <> " where"
+  indent $ do
+      let signalConnectorName = name <> sn
+          cbHaskellType = signalConnectorName <> "Callback"
+      line $ "type HaskellCallbackType " <> si <> " = " <> cbHaskellType
+      line $ "connectSignal _ obj cb connectMode = do"
+      indent $ genSignalConnector signal cbHaskellType "connectMode"
+  export (NamedSubsection SignalSection $ lcFirst sn) si
 
-genSignal :: Signal -> Name -> ExcCodeGen ()
-genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
+-- | Write some simple debug message when signal generation fails, and
+-- generate a placeholder SignalInfo instance.
+processSignalError :: Signal -> Name -> CGError -> CodeGen ()
+processSignalError signal owner err = do
+  let qualifiedSignalName = upperName owner <> "::" <> sigName signal
+      sn = (ucFirst . signalHaskellName . sigName) signal
+  line $ T.concat ["-- XXX Could not generate signal "
+                  , qualifiedSignalName
+                  , "\n", "-- Error was : ", describeCGError err]
+
+  -- Generate a placeholder SignalInfo instance that raises a type
+  -- error when one attempts to use it.
+  cppIf CPPOverloading $ group $ do
+    si <- signalInfoName owner signal
+    bline $ "data " <> si
+    line $ "instance SignalInfo " <> si <> " where"
+    indent $ do
+      line $ "type HaskellCallbackType " <> si <>
+        " = B.Signals.SignalCodeGenError \"" <> qualifiedSignalName <> "\""
+      line $ "connectSignal = undefined"
+    export (NamedSubsection SignalSection $ lcFirst sn) si
+
+-- | Generate a wrapper for a signal.
+genSignal :: Signal -> Name -> CodeGen ()
+genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
+  handleCGExc (processSignalError s on) $ do
   let on' = upperName on
 
   line $ "-- signal " <> on' <> "::" <> sn
@@ -443,6 +478,8 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on = do
       line $ afterName <> " obj cb = liftIO $ do"
       indent $ genSignalConnector s cbType "SignalConnectAfter"
       export docSection afterName
+
+  cppIf CPPOverloading (genSignalInfoInstance on s)
 
   where
     onDoc :: Text
