@@ -1,0 +1,6 @@
+C-docs-url Gtk https://developer.gnome.org/gtk4/stable
+
+# The introspection annotation marks the parameters as
+# (out caller-allocates), but it is just a pointer to a GValue.
+set-attr Gtk/TreeModelFilterModifyFunc/@parameters/value direction in
+set-attr Gtk/TreeModelFilterModifyFunc/@parameters/value caller-allocates 0
