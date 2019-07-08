@@ -45,7 +45,7 @@ module Data.GI.Base.ShortPrelude
     , (++)
     , (=<<)
     , (>=>)
-    , Bool(..)
+    , Bool()
     , Float
     , Double
     , undefined
