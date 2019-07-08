@@ -44,7 +44,7 @@ library
                        Data.GI.Base.Signals,
                        Data.GI.Base.Utils
 
-  pkgconfig-depends:   gobject-2.0 >= 2.32, glib-2.0
+  pkgconfig-depends:   gobject-2.0 >= 2.42, glib-2.0
   build-depends:       base >= 4.9 && < 5,
                        bytestring,
                        containers,
