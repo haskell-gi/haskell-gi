@@ -20,6 +20,7 @@ import Data.Text (Text)
 import Data.GI.CodeGen.API
 import Data.GI.CodeGen.Code (findAPIByName, CodeGen, line)
 import Data.GI.CodeGen.Util (tshow)
+import Data.GI.CodeGen.Fixups (dropMovedItems)
 
 -- | Find the parent of a given object when building the
 -- instanceTree. For the purposes of the binding we do not need to
@@ -70,9 +71,9 @@ instance Inheritable Method where
 apiInheritables :: Inheritable i => Name -> CodeGen [(Name, i)]
 apiInheritables n = do
   api <- findAPIByName n
-  case api of
-    APIInterface iface -> return $ map ((,) n) (ifInheritables iface)
-    APIObject object -> return $ map ((,) n) (objInheritables object)
+  case dropMovedItems api of
+    Just (APIInterface iface) -> return $ map ((,) n) (ifInheritables iface)
+    Just (APIObject object) -> return $ map ((,) n) (objInheritables object)
     _ -> error $ "apiInheritables : Unexpected API : " ++ show n
 
 fullAPIInheritableList :: Inheritable i => Name -> CodeGen [(Name, i)]
