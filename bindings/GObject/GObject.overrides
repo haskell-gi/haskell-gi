@@ -20,6 +20,7 @@ set-attr GObject/Object/set_data_full introspectable 1
 # These class structs are useful to expose
 set-attr GObject/InitiallyUnownedClass haskell-gi-force-visible 1
 set-attr GObject/TypeClass haskell-gi-force-visible 1
+set-attr GObject/ObjectClass haskell-gi-force-visible 1
 
 # Generated from gobject 2.48.0 with xsltproc Nullable.xslt GObject-2.0.gir
 set-attr GObject/BindingTransformFunc/@parameters/user_data nullable 1
