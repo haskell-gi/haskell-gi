@@ -26,6 +26,7 @@ module Data.GI.Base.Properties
     , setObjectPropertyPtrGList
     , setObjectPropertyHash
     , setObjectPropertyCallback
+    , setObjectPropertyGError
 
     , getObjectPropertyString
     , getObjectPropertyStringArray
@@ -52,6 +53,7 @@ module Data.GI.Base.Properties
     , getObjectPropertyPtrGList
     , getObjectPropertyHash
     , getObjectPropertyCallback
+    , getObjectPropertyGError
 
     , constructObjectPropertyString
     , constructObjectPropertyStringArray
@@ -78,6 +80,7 @@ module Data.GI.Base.Properties
     , constructObjectPropertyPtrGList
     , constructObjectPropertyHash
     , constructObjectPropertyCallback
+    , constructObjectPropertyGError
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -92,6 +95,7 @@ import Data.Proxy (Proxy(..))
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions
 import Data.GI.Base.ManagedPtr
+import Data.GI.Base.GError (GError(..))
 import Data.GI.Base.GValue
 import Data.GI.Base.GType
 import Data.GI.Base.GClosure (GClosure(..))
@@ -556,3 +560,18 @@ getObjectPropertyCallback obj propName wrapper = do
   if ptr /= nullPtr
     then return . Just . wrapper $ castPtrToFunPtr ptr
     else return Nothing
+
+-- | Set a property of type `GError`.
+setObjectPropertyGError :: forall a. GObject a =>
+                          a -> String -> Maybe GError -> IO ()
+setObjectPropertyGError = setObjectPropertyBoxed
+
+-- | Construct a property of type `GError`.
+constructObjectPropertyGError :: String -> Maybe GError -> IO (GValueConstruct o)
+constructObjectPropertyGError = constructObjectPropertyBoxed
+
+-- | Get the value of a property of type `GError`.
+getObjectPropertyGError :: forall a. GObject a =>
+                            a -> String -> IO (Maybe GError)
+getObjectPropertyGError obj propName =
+  getObjectPropertyBoxed obj propName GError

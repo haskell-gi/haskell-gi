@@ -13,6 +13,7 @@ module Data.GI.Base.GType
     , gtypeFloat
     , gtypeDouble
     , gtypeBoolean
+    , gtypeError
     , gtypeGType
     , gtypeStrv
     , gtypeBoxed
@@ -111,6 +112,10 @@ gtypeInvalid = GType #const G_TYPE_INVALID
 -- | The `GType` corresponding to a @GVariant@.
 gtypeVariant :: GType
 gtypeVariant = GType #const G_TYPE_VARIANT
+
+-- | The `GType` corresponding to 'Data.GI.Base.GError.GError'.
+gtypeError :: GType
+gtypeError = GType #const G_TYPE_ERROR
 
 {- Run-time types -}
 
