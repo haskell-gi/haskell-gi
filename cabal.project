@@ -28,7 +28,7 @@ packages: base/haskell-gi-base.cabal
           bindings/GstVideo/gi-gstvideo.cabal
           bindings/GstTag/gi-gsttag.cabal
           bindings/GstPbutils/gi-gstpbutils.cabal
-          bindings/Gtk/gi-gtk.cabal
+          bindings/Gtk-3.0/gi-gtk.cabal
           bindings/GtkSource/gi-gtksource.cabal
           bindings/Handy/gi-handy.cabal
           bindings/JavaScriptCore-4.0/gi-javascriptcore.cabal
