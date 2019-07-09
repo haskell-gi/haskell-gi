@@ -4,3 +4,7 @@ C-docs-url Gtk https://developer.gnome.org/gtk4/stable
 # (out caller-allocates), but it is just a pointer to a GValue.
 set-attr Gtk/TreeModelFilterModifyFunc/@parameters/value direction in
 set-attr Gtk/TreeModelFilterModifyFunc/@parameters/value caller-allocates 0
+
+# It is useful to expose these class structs when deriving new types
+set-attr Gtk/WidgetClass haskell-gi-force-visible 1
+set-attr Gtk/ContainerClass haskell-gi-force-visible 1
