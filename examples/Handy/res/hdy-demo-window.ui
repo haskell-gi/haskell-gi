@@ -16,7 +16,7 @@
     <property name="step_increment">250</property>
     <property name="page_increment">1000</property>
   </object>
-  <object class="GtkApplicationWindow" id="app_window">
+  <template class="HdyDemoWindow" parent="GtkApplicationWindow">
     <property name="can_focus">False</property>
     <property name="title">Handy Demo</property>
     <property name="default_width">360</property>
@@ -1192,7 +1192,7 @@
         </child>
       </object>
     </child>
-  </object>
+  </template>
   <object class="GtkSizeGroup" id="start_pane_size_group">
     <property name="mode">horizontal</property>
     <widgets>

@@ -15,7 +15,15 @@ extra-source-files:  README.md
 
 executable libhandy-demo-hs
   hs-source-dirs:      src
+  c-sources:           res/resources.c
   main-is:             Main.hs
   other-modules:       DemoWindow
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5, gi-handy, gi-gtk, gi-gio, gi-gdk, text, gi-gtk-hs, file-embed, haskell-gi-base
+  build-depends:       base >= 4.7 && < 5, gi-handy,
+                       gi-gtk >= 3.0.32 && < 4.0,
+                       gi-gio,
+                       gi-gdk,
+                       text,
+                       gi-gtk-hs,
+                       file-embed,
+                       haskell-gi-base == 0.23.*

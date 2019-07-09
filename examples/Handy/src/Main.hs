@@ -21,7 +21,7 @@ startup = pure ()
 showWindow :: Gtk.Application -> IO ()
 showWindow app = do
     window <- demoWindow app
-    Gtk.widgetShowAll (appWindow window)
+    Gtk.widgetShowAll window
 
 main :: IO ()
 main = do

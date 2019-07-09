@@ -3,10 +3,18 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE MonoLocalBinds #-}
+-- Type subclassing in haskell-gi involves some type-level
+-- programming, enable the necessary features here.
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 module DemoWindow
     ( demoWindow
-    , appWindow
     ) where
 
 import Control.Monad.IO.Class
@@ -16,11 +24,15 @@ import Data.Functor (($>))
 import Data.Char
 import Data.Maybe (fromJust)
 import Prelude
+import Data.Coerce (coerce)
 import Data.FileEmbed
 import Data.GI.Gtk.BuildFn
 import Data.GI.Gtk.ModelView.SeqStore
 import Data.GI.Base
 import Data.GI.Base.GType
+import Data.GI.Base.GObject (registerGType, DerivedGObject(..),
+                             GObjectClass(..))
+import qualified Data.GI.Base.Overloading as O
 import GI.Gtk (AttrOp(..), set, on, get, set, after, new)
 
 -- necessary because of some callback functions, see below. is this fixable with overrides?
@@ -33,9 +45,10 @@ import qualified GI.Gio as Gio
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
+import GHC.OverloadedLabels as OL
+
 data DemoWindow = DemoWindow
-    { appWindow :: Gtk.ApplicationWindow
-    , headerBox :: Hdy.Leaflet
+    { headerBox :: Hdy.Leaflet
     , contentBox :: Hdy.Leaflet
     , back :: Gtk.Button
     , searchButton :: Gtk.ToggleButton
@@ -60,13 +73,151 @@ data DemoWindow = DemoWindow
     , actionDialogButton :: Gtk.Button
     }
 
-keyPressedCB :: MonadIO m => DemoWindow -> Gdk.EventKey -> m Bool
+-- | A pointer to the type for the demo window.
+newtype HdyDemoWindow = HdyDemoWindow (ManagedPtr HdyDemoWindow)
+
+-- | 'HdyDemoWindow' is a type of 'GObject', which we register below.
+instance GObject HdyDemoWindow where
+  gobjectType = registerGType HdyDemoWindow
+
+-- | 'GObject' registration data for 'HdyDemoWindow'.
+instance DerivedGObject HdyDemoWindow where
+  -- | The parent type
+  type GObjectParentType  HdyDemoWindow = Gtk.ApplicationWindow
+  -- | The type for the private data
+  type GObjectPrivateData HdyDemoWindow = DemoWindow
+
+  -- | Object type name to register in the GObject type system.
+  objectTypeName      = "HdyDemoWindow"
+
+  -- | Class init function (called when registering the type)
+  objectClassInit     = hdyDemoWindowClassInit
+
+  -- | Instance init function (called for each object of this type)
+  objectInstanceInit  = hdyDemoWindowInstanceInit
+
+-- | Tell the Haskell type system that we descend from
+-- 'Gtk.ApplicationWindow'.
+instance O.HasParentTypes HdyDemoWindow
+type instance O.ParentTypes HdyDemoWindow = Gtk.ApplicationWindow ': O.ParentTypes Gtk.ApplicationWindow
+
+-- | We inherit all overloaded properties, signals and methods from
+-- 'Gtk.ApplicationWindow'.
+
+-- Overloaded properties:
+instance O.HasAttributeList HdyDemoWindow
+type instance O.AttributeList HdyDemoWindow = O.AttributeList Gtk.ApplicationWindow
+
+-- Overloaded signals:
+type instance O.SignalList HdyDemoWindow = O.SignalList Gtk.ApplicationWindow
+
+-- Overloaded methods:
+instance (info ~ Gtk.ResolveApplicationWindowMethod t HdyDemoWindow,
+          O.MethodInfo info HdyDemoWindow p)
+         => OL.IsLabel t (HdyDemoWindow -> p) where
+#if MIN_VERSION_base(4,10,0)
+    fromLabel = O.overloadedMethod @info
+#else
+    fromLabel _ = O.overloadedMethod @info
+#endif
+
+-- | Things to do when registering the 'HdyDemoWindow' type.
+hdyDemoWindowClassInit :: GObjectClass -> IO ()
+hdyDemoWindowClassInit klass =
+  withTransient Gtk.WidgetClass (coerce klass) $ \widgetClass -> do
+    #setTemplateFromResource widgetClass "/haskell-gi/examples/handy-demo/hdy-demo-window.ui"
+    let bindChild childName =
+          #bindTemplateChildFull widgetClass childName False 0
+    mapM_ bindChild ["header_box", "content_box", "back", "search_button",
+                     "sidebar", "stack", "box_dialer", "dialer",
+                     "display", "arrows", "search_bar", "search_entry",
+                     "arrows_listbox", "arrows_direction_row", "column_listbox",
+                     "lists_listbox", "combo_row", "enum_combo_row",
+                     "header_group", "adj_arrows_count", "adj_arrows_duration",
+                     "presentation_dialog_button", "action_dialog_button"]
+
+-- | Get a child of the given type from the given widget.
+getChild :: forall o. GObject o
+         => HdyDemoWindow -> (ManagedPtr o -> o) -> T.Text -> IO o
+getChild widget constructor name = do
+  gtype <- gobjectType @HdyDemoWindow
+  bareGObject <- #getTemplateChild widget gtype name
+  unsafeCastTo constructor bareGObject
+
+-- | Initialization for each instance
+hdyDemoWindowInstanceInit :: GObjectClass -> HdyDemoWindow
+                          -> IO DemoWindow
+hdyDemoWindowInstanceInit klass self = do
+  #initTemplate self
+
+  w@DemoWindow {..} <- DemoWindow
+         <$> getChild self Hdy.Leaflet "header_box"
+         <*> getChild self Hdy.Leaflet "content_box"
+         <*> getChild self Gtk.Button "back"
+         <*> getChild self Gtk.ToggleButton "search_button"
+         <*> getChild self Gtk.StackSidebar "sidebar"
+         <*> getChild self Gtk.Stack "stack"
+         <*> getChild self Gtk.Box "box_dialer"
+         <*> getChild self Hdy.Dialer "dialer"
+         <*> getChild self Gtk.Label "display"
+         <*> getChild self Hdy.Arrows "arrows"
+         <*> getChild self Hdy.SearchBar "search_bar"
+         <*> getChild self Gtk.SearchEntry "search_entry"
+         <*> getChild self Gtk.ListBox "arrows_listbox"
+         <*> getChild self Hdy.ComboRow "arrows_direction_row"
+         <*> getChild self Gtk.ListBox "column_listbox"
+         <*> getChild self Gtk.ListBox "lists_listbox"
+         <*> getChild self Hdy.ComboRow "combo_row"
+         <*> getChild self Hdy.ComboRow "enum_combo_row"
+         <*> getChild self Hdy.HeaderGroup "header_group"
+         <*> getChild self Gtk.Adjustment "adj_arrows_count"
+         <*> getChild self Gtk.Adjustment "adj_arrows_duration"
+         <*> getChild self Gtk.Button "presentation_dialog_button"
+         <*> getChild self Gtk.Button "action_dialog_button"
+
+  arrowsPageInit w
+  listsPageInit w
+  listBoxSeparate columnListbox
+  listBoxSeparate arrowsListbox
+  set contentBox [ #visibleChildName := "content" ]
+  -- signals
+  on self #keyPressEvent (keyPressedCB self)
+  on headerBox (Gdk.PropertyNotify #visibleChild) (\_ -> update w)
+  on headerBox (Gdk.PropertyNotify #fold) (\_ -> update w)
+  on stack
+      (Gdk.PropertyNotify #visibleChild)
+      (\_ ->
+           set contentBox [#visibleChildName := "content"] *>
+           updateHeaderBar w)
+  on back #clicked $ set contentBox [#visibleChildName := "sidebar"]
+
+  dialerSignals w
+
+  on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \k -> do
+      set arrows
+          [ #direction :=> toEnum . fromIntegral <$>
+            get arrowsDirectionRow #selectedIndex
+          ]
+      Hdy.arrowsAnimate arrows
+  on adjArrowsCount #valueChanged $ do
+      set arrows [ #count :=> truncate <$> get adjArrowsCount #value ]
+      Hdy.arrowsAnimate arrows
+  on adjArrowsDuration #valueChanged $ do
+      set arrows [ #duration :=> truncate <$> get adjArrowsDuration #value ]
+      Hdy.arrowsAnimate arrows
+
+  on presentationDialogButton #clicked (presentationDialog self)
+  on actionDialogButton #clicked (actionDialog self)
+
+  pure w
+
+keyPressedCB :: MonadIO m => HdyDemoWindow -> Gdk.EventKey -> m Bool
 keyPressedCB win key = do
     kv <- get key #keyval
     st <- get key #state
     if (kv == Gdk.KEY_q || kv == Gdk.KEY_Q) &&
        st == [Gdk.ModifierTypeControlMask]
-        then Gtk.widgetDestroy (appWindow win) $> True
+        then Gtk.widgetDestroy win $> True
         else pure False
 
 update :: MonadIO m => DemoWindow -> m ()
@@ -85,36 +236,6 @@ updateHeaderBar :: MonadIO m => DemoWindow -> m ()
 updateHeaderBar DemoWindow {..} = do
     visibleChildName <- get stack #visibleChildName
     set searchButton [#visible := visibleChildName == Just "search-bar"]
-
-demoWindowUI :: Text
-demoWindowUI = $(embedStringFile "res/hdy-demo-window.ui")
-
-buildDemoWindow :: BuildFn DemoWindow
-buildDemoWindow = DemoWindow
-    <$> getObject Gtk.ApplicationWindow "app_window"
-    <*> getObject Hdy.Leaflet "header_box"
-    <*> getObject Hdy.Leaflet "content_box"
-    <*> getObject Gtk.Button "back"
-    <*> getObject Gtk.ToggleButton "search_button"
-    <*> getObject Gtk.StackSidebar "sidebar"
-    <*> getObject Gtk.Stack "stack"
-    <*> getObject Gtk.Box "box_dialer"
-    <*> getObject Hdy.Dialer "dialer"
-    <*> getObject Gtk.Label "display"
-    <*> getObject Hdy.Arrows "arrows"
-    <*> getObject Hdy.SearchBar "search_bar"
-    <*> getObject Gtk.SearchEntry "search_entry"
-    <*> getObject Gtk.ListBox "arrows_listbox"
-    <*> getObject Hdy.ComboRow "arrows_direction_row"
-    <*> getObject Gtk.ListBox "column_listbox"
-    <*> getObject Gtk.ListBox "lists_listbox"
-    <*> getObject Hdy.ComboRow "combo_row"
-    <*> getObject Hdy.ComboRow "enum_combo_row"
-    <*> getObject Hdy.HeaderGroup "header_group"
-    <*> getObject Gtk.Adjustment "adj_arrows_count"
-    <*> getObject Gtk.Adjustment "adj_arrows_duration"
-    <*> getObject Gtk.Button "presentation_dialog_button"
-    <*> getObject Gtk.Button "action_dialog_button"
 
 dialerSignals :: MonadIO m => DemoWindow -> m ()
 dialerSignals DemoWindow{..} = do
@@ -140,13 +261,13 @@ dialogLabelAndShow dlg = do
     Gtk.widgetShow lbl
     Gtk.widgetShow dlg
 
-presentationDialog :: MonadIO m => DemoWindow -> m ()
-presentationDialog DemoWindow{..} = do
+presentationDialog :: MonadIO m => HdyDemoWindow -> m ()
+presentationDialog appWindow = do
     dlg <- new Hdy.Dialog [#title := "HdyDialog", #transientFor := appWindow ]
     dialogLabelAndShow dlg
 
-actionDialog :: MonadIO m => DemoWindow -> m ()
-actionDialog DemoWindow {..} = do
+actionDialog :: MonadIO m => HdyDemoWindow -> m ()
+actionDialog appWindow = do
     dlg <-
         new
             Hdy.Dialog
@@ -208,44 +329,6 @@ arrowsPageInit DemoWindow{..} = do
     Hdy.comboRowSetForEnum arrowsDirectionRow ty 
             (Just (`Hdy.enumValueRowName` nullPtr))
 
-demoWindow :: MonadIO m => Gtk.Application -> m DemoWindow
-demoWindow app = do
-    b <- Gtk.builderNewFromString demoWindowUI (-1)
-    w@DemoWindow {..} <- buildWithBuilder buildDemoWindow b
-    -- set application
-    set appWindow [#application := app]
-    arrowsPageInit w
-    listsPageInit w
-    listBoxSeparate columnListbox
-    listBoxSeparate arrowsListbox
-    set contentBox [ #visibleChildName := "content" ]
-    -- signals
-    on appWindow #keyPressEvent (keyPressedCB w)
-    on headerBox (Gdk.PropertyNotify #visibleChild) (\_ -> update w)
-    on headerBox (Gdk.PropertyNotify #fold) (\_ -> update w)
-    on stack
-        (Gdk.PropertyNotify #visibleChild)
-        (\_ ->
-             set contentBox [#visibleChildName := "content"] *>
-             updateHeaderBar w)
-    on back #clicked $ set contentBox [#visibleChildName := "sidebar"]
+demoWindow :: MonadIO m => Gtk.Application -> m HdyDemoWindow
+demoWindow app = new HdyDemoWindow [#application := app]
 
-    dialerSignals w
-
-    on arrowsDirectionRow (Gdk.PropertyNotify #selectedIndex) $ \k -> do
-        set arrows
-            [ #direction :=> toEnum . fromIntegral <$>
-              get arrowsDirectionRow #selectedIndex
-            ]
-        Hdy.arrowsAnimate arrows
-    on adjArrowsCount #valueChanged $ do
-        set arrows [ #count :=> truncate <$> get adjArrowsCount #value ]
-        Hdy.arrowsAnimate arrows
-    on adjArrowsDuration #valueChanged $ do
-        set arrows [ #duration :=> truncate <$> get adjArrowsDuration #value ]
-        Hdy.arrowsAnimate arrows
-
-    on presentationDialogButton #clicked (presentationDialog w)
-    on actionDialogButton #clicked (actionDialog w)
-
-    pure w
