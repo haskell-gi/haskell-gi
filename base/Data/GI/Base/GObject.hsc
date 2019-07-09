@@ -69,7 +69,7 @@ import Data.GI.Base.GParamSpec (PropertyInfo(..),
 import Data.GI.Base.GQuark (GQuark(..), gQuarkFromString)
 import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
-                                withTransient)
+                                newObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
 import Data.GI.Base.Utils (dbgLog)
 
@@ -229,7 +229,8 @@ foreign import ccall "wrapper"
 -- Note that for this function to work the type must be an instance of
 -- `DerivedGObject`.
 registerGType :: forall o. (HasCallStack, DerivedGObject o,
-                            GObject (GObjectParentType o)) =>
+                            GObject (GObjectParentType o),
+                            GObject o) =>
                  (ManagedPtr o -> o) -> IO GType
 registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
   cgtype <- g_type_from_name cTypeName
@@ -245,8 +246,9 @@ registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
      unwrapInstanceInit :: (GObjectClass -> o -> IO (GObjectPrivateData o)) ->
                            CGTypeInstanceInit o
      unwrapInstanceInit instanceInit objPtr klass = do
-       privateData <- withTransient construct (castPtr objPtr) $ \obj ->
-                          instanceInit klass obj
+       privateData <- do
+         obj <- newObject construct (castPtr objPtr :: Ptr o)
+         instanceInit klass obj
        instanceSetPrivateData objPtr privateData
 
      unwrapClassInit :: (GObjectClass -> IO ()) -> CGTypeClassInit
