@@ -53,7 +53,7 @@ import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr)
 
 import Data.GI.Base.CallStack (CallStack)
-import Data.GI.Base.Overloading (HasParentTypes)
+import {-# SOURCE #-} Data.GI.Base.Overloading (HasParentTypes)
 
 #include <glib-object.h>
 

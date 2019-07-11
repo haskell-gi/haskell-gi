@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeOperators, KindSignatures, DataKinds, PolyKinds,
              TypeFamilies, UndecidableInstances, EmptyDataDecls,
              MultiParamTypeClasses, FlexibleInstances, ConstraintKinds,
-             AllowAmbiguousTypes #-}
+             AllowAmbiguousTypes, FlexibleContexts #-}
 
 -- | Helpers for dealing with overladed properties, signals and
 -- methods.
@@ -11,6 +11,8 @@ module Data.GI.Base.Overloading
       ParentTypes
     , HasParentTypes
     , IsDescendantOf
+
+    , asA
 
     -- * Looking up attributes in parent types
     , AttributeList
@@ -30,8 +32,12 @@ module Data.GI.Base.Overloading
     , MethodInfo(..)
     ) where
 
+import Data.Coerce (coerce)
+
 import GHC.Exts (Constraint)
 import GHC.TypeLits
+
+import Data.GI.Base.BasicTypes (ManagedPtrNewtype, ManagedPtr(..))
 
 -- | Look in the given list of (symbol, tag) tuples for the tag
 -- corresponding to the given symbol. If not found raise the given
@@ -66,7 +72,7 @@ type family ParentTypes a :: [*]
 -- | A constraint on a type, to be fulfilled whenever it has a type
 -- instance for `ParentTypes`. This leads to nicer errors, thanks to
 -- the overlappable instance below.
-class HasParentTypes o
+class HasParentTypes (o :: *)
 
 -- | Default instance, which will give rise to an error for types
 -- without an associated `ParentTypes` instance.
@@ -74,6 +80,15 @@ instance {-# OVERLAPPABLE #-}
     TypeError ('Text "Type ‘" ':<>: 'ShowType a ':<>:
                'Text "’ does not have any known parent types.")
     => HasParentTypes a
+
+-- | Safe coercions to a parent class. For instance:
+--
+-- > #show $ label `asA` Gtk.Widget
+--
+asA :: (ManagedPtrNewtype a, ManagedPtrNewtype b,
+        HasParentTypes b, IsDescendantOf a b)
+    => b -> (ManagedPtr a -> a) -> a
+asA obj _constructor = coerce obj
 
 -- | The list of attributes defined for a given type. Each element of
 -- the list is a tuple, with the first element of the tuple the name

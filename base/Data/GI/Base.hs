@@ -16,6 +16,7 @@ module Data.GI.Base
     , module Data.GI.Base.GVariant
     , module Data.GI.Base.ManagedPtr
     , module Data.GI.Base.Signals
+    , module Data.GI.Base.Overloading
     ) where
 
 import Data.GI.Base.Attributes (get, set, AttrOp(..))
@@ -29,3 +30,4 @@ import Data.GI.Base.GValue (GValue(..), IsGValue(..))
 import Data.GI.Base.GVariant
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Signals (on, after, SignalProxy(PropertyNotify))
+import Data.GI.Base.Overloading (asA)
