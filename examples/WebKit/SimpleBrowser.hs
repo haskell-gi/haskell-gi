@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
 import qualified GI.Gtk as Gtk
 import qualified GI.GLib as GLib
@@ -73,7 +74,15 @@ createGUI sessionBus highlight = do
     userData <- toGVariant ("Hi, extension!" :: T.Text, 57 :: Int64)
     #setWebExtensionsInitializationUserData context userData
 
-  view <- new WK.WebView [#webContext := context]
+  contentManager <- new WK.UserContentManager []
+  on contentManager (#scriptMessageReceived ::: "haskell_gi_handler")
+    $ \result -> do
+      resultAsString <- #getJsValue result >>= #toString
+      putStrLn $ "Got a message: " <> show resultAsString
+  #registerScriptMessageHandler contentManager "haskell_gi_handler"
+
+  view <- new WK.WebView [ #webContext := context
+                         , #userContentManager := contentManager ]
   on view #close $ #destroy win
   #loadUri view "http://www.haskell.org"
 

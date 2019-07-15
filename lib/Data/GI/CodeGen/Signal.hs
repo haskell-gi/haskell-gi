@@ -1,6 +1,5 @@
 module Data.GI.CodeGen.Signal
     ( genSignal
-    , genSignalConnector
     , genCallback
     , signalHaskellName
     ) where
@@ -395,8 +394,8 @@ genSignalInfoInstance owner signal = group $ do
       let signalConnectorName = name <> sn
           cbHaskellType = signalConnectorName <> "Callback"
       line $ "type HaskellCallbackType " <> si <> " = " <> cbHaskellType
-      line $ "connectSignal _ obj cb connectMode = do"
-      indent $ genSignalConnector signal cbHaskellType "connectMode"
+      line $ "connectSignal obj cb connectMode detail = do"
+      indent $ genSignalConnector signal cbHaskellType "connectMode" "detail"
   export (NamedSubsection SignalSection $ lcFirst sn) si
 
 -- | Write some simple debug message when signal generation fails, and
@@ -469,14 +468,14 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
       writeHaddock DocBeforeSymbol onDoc
       line $ onName <> signature
       line $ onName <> " obj cb = liftIO $ do"
-      indent $ genSignalConnector s cbType "SignalConnectBefore"
+      indent $ genSignalConnector s cbType "SignalConnectBefore" "Nothing"
       export docSection onName
 
     group $ do
       writeHaddock DocBeforeSymbol afterDoc
       line $ afterName <> signature
       line $ afterName <> " obj cb = liftIO $ do"
-      indent $ genSignalConnector s cbType "SignalConnectAfter"
+      indent $ genSignalConnector s cbType "SignalConnectAfter" "Nothing"
       export docSection afterName
 
   cppIf CPPOverloading (genSignalInfoInstance on s)
@@ -509,9 +508,11 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
 genSignalConnector :: Signal
                    -> Text -- ^ Callback type
                    -> Text -- ^ SignalConnectBefore or SignalConnectAfter
+                   -> Text -- ^ Detail
                    -> CodeGen ()
-genSignalConnector (Signal {sigName = sn, sigCallable = cb}) cbType when = do
+genSignalConnector (Signal {sigName = sn, sigCallable = cb}) cbType when detail = do
   cb' <- genWrappedCallback cb "cb" cbType True
   let cb'' = prime cb'
   line $ cb'' <> " <- " <> callbackWrapperAllocator cbType <> " " <> cb'
   line $ "connectSignalFunPtr obj \"" <> sn <> "\" " <> cb'' <> " " <> when
+          <> " " <> detail
