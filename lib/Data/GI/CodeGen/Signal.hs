@@ -502,7 +502,9 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
       , "@"
       , "'Data.GI.Base.Signals.on' " <> lowerName on <> " #"
         <> lcFirst (hyphensToCamelCase sn) <> " callback"
-      , "@" ]
+      , "@"
+      , ""
+      , detailedDoc ]
 
     afterDoc :: Text
     afterDoc = T.unlines [
@@ -513,7 +515,19 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
       , "@"
       , "'Data.GI.Base.Signals.after' " <> lowerName on <> " #"
         <> lcFirst (hyphensToCamelCase sn) <> " callback"
-      , "@" ]
+      , "@"
+      , ""
+      , detailedDoc ]
+
+    detailedDoc :: Text
+    detailedDoc = if not (sigDetailed s)
+                  then ""
+                  else T.unlines [
+      "This signal admits a optional parameter @detail@."
+      , "If it's not @Nothing@, we will connect to “@" <> sn
+        <> "::detail@” instead."
+      ]
+
 
 -- | Generate the code for connecting the given signal. This assumes
 -- that it lives inside a @do@ block.
