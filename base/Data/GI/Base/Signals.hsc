@@ -55,6 +55,7 @@ module Data.GI.Base.Signals
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Proxy (Proxy(..))
+import Data.Monoid ((<>))
 
 import Foreign
 import Foreign.C
