@@ -12,12 +12,14 @@ data Signal = Signal {
         sigName :: Text,
         sigCallable :: Callable,
         sigDeprecated :: Maybe DeprecationInfo,
+        sigDetailed :: Bool,
         sigDoc :: Documentation
     } deriving (Show, Eq)
 
 parseSignal :: Parser Signal
 parseSignal = do
   n <- getAttr "name"
+  detailed <- optionalAttr "detailed" False parseBool
   deprecated <- parseDeprecation
   callable <- parseCallable
   doc <- parseDocumentation
@@ -25,5 +27,6 @@ parseSignal = do
                 sigName = n
               , sigCallable = callable
               , sigDeprecated = deprecated
+              , sigDetailed = detailed
               , sigDoc = doc
               }

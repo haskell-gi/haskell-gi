@@ -459,7 +459,9 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
     -- GObject.
     klass <- classConstraint on
     let signatureConstraints = "(" <> klass <> " a, MonadIO m) =>"
-        signatureArgs = "a -> " <> cbType <> " -> m SignalHandlerId"
+        signatureArgs = if sigDetailed s
+          then "a -> P.Maybe T.Text -> " <> cbType <> " -> m SignalHandlerId"
+          else "a -> " <> cbType <> " -> m SignalHandlerId"
         signature = " :: " <> signatureConstraints <> " " <> signatureArgs
         onName = "on" <> signalConnectorName
         afterName = "after" <> signalConnectorName
@@ -467,15 +469,25 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
     group $ do
       writeHaddock DocBeforeSymbol onDoc
       line $ onName <> signature
-      line $ onName <> " obj cb = liftIO $ do"
-      indent $ genSignalConnector s cbType "SignalConnectBefore" "Nothing"
+      if sigDetailed s
+        then do
+        line $ onName <> " obj detail cb = liftIO $ do"
+        indent $ genSignalConnector s cbType "SignalConnectBefore" "detail"
+        else do
+        line $ onName <> " obj cb = liftIO $ do"
+        indent $ genSignalConnector s cbType "SignalConnectBefore" "Nothing"
       export docSection onName
 
     group $ do
       writeHaddock DocBeforeSymbol afterDoc
       line $ afterName <> signature
-      line $ afterName <> " obj cb = liftIO $ do"
-      indent $ genSignalConnector s cbType "SignalConnectAfter" "Nothing"
+      if sigDetailed s
+        then do
+        line $ afterName <> " obj detail cb = liftIO $ do"
+        indent $ genSignalConnector s cbType "SignalConnectAfter" "detail"
+        else do
+        line $ afterName <> " obj cb = liftIO $ do"
+        indent $ genSignalConnector s cbType "SignalConnectAfter" "Nothing"
       export docSection afterName
 
   cppIf CPPOverloading (genSignalInfoInstance on s)
