@@ -30,8 +30,8 @@ install:
 
 # Here starts the actual work to be performed for the package under test; any command which exits with a non-zero exit code causes the build to fail.
 script:
- # The version of Ubuntu in Travis does not have libhandy, libggit or libostree, and and its gtk version is ancient, so testGtk does not build anymore
- - grep -Ev "(Handy|OSTree|haskell-gi-test|Ggit)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
+ # The version of Ubuntu in Travis does not have libhandy, libggit or libostree, and and its gtk version is ancient, so many things do not build anymore
+ - grep -Ev "(Handy|OSTree|haskell-gi-test|Ggit|webkit-example)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
  - sed 's/Handy//;s/OSTree//;s/Ggit//;s/Graphene//;s/Gdk-4.0//;s/Gsk//;s/Gtk-4.0//' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
  - pushd bindings
  - cabal new-run genBuildInfo $(bash PKGS.sh)
