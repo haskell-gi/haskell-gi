@@ -70,7 +70,7 @@ void dbg_log_with_len (const char *msg, int len)
 
 /* Print the given printf-style message to the log. The message is
    only printed if the HASKELL_GI_DEBUG_MEM variable is set. */
-__attribute__ ((format (gnu_printf, 1, 2)))
+__attribute__ ((format (printf, 1, 2)))
 static void dbg_log (const char *msg, ...)
 {
   va_list args;

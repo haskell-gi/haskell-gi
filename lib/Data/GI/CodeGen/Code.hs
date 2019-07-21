@@ -606,7 +606,7 @@ data CPPGuard = CPPOverloading -- ^ Enable overloading
 -- | Guard a code block with CPP code, such that it is included only
 -- if the specified feature is enabled.
 cppIf :: CPPGuard -> BaseCodeGen e a -> BaseCodeGen e a
-cppIf CPPOverloading = cppIfBlock "ENABLE_OVERLOADING"
+cppIf CPPOverloading = cppIfBlock "defined(ENABLE_OVERLOADING)"
 
 -- | Write the given code into the .hs-boot file for the current module.
 hsBoot :: BaseCodeGen e a -> BaseCodeGen e a
@@ -829,10 +829,10 @@ ghcOptions opts = "{-# OPTIONS_GHC " <> T.intercalate ", " opts <> " #-}\n"
 
 -- | Generate some convenience CPP macros.
 cppMacros :: Text
-cppMacros = T.unlines ["#define ENABLE_OVERLOADING (MIN_VERSION_haskell_gi_overloading(1,0,0) \\"
-                      -- Haddocks look better without overloading
-                      , "       && !defined(__HADDOCK_VERSION__))"
-                      ]
+cppMacros = T.unlines
+  ["#if (MIN_VERSION_haskell_gi_overloading(1,0,0) && !defined(__HADDOCK_VERSION__))"
+  , "#define ENABLE_OVERLOADING"
+  , "#endif"]
 
 -- | Standard fields for every module.
 standardFields :: Text
