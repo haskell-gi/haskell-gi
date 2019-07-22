@@ -4,9 +4,14 @@ set -e
 
 export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig:$PKG_CONFIG_PATH
 
+mv osx.cabal.project cabal.project
+
 pushd bindings
 cabal new-run genBuildInfo $(./OSX-PKGS.sh)
 popd
 
-cabal new-build --project-file=osx.cabal.project all
-cabal new-test --project-file=osx.cabal.project
+cabal new-build all
+cabal new-test
+
+cabal new-sdist gi-gtkosxapplication
+cabal new-haddock --haddock-for-hackage gi-gtkosxapplication

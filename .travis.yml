@@ -7,29 +7,41 @@ cache:
 
 matrix:
   include:
-    - os: linux
-      dist: xenial
-      env: CABALVER=2.2 GHCVER=8.0.2
-    - os: linux
-      dist: xenial
-      env: CABALVER=2.2 GHCVER=8.4.1
-    - os: linux
-      dist: xenial
-      env: CABALVER=2.4 GHCVER=8.6.1
-    - os: osx
-      osx_image: xcode11
+  - os: linux
+    dist: xenial
+    env: CABALVER=2.2 GHCVER=8.0.2
+  - os: linux
+    dist: xenial
+    env: CABALVER=2.2 GHCVER=8.4.1
+  - os: linux
+    dist: xenial
+    env: CABALVER=2.4 GHCVER=8.6.1
+  - os: osx
+    osx_image: xcode11
 
 before_install:
- - ./travis/before_install.sh
+- "./travis/before_install.sh"
 
 install:
- - travis_retry ./travis/install.sh
-
+- travis_retry ./travis/install.sh
 script:
-  - ./travis/build.sh
+- "./travis/build.sh"
+
+deploy:
+  provider: releases
+  draft: true
+  api_key:
+    secure: RE9TUUtpOvIVEtDg0r9u3Dpa1NH97Opd2B+6T5RMmW85UNWmmA/hctA3HiemhVw2bYzFjW0lQm5JNWhs8iS5m47W+xIkGgzJem5bUapwUlTnjOybvUPETZEp+js2RDr3LjbhRm5nnp1LVxJ8ptFFVBiF03eygiFYvzX5pa7U30sd1dgoOef9xfUtS2z5PNb4LxOV1o/5NE4WNzQJhZonSMGm6ErDp/qYpqKV2DocEAFPOKLI5qagY5R+bcp/x4GmEr2jxyqJ7n7NH1fpXBxgvRgjVgqAnE7PhN/JpD4TT5OaW+Cg8rF0iAYrwT7/9Womly6Cir9F66ADO6W/EA7saaLaqhUXMtcfDpmRc3CbzHoaoB3Xe/1nI78TXqn2LzPXcHkqvSXj+Sp8xO8qt0Bpt8LSh53Nt2JoO7erv/Vqvgq7xSA7zia+9Mw8y62CPI4p45OV1F4ibMK3pjpcESYWX7WLlzTZ7Ia3VcHneM8tdwSOKproLfKqoNah6Lm/aByoAuA7BFvTqIaoMjrJ5722H58/APWtariFVJiwjzhQFeqRdVcSmuEUSAWQnTjj/Z2M4P5zYSI1vtyZ1fCAqVbf6CQI3KmMCw9LIguxaSZrRy+OzrWnhZfa8ZWyHa/bRnqeDHPVFfhRK19MP7xef8L1L/tNjK1TIJHg5537bhoXxQQ=
+  file:
+    - dist-newstyle/sdist/gi-gtkosxapplication-*.tar.gz
+    - dist-newstyle/gi-gtkosxapplication-*-docs.tar.gz
+  on:
+    repo: haskell-gi/haskell-gi
+    condition: $TRAVIS_OS_NAME = osx
 
 notifications:
   irc:
-    channels: "irc.freenode.net#gtk2hs"
+    channels: irc.freenode.net#gtk2hs
     skip_join: true
+
 email: true
