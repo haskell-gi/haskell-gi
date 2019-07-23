@@ -82,9 +82,10 @@ girRequire ns version =
     withTextCString ns $ \cns ->
     withTextCString version $ \cversion -> do
         typelib <- checkGError (g_irepository_require nullPtr cns cversion 0)
-                               (error $ "Could not load typelib for "
-                                          ++ show ns ++ " version "
-                                          ++ show version)
+                               (\gerror -> error $ "Could not load typelib for "
+                                           ++ show ns ++ " version "
+                                           ++ show version ++ ".\n"
+                                           ++ "Error was: " ++ show gerror)
         return (Typelib typelib)
 
 foreign import ccall "g_irepository_find_by_name" g_irepository_find_by_name ::
