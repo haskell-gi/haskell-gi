@@ -2,6 +2,8 @@
 
 + Update for haskell-gi(-base)-0.23
 
++ Do not try to generate bindings for g_content_type_[gs]et_mime_dirs in Windows, as these are not available there. See https://github.com/haskell-gi/haskell-gi/issues/227.
+
 ### 2.0.24
 
 + Add support for inherited dependencies
