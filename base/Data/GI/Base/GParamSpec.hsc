@@ -200,9 +200,8 @@ gParamSpecValue (PropertyInfo {..}) =
   withTextCString name $ \cname ->
     withTextCString nick $ \cnick ->
       withTextCString blurb $ \cblurb -> do
-        ctype <- gtypeStablePtr
         pspecPtr <- g_param_spec_boxed cname cnick cblurb
-                       ctype
+                       gtypeStablePtr
                        (maybe defaultFlags gflagsToWord flags)
         quark <- pspecQuark @o
         gParamSpecSetQData pspecPtr quark

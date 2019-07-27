@@ -178,9 +178,7 @@ instance IsGValue GType where
     fromGValue = get_gtype
 
 instance IsGValue (StablePtr a) where
-    toGValue val = do
-      gtype <- gtypeStablePtr
-      buildGValue gtype set_stablePtr val
+    toGValue = buildGValue gtypeStablePtr set_stablePtr
     fromGValue = get_stablePtr
 
 foreign import ccall "g_value_set_string" _set_string ::

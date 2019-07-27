@@ -137,26 +137,8 @@ foreign import ccall "g_byte_array_get_type" g_byte_array_get_type :: CGType
 gtypeByteArray :: GType
 gtypeByteArray = GType g_byte_array_get_type
 
--- | Given a `StablePtr`, make a new `StablePtr` to the same
--- underlying Haskell value.
-duplicateStablePtr :: StablePtr a -> IO (StablePtr a)
-duplicateStablePtr = deRefStablePtr >=> newStablePtr
-
-foreign import ccall "wrapper"
-  mkStablePtrDuplicator :: (StablePtr a -> IO (StablePtr a)) ->
-                            IO (FunPtr (StablePtr a -> IO (StablePtr a)))
-
-foreign import ccall haskell_gi_register_Boxed_HsStablePtr ::
-  CString -> FunPtr (StablePtr a -> IO (StablePtr a)) -> IO GType
-
-foreign import ccall haskell_gi_Boxed_StablePtr_GType :: IO CGType
+foreign import ccall haskell_gi_StablePtr_get_type :: CGType
 
 -- | The `GType` for boxed `StablePtr`s.
-gtypeStablePtr :: IO GType
-gtypeStablePtr = withTextCString "Boxed-HsStablePtr" $ \cTypeName -> do
-  cgtype <- haskell_gi_Boxed_StablePtr_GType
-  if cgtype /= 0
-    then return (GType cgtype) -- Already registered
-    else do
-      duplicator <- mkStablePtrDuplicator duplicateStablePtr
-      haskell_gi_register_Boxed_HsStablePtr cTypeName duplicator
+gtypeStablePtr :: GType
+gtypeStablePtr = GType haskell_gi_StablePtr_get_type

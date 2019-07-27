@@ -319,37 +319,26 @@ GType haskell_gi_register_gtype (GType parent, const char *name,
   return result;
 }
 
-static pthread_mutex_t stablePtr_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static GType stablePtr_gtype = 0;
-
-GType haskell_gi_Boxed_StablePtr_GType (void)
+static HsStablePtr duplicateStablePtr(HsStablePtr stable_ptr)
 {
-  return stablePtr_gtype;
+  getStablePtr(deRefStablePtr(stable_ptr));
 }
 
-/* Register the Haskell StablePtr type as a boxed type. */
-GType haskell_gi_register_Boxed_HsStablePtr
-        (const char *typeName, HsStablePtr (*duplicator)(HsStablePtr))
+GType haskell_gi_StablePtr_get_type (void)
 {
-  GType result;
+  static volatile gsize g_define_type_id__volatile = 0;
 
-  /* Lock so that we avoid trying to register twice, which would give
-     rise to a small memory leak for the duplicator FunPtr */
-  pthread_mutex_lock(&stablePtr_mutex);
+  if (g_once_init_enter (&g_define_type_id__volatile))
+    {
+      GType g_define_type_id =
+        g_boxed_type_register_static (g_intern_static_string ("HaskellGIStablePtr"),
+                                      duplicateStablePtr,
+                                      hs_free_stable_ptr);
 
-  if (stablePtr_gtype != 0) {
-    hs_free_fun_ptr ((HsFunPtr)duplicator);
-    result = stablePtr_gtype;
-  } else {
-    result = g_boxed_type_register_static (typeName, duplicator,
-                                           hs_free_stable_ptr);
-    stablePtr_gtype = result;
-  }
+      g_once_init_leave (&g_define_type_id__volatile, g_define_type_id);
+    }
 
-  pthread_mutex_unlock(&stablePtr_mutex);
-
-  return result;
+  return g_define_type_id__volatile;
 }
 
 /* Release the FunPtr allocated for a Haskell signal handler */
