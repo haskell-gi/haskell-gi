@@ -39,7 +39,9 @@ deploy:
     - dist-newstyle/gi-gtkosxapplication-*-docs.tar.gz
   on:
     repo: haskell-gi/haskell-gi
+    tags: true
     condition: $TRAVIS_OS_NAME = osx
+    condition: $TRAVIS_TAG == gi-gtkosxapplication-*
 
 notifications:
   irc:
