@@ -25,6 +25,7 @@ import Data.Text (Text)
 
 -- | A parsed gtk-doc token.
 data Token = Literal Text
+           | Comment Text
            | Verbatim Text
            | CodeBlock (Maybe Language) Text
            | ExternalLink Link
@@ -180,6 +181,7 @@ parseToken = -- Note that the parsers overlap, so this is not as
              <|> parseImage
              <|> parseSectionHeader
              <|> parseList
+             <|> parseComment
              <|> parseBoringLiteral
 
 -- | Parse a signal name, of the form
@@ -209,6 +211,18 @@ parseProperty = do
   _ <- char ':'
   property <- signalOrPropName
   return (SymbolRef (PropertyRef obj property))
+
+-- | Parse an xml comment, of the form
+-- > <!-- comment -->
+-- Note that this function keeps spaces.
+--
+-- === __Examples__
+-- >>> parseOnly (parseComment <* endOfInput) "<!-- comment -->"
+-- Right (Comment " comment ")
+parseComment :: Parser Token
+parseComment = do
+  comment <- string "<!--" *> manyTill anyChar (string "-->")
+  return (Comment $ T.pack comment)
 
 -- | Parse a reference to a virtual method, of the form
 -- > #Struct.method()

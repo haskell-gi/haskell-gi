@@ -47,9 +47,9 @@ data RelativeDocPosition = DocBeforeSymbol
 -- >>> formatHaddock M.empty "" (GtkDoc [Literal "Hello ", Literal "World!"])
 -- "Hello World!"
 --
--- >>> let c2h = M.fromList [(FunctionRef "foo", "foo()")]
+-- >>> let c2h = M.fromList [(FunctionRef "foo", ValueIdentifier "foo")]
 -- >>> formatHaddock c2h "" (GtkDoc [SymbolRef (FunctionRef "foo")])
--- "'foo()'"
+-- "'foo'"
 --
 -- >>> let onlineDocs = "http://wiki.haskell.org"
 -- >>> formatHaddock M.empty onlineDocs (GtkDoc [ExternalLink (Link "GI" "GObjectIntrospection")])
@@ -61,6 +61,7 @@ formatHaddock :: M.Map CRef Hyperlink -> Text -> GtkDoc -> Text
 formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
   where formatToken :: Token -> Text
         formatToken (Literal l) = escape l
+        formatToken (Comment _) = ""
         formatToken (Verbatim v) = "@" <> escape v <> "@"
         formatToken (CodeBlock l c) = formatCodeBlock l c
         formatToken (ExternalLink l) = formatLink l docBase
@@ -101,7 +102,8 @@ formatCRef t = "@/" <> escape t <> "/@"
 
 -- | Format a `Hyperlink` into plain `Text`.
 formatHyperlink :: Hyperlink -> Text
-formatHyperlink (IdentifierLink t) = "'" <> t <> "'"
+formatHyperlink (TypeIdentifier t) = " t'" <> t <> "'"
+formatHyperlink (ValueIdentifier t) = "'" <> t <> "'"
 formatHyperlink (ModuleLink m) = "\"" <> m <> "\""
 formatHyperlink (ModuleLinkWithAnchor m a) = "\"" <> m <> "#" <> a <> "\""
 
