@@ -4,10 +4,13 @@ module Data.GI.CodeGen.Fixups
     , guessPropertyNullability
     , detectGObject
     , dropDuplicatedFields
+    , checkClosureDestructors
     ) where
 
 import Data.Maybe (isNothing, isJust)
+#if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
+#endif
 import qualified Data.Set as S
 import qualified Data.Text as T
 
@@ -150,3 +153,35 @@ dropDuplicatedFields :: (Name, API) -> (Name, API)
 dropDuplicatedFields (n, APIFlags (Flags enum)) =
   (n, APIFlags (Flags $ dropDuplicatedEnumFields enum))
 dropDuplicatedFields (n, api) = (n, api)
+
+-- | Sometimes arguments are marked as being a user_data destructor,
+-- but there is no associated user_data argument. In this case we drop
+-- the annotation.
+checkClosureDestructors :: (Name, API) -> (Name, API)
+checkClosureDestructors (n, APIObject o) =
+  (n, APIObject (o {objMethods = checkMethodDestructors (objMethods o)}))
+checkClosureDestructors (n, APIInterface i) =
+  (n, APIInterface (i {ifMethods = checkMethodDestructors (ifMethods i)}))
+checkClosureDestructors (n, APIStruct s) =
+  (n, APIStruct (s {structMethods = checkMethodDestructors (structMethods s)}))
+checkClosureDestructors (n, APIUnion u) =
+  (n, APIUnion (u {unionMethods = checkMethodDestructors (unionMethods u)}))
+checkClosureDestructors (n, APIFunction f) =
+  (n, APIFunction (f {fnCallable = checkCallableDestructors (fnCallable f)}))
+checkClosureDestructors (n, api) = (n, api)
+
+checkMethodDestructors :: [Method] -> [Method]
+checkMethodDestructors = map checkMethod
+  where checkMethod :: Method -> Method
+        checkMethod m = m {methodCallable =
+                             checkCallableDestructors (methodCallable m)}
+
+-- | If any argument for the callable has a associated destroyer for
+-- the user_data, but no associated user_data, drop the destroyer
+-- annotation.
+checkCallableDestructors :: Callable -> Callable
+checkCallableDestructors c = c {args = map checkArg (args c)}
+  where checkArg :: Arg -> Arg
+        checkArg arg = if argDestroy arg >= 0 && argClosure arg == -1
+                       then arg {argDestroy = -1}
+                       else arg

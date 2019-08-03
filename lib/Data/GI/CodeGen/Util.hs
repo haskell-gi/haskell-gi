@@ -19,14 +19,15 @@ module Data.GI.CodeGen.Util
   , splitOn
   ) where
 
+#if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Char (toLower, toUpper)
 
 import qualified Data.ByteString as B
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-
 
 padTo :: Int -> Text -> Text
 padTo n s = s <> T.replicate (n - T.length s) " "

@@ -19,14 +19,13 @@ module Data.GI.CodeGen.Callable
     , inArgInterfaces
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
 import Control.Monad (forM, forM_, when, void)
 import Data.Bool (bool)
 import Data.List (nub)
 import Data.Maybe (isJust)
+#if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Tuple (swap)
 import qualified Data.Map as Map
 import qualified Data.Text as T
@@ -894,14 +893,22 @@ data DynamicWrapper = DynamicWrapper {
 genCallableDebugInfo :: Callable -> CodeGen ()
 genCallableDebugInfo callable =
     group $ do
-      line $ "-- Args : " <> (tshow $ args callable)
-      line $ "-- Lengths : " <> (tshow $ arrayLengths callable)
-      line $ "-- returnType : " <> (tshow $ returnType callable)
+      commentShow "Args" (args callable)
+      commentShow "Lengths" (arrayLengths callable)
+      commentShow "returnType" (returnType callable)
       line $ "-- throws : " <> (tshow $ callableThrows callable)
       line $ "-- Skip return : " <> (tshow $ skipReturn callable)
       when (skipReturn callable && returnType callable /= Just (TBasicType TBoolean)) $
            do line "-- XXX return value ignored, but it is not a boolean."
               line "--     This may be a memory leak?"
+  where commentShow :: Show a => Text -> a -> CodeGen ()
+        commentShow prefix s =
+          let padding = T.replicate (T.length prefix + 2) " "
+              padded = case T.lines (T.pack $ ppShow s) of
+                         [] -> []
+                         (f:rest) -> "-- " <> prefix <> ": " <> f :
+                                     map (("-- " <> padding) <>) rest
+          in mapM_ line padded
 
 -- | Generate a wrapper for a known C symbol.
 genCCallableWrapper :: Name -> Text -> Callable -> ExcCodeGen ()

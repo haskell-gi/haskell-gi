@@ -4,14 +4,12 @@ module Data.GI.CodeGen.CodeGen
     , genModule
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-import Data.Traversable (traverse)
-#endif
 import Control.Monad (forM, forM_, when, unless, filterM)
 import Data.List (nub)
 import Data.Maybe (fromJust, fromMaybe, catMaybes, mapMaybe)
+#if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
+#endif
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -22,7 +20,8 @@ import Data.GI.CodeGen.Constant (genConstant)
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
 import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability,
-                               detectGObject, dropDuplicatedFields)
+                               detectGObject, dropDuplicatedFields,
+                               checkClosureDestructors)
 import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation,
                                 writeHaddock,
@@ -517,6 +516,10 @@ genModule' apis = do
             -- Some APIs contain duplicated fields by mistake, drop
             -- the duplicates.
           $ map dropDuplicatedFields
+            -- Make sure that every argument marked as being a
+            -- destructor for a user_data argument has an associated
+            -- user_data argument.
+          $ map checkClosureDestructors
           $ M.toList
           $ apis
 

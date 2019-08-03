@@ -9,12 +9,11 @@ module Data.GI.CodeGen.Inheritance
     , instanceTree
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>))
-#endif
 import Control.Monad (foldM, when)
 import qualified Data.Map as M
+#if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 
 import Data.GI.CodeGen.API
