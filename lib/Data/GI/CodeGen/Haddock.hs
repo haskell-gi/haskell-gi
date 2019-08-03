@@ -31,7 +31,7 @@ import Data.GI.CodeGen.CtoHaskellMap (Hyperlink(..))
 import Data.GI.CodeGen.GtkDoc (GtkDoc(..), Token(..), CRef(..), Language(..),
                                Link(..), ListItem(..), parseGtkDoc)
 import Data.GI.CodeGen.Overrides (onlineDocsMap)
-import Data.GI.CodeGen.SymbolNaming (lowerSymbol)
+import Data.GI.CodeGen.SymbolNaming (lowerSymbol, signalHaskellName)
 
 -- | Where is the documentation located with respect to the relevant
 -- symbol, useful for determining whether we want to start with @|@ or @^@.
@@ -68,7 +68,6 @@ formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
         formatToken (Image l) = formatImage l docBase
         formatToken (SectionHeader l h) = formatSectionHeader c2h docBase l h
         formatToken (List l) = formatList c2h docBase l
-        formatToken (SymbolRef (ParamRef p)) = "/@" <> lowerSymbol p <> "@/"
         formatToken (SymbolRef cr) = case M.lookup cr c2h of
           Just hr -> formatHyperlink hr
           Nothing -> formatUnknownCRef c2h cr
@@ -76,7 +75,10 @@ formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
 -- | Format a `CRef` whose Haskell representation is not known.
 formatUnknownCRef :: M.Map CRef Hyperlink -> CRef -> Text
 formatUnknownCRef _ (FunctionRef f) = formatCRef $ f <> "()"
-formatUnknownCRef _ (ParamRef _) = error $ "Should not be reached"
+formatUnknownCRef _ (ParamRef p) = "/@" <> lowerSymbol p <> "@/"
+formatUnknownCRef _ (LocalSignalRef s) =
+  let sn = signalHaskellName s
+  in "[" <> sn <> "](#signal:" <> sn <> ")"
 formatUnknownCRef c2h (SignalRef owner signal) =
   case M.lookup (TypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "::" <> signal
@@ -102,10 +104,13 @@ formatCRef t = "@/" <> escape t <> "/@"
 
 -- | Format a `Hyperlink` into plain `Text`.
 formatHyperlink :: Hyperlink -> Text
-formatHyperlink (TypeIdentifier t) = " t'" <> t <> "'"
+formatHyperlink (TypeIdentifier t) = "t'" <> t <> "'"
 formatHyperlink (ValueIdentifier t) = "'" <> t <> "'"
 formatHyperlink (ModuleLink m) = "\"" <> m <> "\""
-formatHyperlink (ModuleLinkWithAnchor m a) = "\"" <> m <> "#" <> a <> "\""
+formatHyperlink (ModuleLinkWithAnchor mLabel m a) =
+  case mLabel of
+    Nothing -> "\"" <> m <> "#" <> a <> "\""
+    Just label -> "[" <> label <> "](\"" <> m <> "#" <> a <> "\")"
 
 -- | Format a code block in a specified language.
 formatCodeBlock :: Maybe Language -> Text -> Text
@@ -222,14 +227,9 @@ formatDocumentation c2h docBase doc = do
 -- | Write the given documentation into generated code.
 writeDocumentation :: RelativeDocPosition -> Documentation -> CodeGen ()
 writeDocumentation pos doc = do
-  line $ case pos of
-           DocBeforeSymbol -> "{- |"
-           DocAfterSymbol ->  "{- ^"
   c2h <- getC2HMap
   docBase <- getDocBase
-  let haddock = formatDocumentation c2h docBase doc
-  mapM_ line (T.lines haddock)
-  line "-}"
+  writeHaddock pos (formatDocumentation c2h docBase doc)
 
 -- | Like `writeDocumentation`, but allows us to pass explicitly the
 -- Haddock comment to write.
@@ -238,12 +238,10 @@ writeHaddock pos haddock =
   let marker = case pos of
         DocBeforeSymbol -> "|"
         DocAfterSymbol -> "^"
-  in if T.any (== '\n') haddock
-     then do
-        line $ "{- " <> marker
-        mapM_ line (T.lines haddock)
-        line $ "-}"
-     else line $ "-- " <> marker <> " " <> haddock
+      lines = case T.lines haddock of
+        [] -> []
+        (first:rest) -> ("-- " <> marker <> " " <> first) : map ("-- " <>) rest
+  in mapM_ line lines
 
 -- | Write the documentation for the given argument.
 writeArgDocumentation :: Arg -> CodeGen ()
@@ -253,8 +251,9 @@ writeArgDocumentation arg =
     Just raw -> do
       c2h <- getC2HMap
       docBase <- getDocBase
-      line $ "{- ^ /@" <> lowerSymbol (argCName arg) <> "@/: " <>
-        formatHaddock c2h docBase (parseGtkDoc raw) <> " -}"
+      let haddock = "/@" <> lowerSymbol (argCName arg) <> "@/: " <>
+                    formatHaddock c2h docBase (parseGtkDoc raw)
+      writeHaddock DocAfterSymbol haddock
 
 -- | Write the documentation for the given return value.
 writeReturnDocumentation :: Callable -> Bool -> CodeGen ()
@@ -273,7 +272,7 @@ writeReturnDocumentation callable skip = do
                    else []
   let fullInfo = T.intercalate " " (returnValInfo ++ throwsInfo)
   unless (T.null fullInfo) $
-    line $ "{- ^ " <>  fullInfo <> " -}"
+    writeHaddock DocAfterSymbol fullInfo
 
 -- | Add the given text to the documentation for the section being generated.
 addSectionDocumentation :: HaddockSection -> Documentation -> CodeGen ()

@@ -14,9 +14,11 @@ import Data.GI.CodeGen.API (API(..), Name(..), Callback(..),
                             Constant(..), Flags(..),
                             Enumeration(..), EnumerationMember(..),
                             Interface(..), Object(..),
-                            Function(..), Method(..), Struct(..), Union(..))
+                            Function(..), Method(..), Struct(..), Union(..),
+                            Signal(..))
 import Data.GI.CodeGen.ModulePath (ModulePath, dotModulePath, (/.))
-import Data.GI.CodeGen.SymbolNaming (submoduleLocation, lowerName, upperName)
+import Data.GI.CodeGen.SymbolNaming (submoduleLocation, lowerName, upperName,
+                                     signalHaskellName)
 import Data.GI.CodeGen.Util (ucFirst)
 
 -- | Link to an identifier, module, etc.
@@ -27,8 +29,9 @@ data Hyperlink = ValueIdentifier Text
                -- ^ An identifier at the type level.
                | ModuleLink Text
                -- ^ Link to a module.
-               | ModuleLinkWithAnchor Text Text
-               -- ^ Link to an anchor inside a given module.
+               | ModuleLinkWithAnchor (Maybe Text) Text Text
+               -- ^ Link to an anchor inside a given module, with an
+               -- optional label.
   deriving (Show, Eq)
 
 -- | Given a set of APIs, build a `Map` that given a Text
@@ -107,6 +110,20 @@ methodRefs n api methods = map methodRef methods
           in (FunctionRef (methodSymbol m),
               fullyQualifiedValue n api $ lowerName mn')
 
+-- | Refs to the signals for a given owner.
+signalRefs :: Name -> API -> Maybe Text -> [Signal] -> [(CRef, Hyperlink)]
+signalRefs n api maybeCName signals = map signalRef signals
+  where signalRef :: Signal -> (CRef, Hyperlink)
+        signalRef (Signal {sigName = sn}) =
+          let mod = dotModulePath (location n api)
+              sn' = signalHaskellName sn
+              ownerCName = case maybeCName of
+                Just cname -> cname
+                Nothing -> let Name ns owner = n
+                           in ucFirst ns <> owner
+          in (SignalRef ownerCName sn,
+              ModuleLinkWithAnchor (Just sn') mod ("signal:" <> sn'))
+
 -- | Given an optional C type and the API constructor construct the
 -- list of associated refs.
 maybeCType :: Name -> API -> Maybe Text -> [(CRef, Hyperlink)]
@@ -132,8 +149,10 @@ unionRefs n u = maybeCType n (APIUnion u) (unionCType u)
 ifaceRefs :: Name -> Interface -> [(CRef, Hyperlink)]
 ifaceRefs n i = maybeCType n (APIInterface i) (ifCType i)
                  <> methodRefs n (APIInterface i) (ifMethods i)
+                 <> signalRefs n (APIInterface i) (ifCType i) (ifSignals i)
 
 -- | Extract the C references in an object.
 objectRefs :: Name -> Object -> [(CRef, Hyperlink)]
 objectRefs n o = maybeCType n (APIObject o) (objCType o)
                  <> methodRefs n (APIObject o) (objMethods o)
+                 <> signalRefs n (APIObject o) (objCType o) (objSignals o)

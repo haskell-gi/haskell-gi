@@ -786,7 +786,7 @@ formatSection section exports =
                                                    " #" <> anchor <> "#"
                                     Nothing -> subsectionTitle subsec
                     , case subsectionDoc subsec of
-                        Just text -> "{- | " <> text  <> "\n-}"
+                        Just text -> formatHaddockComment text
                         Nothing -> ""
                     , ( T.concat
                       . map (formatExport exportSymbol)
@@ -842,9 +842,17 @@ standardFields = T.unlines [ "Copyright  : " <> authors
 
 -- | The haddock header for the module, including optionally a description.
 moduleHaddock :: Maybe Text -> Text
-moduleHaddock Nothing = T.unlines ["{- |", standardFields <> "-}"]
-moduleHaddock (Just description) = T.unlines ["{- |", standardFields,
-                                              description, "-}"]
+moduleHaddock Nothing = formatHaddockComment $ standardFields
+moduleHaddock (Just description) =
+  formatHaddockComment $ T.unlines [standardFields, description]
+
+-- | Format the comment with the module documentation.
+formatHaddockComment :: Text -> Text
+formatHaddockComment doc = let lines = case T.lines doc of
+                                 [] -> []
+                                 (first:rest) -> ("-- | " <> first) :
+                                                 map ("-- " <>) rest
+                          in T.unlines lines
 
 -- | Generic module prelude. We reexport all of the submodules.
 modulePrelude :: M.Map HaddockSection Text -> Text -> [Export] -> [Text] -> Text

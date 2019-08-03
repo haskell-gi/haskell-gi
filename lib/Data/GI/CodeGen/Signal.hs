@@ -494,27 +494,29 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
 
   where
     onDoc :: Text
-    onDoc = T.unlines [
-      "Connect a signal handler for the “@" <> sn <>
-        "@” signal, to be run before the default handler."
+    onDoc = let hsn = signalHaskellName sn
+            in T.unlines [
+      "Connect a signal handler for the [" <> hsn <> "](#signal:" <> hsn <>
+        ") signal, to be run before the default handler."
       , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
       , ""
       , "@"
       , "'Data.GI.Base.Signals.on' " <> lowerName on <> " #"
-        <> lcFirst (hyphensToCamelCase sn) <> " callback"
+        <> hsn <> " callback"
       , "@"
       , ""
       , detailedDoc ]
 
     afterDoc :: Text
-    afterDoc = T.unlines [
-      "Connect a signal handler for the “@" <> sn <>
-        "@” signal, to be run after the default handler."
+    afterDoc = let hsn = signalHaskellName sn
+               in T.unlines [
+      "Connect a signal handler for the [" <> hsn <> "](#signal:" <> hsn <>
+        ") signal, to be run after the default handler."
       , "When <https://github.com/haskell-gi/haskell-gi/wiki/Overloading overloading> is enabled, this is equivalent to"
       , ""
       , "@"
       , "'Data.GI.Base.Signals.after' " <> lowerName on <> " #"
-        <> lcFirst (hyphensToCamelCase sn) <> " callback"
+        <> hsn <> " callback"
       , "@"
       , ""
       , detailedDoc ]
