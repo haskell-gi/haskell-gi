@@ -7,7 +7,9 @@ module Data.GI.CodeGen.ModulePath
   , dotModulePath
   ) where
 
+#if !MIN_VERSION_base(4,13,0)
 import Data.Monoid (Monoid(..), (<>))
+#endif
 import Data.String (IsString(..))
 import qualified Data.Text as T
 import qualified Data.Semigroup as Sem

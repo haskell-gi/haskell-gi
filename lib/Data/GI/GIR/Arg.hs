@@ -6,7 +6,9 @@ module Data.GI.GIR.Arg
     , parseTransfer
     ) where
 
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 
 import Data.GI.GIR.BasicTypes (Transfer(..), Type)

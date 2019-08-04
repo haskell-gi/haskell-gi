@@ -14,7 +14,9 @@ import Control.Applicative ((<$>))
 import Control.Monad (forM, when)
 
 import Data.Maybe (mapMaybe, isJust, catMaybes)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 

@@ -5,12 +5,11 @@ module Data.GI.CodeGen.Cabal
     , tryPkgConfig
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>))
-#endif
 import Control.Monad (forM_)
 import Data.Maybe (fromMaybe)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Version (Version(..))
 import qualified Data.Map as M
 import qualified Data.Text as T

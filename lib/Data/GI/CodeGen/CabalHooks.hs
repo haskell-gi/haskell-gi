@@ -32,7 +32,9 @@ import Control.Monad (void, forM)
 
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -88,11 +90,13 @@ genConfigModule outputDir modName maybeGiven = do
 
   utf8WriteFile fname $ T.unlines
     [ "{-# LANGUAGE OverloadedStrings #-}"
+    , "-- | Build time configuration used during code generation."
     , "module GI." <> ucFirst modName <> ".Config ( overrides ) where"
     , ""
     , "import qualified Data.Text as T"
     , "import Data.Text (Text)"
     , ""
+    , "-- | Overrides used when generating these bindings."
     , "overrides :: Text"
     , "overrides = T.unlines"
     , " [ " <> T.intercalate "\n , " (quoteOverrides maybeGiven) <> "]"
@@ -181,4 +185,5 @@ configureDryRun name version overridesFile inheritedOverrides = do
   let ovs = maybe inheritedOverrides (:inheritedOverrides) givenOvs
   m <- genModuleCode name version False ovs
 
-  return (listModuleTree m, transitiveModuleDeps m)
+  return (("GI." <> ucFirst name <> ".Config") : listModuleTree m,
+           transitiveModuleDeps m)

@@ -8,7 +8,9 @@ module Data.GI.GIR.Field
 import Control.Monad.Except (catchError, throwError)
 
 import Data.Maybe (isJust, catMaybes)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text, isSuffixOf)
 
 import Data.GI.GIR.BasicTypes (Type(..))

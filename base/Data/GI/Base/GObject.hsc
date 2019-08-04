@@ -43,12 +43,16 @@ import Data.Proxy (Proxy(..))
 import Data.Coerce (coerce)
 
 import Foreign.C (CUInt(..), CString, newCString)
+#if !MIN_VERSION_base(4,13,0)
 import Foreign.Ptr (FunPtr)
 import Foreign.StablePtr (newStablePtr, deRefStablePtr,
                           castStablePtrToPtr, castPtrToStablePtr)
+#endif
 import Foreign
 
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 

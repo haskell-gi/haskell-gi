@@ -133,9 +133,6 @@ module Data.GI.Base.GVariant
 
 #include <glib-object.h>
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>))
-#endif
 import Control.Monad (when, void, (>=>))
 import Control.Exception.Base (bracket)
 
@@ -144,7 +141,9 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Word
 import Data.Int
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Maybe (isJust, fromJust)
 import qualified Data.Map as M
 

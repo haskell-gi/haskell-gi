@@ -4,13 +4,12 @@ module Data.GI.CodeGen.Signal
     , signalHaskellName
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
 import Control.Monad (forM, forM_, when, unless)
 
 import Data.Maybe (catMaybes)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Bool (bool)
 import qualified Data.Text as T
 import Data.Text (Text)

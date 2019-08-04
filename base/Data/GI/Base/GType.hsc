@@ -25,13 +25,6 @@ module Data.GI.Base.GType
     , gtypeStablePtr
     ) where
 
-import Control.Monad ((>=>))
-
-import Foreign.C.String (CString)
-import Foreign.Ptr (FunPtr)
-import Foreign.StablePtr (StablePtr, newStablePtr, deRefStablePtr)
-
-import Data.GI.Base.BasicConversions (withTextCString)
 import Data.GI.Base.BasicTypes (GType(..), CGType)
 
 #include <glib-object.h>

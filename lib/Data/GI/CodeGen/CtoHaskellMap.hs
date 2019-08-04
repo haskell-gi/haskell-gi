@@ -6,7 +6,9 @@ module Data.GI.CodeGen.CtoHaskellMap
   ) where
 
 import qualified Data.Map as M
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 
 import Data.GI.CodeGen.GtkDoc (CRef(..))

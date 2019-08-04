@@ -29,18 +29,19 @@ module Data.GI.Base.Utils
 
 #include <glib-object.h>
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative (Applicative, pure, (<$>), (<*>))
-#endif
 import Control.Exception (throwIO)
 import Control.Monad (void)
 
 import qualified Data.Text as T
 import qualified Data.Text.Foreign as TF
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Word
 
+#if !MIN_VERSION_base(4,13,0)
 import Foreign (peek)
+#endif
 import Foreign.C.Types (CSize(..), CChar)
 import Foreign.Ptr (Ptr, nullPtr, FunPtr, nullFunPtr, freeHaskellFunPtr)
 import Foreign.Storable (Storable(..))

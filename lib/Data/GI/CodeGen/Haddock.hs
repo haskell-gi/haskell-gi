@@ -10,12 +10,15 @@ module Data.GI.CodeGen.Haddock
   , addSectionDocumentation
   ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
+#if !MIN_VERSION_base(4,13,0)
 import Control.Monad (mapM_, unless)
+#else
+import Control.Monad (unless)
+#endif
 import qualified Data.Map as M
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import qualified Data.Text as T
 import Data.Text (Text)
 

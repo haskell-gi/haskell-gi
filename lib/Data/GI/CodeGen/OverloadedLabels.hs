@@ -6,7 +6,9 @@ module Data.GI.CodeGen.OverloadedLabels
 import Control.Applicative ((<$>))
 #endif
 import Data.Maybe (isNothing)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Control.Monad (forM_)
 import qualified Data.Set as S
 import Data.Text (Text)

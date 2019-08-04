@@ -33,14 +33,12 @@ module Data.GI.GIR.Parser
     , Documentation
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
-
 import Control.Monad.Except
 import Control.Monad.Reader
 
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.Read as TR

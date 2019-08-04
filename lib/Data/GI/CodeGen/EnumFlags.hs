@@ -5,7 +5,9 @@ module Data.GI.CodeGen.EnumFlags
     ) where
 
 import Control.Monad (when, forM_)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Set as S
 

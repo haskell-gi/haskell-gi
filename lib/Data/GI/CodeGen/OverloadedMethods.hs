@@ -5,7 +5,9 @@ module Data.GI.CodeGen.OverloadedMethods
     ) where
 
 import Control.Monad (forM, forM_, when)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 

@@ -9,7 +9,9 @@ import Control.Applicative ((<$>))
 #endif
 import Control.Monad (forM_, when)
 
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Set as S

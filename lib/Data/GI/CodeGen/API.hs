@@ -62,7 +62,9 @@ import Control.Monad ((>=>), foldM, forM, forM_)
 import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe, catMaybes)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Text (Text)

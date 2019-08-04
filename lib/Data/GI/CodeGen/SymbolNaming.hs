@@ -29,7 +29,9 @@ module Data.GI.CodeGen.SymbolNaming
     , qualifiedSymbol
     ) where
 
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 

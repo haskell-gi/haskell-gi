@@ -14,7 +14,9 @@ module Data.GI.CodeGen.ProjectInfo
     , standardDeps
     ) where
 
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T (unlines)
 

@@ -75,7 +75,9 @@ import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified Data.Foldable as F
 import Data.Maybe (fromMaybe, catMaybes)
+#if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>), mempty)
+#endif
 import qualified Data.Map.Strict as M
 import Data.Sequence (ViewL ((:<)), viewl, (|>))
 import qualified Data.Sequence as Seq

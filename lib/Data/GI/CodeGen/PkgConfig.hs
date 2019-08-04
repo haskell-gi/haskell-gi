@@ -4,9 +4,10 @@ module Data.GI.CodeGen.PkgConfig
     ) where
 
 import Control.Monad (when)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid (First(..), (<>))
-#if !MIN_VERSION_base(4,8,0)
-import Data.Monoid (mconcat)
+#else
+import Data.Monoid (First(..))
 #endif
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T

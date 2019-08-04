@@ -55,11 +55,15 @@ module Data.GI.Base.Signals
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Proxy (Proxy(..))
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 
 import Foreign
 import Foreign.C
+#if !MIN_VERSION_base(4,13,0)
 import Foreign.Ptr (nullPtr)
+#endif
 
 import GHC.TypeLits
 

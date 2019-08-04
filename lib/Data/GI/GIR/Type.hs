@@ -8,12 +8,10 @@ module Data.GI.GIR.Type
     , parseOptionalType
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
-
 import Data.Maybe (catMaybes)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 import Foreign.Storable (sizeOf)

@@ -42,7 +42,9 @@ import Control.Applicative ((<$>), (<*>), pure, Applicative)
 #endif
 import Control.Monad (when)
 import Data.Maybe (isJust)
+#if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
+#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Exts (IsString(..))
