@@ -123,3 +123,4 @@ test-suite doctests
                , process
                , doctest >= 0.8
                , haskell-gi
+               , attoparsec
