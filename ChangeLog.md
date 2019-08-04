@@ -1,3 +1,21 @@
+### 0.23.0
+
++ gobjectType now does not require a proxy argument, it needs to be used with TypeApplications instead.
+
++ Annotated signals are supported: `on widget (signal ::: "detail")`.
+
++ Safe coercions to parent types supported, with `asA`.
+
++ Support for GObject subclassing, and registering custom properties.
+
++ Use TypeApplications in `AttrInfo` implementation, and inherited methods implementation.
+
++ Add an allocating setting operator `(:&=)`.
+
++ Support for exporting class structs.
+
++ IsGValue instances for GObjects and boxed objects.
+
 ### 0.22.6
 
 + Fix generated IsX typeclasses for non-GObject interfaces.
