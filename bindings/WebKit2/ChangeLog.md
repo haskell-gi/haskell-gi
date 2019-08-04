@@ -1,6 +1,7 @@
 ### 4.0.25
 
 + Update for haskell-gi(-base)-0.23
++ Add a missing nullable return annotation for [uRIRequestGetHttpMethod](https://hackage.haskell.org/package/gi-webkit2/docs/GI-WebKit2-Objects-URIRequest.html#v:uRIRequestGetHttpMethod).
 
 ### 4.0.24
 
