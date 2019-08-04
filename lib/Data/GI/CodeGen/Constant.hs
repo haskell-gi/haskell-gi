@@ -2,11 +2,6 @@ module Data.GI.CodeGen.Constant
     ( genConstant
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
-#endif
-
-import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import Data.GI.CodeGen.API
