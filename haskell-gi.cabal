@@ -112,6 +112,8 @@ Library
 
   other-modules:       Paths_haskell_gi
 
+  autogen-modules:     Paths_haskell_gi
+
 test-suite doctests
   type:          exitcode-stdio-1.0
   default-language: Haskell2010
