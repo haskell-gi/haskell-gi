@@ -321,7 +321,7 @@ GType haskell_gi_register_gtype (GType parent, const char *name,
 
 static HsStablePtr duplicateStablePtr(HsStablePtr stable_ptr)
 {
-  getStablePtr(deRefStablePtr(stable_ptr));
+  return getStablePtr(deRefStablePtr(stable_ptr));
 }
 
 GType haskell_gi_StablePtr_get_type (void)
