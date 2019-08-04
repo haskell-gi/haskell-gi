@@ -10,10 +10,11 @@ maintainer:          Iñaki García Etxebarria (garetxe@gmail.com)
 stability:           Experimental
 category:            Development
 build-type:          Simple
-cabal-version:       >=1.8
+cabal-version:       2.0
 
 executable genBuildInfo
   main-is:              genBuildInfo.hs
+  default-language:     Haskell2010
 
   other-modules:        ProjectInfo
 
@@ -24,12 +25,14 @@ executable genBuildInfo
                         bytestring >= 0.10,
                         containers,
                         aeson,
-                        aeson-pretty
+                        aeson-pretty,
+                        unix ^>= 2.7
 
   ghc-options:         -Wall
 
 executable bumpMinor
   main-is:              bumpMinor.hs
+  default-language:     Haskell2010
 
   other-modules:        ProjectInfo
 

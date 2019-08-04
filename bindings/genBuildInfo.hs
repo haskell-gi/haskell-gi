@@ -6,7 +6,8 @@
 import System.Environment (getArgs)
 import System.FilePath ((</>), (<.>))
 import System.IO (hPutStrLn, stderr, hFlush, stdout)
-import System.Exit (exitFailure)
+import System.Exit (exitFailure, ExitCode(..))
+import System.Posix.Process (forkProcess, getProcessStatus, ProcessStatus(..))
 
 import Control.Monad (forM_, when)
 
@@ -163,6 +164,18 @@ writeReadme fname info =
   , "For general documentation on using [haskell-gi](https://github.com/haskell-gi/haskell-gi) based bindings, see [the project page](https://github.com/haskell-gi/haskell-gi) or [the Wiki](https://github.com/haskell-gi/haskell-gi/wiki)."
   ]
 
+genBindingsInDir :: FilePath -> IO ()
+genBindingsInDir dir = do
+  info <- readGIRInfo (dir </> "pkg.info")
+  putStr $ "Generating " <> T.unpack (name info) <> "-" <> T.unpack (version info) <> " ..."
+  hFlush stdout
+  (exposed, deps) <- exposedModulesAndDeps dir info
+  writeCabal (dir </> T.unpack (name info) <.> "cabal") info exposed
+  writeSetup (dir </> "Setup.hs") info deps
+  writeLicense (dir </> "LICENSE") info
+  writeStackYaml (dir </> "stack.yaml")
+  writeReadme (dir </> "README.md") info
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -172,13 +185,12 @@ main = do
          exitFailure
 
   forM_ args $ \dir -> do
-         info <- readGIRInfo (dir </> "pkg.info")
-         putStr $ "Generating " <> T.unpack (name info) <> ".cabal ..."
-         hFlush stdout
-         (exposed, deps) <- exposedModulesAndDeps dir info
-         writeCabal (dir </> T.unpack (name info) <.> "cabal") info exposed
-         writeSetup (dir </> "Setup.hs") info deps
-         writeLicense (dir </> "LICENSE") info
-         writeStackYaml (dir </> "stack.yaml")
-         writeReadme (dir </> "README.md") info
-         putStrLn " done."
+    -- We need to fork here, since code generation loads the library,
+    -- and multiple versions of the same library cannot be
+    -- simultaneously loaded.
+    pid <- forkProcess (genBindingsInDir dir)
+    status <- getProcessStatus True False pid
+    case status of
+      Nothing -> error "No status received!"
+      Just (Exited ExitSuccess) -> putStrLn " done."
+      Just exitStatus -> error ("Code generation failed: " <> show exitStatus)
