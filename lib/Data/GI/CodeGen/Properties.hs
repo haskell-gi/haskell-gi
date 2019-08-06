@@ -254,15 +254,15 @@ genPropertyConstructor constructor n docSection prop = group $ do
   isNullable <- typeIsNullable (propType prop)
   isCallback <- typeIsCallback (propType prop)
   cls <- classConstraint n
-  let constraints' = (cls <> " o") : constraints
+  let constraints' = (cls <> " o") : "MIO.MonadIO m" : constraints
       pconstraints = parenthesize (T.intercalate ", " constraints') <> " => "
   writeHaddock DocBeforeSymbol (constructorDoc prop)
   line $ constructor <> " :: " <> pconstraints
-           <> t <> " -> IO (GValueConstruct o)"
-  line $ constructor <> " val = B.Properties.constructObjectProperty" <> tStr
+           <> t <> " -> m (GValueConstruct o)"
+  line $ constructor <> " val = MIO.liftIO $ B.Properties.constructObjectProperty" <> tStr
            <> " \"" <> propName prop
            <> if isNullable && (not isCallback)
-              then "\" (Just val)"
+              then "\" (P.Just val)"
               else "\" val"
   export docSection constructor
 
