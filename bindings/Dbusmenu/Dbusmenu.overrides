@@ -1,1 +1,6 @@
 set-attr Dbusmenu/MenuitemClass/buildvariant/@type name zzz
+set-attr Dbusmenu/Menuitem/child_find/@return-value nullable 1
+set-attr Dbusmenu/Menuitem/find_id/@return-value nullable 1
+set-attr Dbusmenu/Menuitem/property_get/@return-value nullable 1
+set-attr Dbusmenu/Menuitem/property_get_byte_array/@return-value nullable 1
+set-attr Dbusmenu/Menuitem/property_get_variant/@return-value nullable 1
