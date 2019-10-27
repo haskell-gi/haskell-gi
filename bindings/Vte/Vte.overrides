@@ -14,3 +14,9 @@ set-attr Vte/Terminal/get_current_directory_uri/@return-value nullable 1
 # The return value is nullable, but it is not properly annotated as such
 # https://github.com/haskell-gi/haskell-gi/issues/185
 set-attr Vte/Terminal/get_window_title/@return-value nullable 1
+
+# The return value is nullable, but it is not properly annotated as such
+set-attr Vte/Terminal/match_check_event/@return-value nullable 1
+
+# The return value is nullable, but it is not properly annotated as such
+set-attr Vte/Terminal/hyperlink_check_event/@return-value nullable 1
