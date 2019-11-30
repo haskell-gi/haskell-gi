@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FunctionalDependencies #-}
+{-# LANGUAGE FlexibleInstances, FunctionalDependencies #-}
 module Rectangle(
   Rectangle(..), 
   Point,

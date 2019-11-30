@@ -248,7 +248,7 @@ createBoxText state boxState (x, y, width, height)
              ly = y + (height - fromIntegral rh) / 2
          Cairo.moveTo lx ly
          Cairo.setSourceRGB 0 0 0
-         toRender $ (flip PangoCairo.showLayout) layout
+         toRender $ flip PangoCairo.showLayout layout
                                             
 drawLegend :: Language -> Bool -> Rectangle Int -> Cairo.Render ()
 drawLegend language False _               = return ()
