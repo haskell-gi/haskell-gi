@@ -89,3 +89,4 @@ branches:
 artifacts:
   - path: hlabyrinth.zip
     name: hlabyrinth
+
