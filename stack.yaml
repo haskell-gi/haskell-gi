@@ -1,12 +1,6 @@
-flags: {}
-packages:
-- .
-extra-deps:
-- gi-atk-2.0.15
-- gi-gtk-3.0.22
-- gi-pango-1.0.16
-- gi-gdk-3.0.15
-- gi-gdkpixbuf-2.0.15
-- gi-gio-2.0.17
-- gi-pangocairo-1.0.16
-resolver: lts-11.3
+resolver: lts-14.16
+extra-deps: 
+- gi-cairo-connector-0.0.1@sha256:b909fcfcb3c19fceb93ea309381c059020e9b9ae8d1fc39aad94962e112fc289,1166
+- gi-cairo-render-0.0.1@sha256:ff2ccc309c021c2c023fa0d380375ef36cff2df93e0c78ed733f052dd1aa9782,3502
+- gi-pangocairo-1.0.23@sha256:04dacf055fef4e19dd0276a8c2b5df08332877600b0014beecd2eaa764495ec6,3158
+- search-algorithms-0.3.1@sha256:83d487688e79f7d354a638d893364cd34cb01352cac9281734c27ee640e31925,1825

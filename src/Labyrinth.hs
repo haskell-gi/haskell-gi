@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-} 
+{-# LANGUAGE TemplateHaskell #-}
 module Labyrinth(
   Labyrinth(..), 
   BoxState(..), 
@@ -342,11 +342,13 @@ labyFindAndMark (Just labyrinth) =
   do path <- labyFindPath labyrinth
      case path of 
          Left error -> return $ Left error
-         Right foundPath -> do Just start <- readTVar $ labyStartField labyrinth  
-                               let pathWithStartElement = start : foundPath      -- include start element
-                               let directionList = labyPathDirection pathWithStartElement
-                               repaintAreas <- mapM markBox (tail directionList) -- remove it again
-                               return $ Right $ catMaybes repaintAreas
+         Right foundPath -> do mayBeStart <- readTVar $ labyStartField labyrinth 
+                               case mayBeStart of 
+                                    Just start -> do let pathWithStartElement = start : foundPath      -- include start element
+                                                     let directionList = labyPathDirection pathWithStartElement
+                                                     repaintAreas <- mapM markBox (tail directionList) -- remove it again
+                                                     return $ Right $ catMaybes repaintAreas
+                                    Nothing -> return $ Left InternalError 
   where markBox :: (Direction, PointInGridCoordinates Int) -> STM (Maybe (RectangleInScreenCoordinates Int)) 
         markBox (dir, box) = do writeArray (labyBoxState labyrinth) box (Path dir)
                                 return $ grBoxToPixel (labyGrid labyrinth) box

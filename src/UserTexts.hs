@@ -36,7 +36,7 @@ data ErrorMessage =
   FileReadPermissionError Path.FilePath Exception.IOException |
   FileWritePermissionError Path.FilePath Exception.IOException | 
   StartPointNotSet  | TargetPointNotSet | NoPathFound | 
-  InternalErrorInPathFinder
+  InternalErrorInPathFinder | InternalError
 
 data DialogWidgetTexts =
   FileSaveCaption | FileOpenCaption | FileSave | FileOpen |
@@ -69,6 +69,8 @@ instance UserText ErrorMessage where
     Printf.printf "No path between start and target could be found."  
   translate English InternalErrorInPathFinder =
     Printf.printf "Internal error in path finding. Processing aborted."   
+  translate English InternalError =
+    Printf.printf "Internal error. Processing aborted."
 
   translate German (FileInternalErrorWhileSaving file) = 
     Printf.printf "Interner Fehler beim Speichern der Datei \"%s\"." file
@@ -90,6 +92,8 @@ instance UserText ErrorMessage where
     Printf.printf "Es konnte kein Weg zwischen Start- und Zielpunkt gefunden werden."   
   translate German InternalErrorInPathFinder =
     Printf.printf "Es wurde ein interner Fehler in der Wegbestimmung festgestellt. Der Vorgang wurde abgebrochen."    
+  translate German InternalError =
+    Printf.printf "Es ist ein interner Fehler aufgetreten. Der Vorgang wurde abgebrochen."
 
 instance UserText DialogWidgetTexts where  
   translate English FileSaveCaption = "Save File"

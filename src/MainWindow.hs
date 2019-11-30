@@ -1,3 +1,4 @@
+
 module MainWindow(CmdOptions(..), run) where
 
 import Data.List(intersect)
@@ -24,6 +25,7 @@ import qualified GI.GLib as Glib
 import qualified GI.Cairo.Render as Cairo
 import qualified GI.Cairo  
 import qualified Data.String.Unicode
+import qualified Data.GI.Base.GObject as GI (new') 
 
 import qualified LoadSave 
 import Rectangle
