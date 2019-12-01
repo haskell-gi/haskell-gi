@@ -10,8 +10,6 @@ before_install:
 
 script: 
   - stack --stack-yaml stack-nix.yaml --no-terminal --install-ghc test --flag hlabyrinth:llvm 
-  - stack --stack-yaml stack-nix.yaml install hlint
-  - hlint .
 
 cache:
   directories:
