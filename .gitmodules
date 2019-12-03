@@ -1,4 +1,4 @@
 [submodule "examples/hlabyrinth"]
 	path = examples/hlabyrinth
 	url = https://github.com/cohomology/hlabyrinth
-	branch = use-haskell-gi
+	branch = master
