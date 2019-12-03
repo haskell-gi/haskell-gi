@@ -32,13 +32,6 @@ packages:
       sha256: 1e007eb17329ea5b2bf9efc801fc8d2daa97040d19db4b8274b4743ee145df8b
   original:
     hackage: search-algorithms-0.3.1@sha256:83d487688e79f7d354a638d893364cd34cb01352cac9281734c27ee640e31925,1825
-- completed:
-    hackage: haskell-gi-overloading-0.0@sha256:e1ba6583d908525af55f45ede17224a0fe5e7c8980bb5962ac39ee8b429e5bae,631
-    pantry-tree:
-      size: 264
-      sha256: b76f20f1b0acbce7bce3e36d0d5feb28cc63dd90ced15c1e6176d8c583535543
-  original:
-    hackage: haskell-gi-overloading-0.0@sha256:e1ba6583d908525af55f45ede17224a0fe5e7c8980bb5962ac39ee8b429e5bae,631
 snapshots:
 - completed:
     size: 524804
