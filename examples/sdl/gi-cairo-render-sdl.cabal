@@ -24,7 +24,7 @@ Source-Repository head
 
 Executable sdl-demo
         build-depends:  base >= 4 && < 5,
-                        sdl2 >= 2.0.4 && <2.5,
+                        sdl2 >= 2.0.4 && <2.6,
                         gi-cairo-render == 0.0.*
         main-is:        CairoSDL.hs 
         default-language:   Haskell2010
