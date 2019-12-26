@@ -1,0 +1,25 @@
+name: Haskell CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: '8.6.5'
+        cabal-version: '3.0'
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev
+        cabal update
+    - name: Build
+      run: |
+        cabal new-build all
+    - name: Run tests
+      run: cabal new-test
