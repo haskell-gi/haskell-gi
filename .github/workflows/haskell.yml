@@ -36,5 +36,3 @@ jobs:
     - name: Build
       run: |
         cabal new-build all
-    - name: Run tests
-      run: cabal new-test
