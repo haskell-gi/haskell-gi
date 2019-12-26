@@ -456,7 +456,7 @@ genPlaceholderProperty owner prop = do
   let cName = (hyphensToCamelCase . propName) prop
       docSection = NamedSubsection PropertySection (lcFirst cName)
   export docSection it
-  line $ "data " <> it
+  bline $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"
   indent $ do
     line $ "type AttrAllowedOps " <> it <> " = '[]"
