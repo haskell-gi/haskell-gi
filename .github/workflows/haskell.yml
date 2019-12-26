@@ -20,6 +20,9 @@ jobs:
         cabal update
     - name: Build
       run: |
+        pushd bindings
+        cabal new-run genBuildInfo $(bash PKGS.sh)
+        popd
         cabal new-build all
     - name: Run tests
       run: cabal new-test
