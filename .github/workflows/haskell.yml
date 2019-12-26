@@ -28,7 +28,7 @@ jobs:
         sudo add-apt-repository -y ppa:gnome3-team/gnome3-staging
         sudo add-apt-repository -y ppa:gnome3-team/gnome3
         sudo apt-get update
-        sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev libgraphene-dev
+        sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev libgraphene-1.0-dev
         pushd bindings
         cabal new-update
         cabal new-run genBuildInfo $(bash PKGS.sh)
