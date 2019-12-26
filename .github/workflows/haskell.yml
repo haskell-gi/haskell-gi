@@ -13,13 +13,26 @@ jobs:
       with:
         ghc-version: '8.6.5'
         cabal-version: '3.0'
+    - name: Cache cabal store
+      uses: actions/cache@v1
+      with:
+        path: ~/.cabal/store
+        key: ${{ runner.os }}-cabal
+    - name: Do not build dependencies not available in runner
+      run: |
+        grep -Ev "(Handy|OSTree|Ggit)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
+        sed 's/Handy//;s/OSTree//;s/Ggit//;s/Gdk-4.0//;s/Gsk//;s/Gtk-4.0//' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
+
     - name: Install dependencies
       run: |
+        sudo add-apt-repository -y ppa:gnome3-team/gnome3-staging
+        sudo add-apt-repository -y ppa:gnome3-team/gnome3
         sudo apt-get update
-        sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev
-        cabal update
+        sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev libgraphene-1.0-dev
+        pushd bindings
+        cabal new-update
+        cabal new-run genBuildInfo $(bash PKGS.sh)
+        popd
     - name: Build
       run: |
         cabal new-build all
-    - name: Run tests
-      run: cabal new-test
