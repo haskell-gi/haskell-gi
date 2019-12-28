@@ -21,7 +21,7 @@ jobs:
     - name: Do not build dependencies not available in runner
       run: |
         grep -Ev "(Handy|OSTree|Ggit)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
-        sed 's/Handy//;s/OSTree//;s/Ggit//;s/Gdk-4.0//;s/Gsk//;s/Gtk-4.0//' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
+        sed 's/Handy//;s/OSTree//;s/Ggit//;s/Gdk-4.0//;s/GdkX11-4.0//;s/Gsk//;s/Gtk-4.0//' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
 
     - name: Install dependencies
       run: |
