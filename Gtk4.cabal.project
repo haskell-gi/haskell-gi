@@ -12,5 +12,6 @@ packages: base/haskell-gi-base.cabal
           bindings/GdkPixbuf/gi-gdkpixbuf.cabal
           bindings/Graphene/gi-graphene.cabal
           bindings/Gdk-4.0/gi-gdk.cabal
+          bindings/GdkX11-4.0/gi-gdkx11.cabal
           bindings/Gsk/gi-gsk.cabal
           bindings/Gtk-4.0/gi-gtk.cabal

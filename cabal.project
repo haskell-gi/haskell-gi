@@ -21,7 +21,7 @@ packages: base/haskell-gi-base.cabal
           bindings/PangoCairo/gi-pangocairo.cabal
           bindings/GdkPixbuf/gi-gdkpixbuf.cabal
           bindings/Gdk-3.0/gi-gdk.cabal
-	  bindings/GdkX11/gi-gdkx11.cabal
+	  bindings/GdkX11-3.0/gi-gdkx11.cabal
           bindings/Gst/gi-gst.cabal
           bindings/GstBase/gi-gstbase.cabal
           bindings/GstAudio/gi-gstaudio.cabal
