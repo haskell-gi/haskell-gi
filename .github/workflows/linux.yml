@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         ghc: ['8.4.4', '8.6.5', '8.8.1']
-        cabal: ['2.2', '2.4', '3.0']
+        cabal: ['2.4', '3.0']
 
     steps:
     - uses: actions/checkout@v1
@@ -22,7 +22,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.cabal/store
-        key: ${{ runner.os }}-cabal
+        key: ${{ runner.os }}-${{ matrix.ghc }}-${{ matrix.cabal }}-cabal
     - name: Do not build dependencies not available in runner
       run: |
         grep -Ev "(Handy|OSTree|Ggit)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
