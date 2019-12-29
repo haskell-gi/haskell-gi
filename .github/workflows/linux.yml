@@ -1,18 +1,23 @@
-name: Haskell CI
+name: Linux CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        ghc: ['8.4.4', '8.6.5', '8.8.1']
+        cabal: ['2.2', '2.4', '3.0']
+
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-haskell@v1
       with:
-        ghc-version: '8.6.5'
-        cabal-version: '3.0'
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
     - name: Cache cabal store
       uses: actions/cache@v1
       with:
