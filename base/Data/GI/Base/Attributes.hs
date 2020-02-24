@@ -106,7 +106,7 @@
 -- `set` afterwards. That these invariants hold is also checked during
 -- compile time.
 --
--- == Nullable atributes
+-- == Nullable attributes
 --
 -- Whenever the attribute is represented as a pointer in the C side,
 -- it is often the case that the underlying C representation admits or
@@ -115,7 +115,7 @@
 -- representing the @NULL@ pointer value (notable exceptions are
 -- `Data.GI.Base.BasicTypes.GList` and
 -- `Data.GI.Base.BasicTypes.GSList`, for which @NULL@ is represented
--- simply as he empty list). This can be overriden in the
+-- simply as the empty list). This can be overridden in the
 -- introspection data, since sometimes attributes are non-nullable,
 -- even if the type would allow for @NULL@.
 --
