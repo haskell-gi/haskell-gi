@@ -1,0 +1,5 @@
+namespace GtkSheet
+
+# Conflicts with a method of same name on GtkSheet/Sheet
+delete-node GtkSheet/SheetColumn/visible
+
