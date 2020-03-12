@@ -2,6 +2,9 @@ name: Linux CI
 
 on: [push, pull_request]
 
+env:
+  gtksheet_version: 4.3.2
+
 jobs:
   build:
 
@@ -25,15 +28,43 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
     - name: Do not build dependencies not available in runner
       run: |
-        grep -Ev "(Handy|OSTree|Ggit|GtkSheet)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
-        sed 's/Handy//;s/OSTree//;s/Ggit//;s/Gdk-4.0//;s/GdkX11-4.0//;s/Gsk//;s/Gtk-4.0//;s/GtkSheet//' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
+        grep -Ev "(Handy|OSTree|Ggit)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
+        sed 's/Handy//;s/OSTree//;s/Ggit//;s/Gdk-4.0//;s/GdkX11-4.0//;s/Gsk//;s/Gtk-4.0//' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
 
     - name: Install dependencies
       run: |
         sudo add-apt-repository -y ppa:gnome3-team/gnome3-staging
         sudo add-apt-repository -y ppa:gnome3-team/gnome3
         sudo apt-get update
-        sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev libgraphene-1.0-dev
+        sudo apt-get install -y libgirepository1.0-dev gir1.2-javascriptcoregtk-4.0 libwebkit2gtk-4.0-dev libpoppler-glib-dev libvte-2.91-dev libgtksourceview-3.0-dev libgstreamer-plugins-base1.0-dev libsecret-1-dev libnotify-dev libdbusmenu-gtk3-dev libwnck-3-dev libgraphene-1.0-dev libgladeui-dev
+
+    - uses: actions/cache@v1
+      id: gtksheet-cache
+      with:
+        path: gtksheet/gtksheet
+        key: ${{ env.gtksheet_version }}
+
+    - name: Build GtkSheet from source
+      uses: actions/checkout@v2
+      if: steps.gtksheet-cache.outputs.cache-hit != 'true'
+      with:
+        repository: fpaquet/gtksheet
+        ref: V{{ env.gtksheet_version}}
+      run: |
+        pushd gtksheet
+        # Configure and install
+        autoreconf -i
+        ./configure --enable-introspection
+        sudo make install
+        # The make install does this, but with -n
+        # That means the lib cache doesn't get rebuilt, only links, and the
+        # lib cache rebuild appears to be necessary
+        sudo ldconfig
+        # Fix https://github.com/fpaquet/gtksheet/issues/23 - rename the typelib file
+        sudo mv "/usr/local/lib/girepository-1.0/GtkSheet-4.0.typelib" "$(pkg-config gobject-introspection-1.0 --variable=typelibdir)/GtkSheet-${{ env.gtksheet_version }}.typelib"
+        popd
+
+    - name: Generate bindings
         pushd bindings
         cabal new-update
         cabal new-run genBuildInfo $(bash PKGS.sh)
