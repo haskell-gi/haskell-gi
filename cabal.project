@@ -45,4 +45,3 @@ packages: base/haskell-gi-base.cabal
           bindings/Ggit/gi-ggit.cabal
           bindings/DbusmenuGtk3/gi-dbusmenugtk3.cabal
           bindings/Dbusmenu/gi-dbusmenu.cabal
-          bindings/GtkSheet/gi-gtksheet.cabal

@@ -29,7 +29,8 @@ jobs:
     - name: Do not build dependencies not available in runner
       run: |
         grep -Ev "(Handy|OSTree|Ggit)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
-        sed 's/Handy//;s/OSTree//;s/Ggit//;s/Gdk-4.0//;s/GdkX11-4.0//;s/Gsk//;s/Gtk-4.0//' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
+        echo "          bindings/GtkSheet/gi-gtksheet.cabal" >> cabal.project
+        sed 's/Handy//;s/OSTree//;s/Ggit//;s/Gdk-4.0//;s/GdkX11-4.0//;s/Gsk//;s/Gtk-4.0//;s/"$/ GtkSheet"/' bindings/PKGS.sh > PKGS.new; mv PKGS.new bindings/PKGS.sh
 
     - name: Install dependencies
       run: |
@@ -41,7 +42,7 @@ jobs:
     - uses: actions/cache@v1
       id: gtksheet-cache
       with:
-        path: gtksheet/gtksheet
+        path: gtksheet
         key: ${{ env.gtksheet_version }}
 
     - name: Build GtkSheet from source
@@ -55,6 +56,12 @@ jobs:
         # Configure and install
         autoreconf -i
         ./configure --enable-introspection
+        make
+        popd
+
+    - name: Install GtkSheet
+      run: |
+        pushd gtksheet
         sudo make install
         # The make install does this, but with -n
         # That means the lib cache doesn't get rebuilt, only links, and the
