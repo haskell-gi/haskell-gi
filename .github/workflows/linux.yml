@@ -49,7 +49,8 @@ jobs:
       if: steps.gtksheet-cache.outputs.cache-hit != 'true'
       with:
         repository: fpaquet/gtksheet
-        ref: V{{ env.gtksheet_version}}
+        ref: V${{ env.gtksheet_version}}
+        path: gtksheet
 
     - name: Build GtkSheet from source
       if: steps.gtksheet-cache.outputs.cache-hit != 'true'
