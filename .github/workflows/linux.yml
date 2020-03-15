@@ -45,12 +45,14 @@ jobs:
         path: gtksheet
         key: ${{ env.gtksheet_version }}
 
-    - name: Build GtkSheet from source
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v2
       if: steps.gtksheet-cache.outputs.cache-hit != 'true'
       with:
         repository: fpaquet/gtksheet
         ref: V{{ env.gtksheet_version}}
+
+    - name: Build GtkSheet from source
+      if: steps.gtksheet-cache.outputs.cache-hit != 'true'
       run: |
         pushd gtksheet
         # Configure and install
