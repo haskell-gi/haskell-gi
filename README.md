@@ -134,4 +134,4 @@ The bindings in `haskell-gi` aim for complete coverage of the bound APIs, but as
 
 ---
 
-[![Join the chat at https://gitter.im/haskell-gi/haskell-gi](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/haskell-gi/haskell-gi?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Join the chat at https://gitter.im/haskell-gi/haskell-gi](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/haskell-gi/haskell-gi?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) ![Linux CI](https://github.com/haskell-gi/haskell-gi/workflows/Linux%20CI/badge.svg)
