@@ -319,8 +319,8 @@ loadGIRInfo :: Bool             -- ^ verbose
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
             -> [GIRRule]        -- ^ fixups
-            -> IO (GIRInfo,
-                   [GIRInfo])   -- ^ (parsed doc, parsed deps)
+            -> IO (GIRInfo, [GIRInfo], M.Map Text Typelib)
+            -- ^ (parsed doc,  parsed deps, typelibMap)
 loadGIRInfo verbose name version extraPaths rules =  do
   (doc, deps) <- loadGIRFile verbose name version extraPaths rules
   let aliases = M.unions (map documentListAliases (doc : M.elems deps))
@@ -335,7 +335,7 @@ loadGIRInfo verbose name version extraPaths rules =  do
              typelib <- girRequire (girNSName info) (girNSVersion info)
              return (girNSName info, typelib))
         (fixedDoc, fixedDeps) <- fixupGIRInfos typelibMap docGIR depsGIR
-        return (fixedDoc, fixedDeps)
+        return (fixedDoc, fixedDeps, typelibMap)
       else error . T.unpack $ "Got unexpected namespace \""
                <> girNSName docGIR <> "\" when parsing \"" <> name <> "\"."
   where combineErrors :: Either Text GIRInfo -> [Either Text GIRInfo]

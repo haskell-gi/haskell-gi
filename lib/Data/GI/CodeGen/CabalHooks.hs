@@ -67,12 +67,14 @@ genModuleCode name version verbosity overrides = do
 
   let ovs = mconcat parsed
 
-  (gir, girDeps) <- loadGIRInfo verbosity name (Just version) [] (girFixups ovs)
+  (gir, girDeps, typelibMap) <- loadGIRInfo verbosity name
+                                            (Just version) [] (girFixups ovs)
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
       cfg = Config {modName = name,
                     verbose = verbosity,
-                    overrides = ovs}
+                    overrides = ovs,
+                    typelibMap = typelibMap}
 
   return $ genCode cfg allAPIs (toModulePath name) (genModule apis)
 

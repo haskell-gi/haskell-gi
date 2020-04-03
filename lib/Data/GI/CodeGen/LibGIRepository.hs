@@ -8,13 +8,14 @@ module Data.GI.CodeGen.LibGIRepository
     , girStructFieldInfo
     , girUnionFieldInfo
     , girLoadGType
+    , girLookupSymbol
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
 
-import Control.Monad (forM, when, (>=>))
+import Control.Monad (forM, (>=>))
 import qualified Data.Map as M
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -24,6 +25,7 @@ import Foreign.C.String (CString, withCString)
 import Foreign (nullPtr, Ptr, FunPtr, peek)
 
 import System.Environment (lookupEnv)
+import System.IO.Unsafe (unsafePerformIO)
 import System.FilePath (searchPathSeparator)
 
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
@@ -39,6 +41,7 @@ newtype BaseInfo = BaseInfo (ManagedPtr BaseInfo)
 -- | Wrapper for 'GITypelib', remembering the originating namespace
 -- and version.
 data Typelib = Typelib Text Text (Ptr Typelib)
+  deriving Show
 
 -- | Extra info about a field in a struct or union which is not easily
 -- determined from the GIR file. (And which we determine by using
@@ -157,18 +160,30 @@ girUnionFieldInfo ns name = do
 foreign import ccall "g_typelib_symbol" g_typelib_symbol ::
     Ptr Typelib -> CString -> Ptr (FunPtr a) -> IO CInt
 
--- | Load a symbol from the dynamic library associated to the given namespace.
-girSymbol :: forall a. Typelib -> Text -> IO (FunPtr a)
-girSymbol (Typelib ns version typelib) symbol = do
+-- | Try to load a symbol from the dynamic library associated to the
+-- given typelib.
+{-# NOINLINE girLookupSymbol #-}
+-- The following is effectively pure once we have loaded the
+-- typelibs.
+girLookupSymbol :: forall a. Typelib -> Text -> Maybe (FunPtr a)
+girLookupSymbol (Typelib _ _ typelib) symbol = unsafePerformIO $ do
   funPtrPtr <- allocMem :: IO (Ptr (FunPtr a))
   result <- withTextCString symbol $ \csymbol ->
                       g_typelib_symbol typelib csymbol funPtrPtr
-  when (result /= 1) $
-       error ("Could not resolve symbol " ++ show symbol ++ " in namespace "
-              ++ show (ns <> "-" <> version))
   funPtr <- peek funPtrPtr
   freeMem funPtrPtr
-  return funPtr
+  if result /= 1
+    then return Nothing
+    else return (Just funPtr)
+
+-- | Load a symbol from the dynamic library associated to the given
+-- typelib. If the symbol does not exist this will raise an error.
+girSymbol :: Typelib -> Text -> FunPtr a
+girSymbol typelib@(Typelib ns version _) symbol =
+  case girLookupSymbol typelib symbol of
+    Just funPtr -> funPtr
+    Nothing -> error ("Could not resolve symbol " ++ show symbol ++ " in namespace "
+              ++ show (ns <> "-" <> version))
 
 type GTypeInit = IO CGType
 foreign import ccall "dynamic" gtypeInit :: FunPtr GTypeInit -> GTypeInit
@@ -176,6 +191,5 @@ foreign import ccall "dynamic" gtypeInit :: FunPtr GTypeInit -> GTypeInit
 -- | Load a GType given the `Typelib` where it lives and the type init
 -- function.
 girLoadGType :: Typelib -> Text -> IO GType
-girLoadGType typelib typeInit = do
-  funPtr <- girSymbol typelib typeInit
-  GType <$> gtypeInit funPtr
+girLoadGType typelib typeInit =
+  GType <$> gtypeInit (girSymbol typelib typeInit)
