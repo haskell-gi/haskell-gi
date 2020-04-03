@@ -2,6 +2,7 @@
 -- | A minimal wrapper for libgirepository.
 module Data.GI.CodeGen.LibGIRepository
     ( girRequire
+    , Typelib
     , setupTypelibSearchPath
     , FieldInfo(..)
     , girStructFieldInfo
@@ -35,8 +36,9 @@ import Data.GI.CodeGen.Util (splitOn)
 -- | Wrapper for 'GIBaseInfo'
 newtype BaseInfo = BaseInfo (ManagedPtr BaseInfo)
 
--- | Wrapper for 'GITypelib'
-newtype Typelib = Typelib (Ptr Typelib)
+-- | Wrapper for 'GITypelib', remembering the originating namespace
+-- and version.
+data Typelib = Typelib Text Text (Ptr Typelib)
 
 -- | Extra info about a field in a struct or union which is not easily
 -- determined from the GIR file. (And which we determine by using
@@ -86,7 +88,7 @@ girRequire ns version =
                                            ++ show ns ++ " version "
                                            ++ show version ++ ".\n"
                                            ++ "Error was: " ++ show gerror)
-        return (Typelib typelib)
+        return (Typelib ns version typelib)
 
 foreign import ccall "g_irepository_find_by_name" g_irepository_find_by_name ::
     Ptr () -> CString -> CString -> IO (Ptr BaseInfo)
@@ -156,17 +158,14 @@ foreign import ccall "g_typelib_symbol" g_typelib_symbol ::
     Ptr Typelib -> CString -> Ptr (FunPtr a) -> IO CInt
 
 -- | Load a symbol from the dynamic library associated to the given namespace.
-girSymbol :: forall a. Text -> Text -> IO (FunPtr a)
-girSymbol ns symbol = do
-  typelib <- withTextCString ns $ \cns ->
-                    checkGError (g_irepository_require nullPtr cns nullPtr 0)
-                                (error $ "Could not load typelib " ++ show ns)
+girSymbol :: forall a. Typelib -> Text -> IO (FunPtr a)
+girSymbol (Typelib ns version typelib) symbol = do
   funPtrPtr <- allocMem :: IO (Ptr (FunPtr a))
   result <- withTextCString symbol $ \csymbol ->
                       g_typelib_symbol typelib csymbol funPtrPtr
   when (result /= 1) $
        error ("Could not resolve symbol " ++ show symbol ++ " in namespace "
-              ++ show ns)
+              ++ show (ns <> "-" <> version))
   funPtr <- peek funPtrPtr
   freeMem funPtrPtr
   return funPtr
@@ -174,9 +173,9 @@ girSymbol ns symbol = do
 type GTypeInit = IO CGType
 foreign import ccall "dynamic" gtypeInit :: FunPtr GTypeInit -> GTypeInit
 
--- | Load a GType given the namespace where it lives and the type init
+-- | Load a GType given the `Typelib` where it lives and the type init
 -- function.
-girLoadGType :: Text -> Text -> IO GType
-girLoadGType ns typeInit = do
-  funPtr <- girSymbol ns typeInit
+girLoadGType :: Typelib -> Text -> IO GType
+girLoadGType typelib typeInit = do
+  funPtr <- girSymbol typelib typeInit
   GType <$> gtypeInit funPtr

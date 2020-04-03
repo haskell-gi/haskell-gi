@@ -58,7 +58,7 @@ module Data.GI.CodeGen.API
 import Control.Applicative ((<$>))
 #endif
 
-import Control.Monad ((>=>), foldM, forM, forM_)
+import Control.Monad ((>=>), foldM, forM)
 import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe, catMaybes)
@@ -106,7 +106,7 @@ import Data.GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr,
 import Data.GI.Base.BasicConversions (unpackStorableArrayWithLength)
 import Data.GI.Base.BasicTypes (GType(..), CGType, gtypeName)
 import Data.GI.Base.Utils (allocMem, freeMem)
-import Data.GI.CodeGen.LibGIRepository (girRequire, FieldInfo(..),
+import Data.GI.CodeGen.LibGIRepository (girRequire, Typelib, FieldInfo(..),
                                         girStructFieldInfo, girUnionFieldInfo,
                                         girLoadGType)
 import Data.GI.CodeGen.GType (gtypeIsBoxed)
@@ -331,9 +331,10 @@ loadGIRInfo verbose name version extraPaths rules =  do
     Right (docGIR, depsGIR) -> do
       if girNSName docGIR == name
       then do
-        forM_ (docGIR : depsGIR) $ \info ->
-            girRequire (girNSName info) (girNSVersion info)
-        (fixedDoc, fixedDeps) <- fixupGIRInfos docGIR depsGIR
+        typelibMap <- M.fromList <$> (forM (docGIR : depsGIR) $ \info -> do
+             typelib <- girRequire (girNSName info) (girNSVersion info)
+             return (girNSName info, typelib))
+        (fixedDoc, fixedDeps) <- fixupGIRInfos typelibMap docGIR depsGIR
         return (fixedDoc, fixedDeps)
       else error . T.unpack $ "Got unexpected namespace \""
                <> girNSName docGIR <> "\" when parsing \"" <> name <> "\"."
@@ -360,19 +361,22 @@ gtypeInterfaceListPrereqs (GType cgtype) = do
 -- | The list of prerequisites in GIR files is not always
 -- accurate. Instead of relying on this, we instantiate the 'GType'
 -- associated to the interface, and listing the interfaces from there.
-fixupInterface :: M.Map Text Name -> (Name, API) -> IO (Name, API)
-fixupInterface csymbolMap (n@(Name ns _), APIInterface iface) = do
+fixupInterface :: M.Map Text Typelib -> M.Map Text Name -> (Name, API)
+               -> IO (Name, API)
+fixupInterface typelibMap csymbolMap (n@(Name ns _), APIInterface iface) = do
   prereqs <- case ifTypeInit iface of
                Nothing -> return []
                Just ti -> do
-                 gtype <- girLoadGType ns ti
+                 gtype <- case M.lookup ns typelibMap of
+                            Just typelib -> girLoadGType typelib ti
+                            Nothing -> error $ "fi: Typelib for " ++ show ns ++ " not loaded."
                  prereqGTypes <- gtypeInterfaceListPrereqs gtype
                  forM prereqGTypes $ \p -> do
                    case M.lookup p csymbolMap of
                      Just pn -> return pn
                      Nothing -> error $ "Could not find prerequisite type " ++ show p ++ " for interface " ++ show n
   return (n, APIInterface (iface {ifPrerequisites = prereqs}))
-fixupInterface _ (n, api) = return (n, api)
+fixupInterface _ _ (n, api) = return (n, api)
 
 -- | There is not enough info in the GIR files to determine whether a
 -- struct is boxed. We find out by instantiating the 'GType'
@@ -380,23 +384,27 @@ fixupInterface _ (n, api) = return (n, api)
 -- descends from the boxed GType. Similarly, the size of the struct
 -- and offset of the fields is hard to compute from the GIR data, we
 -- simply reuse the machinery in libgirepository.
-fixupStruct :: M.Map Text Name -> (Name, API) -> IO (Name, API)
-fixupStruct _ (n, APIStruct s) = do
-  fixed <- (fixupStructIsBoxed n >=> fixupStructSizeAndOffsets n) s
+fixupStruct :: M.Map Text Typelib -> M.Map Text Name -> (Name, API)
+            -> IO (Name, API)
+fixupStruct typelibMap _ (n, APIStruct s) = do
+  fixed <- (fixupStructIsBoxed typelibMap n >=> fixupStructSizeAndOffsets n) s
   return (n, APIStruct fixed)
-fixupStruct _ api = return api
+fixupStruct _ _ api = return api
 
 -- | Find out whether the struct is boxed.
-fixupStructIsBoxed :: Name -> Struct -> IO Struct
+fixupStructIsBoxed :: M.Map Text Typelib -> Name -> Struct -> IO Struct
 -- The type for "GVariant" is marked as "intern", we wrap
 -- this one natively.
-fixupStructIsBoxed (Name "GLib" "Variant") s =
+fixupStructIsBoxed _ (Name "GLib" "Variant") s =
     return (s {structIsBoxed = False})
-fixupStructIsBoxed (Name ns _) s = do
+fixupStructIsBoxed typelibMap (Name ns _) s = do
   isBoxed <- case structTypeInit s of
                Nothing -> return False
                Just ti -> do
-                 gtype <- girLoadGType ns ti
+                 gtype <- case M.lookup ns typelibMap of
+                   Just typelib -> girLoadGType typelib ti
+                   Nothing -> error $ "fsib: Typelib for " ++ show ns ++ " not loaded."
+
                  return (gtypeIsBoxed gtype)
   return (s {structIsBoxed = isBoxed})
 
@@ -433,9 +441,10 @@ fixupField offsetMap f =
 -- | Fixup parsed GIRInfos: some of the required information is not
 -- found in the GIR files themselves, but can be obtained by
 -- instantiating the required GTypes from the installed libraries.
-fixupGIRInfos :: GIRInfo -> [GIRInfo] -> IO (GIRInfo, [GIRInfo])
-fixupGIRInfos doc deps = (fixup fixupInterface >=>
-                          fixup fixupStruct >=>
+fixupGIRInfos :: M.Map Text Typelib -> GIRInfo -> [GIRInfo]
+              -> IO (GIRInfo, [GIRInfo])
+fixupGIRInfos typelibMap doc deps = (fixup (fixupInterface typelibMap) >=>
+                          fixup (fixupStruct typelibMap) >=>
                           fixup fixupUnion) (doc, deps)
   where fixup :: (M.Map Text Name -> (Name, API) -> IO (Name, API))
                  -> (GIRInfo, [GIRInfo]) -> IO (GIRInfo, [GIRInfo])
