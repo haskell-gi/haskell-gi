@@ -14,7 +14,7 @@ maintainer:          Iñaki García Etxebarria (inaki@blueleaf.cc)
 stability:           Experimental
 category:            Development
 build-type:          Simple
-tested-with:         GHC == 8.0.1, GHC == 8.4.1, GHC == 8.6.1, GHC == 8.8.1
+tested-with:         GHC == 8.0.1, GHC == 8.4.1, GHC == 8.6.1, GHC == 8.8.1, GHC == 8.10.1
 cabal-version:       2.0
 
 extra-source-files: ChangeLog.md
