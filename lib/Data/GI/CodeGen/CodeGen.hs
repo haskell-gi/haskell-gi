@@ -51,10 +51,12 @@ genFunction n (Function symbol fnMovedTo callable) =
     -- Only generate the function if it has not been moved.
     when (Nothing == fnMovedTo) $
       group $ do
-        line $ "-- function " <> symbol
-        handleCGExc (\e -> line ("-- XXX Could not generate function "
-                           <> symbol
-                           <> "\n-- Error was : " <> describeCGError e))
+        line $ "-- function " <> name n
+        handleCGExc (\e -> do
+                        line ("-- XXX Could not generate function "
+                              <> name n
+                              <> "\n")
+                        printCGError e)
                         (do
                           genCCallableWrapper n symbol callable
                           export (NamedSubsection MethodSection $ lowerName n) (lowerName n)
@@ -130,10 +132,10 @@ genStruct n s = unless (ignoreStruct n s) $ do
        isFunction <- symbolFromFunction (methodSymbol f)
        if not isFunction
        then handleCGExc
-               (\e -> line ("-- XXX Could not generate method "
-                            <> name' <> "::" <> name mn <> "\n"
-                            <> "-- Error was : " <> describeCGError e) >>
-                return Nothing)
+               (\e -> do line ("-- XXX Could not generate method "
+                               <> name' <> "::" <> name mn)
+                         printCGError e
+                         return Nothing)
                (genMethod n f >> return (Just (n, f)))
        else return Nothing
 
@@ -174,10 +176,10 @@ genUnion n u = do
       isFunction <- symbolFromFunction (methodSymbol f)
       if not isFunction
       then handleCGExc
-                (\e -> line ("-- XXX Could not generate method "
-                             <> name' <> "::" <> name mn <> "\n"
-                             <> "-- Error was : " <> describeCGError e)
-                >> return Nothing)
+                (\e -> do line ("-- XXX Could not generate method "
+                                <> name' <> "::" <> name mn)
+                          printCGError e
+                          return Nothing)
                 (genMethod n f >> return (Just (n, f)))
       else return Nothing
 
@@ -379,11 +381,11 @@ genObject n o = do
     -- Methods
     forM_ (objMethods o) $ \f -> do
       let mn = methodName f
-      handleCGExc (\e -> line ("-- XXX Could not generate method "
-                              <> name' <> "::" <> name mn <> "\n"
-                              <> "-- Error was : " <> describeCGError e)
-                  >> (cppIf CPPOverloading $
-                           genUnsupportedMethodInfo n f))
+      handleCGExc (\e -> do line ("-- XXX Could not generate method "
+                                  <> name' <> "::" <> name mn)
+                            printCGError e
+                            cppIf CPPOverloading $
+                              genUnsupportedMethodInfo n f)
                   (genMethod n f)
 
 genInterface :: Name -> Interface -> CodeGen ()
@@ -402,9 +404,9 @@ genInterface n iface = do
   noName name'
 
   forM_ (ifSignals iface) $ \s -> handleCGExc
-     (line . (T.concat ["-- XXX Could not generate signal ", name', "::"
-                     , sigName s
-                     , "\n", "-- Error was : "] <>) . describeCGError)
+     (\e -> do line $ T.concat ["-- XXX Could not generate signal ", name', "::"
+                               , sigName s]
+               printCGError e)
      (genSignal s n)
 
   cppIf CPPOverloading $
@@ -443,7 +445,7 @@ genInterface n iface = do
     genWrappedPtr n (ifAllocationInfo iface) 0
 
     when (not . null . ifProperties $ iface) $ group $ do
-       line $ "-- XXX Skipping property generation for non-GObject interface"
+       comment $ "XXX Skipping property generation for non-GObject interface"
 
   -- Methods
   cppIf CPPOverloading $
@@ -454,11 +456,10 @@ genInterface n iface = do
       isFunction <- symbolFromFunction (methodSymbol f)
       unless isFunction $
              handleCGExc
-             (\e -> line ("-- XXX Could not generate method "
-                          <> name' <> "::" <> name mn <> "\n"
-                          <> "-- Error was : " <> describeCGError e)
-             >> (cppIf CPPOverloading $
-                      genUnsupportedMethodInfo n f))
+             (\e -> do comment ("XXX Could not generate method "
+                                <> name' <> "::" <> name mn)
+                       printCGError e
+                       cppIf CPPOverloading (genUnsupportedMethodInfo n f))
              (genMethod n f)
 
 -- Some type libraries include spurious interface/struct methods,

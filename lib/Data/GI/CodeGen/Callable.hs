@@ -32,13 +32,11 @@ import qualified Data.Text as T
 import Data.Text (Text)
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Config (Config(typelibMap))
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Haddock (deprecatedPragma, writeHaddock,
                                 writeDocumentation, RelativeDocPosition(..),
                                 writeArgDocumentation, writeReturnDocumentation)
-import Data.GI.CodeGen.LibGIRepository (girLookupSymbol)
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Transfer
 import Data.GI.CodeGen.Type
@@ -914,31 +912,27 @@ genCallableDebugInfo callable =
 
 -- | Generate a wrapper for a known C symbol.
 genCCallableWrapper :: Name -> Text -> Callable -> ExcCodeGen ()
-genCCallableWrapper n cSymbol callable = do
-  genCallableDebugInfo callable
+genCCallableWrapper n cSymbol callable
+  | callableResolvable callable == Nothing =
+      -- If we reach this point there is some internal error.
+      terror ("Resolvability of “" <> cSymbol <> "” unkown.")
+  | callableResolvable callable == Just False =
+      badIntroError ("Could not resolve the symbol “" <> cSymbol
+                     <> "” in the “" <> namespace n
+                     <> "” namespace, ignoring.")
+  | otherwise = do
+      genCallableDebugInfo callable
 
-  let callable' = fixupCallerAllocates callable
+      let callable' = fixupCallerAllocates callable
 
-  -- Make sure that the symbol actually exists, raise an exception
-  -- otherwise.
-  cfg <- config
-  case Map.lookup (namespace n) (typelibMap cfg) of
-    Nothing -> error $ "Could not find typelib for " ++ show (namespace n)
-    Just typelib -> do
-      case girLookupSymbol typelib cSymbol of
-        Just _ -> return ()
-        Nothing -> badIntroError ("Could not resolve the symbol `" <> cSymbol
-                                  <> "' in the `" <> namespace n
-                                  <> "' namespace.")
+      hSymbol <- mkForeignImport cSymbol callable'
 
-  hSymbol <- mkForeignImport cSymbol callable'
+      blank
 
-  blank
-
-  deprecatedPragma (lowerName n) (callableDeprecated callable)
-  writeDocumentation DocBeforeSymbol (callableDocumentation callable)
-  void (genHaskellWrapper n (KnownForeignSymbol hSymbol) callable'
-         WithoutClosures)
+      deprecatedPragma (lowerName n) (callableDeprecated callable)
+      writeDocumentation DocBeforeSymbol (callableDocumentation callable)
+      void (genHaskellWrapper n (KnownForeignSymbol hSymbol) callable'
+            WithoutClosures)
 
 -- | For callbacks we do not need to keep track of which arguments are
 -- closures.

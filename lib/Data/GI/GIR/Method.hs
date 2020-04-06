@@ -18,6 +18,7 @@ data MethodType = Constructor    -- ^ Constructs an instance of the parent type
 
 data Method = Method {
       methodName        :: Name,
+      -- | The symbol in the dynlib that this method refers to.
       methodSymbol      :: Text,
       methodType        :: MethodType,
       methodMovedTo     :: Maybe Text,

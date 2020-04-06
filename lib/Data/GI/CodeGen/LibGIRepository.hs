@@ -8,7 +8,7 @@ module Data.GI.CodeGen.LibGIRepository
     , girStructFieldInfo
     , girUnionFieldInfo
     , girLoadGType
-    , girLookupSymbol
+    , girIsSymbolResolvable
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -17,6 +17,7 @@ import Control.Applicative ((<$>))
 
 import Control.Monad (forM, (>=>))
 import qualified Data.Map as M
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -25,7 +26,6 @@ import Foreign.C.String (CString, withCString)
 import Foreign (nullPtr, Ptr, FunPtr, peek)
 
 import System.Environment (lookupEnv)
-import System.IO.Unsafe (unsafePerformIO)
 import System.FilePath (searchPathSeparator)
 
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
@@ -40,8 +40,13 @@ newtype BaseInfo = BaseInfo (ManagedPtr BaseInfo)
 
 -- | Wrapper for 'GITypelib', remembering the originating namespace
 -- and version.
-data Typelib = Typelib Text Text (Ptr Typelib)
-  deriving Show
+data Typelib = Typelib { typelibNamespace       :: Text
+                       , typelibVersion         :: Text
+                       , _typelibPtr            :: Ptr Typelib
+                       }
+
+instance Show Typelib where
+  show t = T.unpack (typelibNamespace t) ++ "-" ++ T.unpack (typelibVersion t)
 
 -- | Extra info about a field in a struct or union which is not easily
 -- determined from the GIR file. (And which we determine by using
@@ -162,11 +167,8 @@ foreign import ccall "g_typelib_symbol" g_typelib_symbol ::
 
 -- | Try to load a symbol from the dynamic library associated to the
 -- given typelib.
-{-# NOINLINE girLookupSymbol #-}
--- The following is effectively pure once we have loaded the
--- typelibs.
-girLookupSymbol :: forall a. Typelib -> Text -> Maybe (FunPtr a)
-girLookupSymbol (Typelib _ _ typelib) symbol = unsafePerformIO $ do
+girLookupSymbol :: forall a. Typelib -> Text -> IO (Maybe (FunPtr a))
+girLookupSymbol (Typelib _ _ typelib) symbol = do
   funPtrPtr <- allocMem :: IO (Ptr (FunPtr a))
   result <- withTextCString symbol $ \csymbol ->
                       g_typelib_symbol typelib csymbol funPtrPtr
@@ -178,10 +180,11 @@ girLookupSymbol (Typelib _ _ typelib) symbol = unsafePerformIO $ do
 
 -- | Load a symbol from the dynamic library associated to the given
 -- typelib. If the symbol does not exist this will raise an error.
-girSymbol :: Typelib -> Text -> FunPtr a
-girSymbol typelib@(Typelib ns version _) symbol =
-  case girLookupSymbol typelib symbol of
-    Just funPtr -> funPtr
+girSymbol :: Typelib -> Text -> IO (FunPtr a)
+girSymbol typelib@(Typelib ns version _) symbol = do
+  maybeSymbol <- girLookupSymbol typelib symbol
+  case maybeSymbol of
+    Just funPtr -> return funPtr
     Nothing -> error ("Could not resolve symbol " ++ show symbol ++ " in namespace "
               ++ show (ns <> "-" <> version))
 
@@ -192,4 +195,10 @@ foreign import ccall "dynamic" gtypeInit :: FunPtr GTypeInit -> GTypeInit
 -- function.
 girLoadGType :: Typelib -> Text -> IO GType
 girLoadGType typelib typeInit =
-  GType <$> gtypeInit (girSymbol typelib typeInit)
+  GType <$> (girSymbol typelib typeInit >>= gtypeInit)
+
+-- | Check whether a symbol is present in the dynamical liberary.
+girIsSymbolResolvable :: Typelib -> Text -> IO Bool
+girIsSymbolResolvable typelib symbol = do
+  maybeSymbol <- girLookupSymbol typelib symbol
+  return (isJust maybeSymbol)

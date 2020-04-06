@@ -24,7 +24,7 @@ module Data.GI.CodeGen.Code
     , recurseWithAPIs
 
     , handleCGExc
-    , describeCGError
+    , printCGError
     , notImplementedError
     , badIntroError
     , missingInfoError
@@ -35,6 +35,7 @@ module Data.GI.CodeGen.Code
     , line
     , blank
     , group
+    , comment
     , cppIf
     , CPPGuard(..)
     , hsBoot
@@ -126,6 +127,7 @@ data CodeToken
     = Line Text           -- ^ A single line, indented to current indentation.
     | Indent Code         -- ^ Indented region.
     | Group Code          -- ^ A grouped set of lines
+    | Comment [Text]      -- ^ A (possibly multi line) comment
     | IncreaseIndent      -- ^ Increase the indentation for the rest
                           -- of the lines in the group.
     | CPPBlock CPPConditional Code -- ^ A block of code guarded by the
@@ -495,12 +497,14 @@ minBaseVersion minfo =
     maximum (moduleMinBase minfo
             : map minBaseVersion (M.elems $ submodules minfo))
 
--- | Give a friendly textual description of the error for presenting
--- to the user.
-describeCGError :: CGError -> Text
-describeCGError (CGErrorNotImplemented e) = "Not implemented: " <> tshow e
-describeCGError (CGErrorBadIntrospectionInfo e) = "Bad introspection data: " <> tshow e
-describeCGError (CGErrorMissingInfo e) = "Missing info: " <> tshow e
+-- | Print, as a comment, a friendly textual description of the error.
+printCGError :: CGError -> CodeGen ()
+printCGError (CGErrorNotImplemented e) = do
+  comment $ "Not implemented: " <> e
+printCGError (CGErrorBadIntrospectionInfo e) =
+  comment $ "Bad introspection data: " <> e
+printCGError (CGErrorMissingInfo e) =
+  comment $ "Missing info: " <> e
 
 notImplementedError :: Text -> ExcCodeGen a
 notImplementedError s = throwError $ CGErrorNotImplemented s
@@ -570,6 +574,10 @@ bline l = hsBoot (line l) >> line l
 -- | A blank line
 blank :: CodeGen ()
 blank = line ""
+
+-- | A (possibly multi line) comment, separated by newlines
+comment :: Text -> CodeGen ()
+comment = tellCode . Comment . T.lines
 
 -- | Increase the indent level for code generation.
 indent :: BaseCodeGen e a -> BaseCodeGen e a
@@ -687,16 +695,28 @@ codeToText (Code seq) = LT.toStrict . B.toLazyText $ genCode 0 (viewl seq)
                                       genCode n (viewl rest)
         genCode n (Group (Code seq) :< rest) = genCode n (viewl seq) <>
                                                genCode n (viewl rest)
+        genCode n (Comment [] :< rest) = genCode n (viewl rest)
+        genCode n (Comment [s] :< rest) =
+          B.fromText (paddedLine n ("-- " <> s)) <> genCode n (viewl rest)
+        genCode n (Comment (l:ls):< rest) =
+          B.fromText ("{-  " <> l <> "\n" <>
+                      paddedLines (n+1) ls <> "-}\n") <> genCode n (viewl rest)
         genCode n (CPPBlock cond (Code seq) :< rest) =
           let (condBegin, condEnd) = cppCondFormat cond
           in B.fromText condBegin <> genCode n (viewl seq) <>
              B.fromText condEnd <> genCode n (viewl rest)
         genCode n (IncreaseIndent :< rest) = genCode (n+1) (viewl rest)
 
--- | Pad a line to the given number of leading spaces, and add a
--- newline at the end.
+-- | Pad a line to the given number of leading tabs (with one tab
+-- equal to four spaces), and add a newline at the end.
 paddedLine :: Int -> Text -> Text
 paddedLine n s = T.replicate (n * 4) " " <> s <> "\n"
+
+-- | Pad a set of lines to the given number of leading tabs (with one
+-- tab equal to four spaces), and add a newline at the end of each
+-- line.
+paddedLines :: Int -> [Text] -> Text
+paddedLines n ls = mconcat $ map (paddedLine n) ls
 
 -- | Put a (padded) comma at the end of the text.
 comma :: Text -> Text

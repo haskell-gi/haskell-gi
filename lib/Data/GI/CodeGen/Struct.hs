@@ -424,10 +424,11 @@ genStructOrUnionFields n fields = do
   let name' = upperName n
 
   attrs <- forM fields $ \field ->
-      handleCGExc (\e -> line ("-- XXX Skipped attribute for \"" <> name' <>
-                               ":" <> fieldName field <> "\" :: " <>
-                               describeCGError e) >>
-                   return Nothing)
+      handleCGExc (\e -> do
+                      line ("-- XXX Skipped attribute for \"" <> name' <>
+                             ":" <> fieldName field <> "\"")
+                      printCGError e
+                      return Nothing)
                   (buildFieldAttributes n field)
 
   blank

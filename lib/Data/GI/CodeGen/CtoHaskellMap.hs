@@ -6,6 +6,7 @@ module Data.GI.CodeGen.CtoHaskellMap
   ) where
 
 import qualified Data.Map as M
+import Data.Maybe (catMaybes)
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
 #endif
@@ -104,13 +105,13 @@ enumRefs api n e = (TypeRef (enumCType e),
 
 -- | Refs to the methods for a given owner.
 methodRefs :: Name -> API -> [Method] -> [(CRef, Hyperlink)]
-methodRefs n api methods = map methodRef methods
-  where methodRef :: Method -> (CRef, Hyperlink)
-        methodRef m@(Method {methodName = mn}) =
+methodRefs n api methods = catMaybes $ map methodRef methods
+  where methodRef :: Method -> Maybe (CRef, Hyperlink)
+        methodRef Method{methodSymbol = symbol, methodName = mn} =
           -- Method name namespaced by the owner.
           let mn' = mn {name = name n <> "_" <> name mn}
-          in (FunctionRef (methodSymbol m),
-              fullyQualifiedValue n api $ lowerName mn')
+          in Just (FunctionRef symbol,
+                   fullyQualifiedValue n api $ lowerName mn')
 
 -- | Refs to the signals for a given owner.
 signalRefs :: Name -> API -> Maybe Text -> [Signal] -> [(CRef, Hyperlink)]

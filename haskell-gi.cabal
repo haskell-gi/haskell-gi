@@ -1,5 +1,5 @@
 name:                haskell-gi
-version:             0.23.0
+version:             0.23.1
 synopsis:            Generate Haskell bindings for GObject Introspection capable libraries
 description:         Generate Haskell bindings for GObject Introspection capable libraries. This includes most notably
                      Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
@@ -36,6 +36,7 @@ Library
                        mtl >= 2.2,
                        transformers >= 0.3,
                        pretty-show,
+                       ansi-terminal ^>= 0.10,
                        process,
                        safe,
                        bytestring,
@@ -51,7 +52,7 @@ Library
 
   c-sources:           lib/c/enumStorage.c
 
-  build-tools:         hsc2hs
+  build-tools-depends: hsc2hs
   hs-source-dirs:      lib
   exposed-modules:     Data.GI.GIR.Alias,
                        Data.GI.GIR.Allocation,

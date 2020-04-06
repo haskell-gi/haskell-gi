@@ -481,7 +481,8 @@ genProperties n ownedProps allProps = do
       handleCGExc (\err -> do
                      line $ "-- XXX Generation of property \""
                               <> propName prop <> "\" of object \""
-                              <> name <> "\" failed: " <> describeCGError err
+                              <> name <> "\" failed."
+                     printCGError err
                      cppIf CPPOverloading (genPlaceholderProperty n prop))
                   (genOneProperty n prop)
 

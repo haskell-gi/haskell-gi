@@ -1,6 +1,7 @@
 -- | The Parser monad.
 module Data.GI.GIR.Parser
     ( Parser
+    , ParseContext(..)
     , ParseError
     , parseError
 

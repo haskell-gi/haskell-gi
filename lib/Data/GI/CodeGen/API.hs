@@ -58,13 +58,14 @@ module Data.GI.CodeGen.API
 import Control.Applicative ((<$>))
 #endif
 
-import Control.Monad ((>=>), foldM, forM)
+import Control.Monad ((>=>), foldM, forM, when)
 import qualified Data.List as L
 import qualified Data.Map as M
 import Data.Maybe (mapMaybe, catMaybes)
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
 #endif
+
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -108,9 +109,10 @@ import Data.GI.Base.BasicTypes (GType(..), CGType, gtypeName)
 import Data.GI.Base.Utils (allocMem, freeMem)
 import Data.GI.CodeGen.LibGIRepository (girRequire, Typelib, FieldInfo(..),
                                         girStructFieldInfo, girUnionFieldInfo,
-                                        girLoadGType)
+                                        girLoadGType, girIsSymbolResolvable)
 import Data.GI.CodeGen.GType (gtypeIsBoxed)
 import Data.GI.CodeGen.Type (Type)
+import Data.GI.CodeGen.Util (printWarning, terror, tshow)
 
 data GIRInfo = GIRInfo {
       girPCPackages      :: [Text],
@@ -158,6 +160,7 @@ data GIRRule = GIRSetAttr (GIRPath, XML.Name) Text -- ^ (Path to element,
                                      -- the given selector.
              deriving (Show)
 
+-- | An element in the exposed API
 data API
     = APIConst Constant
     | APIFunction Function
@@ -261,7 +264,7 @@ loadDependencies verbose requested loaded extraPaths rules
         | S.null requested = return loaded
         | otherwise = do
   let (name, version) = S.elemAt 0 requested
-  doc <- fixupGIRDocument rules <$>
+  doc <- overrideGIRDocument rules <$>
          readGiRepository verbose name (Just version) extraPaths
   let newLoaded = M.insert (name, version) doc loaded
       loadedSet = S.fromList (M.keys newLoaded)
@@ -274,11 +277,11 @@ loadGIRFile :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
-            -> [GIRRule]        -- ^ fixups
+            -> [GIRRule]        -- ^ overrides
             -> IO (Document,
                    M.Map (Text, Text) Document) -- ^ (loaded doc, dependencies)
 loadGIRFile verbose name version extraPaths rules = do
-  doc <- fixupGIRDocument rules <$>
+  doc <- overrideGIRDocument rules <$>
          readGiRepository verbose name version extraPaths
   deps <- loadDependencies verbose (documentListIncludes doc) M.empty
           extraPaths rules
@@ -313,37 +316,33 @@ loadRawGIRInfo verbose name version extraPaths = do
     Left err -> error . T.unpack $ "Error when raw parsing \"" <> name <> "\": " <> err
     Right docGIR -> return docGIR
 
--- | Load and parse a GIR file, including its dependencies.
-loadGIRInfo :: Bool             -- ^ verbose
-            -> Text             -- ^ name
-            -> Maybe Text       -- ^ version
-            -> [FilePath]       -- ^ extra paths to search
-            -> [GIRRule]        -- ^ fixups
-            -> IO (GIRInfo, [GIRInfo], M.Map Text Typelib)
-            -- ^ (parsed doc,  parsed deps, typelibMap)
-loadGIRInfo verbose name version extraPaths rules =  do
-  (doc, deps) <- loadGIRFile verbose name version extraPaths rules
-  let aliases = M.unions (map documentListAliases (doc : M.elems deps))
-      parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
-      parsedDeps = map (toGIRInfo . parseGIRDocument aliases) (M.elems deps)
-  case combineErrors parsedDoc parsedDeps of
-    Left err -> error . T.unpack $ "Error when parsing \"" <> name <> "\": " <> err
-    Right (docGIR, depsGIR) -> do
-      if girNSName docGIR == name
-      then do
-        typelibMap <- M.fromList <$> (forM (docGIR : depsGIR) $ \info -> do
-             typelib <- girRequire (girNSName info) (girNSVersion info)
-             return (girNSName info, typelib))
-        (fixedDoc, fixedDeps) <- fixupGIRInfos typelibMap docGIR depsGIR
-        return (fixedDoc, fixedDeps, typelibMap)
-      else error . T.unpack $ "Got unexpected namespace \""
-               <> girNSName docGIR <> "\" when parsing \"" <> name <> "\"."
-  where combineErrors :: Either Text GIRInfo -> [Either Text GIRInfo]
-                      -> Either Text (GIRInfo, [GIRInfo])
-        combineErrors parsedDoc parsedDeps = do
-          doc <- parsedDoc
-          deps <- sequence parsedDeps
-          return (doc, deps)
+-- | Fixup parsed GIRInfos: some of the required information is not
+-- found in the GIR files themselves, or does not accurately reflect
+-- the content in the dynamic library itself, but this can be
+-- corrected by checking the typelib.
+fixupGIRInfos :: Bool -> M.Map Text Typelib -> GIRInfo -> [GIRInfo]
+              -> IO (GIRInfo, [GIRInfo])
+fixupGIRInfos verbose typelibMap doc deps =
+  (fixup (fixupInterface typelibMap ctypes) >=>
+    fixup (fixupStruct typelibMap) >=>
+    fixup fixupUnion >=>
+    fixup (fixupMissingSymbols verbose typelibMap)
+  ) (doc, deps)
+  where fixup :: ((Name, API) -> IO (Name, API))
+                 -> (GIRInfo, [GIRInfo]) -> IO (GIRInfo, [GIRInfo])
+        fixup fixer (doc, deps) = do
+          fixedDoc <- fixAPIs fixer doc
+          fixedDeps <- mapM (fixAPIs fixer) deps
+          return (fixedDoc, fixedDeps)
+
+        fixAPIs :: ((Name, API) -> IO (Name, API))
+                -> GIRInfo -> IO GIRInfo
+        fixAPIs fixer info = do
+          fixedAPIs <- mapM fixer (girAPIs info)
+          return $ info {girAPIs = fixedAPIs}
+
+        ctypes :: M.Map Text Name
+        ctypes = M.unions (map girCTypes (doc:deps))
 
 foreign import ccall "g_type_interface_prerequisites" g_type_interface_prerequisites :: CGType -> Ptr CUInt -> IO (Ptr CGType)
 
@@ -384,12 +383,12 @@ fixupInterface _ _ (n, api) = return (n, api)
 -- descends from the boxed GType. Similarly, the size of the struct
 -- and offset of the fields is hard to compute from the GIR data, we
 -- simply reuse the machinery in libgirepository.
-fixupStruct :: M.Map Text Typelib -> M.Map Text Name -> (Name, API)
+fixupStruct :: M.Map Text Typelib -> (Name, API)
             -> IO (Name, API)
-fixupStruct typelibMap _ (n, APIStruct s) = do
+fixupStruct typelibMap (n, APIStruct s) = do
   fixed <- (fixupStructIsBoxed typelibMap n >=> fixupStructSizeAndOffsets n) s
   return (n, APIStruct fixed)
-fixupStruct _ _ api = return api
+fixupStruct _ api = return api
 
 -- | Find out whether the struct is boxed.
 fixupStructIsBoxed :: M.Map Text Typelib -> Name -> Struct -> IO Struct
@@ -417,11 +416,11 @@ fixupStructSizeAndOffsets (Name ns n) s = do
             , structFields = map (fixupField infoMap) (structFields s)})
 
 -- | Same thing for unions.
-fixupUnion :: M.Map Text Name -> (Name, API) -> IO (Name, API)
-fixupUnion _ (n, APIUnion u) = do
+fixupUnion :: (Name, API) -> IO (Name, API)
+fixupUnion (n, APIUnion u) = do
   fixed <- (fixupUnionSizeAndOffsets n) u
   return (n, APIUnion fixed)
-fixupUnion _ api = return api
+fixupUnion api = return api
 
 -- | Like 'fixupStructSizeAndOffset' above.
 fixupUnionSizeAndOffsets :: Name -> Union -> IO Union
@@ -438,39 +437,108 @@ fixupField offsetMap f =
                                   ++ show (fieldName f)
                        Just o -> fieldInfoOffset o }
 
--- | Fixup parsed GIRInfos: some of the required information is not
--- found in the GIR files themselves, but can be obtained by
--- instantiating the required GTypes from the installed libraries.
-fixupGIRInfos :: M.Map Text Typelib -> GIRInfo -> [GIRInfo]
-              -> IO (GIRInfo, [GIRInfo])
-fixupGIRInfos typelibMap doc deps = (fixup (fixupInterface typelibMap) >=>
-                          fixup (fixupStruct typelibMap) >=>
-                          fixup fixupUnion) (doc, deps)
-  where fixup :: (M.Map Text Name -> (Name, API) -> IO (Name, API))
-                 -> (GIRInfo, [GIRInfo]) -> IO (GIRInfo, [GIRInfo])
-        fixup fixer (doc, deps) = do
-          fixedDoc <- fixAPIs fixer doc
-          fixedDeps <- mapM (fixAPIs fixer) deps
-          return (fixedDoc, fixedDeps)
+-- | Some of the symbols listed in the introspection data are not
+-- present in the dynamic library itself. Generating bindings for
+-- these will sometimes lead to linker errors, so here we check that
+-- every symbol listed in the bindings is actually present.
+fixupMissingSymbols :: Bool -> M.Map Text Typelib -> (Name, API)
+                    -> IO (Name, API)
+fixupMissingSymbols verbose typelibMap (n, APIStruct s) = do
+  fixedMethods <- fixupMethodMissingSymbols (resolveTypelib n typelibMap)
+                                            (structMethods s) verbose
+  return (n, APIStruct (s {structMethods = fixedMethods}))
+fixupMissingSymbols verbose typelibMap (n, APIUnion u) = do
+  fixedMethods <- fixupMethodMissingSymbols (resolveTypelib n typelibMap)
+                                            (unionMethods u) verbose
+  return (n, APIUnion (u {unionMethods = fixedMethods}))
+fixupMissingSymbols verbose typelibMap (n, APIObject o) = do
+  fixedMethods <- fixupMethodMissingSymbols (resolveTypelib n typelibMap)
+                                            (objMethods o) verbose
+  return (n, APIObject (o {objMethods = fixedMethods}))
+fixupMissingSymbols verbose typelibMap (n, APIInterface i) = do
+  fixedMethods <- fixupMethodMissingSymbols (resolveTypelib n typelibMap)
+                                            (ifMethods i) verbose
+  return (n, APIInterface (i {ifMethods = fixedMethods}))
+fixupMissingSymbols verbose typelibMap (n, APIFunction f) =
+  fixupFunctionSymbols typelibMap (n, f) verbose
+fixupMissingSymbols _ _ (n, api) = return (n, api)
 
-        fixAPIs :: (M.Map Text Name -> (Name, API) -> IO (Name, API)) -> GIRInfo -> IO GIRInfo
-        fixAPIs fixer info = do
-          fixedAPIs <- mapM (fixer ctypes) (girAPIs info)
-          return $ info {girAPIs = fixedAPIs}
+-- | Resolve the typelib owning the given name, erroring out if the
+-- typelib is not known.
+resolveTypelib :: Name -> M.Map Text Typelib -> Typelib
+resolveTypelib n typelibMap = case M.lookup (namespace n) typelibMap of
+  Nothing -> terror $ "Could not find typelib for “" <> namespace n <> "”."
+  Just typelib -> typelib
 
-        ctypes :: M.Map Text Name
-        ctypes = M.unions (map girCTypes (doc:deps))
+-- | Mark whether the methods can be resolved in the given typelib.
+fixupMethodMissingSymbols :: Typelib -> [Method] -> Bool -> IO [Method]
+fixupMethodMissingSymbols typelib methods verbose = mapM check methods
+  where check :: Method -> IO Method
+        check method@Method{methodCallable = callable} = do
+          resolvable <- girIsSymbolResolvable typelib (methodSymbol method)
+          when (verbose && not resolvable) $
+            printWarning $ "Could not resolve the callable “"
+                           <> methodSymbol method
+                           <> "” in the “" <> tshow typelib
+                           <> "” typelib, ignoring."
+          let callable' = callable{callableResolvable = Just resolvable}
+          return $ method{methodCallable = callable'}
+
+-- | Check that the symbol the function refers to is actually present
+-- in the dynamic library.
+fixupFunctionSymbols :: M.Map Text Typelib -> (Name, Function) -> Bool
+                            -> IO (Name, API)
+fixupFunctionSymbols typelibMap (n, f) verbose = do
+  let typelib = resolveTypelib n typelibMap
+  resolvable <- girIsSymbolResolvable typelib (fnSymbol f)
+  when (verbose && not resolvable) $
+    printWarning $ "Could not resolve the function “" <> fnSymbol f
+                    <> "” in the “" <> tshow typelib <> "” typelib, ignoring."
+  let callable' = (fnCallable f){callableResolvable = Just resolvable}
+  return (n, APIFunction (f {fnCallable = callable'}))
+
+-- | Load and parse a GIR file, including its dependencies.
+loadGIRInfo :: Bool             -- ^ verbose
+            -> Text             -- ^ name
+            -> Maybe Text       -- ^ version
+            -> [FilePath]       -- ^ extra paths to search
+            -> [GIRRule]        -- ^ fixups
+            -> IO (GIRInfo, [GIRInfo])
+            -- ^ (parsed doc,  parsed deps)
+loadGIRInfo verbose name version extraPaths rules =  do
+  (doc, deps) <- loadGIRFile verbose name version extraPaths rules
+  let aliases = M.unions (map documentListAliases (doc : M.elems deps))
+      parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
+      parsedDeps = map (toGIRInfo . parseGIRDocument aliases) (M.elems deps)
+  case combineErrors parsedDoc parsedDeps of
+    Left err -> error . T.unpack $ "Error when parsing \"" <> name <> "\": " <> err
+    Right (docGIR, depsGIR) -> do
+      if girNSName docGIR == name
+      then do
+        typelibMap <- M.fromList <$> (forM (docGIR : depsGIR) $ \info -> do
+             typelib <- girRequire (girNSName info) (girNSVersion info)
+             return (girNSName info, typelib))
+        (fixedDoc, fixedDeps) <- fixupGIRInfos verbose typelibMap docGIR depsGIR
+        return (fixedDoc, fixedDeps)
+      else error . T.unpack $ "Got unexpected namespace \""
+               <> girNSName docGIR <> "\" when parsing \"" <> name <> "\"."
+  where combineErrors :: Either Text GIRInfo -> [Either Text GIRInfo]
+                      -> Either Text (GIRInfo, [GIRInfo])
+        combineErrors parsedDoc parsedDeps = do
+          doc <- parsedDoc
+          deps <- sequence parsedDeps
+          return (doc, deps)
 
 -- | Given a XML document containing GIR data, apply the given overrides.
-fixupGIRDocument :: [GIRRule] -> XML.Document -> XML.Document
-fixupGIRDocument rules doc =
-    doc {XML.documentRoot = fixupGIR rules (XML.documentRoot doc)}
+overrideGIRDocument :: [GIRRule] -> XML.Document -> XML.Document
+overrideGIRDocument rules doc =
+    doc {XML.documentRoot = overrideGIR rules (XML.documentRoot doc)}
 
 -- | Looks for the given path in the given subelements of the given
 -- element. If the path is empty apply the corresponding rule,
 -- otherwise return the element ummodified.
-fixupGIR :: [GIRRule] -> XML.Element -> XML.Element
-fixupGIR rules elem =
+overrideGIR :: [GIRRule] -> XML.Element -> XML.Element
+overrideGIR rules elem =
     elem {XML.elementNodes =
           mapMaybe (\e -> foldM applyGIRRule e rules) (XML.elementNodes elem)}
     where applyGIRRule :: XML.Node -> GIRRule -> Maybe XML.Node

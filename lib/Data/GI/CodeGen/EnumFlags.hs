@@ -104,7 +104,9 @@ genEnum n@(Name _ name) enum = do
   line $ "-- Enum " <> name
 
   let docSection = NamedSubsection EnumSection (upperName n)
-  handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
+  handleCGExc (\e -> do
+                  line $ "-- XXX Code Generation error"
+                  printCGError e)
               (do genEnumOrFlags docSection n enum
                   case enumTypeInit enum of
                     Nothing -> return ()
@@ -129,7 +131,9 @@ genFlags n@(Name _ name) (Flags enum) = do
   line $ "-- Flags " <> name
 
   let docSection = NamedSubsection FlagSection (upperName n)
-  handleCGExc (\e -> line $ "-- XXX Could not generate: " <> describeCGError e)
+  handleCGExc (\e -> do
+                  line "-- XXX Code generation error"
+                  printCGError e)
               (do
                 genEnumOrFlags docSection n enum
 

@@ -333,20 +333,21 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
 genCallback :: Name -> Callback -> CodeGen ()
 genCallback n (Callback {cbCallable = cb, cbDocumentation = cbDoc }) = do
   let name' = upperName n
+      cb' = fixupCallerAllocates cb
+
   line $ "-- callback " <> name'
-  line $ "--          -> " <> tshow (fixupCallerAllocates cb)
+  line $ "{- " <> T.pack (ppShow cb') <> "\n-}"
 
   if skipReturn cb
   then group $ do
     line $ "-- XXX Skipping callback " <> name'
-    line $ "-- Callbacks skipping return unsupported :\n"
-             <> T.pack (ppShow n) <> "\n" <> T.pack (ppShow cb)
+    line $ "{- Callbacks skipping return unsupported :\n"
+             <> T.pack (ppShow n) <> "\n" <> T.pack (ppShow cb') <> "-}"
   else do
-    let cb' = fixupCallerAllocates cb
-
-    handleCGExc (\e -> line ("-- XXX Could not generate callback wrapper for "
-                             <> name' <>
-                             "\n-- Error was : " <> describeCGError e)) $ do
+    handleCGExc (\e -> do
+                   line $ "-- XXX Could not generate callback wrapper for "
+                          <> name'
+                   printCGError e) $ do
       typeSynonym <- genCCallbackPrototype name' cb' name' False
       dynamic <- genDynamicCallableWrapper n typeSynonym cb
       export (NamedSubsection SignalSection name') dynamic
@@ -405,7 +406,8 @@ processSignalError signal owner err = do
       sn = (ucFirst . signalHaskellName . sigName) signal
   line $ T.concat ["-- XXX Could not generate signal "
                   , qualifiedSignalName
-                  , "\n", "-- Error was : ", describeCGError err]
+                  , "\n", "-- Error was : "]
+  printCGError err
 
   -- Generate a placeholder SignalInfo instance that raises a type
   -- error when one attempts to use it.

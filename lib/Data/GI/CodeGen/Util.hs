@@ -17,7 +17,11 @@ module Data.GI.CodeGen.Util
   , utf8WriteFile
 
   , splitOn
+
+  , printWarning
   ) where
+
+import GHC.Stack (HasCallStack)
 
 #if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
@@ -28,6 +32,10 @@ import qualified Data.ByteString as B
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Data.Text.IO as TIO
+
+import qualified System.Console.ANSI as A
+import System.IO (stderr, hFlush)
 
 padTo :: Int -> Text -> Text
 padTo n s = s <> T.replicate (n - T.length s) " "
@@ -44,10 +52,6 @@ parenthesize s = "(" <> s <> ")"
 -- | Construct the `Text` representation of a showable.
 tshow :: Show a => a -> Text
 tshow = T.pack . show
-
--- | Throw an error with the given `Text`.
-terror :: Text -> a
-terror = error . T.unpack
 
 -- | Capitalize the first character of the given string.
 ucFirst :: Text -> Text
@@ -91,3 +95,32 @@ utf8ReadFile fname = do
 -- | Write the given `Text` into an UTF-8 encoded file.
 utf8WriteFile :: FilePath -> T.Text -> IO ()
 utf8WriteFile fname text = B.writeFile fname (TE.encodeUtf8 text)
+
+-- | Print a (colored) warning message to stderr
+printWarning :: Text -> IO ()
+printWarning warning = do
+  inColour <- A.hSupportsANSIColor stderr
+  if not inColour
+    then TIO.hPutStrLn stderr warning
+    else do
+      A.hSetSGR stderr [A.SetConsoleIntensity A.BoldIntensity,
+                        A.SetColor A.Foreground A.Vivid A.Yellow]
+      TIO.hPutStr stderr "Warning: "
+      A.hSetSGR stderr [A.SetColor A.Foreground A.Vivid A.White]
+      TIO.hPutStrLn stderr warning
+      A.hSetSGR stderr [A.Reset]
+      hFlush stderr
+
+-- | Throw an error with the given `Text`.
+terror :: HasCallStack => Text -> a
+terror errMsg =
+  let fmt = A.setSGRCode [A.SetConsoleIntensity A.BoldIntensity,
+                          A.SetColor A.Foreground A.Vivid A.Red]
+            ++ "ERROR: "
+            ++ A.setSGRCode [A.SetColor A.Foreground A.Vivid A.White]
+            ++ T.unpack errMsg
+            ++ A.setSGRCode [A.SetConsoleIntensity A.NormalIntensity,
+                             A.SetColor A.Foreground A.Vivid A.Blue]
+            ++ "\nPlease report this at https://github.com/haskell-gi/haskell-gi/issues"
+            ++ A.setSGRCode [A.Reset]
+  in error fmt

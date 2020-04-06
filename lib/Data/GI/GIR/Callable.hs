@@ -17,7 +17,12 @@ data Callable = Callable {
         skipReturn :: Bool,
         callableThrows :: Bool,
         callableDeprecated :: Maybe DeprecationInfo,
-        callableDocumentation :: Documentation
+        callableDocumentation :: Documentation,
+        -- | Whether the symbol for this callable can be resolved in
+        -- the dynamical library associated with the current
+        -- introspection data. 'Nothing' means that we have not
+        -- checked yet.
+        callableResolvable :: Maybe Bool
     } deriving (Show, Eq)
 
 parseArgs :: Parser [Arg]
@@ -64,4 +69,12 @@ parseCallable = do
                 , callableThrows = throws
                 , callableDeprecated = deprecated
                 , callableDocumentation = docs
+                  -- Some symbols are present in the @.gir@ file, but
+                  -- they are absent from the library
+                  -- itself. Generating bindings for such symbols
+                  -- could then lead to linker errors, so later on we
+                  -- check whether the callables are actually
+                  -- resolvable, and adjust the callable info
+                  -- appropriately.
+                , callableResolvable = Nothing
                 }
