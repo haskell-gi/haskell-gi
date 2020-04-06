@@ -52,7 +52,7 @@ Library
 
   c-sources:           lib/c/enumStorage.c
 
-  build-tools-depends: hsc2hs
+  build-tools:         hsc2hs
   hs-source-dirs:      lib
   exposed-modules:     Data.GI.GIR.Alias,
                        Data.GI.GIR.Allocation,
