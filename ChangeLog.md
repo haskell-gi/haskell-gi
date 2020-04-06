@@ -1,3 +1,7 @@
+### 0.23.1
+
++ Check whether symbols exist in the dynamic library before trying to generate bindings for them, in order to avoid linker errors.
+
 ### 0.23.0
 
 + gobjectType now does not require a proxy argument, it needs to be used with TypeApplications instead.
