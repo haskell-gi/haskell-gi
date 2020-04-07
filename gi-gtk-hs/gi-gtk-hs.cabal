@@ -2,7 +2,7 @@ name:                gi-gtk-hs
 version:             0.3.8.1
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
-homepage:            https://github.com/haskell-gi/gi-gtk-hs
+homepage:            https://github.com/haskell-gi/haskell-gi
 license:             LGPL-2.1
 license-file:        LICENSE
 author:              Jonas Platte,
