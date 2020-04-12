@@ -678,7 +678,6 @@ unpackCArray length (TCArray False _ _ t) transfer =
            isScalar <- typeIsEnumOrFlag t
            hType <- haskellType t
            fType <- foreignType t
-           innerConstructor <- fToH' t a hType fType transfer
            let (boxed, size) = case a of
                         Just (APIStruct s) -> (structIsBoxed s, structSize s)
                         Just (APIUnion u) -> (unionIsBoxed u, unionSize u)
@@ -687,6 +686,13 @@ unpackCArray length (TCArray False _ _ t) transfer =
                         | (size == 0) = "unpackPtrArrayWithLength"
                         | boxed       = "unpackBoxedArrayWithLength " <> tshow size
                         | otherwise   = "unpackBlockArrayWithLength " <> tshow size
+               -- We always make a copy of the elements when unpacking
+               -- boxed types.
+           let transfer' | boxed      = if transfer == TransferContainer
+                                        then TransferEverything
+                                        else transfer
+                         | otherwise  = transfer
+           innerConstructor <- fToH' t a hType fType transfer'
            return $ do
              apply $ M $ parenthesize $ unpacker <> " " <> length
              mapC innerConstructor
