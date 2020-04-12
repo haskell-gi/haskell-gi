@@ -428,7 +428,14 @@ prepareOutArg arg = do
           notImplementedError $ ("Don't know how to allocate \""
                                  <> argCName arg <> "\" of type "
                                  <> tshow (argType arg))
-  else genConversion name $ literal $ M $ "allocMem :: " <> typeShow (io $ ptr ft)
+  else do
+    -- Initialize pointers to NULL to avoid a crash in case the function
+    -- does not initialize it.
+    isPtr <- typeIsPtr (argType arg)
+    let alloc = if isPtr
+                then "callocMem"
+                else "allocMem"
+    genConversion name $ literal $ M $ alloc <> " :: " <> typeShow (io $ ptr ft)
 
 -- Convert a non-zero terminated out array, stored in a variable
 -- named "aname", into the corresponding Haskell object.
@@ -439,7 +446,7 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
   if fixed > -1
   then do
     unpacked <- convert aname $ unpackCArray (tshow fixed) t transfer
-    -- Free the memory associated with the array
+    -- Free the memory associated with the array.
     freeContainerType transfer t aname undefined
     return unpacked
   else do
@@ -453,7 +460,7 @@ convertOutCArray callable t@(TCArray False fixed length _) aname
                                             lname
     let lname'' = primeLength lname'
     unpacked <- convert aname $ unpackCArray lname'' t transfer
-    -- Free the memory associated with the array
+    -- Free the memory associated with the array.
     freeContainerType transfer t aname lname''
     return unpacked
 
