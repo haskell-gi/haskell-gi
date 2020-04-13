@@ -37,7 +37,7 @@ import Data.GI.CodeGen.Signal (genSignal, genCallback)
 import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
                   genWrappedPtr)
-import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint, noName,
+import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint,
                                      submoduleLocation, lowerName, qualifiedAPI)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
@@ -121,8 +121,6 @@ genStruct n s = unless (ignoreStruct n s) $ do
    -- Generate a builder for a structure filled with zeroes.
    genZeroStruct n s
 
-   noName name'
-
    -- Generate code for fields.
    genStructOrUnionFields n (structFields s)
 
@@ -164,8 +162,6 @@ genUnion n u = do
 
   -- Generate a builder for a structure filled with zeroes.
   genZeroUnion n u
-
-  noName name'
 
   -- Generate code for fields.
   genStructOrUnionFields n (unionFields u)
@@ -365,8 +361,6 @@ genObject n o = do
     parents <- instanceTree n
     genGObjectCasts n (objTypeInit o) (parents <> objInterfaces o)
 
-    noName name'
-
     cppIf CPPOverloading $
          fullObjectMethodList n o >>= genMethodList n
 
@@ -400,8 +394,6 @@ genInterface n iface = do
   exportDecl (name' <> "(..)")
 
   addSectionDocumentation ToplevelSection (ifDocumentation iface)
-
-  noName name'
 
   forM_ (ifSignals iface) $ \s -> handleCGExc
      (\e -> do line $ T.concat ["-- XXX Could not generate signal ", name', "::"

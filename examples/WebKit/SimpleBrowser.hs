@@ -145,7 +145,7 @@ main = do
   -- once we have registered ourselves into the session bus, to avoid
   -- a race condition with the extension, which will attempt to call
   -- our 'extensionActivated' method as soon as it is ready.
-  sessionBus <- Gio.busGetSync Gio.BusTypeSession Gio.noCancellable
+  sessionBus <- Gio.busGetSync Gio.BusTypeSession (Nothing @Gio.Cancellable)
   registerDBusServer browserServerInfo (methodCall highlight)
                      (createGUI sessionBus highlight)
 

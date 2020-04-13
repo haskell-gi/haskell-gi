@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module SimpleExtension where
@@ -75,7 +76,7 @@ invokeExtensionMethod page methodName parameters =
 -- | Notify the browser that we are around.
 extensionActivated :: IO ()
 extensionActivated = do
-  sessionBus <- Gio.busGetSync Gio.BusTypeSession Gio.noCancellable
+  sessionBus <- Gio.busGetSync Gio.BusTypeSession (Nothing @Gio.Cancellable)
   execDBusMethod sessionBus browserServerInfo "extensionActivated" Nothing Nothing
 
 -- Make sure that the entry point of the extension is visible by the
@@ -91,10 +92,10 @@ initialize_simple_web_extension_with_user_data extensionPtr dataPtr = do
   -- Make a managed Haskell object out of the raw C pointer.
   extension <- newObject WE.WebExtension extensionPtr
   userData <- newGVariantFromPtr dataPtr
-  fromGVariant userData >>= \case
+  fromGVariant @(Text, Int64) userData >>= \case
     Just (str, count) ->
-      putStrLn $ "The string was " <> show (str :: Text) <>
-                 ", and the count was " <> show (count :: Int64)
+      putStrLn $ "The string was " <> show str <>
+                 ", and the count was " <> show count
     Nothing -> putStrLn "Could not decode user data!"
 
   -- From now on the @extension@ object can be used normally from

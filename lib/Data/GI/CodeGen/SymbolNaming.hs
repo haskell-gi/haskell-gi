@@ -3,7 +3,6 @@ module Data.GI.CodeGen.SymbolNaming
     ( lowerName
     , lowerSymbol
     , upperName
-    , noName
     , escapedArgName
 
     , classConstraint
@@ -36,8 +35,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Code (CodeGen, group, line, exportDecl,
-                             qualified, getAPI)
+import Data.GI.CodeGen.Code (CodeGen, qualified, getAPI)
 import Data.GI.CodeGen.ModulePath (ModulePath, (/.), toModulePath)
 import Data.GI.CodeGen.Type (Type(TInterface))
 import Data.GI.CodeGen.Util (lcFirst, ucFirst, modifyQualified)
@@ -159,17 +157,6 @@ qualifiedSymbol :: Text -> Name -> CodeGen Text
 qualifiedSymbol s n@(Name ns _) = do
   api <- getAPI (TInterface n)
   qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) (Name ns s)
-
--- | Save a bit of typing for optional arguments in the case that we
--- want to pass Nothing.
-noName :: Text -> CodeGen ()
-noName name' = group $ do
-  -- We should use `writeHaddock` here, but it would give rise to a
-  -- cyclic import.
-  line $ "-- | A convenience alias for `Nothing` :: `Maybe` `" <> name' <> "`."
-  line $ "no" <> name' <> " :: Maybe " <> name'
-  line $ "no" <> name' <> " = Nothing"
-  exportDecl ("no" <> name')
 
 -- | Turn a hyphen-separated identifier into camel case.
 --

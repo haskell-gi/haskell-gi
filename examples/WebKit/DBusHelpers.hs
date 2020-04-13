@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Helper functions for registering D-Bus servers fomr Haskell.  See
 -- the [D-Bus
@@ -103,7 +104,7 @@ execDBusMethod connection info methodName params resultCallback =
   #call connection (Just $ serverBusName info) (serverObjectPath info)
         (serverInterfaceName info)
         methodName params Nothing []
-        (-1) Gio.noCancellable
+        (-1) (Nothing @Gio.Cancellable)
         (wrapResultCB <$> resultCallback)
 
   where wrapResultCB :: DBusResultReady -> Gio.AsyncReadyCallback
