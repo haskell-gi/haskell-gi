@@ -13,14 +13,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.4.4', '8.6.5', '8.8.1']
+        ghc: ['8.4', '8.6', '8.8', '8.10']
 
     steps:
     - uses: actions/checkout@v1
+    # At this point cabal.project refers to cabal files that do not exist,
+    # hide it so that 'cabal update' does not fail.
+    - name: Hide cabal project
+      run: mv cabal.project _cabal.project
     - uses: actions/setup-haskell@v1
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: '3.0'
+        cabal-version: 'latest'
+    - name: Restore cabal project
+      run: mv _cabal.project cabal.project
     - name: Cache cabal store
       uses: actions/cache@v1
       with:
@@ -82,4 +88,4 @@ jobs:
         popd
     - name: Build
       run: |
-        cabal new-build all
+        cabal new-build all --allow-newer=cairo:Cabal
