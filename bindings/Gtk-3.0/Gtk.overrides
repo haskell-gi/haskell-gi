@@ -38,6 +38,9 @@ set-attr Gtk/PrintOperation/create-custom-widget/@return-value transfer-ownershi
 # https://bugzilla.gnome.org/show_bug.cgi?id=781246
 set-attr Gtk/Widget/get_parent_window/@return-value nullable 1
 
+# Nullablereturn value, but not marked as such
+set-attr Gtk/ComboBoxText/get_active_text/@return-value nullable 1
+
 # Wrong introspection data in old gtk versions, see
 # https://bugzilla.gnome.org/show_bug.cgi?id=674537
 set-attr Gtk/MenuPositionFunc/@parameters/x direction inout
