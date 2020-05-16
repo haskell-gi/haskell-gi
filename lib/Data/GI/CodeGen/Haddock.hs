@@ -81,7 +81,7 @@ formatUnknownCRef _ (FunctionRef f) = formatCRef $ f <> "()"
 formatUnknownCRef _ (ParamRef p) = "/@" <> lowerSymbol p <> "@/"
 formatUnknownCRef _ (LocalSignalRef s) =
   let sn = signalHaskellName s
-  in "[" <> sn <> "](#signal:" <> sn <> ")"
+  in "[" <> sn <> "](#g:signal:" <> sn <> ")"
 formatUnknownCRef c2h (SignalRef owner signal) =
   case M.lookup (TypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "::" <> signal
