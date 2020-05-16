@@ -5,8 +5,10 @@ module Data.GI.CodeGen.Fixups
     , detectGObject
     , dropDuplicatedFields
     , checkClosureDestructors
+    , fixSymbolNaming
     ) where
 
+import Data.Char (isAlpha)
 import Data.Maybe (isNothing, isJust)
 #if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
@@ -185,3 +187,22 @@ checkCallableDestructors c = c {args = map checkArg (args c)}
         checkArg arg = if argDestroy arg >= 0 && argClosure arg == -1
                        then arg {argDestroy = -1}
                        else arg
+
+-- | Some symbols have names that are not valid Haskell identifiers,
+-- fix that here.
+fixSymbolNaming :: (Name, API) -> (Name, API)
+fixSymbolNaming (n, APIConst c) = (fixName n, APIConst c)
+fixSymbolNaming (n, api) = (n, api)
+
+-- | Make sure that the given name is a valid Haskell identifier.
+--
+-- === __Examples__
+-- >>> fixName (Name "IBus" "0")
+-- Name "IBus" "_0"
+--
+-- >>> fixName (Name "IBus" "a")
+-- Name "IBus" "a"
+fixName :: Name -> Name
+fixName (Name ns n)
+  | not (T.null n) && not (isAlpha $ T.head n) = Name ns ("_" <> n)
+  | otherwise = Name ns n

@@ -21,7 +21,7 @@ import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.EnumFlags (genEnum, genFlags)
 import Data.GI.CodeGen.Fixups (dropMovedItems, guessPropertyNullability,
                                detectGObject, dropDuplicatedFields,
-                               checkClosureDestructors)
+                               checkClosureDestructors, fixSymbolNaming)
 import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Haddock (deprecatedPragma, addSectionDocumentation,
                                 writeHaddock,
@@ -513,6 +513,9 @@ genModule' apis = do
             -- destructor for a user_data argument has an associated
             -- user_data argument.
           $ map checkClosureDestructors
+            -- Make sure that the symbols to be generated are valid
+            -- Haskell identifiers, when necessary.
+          $ map fixSymbolNaming
           $ M.toList
           $ apis
 

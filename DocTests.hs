@@ -14,7 +14,8 @@ main = do
             [ "Data.GI.CodeGen.GtkDoc"
             , "Data.GI.CodeGen.ModulePath"
             , "Data.GI.CodeGen.SymbolNaming"
-            , "Data.GI.CodeGen.Haddock" ]
+            , "Data.GI.CodeGen.Haddock"
+            , "Data.GI.CodeGen.Fixups" ]
 
 pkgConfigLibs :: String -> IO [String]
 pkgConfigLibs pkg = words <$> readProcess "pkg-config" ["--libs", pkg] ""
