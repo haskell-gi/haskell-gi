@@ -1,5 +1,13 @@
 namespace Poppler
 
+# These will destroy the argument, so mark them as taking ownership of the argument.
+set-attr Poppler/Page/free_annot_mapping/@parameters/list transfer-ownership full
+set-attr Poppler/Page/free_form_field_mapping/@parameters/list transfer-ownership full
+set-attr Poppler/Page/free_image_mapping/@parameters/list transfer-ownership full
+set-attr Poppler/Page/free_link_mapping/@parameters/list transfer-ownership full
+set-attr Poppler/Page/free_image_mapping/@parameters/list transfer-ownership full
+set-attr Poppler/Page/free_text_attributes/@parameters/list transfer-ownership full
+
 # Generated from poppler-glib 0.42.0 with xsltproc Nullable.xslt Poppler-0.18.gir
 set-attr Poppler/Annot/set_color/@parameters/poppler_color nullable 1
 set-attr Poppler/AnnotCircle/set_interior_color/@parameters/poppler_color nullable 1
