@@ -1,3 +1,7 @@
+### 0.23.2
+
++ Fix a possible segfault in functions that return an out pointer to a dynamically allocated array, but do not initialize the array if it has zero size. See [#289](https://github.com/haskell-gi/haskell-gi/issues/289) for an example.
+
 ### 0.23.1
 
 + Check whether symbols exist in the dynamic library before trying to generate bindings for them, in order to avoid linker errors.
