@@ -198,10 +198,10 @@ fixSymbolNaming (n, api) = (n, api)
 --
 -- === __Examples__
 -- >>> fixName (Name "IBus" "0")
--- Name "IBus" "_0"
+-- Name {namespace = "IBus", name = "_0"}
 --
 -- >>> fixName (Name "IBus" "a")
--- Name "IBus" "a"
+-- Name {namespace = "IBus", name = "a"}
 fixName :: Name -> Name
 fixName (Name ns n)
   | not (T.null n) && not (isAlpha $ T.head n) = Name ns ("_" <> n)

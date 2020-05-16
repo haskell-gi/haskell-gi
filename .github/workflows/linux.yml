@@ -86,6 +86,9 @@ jobs:
         cabal new-update
         cabal new-run genBuildInfo $(bash PKGS.sh)
         popd
+
     - name: Build
-      run: |
-        cabal new-build all --allow-newer=cairo:Cabal
+      run: cabal build all --allow-newer=cairo:Cabal
+
+    - name: Run tests
+      run: cabal test --allow-newer=cairo:Cabal

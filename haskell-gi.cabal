@@ -13,11 +13,17 @@ author:              Will Thompson,
 maintainer:          Iñaki García Etxebarria (inaki@blueleaf.cc)
 stability:           Experimental
 category:            Development
-build-type:          Simple
+build-type:          Custom
 tested-with:         GHC == 8.0.1, GHC == 8.4.1, GHC == 8.6.1, GHC == 8.8.1, GHC == 8.10.1
 cabal-version:       2.0
 
 extra-source-files: ChangeLog.md
+
+custom-setup
+ setup-depends:
+   base >= 4 && <5,
+   Cabal,
+   cabal-doctest >= 1 && <1.1
 
 source-repository head
   type: git
@@ -118,10 +124,9 @@ Library
 test-suite doctests
   type:          exitcode-stdio-1.0
   default-language: Haskell2010
-  ghc-options:   -threaded
+  ghc-options:   -threaded -Wall
   main-is:       DocTests.hs
   build-depends: base
                , process
                , doctest >= 0.8
                , haskell-gi
-               , attoparsec
