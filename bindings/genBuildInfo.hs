@@ -3,13 +3,13 @@
 -- | Generate the cabal info for the given subdirectories, assuming
 -- the existence of appropriate "pkg.info" files.
 
-import System.Environment (getArgs)
+import System.Environment (getArgs,getExecutablePath)
 import System.FilePath ((</>), (<.>))
 import System.IO (hPutStrLn, stderr, hFlush, stdout)
 import System.Exit (exitFailure, ExitCode(..))
-import System.Posix.Process (forkProcess, getProcessStatus, ProcessStatus(..))
+import System.Process (rawSystem)
 
-import Control.Monad (forM_, when)
+import Control.Monad (forM_)
 
 import qualified Data.Aeson as A
 import qualified Data.ByteString as B
@@ -175,22 +175,22 @@ genBindingsInDir dir = do
   writeLicense (dir </> "LICENSE") info
   writeStackYaml (dir </> "stack.yaml")
   writeReadme (dir </> "README.md") info
+  putStrLn " done."
 
 main :: IO ()
 main = do
   args <- getArgs
 
-  when (null args) $ do
-         hPutStrLn stderr "usage: genBuildInfo [options] dir1 [dir2 [...]]"
-         exitFailure
-
-  forM_ args $ \dir -> do
-    -- We need to fork here, since code generation loads the library,
-    -- and multiple versions of the same library cannot be
-    -- simultaneously loaded.
-    pid <- forkProcess (genBindingsInDir dir)
-    status <- getProcessStatus True False pid
-    case status of
-      Nothing -> error "No status received!"
-      Just (Exited ExitSuccess) -> putStrLn " done."
-      Just exitStatus -> error ("Code generation failed: " <> show exitStatus)
+  case args of
+    [] -> do hPutStrLn stderr "usage: genBuildInfo [options] dir1 [dir2 [...]]"
+             exitFailure
+    [dir] -> genBindingsInDir dir
+    dirs -> forM_ dirs $ \dir -> do
+      -- We need to spawn new processes here, since code generation
+      -- loads the library, and multiple versions of the same library
+      -- cannot be simultaneously loaded.
+      self <- getExecutablePath
+      exitCode <- rawSystem self [dir]
+      case exitCode of
+        ExitSuccess -> return ()
+        ExitFailure err -> error ("Code generation failed: " <> show err)
