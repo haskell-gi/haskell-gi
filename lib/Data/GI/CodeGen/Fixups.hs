@@ -8,7 +8,7 @@ module Data.GI.CodeGen.Fixups
     , fixSymbolNaming
     ) where
 
-import Data.Char (isAlpha)
+import Data.Char (generalCategory, GeneralCategory(UppercaseLetter))
 import Data.Maybe (isNothing, isJust)
 #if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
@@ -191,18 +191,23 @@ checkCallableDestructors c = c {args = map checkArg (args c)}
 -- | Some symbols have names that are not valid Haskell identifiers,
 -- fix that here.
 fixSymbolNaming :: (Name, API) -> (Name, API)
-fixSymbolNaming (n, APIConst c) = (fixName n, APIConst c)
+fixSymbolNaming (n, APIConst c) = (fixConstantName n, APIConst c)
 fixSymbolNaming (n, api) = (n, api)
 
--- | Make sure that the given name is a valid Haskell identifier.
+-- | Make sure that the given name is a valid Haskell identifier in
+-- patterns.
 --
 -- === __Examples__
--- >>> fixName (Name "IBus" "0")
--- Name {namespace = "IBus", name = "_0"}
+-- >>> fixConstantName (Name "IBus" "0")
+-- Name {namespace = "IBus", name = "Const'0"}
 --
--- >>> fixName (Name "IBus" "a")
--- Name {namespace = "IBus", name = "a"}
-fixName :: Name -> Name
-fixName (Name ns n)
-  | not (T.null n) && not (isAlpha $ T.head n) = Name ns ("_" <> n)
+-- >>> fixConstantName (Name "IBus" "a")
+-- Name {namespace = "IBus", name = "Const'a"}
+--
+-- >>> fixConstantName (Name "IBus" "A")
+-- Name {namespace = "IBus", name = "A"}
+fixConstantName :: Name -> Name
+fixConstantName (Name ns n)
+  | not (T.null n) && generalCategory (T.head n) /= UppercaseLetter
+  = Name ns ("Const'" <> n)
   | otherwise = Name ns n
