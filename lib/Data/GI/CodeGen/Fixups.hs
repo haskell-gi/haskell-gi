@@ -199,15 +199,15 @@ fixSymbolNaming (n, api) = (n, api)
 --
 -- === __Examples__
 -- >>> fixConstantName (Name "IBus" "0")
--- Name {namespace = "IBus", name = "Const'0"}
+-- Name {namespace = "IBus", name = "C'0"}
 --
 -- >>> fixConstantName (Name "IBus" "a")
--- Name {namespace = "IBus", name = "Const'a"}
+-- Name {namespace = "IBus", name = "C'a"}
 --
 -- >>> fixConstantName (Name "IBus" "A")
 -- Name {namespace = "IBus", name = "A"}
 fixConstantName :: Name -> Name
 fixConstantName (Name ns n)
   | not (T.null n) && generalCategory (T.head n) /= UppercaseLetter
-  = Name ns ("Const'" <> n)
+  = Name ns ("C'" <> n)
   | otherwise = Name ns n
