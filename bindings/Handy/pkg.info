@@ -18,9 +18,6 @@
     ],
     "pkgconfigDepends": "libhandy-0.0",
     "packages": {
-        "fedora": [],
-        "ubuntu": [
-            "libhandy-0.0-dev"
-        ]
+        "fedora": []
     }
 }
