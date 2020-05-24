@@ -12,5 +12,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "libgit2-glib-1.0"
+    "pkgconfigDepends": "libgit2-glib-1.0",
+    "packages": {
+        "fedora": [],
+        "ubuntu": [
+            "libgit2-glib-1.0-dev"
+        ]
+    }
 }

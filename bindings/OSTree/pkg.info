@@ -12,5 +12,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "ostree-1"
+    "pkgconfigDepends": "ostree-1",
+    "packages": {
+        "fedora": [],
+        "ubuntu": [
+            "libostree-dev"
+        ]
+    }
 }

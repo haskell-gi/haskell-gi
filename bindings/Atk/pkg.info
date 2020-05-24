@@ -11,5 +11,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "atk >= 2.0 && < 3"
+    "pkgconfigDepends": "atk >= 2.0 && < 3",
+    "packages": {
+        "fedora": [],
+        "ubuntu": [
+            "libatk1.0-dev"
+        ]
+    }
 }

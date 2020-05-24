@@ -14,5 +14,11 @@
         "gi-gtk == 3.0.*",
         "gi-gobject == 2.0.*"
     ],
-    "pkgconfigDepends": "webkit2gtk-web-extension-4.0"
+    "pkgconfigDepends": "webkit2gtk-web-extension-4.0",
+    "packages": {
+        "fedora": [],
+        "ubuntu": [
+            "libwebkit2gtk-4.0-dev"
+        ]
+    }
 }
