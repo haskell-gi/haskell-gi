@@ -16,7 +16,7 @@
         "gi-glib == 2.0.*"
     ],
     "pkgconfigDepends": "gstreamer-pbutils-1.0",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libgstreamer-plugins-base1.0-dev"

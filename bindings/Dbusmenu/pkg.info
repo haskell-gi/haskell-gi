@@ -12,7 +12,7 @@
         "gi-gobject == 2.0.*"
     ],
     "pkgconfigDepends": "dbusmenu-glib-0.4",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libdbusmenu-glib-dev"

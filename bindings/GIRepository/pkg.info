@@ -12,7 +12,7 @@
         "gi-gobject == 2.0.*"
     ],
     "pkgconfigDepends": "gobject-introspection-1.0",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libgirepository1.0-dev"

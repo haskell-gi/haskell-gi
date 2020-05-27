@@ -12,7 +12,7 @@
         "gi-glib == 2.0.*"
     ],
     "pkgconfigDepends": "gstreamer-1.0",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libgstreamer1.0-dev"

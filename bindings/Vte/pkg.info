@@ -17,7 +17,7 @@
         "gi-atk == 2.0.*"
     ],
     "pkgconfigDepends": "vte-2.91",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libvte-2.91-dev"

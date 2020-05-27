@@ -15,7 +15,7 @@
         "gi-gobject == 2.0.*"
     ],
     "pkgconfigDepends": "webkit2gtk-web-extension-4.0",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libwebkit2gtk-4.0-dev"

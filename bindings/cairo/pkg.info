@@ -9,7 +9,7 @@
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [],
     "pkgconfigDepends": "cairo-gobject >= 1.0 && < 2",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libgirepository1.0-dev"

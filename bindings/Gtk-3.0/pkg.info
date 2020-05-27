@@ -18,7 +18,7 @@
         "gi-atk == 2.0.*"
     ],
     "pkgconfigDepends": "gtk+-3.0",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libgtk-3-dev"

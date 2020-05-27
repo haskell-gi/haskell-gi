@@ -9,7 +9,7 @@
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [],
     "pkgconfigDepends": "x11 >= 1.6",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libgirepository1.0-dev"

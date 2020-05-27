@@ -15,7 +15,7 @@
         "gi-xlib == 2.0.*"
     ],
     "pkgconfigDepends": "gtk4-x11",
-    "packages": {
+    "distributionPackages": {
         "fedora": []
     }
 }

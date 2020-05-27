@@ -14,7 +14,7 @@
         "gi-glib == 2.0.*"
     ],
     "pkgconfigDepends": "poppler-glib >= 0.18 && < 1",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libpoppler-glib-dev"

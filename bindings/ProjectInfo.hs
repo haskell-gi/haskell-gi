@@ -9,7 +9,9 @@ module ProjectInfo
 import GHC.Generics
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
+import qualified Data.Map as M
 
+import Data.Map (Map)
 import Data.Text (Text)
 
 data ProjectInfo = ProjectInfo {
@@ -25,6 +27,7 @@ data ProjectInfo = ProjectInfo {
     , girName           :: Text         -- ^ GIR file (without version)
     , girVersion        :: Text         -- ^ Its version
     , girOverrides      :: Maybe FilePath   -- ^ Possibly an overrides file
+    , distributionPackages :: Map Text [Text] -- ^ Package lists for distributions
     } deriving (Show, Generic)
 
 instance A.FromJSON ProjectInfo
@@ -42,6 +45,7 @@ emptyProjectInfo = ProjectInfo {
                    , girName = error "girName missing"
                    , girVersion = error "girVersion missing"
                    , girOverrides = error "girOverrides missing"
+                   , distributionPackages = M.empty
                    }
 
 prettyConfig :: AP.Config
@@ -49,4 +53,5 @@ prettyConfig = AP.defConfig { AP.confCompare = AP.keyOrder
                               ["name", "version", "description", "synopsis",
                                "girName", "girVersion",
                                "girOverrides", "pkgConfig", "depends",
-                               "baseVersion"]}
+                               "baseVersion",
+                               "distributionPackages"]}

@@ -15,7 +15,7 @@
         "gi-gobject == 2.0.*"
     ],
     "pkgconfigDepends": "libwnck-3.0",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libwnck-3-dev"

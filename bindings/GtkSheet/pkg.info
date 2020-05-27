@@ -17,7 +17,7 @@
         "gi-gtk == 3.0.*"
     ],
     "pkgconfigDepends": "gtksheet-4.0",
-    "packages": {
+    "distributionPackages": {
         "ubuntu-ci": []
     }
 }

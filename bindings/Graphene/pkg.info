@@ -12,7 +12,7 @@
         "gi-glib == 2.0.*"
     ],
     "pkgconfigDepends": "graphene-gobject-1.0",
-    "packages": {
+    "distributionPackages": {
         "fedora": [],
         "ubuntu": [
             "libgraphene-1.0-dev"

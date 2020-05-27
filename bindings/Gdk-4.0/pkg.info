@@ -16,7 +16,7 @@
         "gi-glib == 2.0.*"
     ],
     "pkgconfigDepends": "gtk4",
-    "packages": {
+    "distributionPackages": {
         "fedora": []
     }
 }
