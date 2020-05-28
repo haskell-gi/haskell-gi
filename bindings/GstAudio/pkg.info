@@ -13,5 +13,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "gstreamer-audio-1.0"
+    "pkgconfigDepends": "gstreamer-audio-1.0",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libgstreamer-plugins-base1.0-dev"
+        ]
+    }
 }

@@ -11,5 +11,11 @@
         "gi-glib == 2.0.*",
         "gi-gobject == 2.0.*"
     ],
-    "pkgconfigDepends": "gobject-introspection-1.0"
+    "pkgconfigDepends": "gobject-introspection-1.0",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libgirepository1.0-dev"
+        ]
+    }
 }

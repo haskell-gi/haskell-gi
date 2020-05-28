@@ -8,5 +8,11 @@
     "girOverrides": "GLib.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [],
-    "pkgconfigDepends": "glib-2.0"
+    "pkgconfigDepends": "glib-2.0",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libgirepository1.0-dev"
+        ]
+    }
 }

@@ -8,5 +8,11 @@
     "girOverrides": "cairo.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "giDepends": [],
-    "pkgconfigDepends": "cairo-gobject >= 1.0 && < 2"
+    "pkgconfigDepends": "cairo-gobject >= 1.0 && < 2",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libgirepository1.0-dev"
+        ]
+    }
 }

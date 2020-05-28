@@ -11,5 +11,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "javascriptcoregtk-4.0"
+    "pkgconfigDepends": "javascriptcoregtk-4.0",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "gir1.2-javascriptcoregtk-4.0"
+        ]
+    }
 }

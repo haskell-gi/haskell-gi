@@ -16,5 +16,8 @@
         "gi-gio == 2.0.*",
         "gi-pango == 1.0.*"
     ],
-    "pkgconfigDepends": "libhandy-0.0"
+    "pkgconfigDepends": "libhandy-0.0",
+    "distributionPackages": {
+        "fedora": []
+    }
 }

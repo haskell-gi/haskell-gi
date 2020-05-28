@@ -12,5 +12,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "libsoup-2.4"
+    "pkgconfigDepends": "libsoup-2.4",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libsoup2.4-dev"
+        ]
+    }
 }

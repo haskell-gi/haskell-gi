@@ -10,5 +10,11 @@
     "giDepends": [
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "gobject-2.0"
+    "pkgconfigDepends": "gobject-2.0",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libgirepository1.0-dev"
+        ]
+    }
 }

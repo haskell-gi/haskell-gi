@@ -11,5 +11,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "pango >= 1.0 && < 2"
+    "pkgconfigDepends": "pango >= 1.0 && < 2",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libpango1.0-dev"
+        ]
+    }
 }

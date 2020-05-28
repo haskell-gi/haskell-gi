@@ -12,5 +12,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "gdk-pixbuf-2.0"
+    "pkgconfigDepends": "gdk-pixbuf-2.0",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libgdk-pixbuf2.0-dev"
+        ]
+    }
 }

@@ -12,5 +12,11 @@
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
     ],
-    "pkgconfigDepends": "libnotify >= 0.7 && < 1"
+    "pkgconfigDepends": "libnotify >= 0.7 && < 1",
+    "distributionPackages": {
+        "fedora": [],
+        "ubuntu": [
+            "libnotify-dev"
+        ]
+    }
 }
