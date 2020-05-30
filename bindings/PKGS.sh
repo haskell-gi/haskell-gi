@@ -1,10 +1,18 @@
 #!/bin/bash
 
+set -eu
+
 show_help () {
-    echo "USAGE: $0 (list|deps) (fedora|ubuntu|ubuntu-ci)"
+    echo "USAGE: $0 [list|cabal-files|deps] [fedora|ubuntu|ubuntu-ci]"
+    echo "Query bindings/cabal files/package dependencies for the given distribution"
 }
 
 DEFAULT_TARGET="fedora"
+
+if [ "${1:-}" = "--help" ] ; then
+    show_help
+    exit 0
+fi
 
 BINDINGS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 ACTION="${1:-list}"
@@ -20,8 +28,8 @@ case "$TARGET" in
         PKG_COND='.distributionPackages.ubuntu != null or .distributionPackages."ubuntu-ci" != null'
         ;;
     *)
-        echo "Unknown target"
-        show_help
+        echo "Unknown target" >&2
+        show_help >&2
         exit 1
 esac
 
@@ -30,12 +38,16 @@ case "$ACTION" in
         cd "$BINDINGS_DIR"
         jq -r "select( $PKG_COND )"'| input_filename | split("/")[0]' */pkg.info 
         ;;
+    cabal-files)
+        cd "$BINDINGS_DIR"
+        jq -r "select( $PKG_COND )"'| ( input_filename | split("/")[0] ) + "/" + .name + ".cabal"' */pkg.info
+        ;;
     deps)
         cd "$BINDINGS_DIR"
         jq -sr "[ .[] | ( $PKG_DEPS ) // [] ] | add | .[]" */pkg.info | sort | uniq
         ;;
     *)
-        echo "Unknown action"
-        show_help
+        echo "Unknown action" >&2
+        show_help >&2
         exit 1
 esac

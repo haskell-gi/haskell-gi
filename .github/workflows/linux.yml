@@ -32,11 +32,10 @@ jobs:
       with:
         path: ~/.cabal/store
         key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
-    - name: Do not build dependencies not available in runner
+    - name: Update cabal.project
       run: |
-        grep -Ev "(Handy|OSTree|Ggit)" cabal.project > cabal.project.new; mv cabal.project.new cabal.project
-        echo "          bindings/GtkSheet/gi-gtksheet.cabal" >> cabal.project
-        sed -i.bak '/^DEFAULT_TARGET=/s/"fedora"/"ubuntu-ci"/' bindings/PKGS.sh
+        sed -i.bak -e '/examples\/Handy\//d' cabal.project
+        ./update-cabal-project.sh ubuntu-ci
 
     - name: Install dependencies
       run: |
@@ -84,7 +83,7 @@ jobs:
       run: |
         pushd bindings
         cabal new-update
-        cabal new-run genBuildInfo $(bash PKGS.sh)
+        cabal new-run genBuildInfo $(./PKGS.sh list ubuntu-ci)
         popd
 
     - name: Build
