@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+TARGET="$1"
+
+ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+sed -i.bak -e '/^\s*bindings\//d' cabal.project
+./bindings/PKGS.sh cabal-files "$TARGET" | sed 's!^!          bindings/!' >> "$ROOT_DIR/cabal.project"

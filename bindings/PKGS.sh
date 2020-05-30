@@ -1,7 +1,9 @@
 #!/bin/bash
 
+set -e
+
 show_help () {
-    echo "USAGE: $0 (list|deps) (fedora|ubuntu|ubuntu-ci)"
+    echo "USAGE: $0 (list|deps|cabal-files) (fedora|ubuntu|ubuntu-ci)"
 }
 
 DEFAULT_TARGET="fedora"
@@ -29,6 +31,10 @@ case "$ACTION" in
     list)
         cd "$BINDINGS_DIR"
         jq -r "select( $PKG_COND )"'| input_filename | split("/")[0]' */pkg.info 
+        ;;
+    cabal-files)
+        cd "$BINDINGS_DIR"
+        jq -r "select( $PKG_COND )"'| ( input_filename | split("/")[0] ) + "/" + .name + ".cabal"' */pkg.info
         ;;
     deps)
         cd "$BINDINGS_DIR"
