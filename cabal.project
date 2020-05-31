@@ -31,6 +31,7 @@ packages: base/haskell-gi-base.cabal
           bindings/Gtk-3.0/gi-gtk.cabal
           bindings/GtkSource/gi-gtksource.cabal
           bindings/Handy/gi-handy.cabal
+          bindings/IBus/gi-ibus.cabal
           bindings/JavaScriptCore-4.0/gi-javascriptcore.cabal
           bindings/Soup/gi-soup.cabal
           bindings/WebKit2/gi-webkit2.cabal
