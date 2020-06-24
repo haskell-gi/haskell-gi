@@ -53,7 +53,7 @@ Here is an example "Hello World" program:
 ```haskell
 {-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
 {- cabal:
-build-depends: base, haskell-gi-base, gi-gtk
+build-depends: base, haskell-gi-base, gi-gtk == 3.0.*
 -}
 
 import qualified GI.Gtk as Gtk
