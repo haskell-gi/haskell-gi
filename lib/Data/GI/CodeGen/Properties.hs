@@ -44,6 +44,7 @@ propTypeStr t = case t of
    TParamSpec -> return "ParamSpec"
    TGClosure _ -> return "Closure"
    TError -> return "GError"
+   TGValue -> return "GValue"
    TBasicType TInt -> case sizeOf (0 :: CInt) of
                         4 -> return "Int32"
                         n -> error ("Unsupported `gint' type length: " ++

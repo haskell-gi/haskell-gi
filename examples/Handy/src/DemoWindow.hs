@@ -77,8 +77,10 @@ data DemoWindow = DemoWindow
 newtype HdyDemoWindow = HdyDemoWindow (ManagedPtr HdyDemoWindow)
 
 -- | 'HdyDemoWindow' is a type of 'GObject', which we register below.
-instance GObject HdyDemoWindow where
-  gobjectType = registerGType HdyDemoWindow
+instance TypedObject HdyDemoWindow where
+  glibType = registerGType HdyDemoWindow
+
+instance GObject HdyDemoWindow
 
 -- | 'GObject' registration data for 'HdyDemoWindow'.
 instance DerivedGObject HdyDemoWindow where
@@ -140,7 +142,7 @@ hdyDemoWindowClassInit klass =
 getChild :: forall o. GObject o
          => HdyDemoWindow -> (ManagedPtr o -> o) -> T.Text -> IO o
 getChild widget constructor name = do
-  gtype <- gobjectType @HdyDemoWindow
+  gtype <- glibType @HdyDemoWindow
   bareGObject <- #getTemplateChild widget gtype name
   unsafeCastTo constructor bareGObject
 
@@ -305,7 +307,7 @@ listsPageInit DemoWindow {..} = do
         obj0 <- new Hdy.ValueObject [#value :=> toGValue (Just @Text "Foo")]
         obj1 <- new Hdy.ValueObject [#value :=> toGValue (Just @Text "Bar")]
         obj2 <- new Hdy.ValueObject [#value :=> toGValue (Just @Text "Baz")]
-        voType <- liftIO $ gobjectType @Hdy.ValueObject
+        voType <- liftIO $ glibType @Hdy.ValueObject
         listStore <- new Gio.ListStore [#itemType := voType]
         Gio.listStoreInsert listStore 0 obj0
         Gio.listStoreInsert listStore 1 obj1
@@ -317,7 +319,7 @@ listsPageInit DemoWindow {..} = do
                  (Gdk.castTo Hdy.ValueObject >=>
                   Hdy.valueObjectDupString . fromJust))
     setupEnumRow = do
-        enumType <- liftIO $ boxedEnumType Gtk.LicenseUnknown
+        enumType <- liftIO $ glibType @Gtk.License
         Hdy.comboRowSetForEnum
             enumComboRow
             enumType
@@ -325,7 +327,7 @@ listsPageInit DemoWindow {..} = do
 
 arrowsPageInit :: MonadIO m => DemoWindow -> m ()
 arrowsPageInit DemoWindow{..} = do
-    ty <- liftIO $ boxedEnumType Hdy.ArrowsDirectionLeft
+    ty <- liftIO $ glibType @Hdy.ArrowsDirection
     Hdy.comboRowSetForEnum arrowsDirectionRow ty 
             (Just (`Hdy.enumValueRowName` nullPtr))
 

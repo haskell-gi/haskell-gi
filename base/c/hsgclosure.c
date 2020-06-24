@@ -86,7 +86,7 @@ static void dbg_log (const char *msg, ...)
   va_end(args);
 }
 
-int check_object_type(void *instance, GType type)
+int check_object_type (void *instance, GType type)
 {
   int result;
 
@@ -98,6 +98,11 @@ int check_object_type(void *instance, GType type)
   }
 
   return result;
+}
+
+GType _haskell_gi_g_value_get_type (GValue *gvalue)
+{
+  return G_VALUE_TYPE (gvalue);
 }
 
 /* Information about a boxed type to free */

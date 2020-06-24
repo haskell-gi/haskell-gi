@@ -13,7 +13,6 @@ import Control.Monad (forM_)
 
 import qualified Data.Aeson as A
 import qualified Data.ByteString as B
-import Data.Monoid ((<>))
 import qualified Data.Set as S
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
@@ -59,7 +58,7 @@ writeCabal fname info exposed =
          T.intercalate ",\n                     "
            ([ "base >= 4.9 && < 5"
             , "Cabal >= 1.24"
-            , "haskell-gi >= 0.23 && < 0.24"]
+            , "haskell-gi >= 0.24 && < 0.25"]
             <> giDepends info)
        , ""
        , "library"
@@ -72,11 +71,11 @@ writeCabal fname info exposed =
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([ baseVersion info
-               , "haskell-gi-base >= 0.23 && < 0.24"
+               , "haskell-gi-base >= 0.24 && < 0.25"
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi >= 0.23.0 && < 0.24"
+               , "haskell-gi >= 0.24.0 && < 0.25"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]

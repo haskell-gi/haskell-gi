@@ -39,7 +39,7 @@ import Data.GI.Base.ManagedPtr (newManagedPtr', withManagedPtr,
                                 disownManagedPtr,
                                 newObject, withTransient)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
-import Data.GI.Base.BasicTypes (GObject(..), GParamSpec(..),
+import Data.GI.Base.BasicTypes (GObject, GParamSpec(..),
                                 GType(..), IsGFlag, ManagedPtr)
 import Data.GI.Base.GQuark (GQuark(..), gQuarkFromString)
 import Data.GI.Base.GType (gtypeStablePtr)

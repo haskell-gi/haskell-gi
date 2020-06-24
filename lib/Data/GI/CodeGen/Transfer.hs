@@ -43,6 +43,7 @@ basicFreeFn (TGSList _) = Just "g_slist_free"
 basicFreeFn (TGHash _ _) = Just "unrefGHashTable"
 basicFreeFn (TError) = Nothing
 basicFreeFn (TVariant) = Nothing
+basicFreeFn (TGValue) = Just "B.GValue.unsetGValue"
 basicFreeFn (TParamSpec) = Nothing
 basicFreeFn (TGClosure _) = Nothing
 
@@ -61,6 +62,10 @@ basicFreeFnOnError TVariant transfer =
 basicFreeFnOnError TParamSpec transfer =
     return $ if transfer == TransferEverything
              then Just "unrefGParamSpec"
+             else Nothing
+basicFreeFnOnError TGValue transfer =
+    return $ if transfer == TransferEverything
+             then Just "SP.freeMem"
              else Nothing
 basicFreeFnOnError (TGClosure _) transfer =
     return $ if transfer == TransferEverything

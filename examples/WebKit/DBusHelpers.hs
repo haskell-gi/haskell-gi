@@ -15,7 +15,6 @@ module DBusHelpers
   , execDBusMethod
   ) where
 
-import Data.Monoid ((<>))
 import Data.Text (Text)
 
 import Data.GI.Base (GVariant)

@@ -388,14 +388,11 @@ prepareInoutArg arg = do
   ft <- foreignType $ argType arg
   allocInfo <- typeAllocInfo (argType arg)
   case allocInfo of
-    Just (TypeAllocInfo isBoxed n) -> do
-         let allocator = if isBoxed
-                         then "callocBoxedBytes"
-                         else "callocBytes"
+    Just (TypeAlloc allocator n) -> do
          wrapMaybe arg >>= bool
             (do
               name'' <- genConversion (prime name') $
-                        literal $ M $ allocator <> " " <> tshow n <>
+                        literal $ M $ allocator <>
                                     " :: " <> typeShow (io ft)
               line $ "memcpy " <> name'' <> " " <> name' <> " " <> tshow n
               return name'')
@@ -418,11 +415,8 @@ prepareOutArg arg = do
   then do
     allocInfo <- typeAllocInfo (argType arg)
     case allocInfo of
-      Just (TypeAllocInfo isBoxed n) -> do
-          let allocator = if isBoxed
-                          then "callocBoxedBytes"
-                          else "callocBytes"
-          genConversion name $ literal $ M $ allocator <> " " <> tshow n <>
+      Just (TypeAlloc allocator _) -> do
+          genConversion name $ literal $ M $ allocator <>
                             " :: " <> typeShow (io ft)
       Nothing ->
           notImplementedError $ ("Don't know how to allocate \""

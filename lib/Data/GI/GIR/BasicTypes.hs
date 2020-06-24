@@ -54,6 +54,7 @@ data Type
     = TBasicType BasicType
     | TError           -- ^ GError
     | TVariant         -- ^ GVariant
+    | TGValue          -- ^ GValue
     | TParamSpec       -- ^ GParamSpec
     | TCArray Bool Int Int Type  -- ^ Zero terminated, Array Fixed
                                  -- Size, Array Length, Element Type

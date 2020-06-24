@@ -6,7 +6,6 @@ module Main where
 
 import           Control.Monad (when)
 import           Data.Maybe (fromJust)
-import           Data.Monoid ((<>))
 import           Data.Text (Text)
 import           Foreign.Ptr (castPtr)
 

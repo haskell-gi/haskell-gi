@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, TupleSections, OverloadedStrings,
-    FlexibleContexts, ConstraintKinds #-}
+    FlexibleContexts, ConstraintKinds, TypeApplications #-}
 {- | Assorted utility functions for bindings. -}
 module Data.GI.Base.Utils
     ( whenJust
@@ -46,7 +46,8 @@ import Foreign.C.Types (CSize(..), CChar)
 import Foreign.Ptr (Ptr, nullPtr, FunPtr, nullFunPtr, freeHaskellFunPtr)
 import Foreign.Storable (Storable(..))
 
-import Data.GI.Base.BasicTypes (GType(..), CGType, BoxedObject(..),
+import Data.GI.Base.BasicTypes (GType(..), CGType, GBoxed,
+                                TypedObject(glibType),
                                 UnexpectedNullPointerReturn(..))
 import Data.GI.Base.CallStack (HasCallStack, callStack, prettyCallStack)
 
@@ -127,10 +128,10 @@ foreign import ccall "g_boxed_copy" g_boxed_copy ::
 -- in particular may well be different from a plain g_malloc. In
 -- particular g_slice_alloc is often used for allocating boxed
 -- objects, which are then freed using g_slice_free.
-callocBoxedBytes :: forall a. BoxedObject a => Int -> IO (Ptr a)
+callocBoxedBytes :: forall a. GBoxed a => Int -> IO (Ptr a)
 callocBoxedBytes n = do
   ptr <- callocBytes n
-  GType cgtype <- boxedType (undefined :: a)
+  GType cgtype <- glibType @a
   result <- g_boxed_copy cgtype ptr
   freeMem ptr
   return result

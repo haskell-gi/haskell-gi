@@ -18,7 +18,7 @@ source-repository head
 executable Cairo
  main-is:              Cairo.hs
  build-depends:        base >= 4.9 && < 5,
-                       haskell-gi-base == 0.23.*,
+                       haskell-gi-base ^>= 0.24.0,
                        gi-glib == 2.0.*,
                        gi-cairo == 1.0.*,
                        gi-gdk == 3.0.*,
@@ -34,7 +34,7 @@ executable Cairo
 executable DBusServer
   main-is:              DBusServer.hs
   build-depends:        base >= 4.9 && < 5,
-                        haskell-gi-base == 0.23.*,
+                        haskell-gi-base ^>= 0.24.0,
                         gi-glib == 2.0.*,
                         gi-gio == 2.0.*,
                         text == 1.2.*
@@ -45,7 +45,7 @@ executable DBusServer
 executable GstHelloWorld
   main-is:              GstHelloWorld.hs
   build-depends:        base >= 4.9 && < 5,
-                        haskell-gi-base == 0.23.*,
+                        haskell-gi-base ^>= 0.24.0,
                         gi-glib,
                         gi-gst,
                         text
@@ -60,8 +60,9 @@ executable GstGtkX11
                       , gi-gtk == 3.0.*
                       , gi-xlib
                       , gi-gstvideo
+                      , gi-gdk
                       , gi-gdkx11
-                      , haskell-gi-base == 0.23.*
+                      , haskell-gi-base ^>= 0.24.0
   default-language:     Haskell2010
   other-extensions:     OverloadedStrings
   ghc-options:          -O -threaded -with-rtsopts=-N -Wall
@@ -69,7 +70,7 @@ executable GstGtkX11
 executable gtk-emit-signal
   main-is:            GtkEmitSignal.hs
   build-depends:        base >= 4.9 && < 5
-                      , haskell-gi-base == 0.23.*
+                      , haskell-gi-base ^>= 0.24.0
                       , gi-gobject
                       , gi-glib
                       , gi-gtk
@@ -80,8 +81,8 @@ executable CustomGObject
   main-is:            CustomGObject.hs
   other-modules:      CustomContainer
   build-depends:        base >= 4.9 && < 5
-                      , haskell-gi ^>= 0.23.0
-                      , haskell-gi-base ^>= 0.23.0
+                      , haskell-gi ^>= 0.24.0
+                      , haskell-gi-base ^>= 0.24.0
                       , gi-gtk == 3.0.*
                       , gi-gdk == 3.0.*
                       , vector

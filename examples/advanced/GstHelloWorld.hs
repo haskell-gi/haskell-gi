@@ -20,7 +20,6 @@ import System.IO (stderr)
 import System.Exit (exitFailure)
 import Data.Text (pack, unpack)
 import qualified Data.Text.IO as T
-import Data.Monoid ((<>))
 import Data.Maybe (fromMaybe)
 
 busCall :: GLib.MainLoop -> Gst.Bus -> Gst.Message -> IO Bool

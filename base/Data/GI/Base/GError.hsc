@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, DataKinds #-}
 
 -- | To catch GError exceptions use the
 -- catchGError* or handleGError* functions. They work in a similar
@@ -70,9 +71,11 @@ import Data.Word
 
 import System.IO.Unsafe (unsafePerformIO)
 
-import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), ManagedPtr)
+import Data.GI.Base.BasicTypes (GType(..), ManagedPtr, TypedObject(..),
+                                GBoxed)
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
-import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr, copyBoxed)
+import Data.GI.Base.ManagedPtr (withManagedPtr, wrapBoxed, copyBoxed)
+import Data.GI.Base.Overloading (ParentTypes, HasParentTypes)
 import Data.GI.Base.Utils (allocMem, freeMem)
 
 #include <glib.h>
@@ -91,10 +94,18 @@ instance Show GError where
 
 instance Exception GError
 
+-- | There are no types in the bindings that a `GError` can be safely
+-- cast to.
+type instance ParentTypes GError = '[]
+instance HasParentTypes GError
+
 foreign import ccall "g_error_get_type" g_error_get_type :: IO GType
 
-instance BoxedObject GError where
-    boxedType _ = g_error_get_type
+instance TypedObject GError where
+  glibType = g_error_get_type
+
+-- | `GError`s are registered as boxed in the GLib type system.
+instance GBoxed GError
 
 -- | A GQuark.
 type GQuark = #type GQuark

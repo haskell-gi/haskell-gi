@@ -22,7 +22,8 @@ module CustomContainer
   , toCustomContainer
   ) where
 
-import Data.GI.Base (GObject(..), ManagedPtr(..), unsafeCastTo, withTransient,
+import Data.GI.Base (GObject, TypedObject(glibType), ManagedPtr(..),
+                     unsafeCastTo, withTransient,
                      get, set, new, AttrOp((:=), (:&=)), GType, toGValue)
 import Data.GI.Base.Attributes (AttrInfo(..), AttrOpTag(..))
 import Data.GI.Base.GValue (GValueConstruct(..))
@@ -37,7 +38,6 @@ import Control.Monad (when, forM, forM_, filterM, foldM_)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Coerce (coerce)
 import Data.Int (Int32)
-import Data.Semigroup (Semigroup(..))
 import qualified Data.Vector as V
 import Data.Vector ((//), (!))
 import Foreign.Ptr (Ptr)
@@ -58,8 +58,10 @@ newtype CustomContainer = CustomContainer (ManagedPtr CustomContainer)
 -- Declare that the new type is a GObject, with a type to be
 -- registered at runtime. The information on the type will be declared
 -- in the 'DerivedGObject' instance below.
-instance GObject CustomContainer where
-  gobjectType = registerGType CustomContainer
+instance TypedObject CustomContainer where
+  glibType = registerGType CustomContainer
+
+instance GObject CustomContainer
 
 -- We keep the private data of the CustomContainer here.
 data CustomContainerPrivate =
@@ -500,4 +502,4 @@ customContainerAdd container child = do
 
 -- Return the type of children that this container accepts
 customContainerChildType :: Gtk.Container -> IO GType
-customContainerChildType _ = gobjectType @Gtk.Widget
+customContainerChildType _ = glibType @Gtk.Widget

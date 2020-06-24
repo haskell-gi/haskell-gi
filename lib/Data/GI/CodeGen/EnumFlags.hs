@@ -92,12 +92,19 @@ genBoxedEnum n typeInit = do
   let name' = upperName n
 
   group $ do
+    line $ "type instance O.ParentTypes " <> name' <> " = '[]"
+    bline $ "instance O.HasParentTypes " <> name'
+
+  group $ do
     line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
             typeInit <> " :: "
     indent $ line "IO GType"
   group $ do
-       bline $ "instance BoxedEnum " <> name' <> " where"
-       indent $ line $ "boxedEnumType _ = c_" <> typeInit
+       bline $ "instance B.Types.TypedObject " <> name' <> " where"
+       indent $ line $ "glibType = c_" <> typeInit
+
+  group $ do
+    bline $ "instance B.Types.BoxedEnum " <> name'
 
 genEnum :: Name -> Enumeration -> CodeGen ()
 genEnum n@(Name _ name) enum = do
@@ -117,12 +124,19 @@ genBoxedFlags n typeInit = do
   let name' = upperName n
 
   group $ do
+    line $ "type instance O.ParentTypes " <> name' <> " = '[]"
+    bline $ "instance O.HasParentTypes " <> name'
+
+  group $ do
     line $ "foreign import ccall \"" <> typeInit <> "\" c_" <>
             typeInit <> " :: "
     indent $ line "IO GType"
   group $ do
-       bline $ "instance BoxedFlags " <> name' <> " where"
-       indent $ line $ "boxedFlagsType _ = c_" <> typeInit
+       bline $ "instance B.Types.TypedObject " <> name' <> " where"
+       indent $ line $ "glibType = c_" <> typeInit
+
+  group $ do
+    bline $ "instance B.Types.BoxedFlags " <> name'
 
 -- | Very similar to enums, but we also declare ourselves as members of
 -- the IsGFlag typeclass.

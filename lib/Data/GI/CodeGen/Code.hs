@@ -89,6 +89,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy.Builder as B
 import qualified Data.Text.Lazy as LT
 
+import GHC.Stack (HasCallStack)
+
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath (joinPath, takeDirectory)
 
@@ -537,19 +539,19 @@ resetTypeVariableScope :: CodeGen ()
 resetTypeVariableScope =
   modify' (\(cgs, s) -> (cgs {cgsNextAvailableTyvar = SingleCharTyvar 'a'}, s))
 
-findAPI :: Type -> CodeGen (Maybe API)
-findAPI TError = Just <$> findAPIByName (Name "GLib" "Error")
+-- | Try to find the API associated with a given type, if known.
+findAPI :: HasCallStack => Type -> CodeGen (Maybe API)
 findAPI (TInterface n) = Just <$> findAPIByName n
 findAPI _ = return Nothing
 
 -- | Find the API associated with a given type. If the API cannot be
 -- found this raises an `error`.
-getAPI :: Type -> CodeGen API
+getAPI :: HasCallStack => Type -> CodeGen API
 getAPI t = findAPI t >>= \case
            Just a -> return a
            Nothing -> terror ("Could not resolve type \"" <> tshow t <> "\".")
 
-findAPIByName :: Name -> CodeGen API
+findAPIByName :: HasCallStack => Name -> CodeGen API
 findAPIByName n@(Name ns _) = do
     apis <- getAPIs
     case M.lookup n apis of
@@ -922,6 +924,7 @@ moduleImports = T.unlines [
                 , "import qualified Prelude as P"
                 , ""
                 , "import qualified Data.GI.Base.Attributes as GI.Attributes"
+                , "import qualified Data.GI.Base.BasicTypes as B.Types"
                 , "import qualified Data.GI.Base.ManagedPtr as B.ManagedPtr"
                 , "import qualified Data.GI.Base.GClosure as B.GClosure"
                 , "import qualified Data.GI.Base.GError as B.GError"

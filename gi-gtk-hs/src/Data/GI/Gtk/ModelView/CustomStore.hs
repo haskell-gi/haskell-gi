@@ -69,7 +69,8 @@ import Foreign.Marshal (fromBool)
 import Foreign.Storable (peek, poke, peekByteOff)
 import System.IO.Unsafe (unsafePerformIO)
 import Data.GI.Base.BasicTypes
-       (ManagedPtr(..), GObject(..), GType, CGType(..), gtypeToCGType)
+       (ManagedPtr(..), GObject, TypedObject(..),
+        GType, CGType(..), gtypeToCGType)
 import Data.GI.Base.GType (gtypeInt, gtypeBoolean, gtypeString, gtypeInvalid)
 import Data.GI.Base.BasicConversions (gflagsToWord, withTextCString)
 import Data.GI.Base.ManagedPtr (newObject, withManagedPtr, newManagedPtr_)
@@ -115,11 +116,10 @@ newtype CustomStore private row = CustomStore (ManagedPtr (CustomStore private r
 instance HasParentTypes (CustomStore private row)
 type instance ParentTypes (CustomStore private row) = '[ TreeModel ]
 
+instance TypedObject (CustomStore private row) where
+  glibType = glibType @TreeModel
+
 instance GObject (CustomStore private row) where
-#if !MIN_VERSION_haskell_gi_base(0,20,1)
-    gobjectIsInitiallyUnowned _ = False
-#endif
-    gobjectType = gobjectType @TreeModel
 
 -- | Type synonym for viewing the store as a set of columns.
 type ColumnMap row = IORef [ColumnAccess row]
@@ -319,7 +319,7 @@ caToGType (CAPixbuf _) = gtypePixbuf
 caToGType CAInvalid = gtypeInt -- to avoid warnings of functions that iterate through all columns
 
 gtypePixbuf :: GType
-gtypePixbuf = unsafePerformIO $ gobjectType @Pixbuf
+gtypePixbuf = unsafePerformIO $ glibType @Pixbuf
 {-# NOINLINE gtypePixbuf #-}
 
 treeModelIfaceGetColumnType_static :: StablePtr (CustomStoreImplementation model row) -> CInt -> IO CGType

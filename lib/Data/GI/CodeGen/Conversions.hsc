@@ -37,14 +37,10 @@ module Data.GI.CodeGen.Conversions
     , Constructor(..)
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>), (<*>), pure, Applicative)
-#endif
+#include <glib-object.h>
+
 import Control.Monad (when)
 import Data.Maybe (isJust)
-#if !MIN_VERSION_base(4,11,0)
-import Data.Monoid ((<>))
-#endif
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Exts (IsString(..))
@@ -175,11 +171,7 @@ computeArrayLength array (TCArray _ _ _ t) = do
   return $ "fromIntegral $ " <> reader <> " " <> array
     where findReader = case t of
                      TBasicType TUInt8 -> return "B.length"
-                     TBasicType _      -> return "length"
-                     TInterface _      -> return "length"
-                     TCArray{}         -> return "length"
-                     _ -> notImplementedError $
-                          "Don't know how to compute length of " <> tshow t
+                     _ -> return "P.length"
 computeArrayLength _ t =
     notImplementedError $ "computeArrayLength called on non-CArray type "
                             <> tshow t
@@ -196,7 +188,7 @@ hObjectToF t transfer =
     isGO <- isGObject t
     if isGO
     then return $ M "B.ManagedPtr.disownObject"
-    else badIntroError "Transferring a non-GObject object"
+    else return $ M "B.ManagedPtr.disownManagedPtr"
   -- castPtr since we accept any instance of the class associated with
   -- the GObject, not just the precise type of the GObject, while the
   -- foreign function declaration requires a pointer of the precise
@@ -207,6 +199,12 @@ hVariantToF :: Transfer -> CodeGen Constructor
 hVariantToF transfer =
   if transfer == TransferEverything
   then return $ M "B.GVariant.disownGVariant"
+  else return $ M "unsafeManagedPtrGetPtr"
+
+hValueToF :: Transfer -> CodeGen Constructor
+hValueToF transfer =
+  if transfer == TransferEverything
+  then return $ M "B.GValue.disownGValue"
   else return $ M "unsafeManagedPtrGetPtr"
 
 hParamSpecToF :: Transfer -> CodeGen Constructor
@@ -262,6 +260,7 @@ hToF' t a hType fType transfer
     | ( hType == fType ) = return Id
     | TError <- t = hBoxedToF transfer
     | TVariant <- t = hVariantToF transfer
+    | TGValue <- t = hValueToF transfer
     | TParamSpec <- t = hParamSpecToF transfer
     | TGClosure c <- t = hClosureToF transfer c
     | Just (APIEnum _) <- a = return "(fromIntegral . fromEnum)"
@@ -306,6 +305,8 @@ hToF' t a hType fType transfer
         return $ M "(packMapStorableArray realToFrac)"
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
+    | TCArray False _ _ TGValue <- t =
+        return $ M "B.GValue.packGValueArray"
     | TCArray{}  <- t = notImplementedError $
                    "Don't know how to pack C array of type " <> tshow t
     | otherwise = case (typeShow hType, typeShow fType) of
@@ -395,7 +396,6 @@ hToF (TCArray zt _ _ t@(TCArray{})) transfer = do
                then "packZeroTerminated"
                else "pack"
   hToF_PackedType t (packer <> "PtrArray") transfer
-
 hToF (TCArray zt _ _ t@(TInterface _)) transfer = do
   isScalar <- typeIsEnumOrFlag t
   let packer = if zt
@@ -473,6 +473,12 @@ fVariantToH transfer =
                   TransferEverything -> "B.GVariant.wrapGVariantPtr"
                   _ -> "B.GVariant.newGVariantFromPtr"
 
+fValueToH :: Transfer -> CodeGen Constructor
+fValueToH transfer =
+  return $ M $ case transfer of
+                  TransferEverything -> "B.GValue.wrapGValuePtr"
+                  _ -> "B.GValue.newGValueFromPtr"
+
 fParamSpecToH :: Transfer -> CodeGen Constructor
 fParamSpecToH transfer =
   return $ M $ case transfer of
@@ -500,6 +506,7 @@ fToH' t a hType fType transfer
     | Just (APIFlags _) <- a = return "wordToGFlags"
     | TError <- t = boxedForeignPtr "GError" transfer
     | TVariant <- t = fVariantToH transfer
+    | TGValue <- t = fValueToH transfer
     | TParamSpec <- t = fParamSpecToH transfer
     | TGClosure c <- t = fClosureToH transfer c
     | Just (APIStruct s) <- a = structForeignPtr s hType transfer
@@ -673,6 +680,8 @@ unpackCArray length (TCArray False _ _ t) transfer =
                          "unpackMapStorableArrayWithLength realToFrac " <> length
     TBasicType _ -> return $ apply $ M $ parenthesize $
                          "unpackStorableArrayWithLength " <> length
+    TGValue -> return $ apply $ M $ parenthesize $
+               "B.GValue.unpackGValueArrayWithLength " <> length
     TInterface _ -> do
            a <- findAPI t
            isScalar <- typeIsEnumOrFlag t
@@ -728,12 +737,9 @@ argumentType t expose = do
       l <- getFreshTypeVariable
       return (l, [cls <> " " <> l])
     Just (APIObject _) -> do
-      isGO <- isGObject t
-      if isGO
-        then do cls <- typeConstraint t
-                l <- getFreshTypeVariable
-                return (l, [cls <> " " <> l])
-        else return (s, [])
+      cls <- typeConstraint t
+      l <- getFreshTypeVariable
+      return (l, [cls <> " " <> l])
     Just (APICallback cb) ->
       -- See [Note: Callables that throw]
       if callableThrows (cbCallable cb)
@@ -826,7 +832,7 @@ haskellType (TGClosure (Just inner@(TInterface n))) = do
 haskellType (TGClosure _) = do
   tyvar <- getFreshTypeVariable
   return $ "GClosure" `con` [con0 tyvar]
-haskellType (TInterface (Name "GObject" "Value")) = return $ "GValue" `con` []
+haskellType TGValue = return $ "GValue" `con` []
 haskellType t@(TInterface n) = do
   api <- getAPI t
   tname <- qualifiedAPI n
@@ -888,6 +894,7 @@ foreignBasicType t         = haskellBasicType t
 -- This translates GI types to the types used in foreign function calls.
 foreignType :: Type -> CodeGen TypeRep
 foreignType (TBasicType t) = return $ foreignBasicType t
+foreignType (TCArray _ _ _ TGValue) = return $ ptr ("B.GValue.GValue" `con` [])
 foreignType (TCArray zt _ _ t) = do
   api <- findAPI t
   let size = case api of
@@ -919,8 +926,7 @@ foreignType t@TVariant = ptr <$> haskellType t
 foreignType t@TParamSpec = ptr <$> haskellType t
 foreignType (TGClosure Nothing) = return $ ptr ("GClosure" `con` [con0 "()"])
 foreignType t@(TGClosure (Just _)) = ptr <$> haskellType t
-foreignType (TInterface (Name "GObject" "Value")) =
-  return $ ptr $ "GValue" `con` []
+foreignType t@(TGValue) = ptr <$> haskellType t
 foreignType t@(TInterface n) = do
   api <- getAPI t
   let enumIsSigned e = any (< 0) (map enumMemberValue (enumMembers e))
@@ -947,24 +953,25 @@ typeIsEnumOrFlag t = do
     (Just (APIFlags _)) -> return True
     _ -> return False
 
--- | Information on how to allocate a type.
-data TypeAllocInfo = TypeAllocInfo {
-      typeAllocInfoIsBoxed :: Bool
-    , typeAllocInfoSize    :: Int -- ^ In bytes.
-    }
+-- | Information on how to allocate a type: allocator function and
+-- size of the struct.
+data TypeAllocInfo = TypeAlloc Text Int
 
 -- | Information on how to allocate the given type, if known.
 typeAllocInfo :: Type -> CodeGen (Maybe TypeAllocInfo)
+typeAllocInfo TGValue =
+  let n = #{size GValue}
+  in return $ Just $ TypeAlloc ("SP.callocBytes " <> tshow n) n
 typeAllocInfo t = do
   api <- findAPI t
   case api of
-    Just (APIStruct s) -> case structSize s of
-                            0 -> return Nothing
-                            n -> let info = TypeAllocInfo {
-                                              typeAllocInfoIsBoxed = structIsBoxed s
-                                            , typeAllocInfoSize = n
-                                            }
-                                 in return (Just info)
+    Just (APIStruct s) ->
+      case structSize s of
+        0 -> return Nothing
+        n -> let allocator = if structIsBoxed s
+                             then "SP.callocBoxedBytes"
+                             else "SP.callocBytes"
+             in return $ Just $ TypeAlloc (allocator <> " " <> tshow n) n
     _ -> return Nothing
 
 -- | Returns whether the given type corresponds to a `ManagedPtr`
@@ -972,6 +979,7 @@ typeAllocInfo t = do
 isManaged   :: Type -> CodeGen Bool
 isManaged TError = return True
 isManaged TVariant = return True
+isManaged TGValue = return True
 isManaged TParamSpec = return True
 isManaged (TGClosure _) = return True
 isManaged t@(TInterface _) = do
@@ -1045,10 +1053,12 @@ elementTypeAndMap :: Type -> Text -> Maybe (Type, Text)
 -- ByteString
 elementTypeAndMap (TCArray _ _ _ (TBasicType TUInt8)) _ = Nothing
 elementTypeAndMap (TCArray True _ _ t) _ = Just (t, "mapZeroTerminatedCArray")
+elementTypeAndMap (TCArray _ _ _ TGValue) len =
+  Just (TGValue, parenthesize $ "B.GValue.mapGValueArrayWithLength " <> len)
 elementTypeAndMap (TCArray False (-1) _ t) len =
-    Just (t, parenthesize $ "mapCArrayWithLength " <> len)
+  Just (t, parenthesize $ "mapCArrayWithLength " <> len)
 elementTypeAndMap (TCArray False fixed _ t) _ =
-    Just (t, parenthesize $ "mapCArrayWithLength " <> tshow fixed)
+  Just (t, parenthesize $ "mapCArrayWithLength " <> tshow fixed)
 elementTypeAndMap (TGArray t) _ = Just (t, "mapGArray")
 elementTypeAndMap (TPtrArray t) _ = Just (t, "mapPtrArray")
 elementTypeAndMap (TGList t) _ = Just (t, "mapGList")

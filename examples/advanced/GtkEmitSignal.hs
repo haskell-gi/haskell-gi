@@ -67,7 +67,7 @@ main = do
   _ <- on entry #realize $ do
 
     -- Get the GType for the GtkEntry
-    gtype <- gobjectType @GI.Gtk.Entry
+    gtype <- glibType @GI.Gtk.Entry
 
     -- Get the signal ID and Quark detail
     -- based on the `insert-at-cursor` signal name

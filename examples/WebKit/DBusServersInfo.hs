@@ -7,8 +7,6 @@ module DBusServersInfo
   , browserServerInfo
   ) where
 
-import Data.Monoid ((<>))
-
 import DBusHelpers (DBusServerInfo(..))
 
 -- | Definition of the method server installed by the extension.

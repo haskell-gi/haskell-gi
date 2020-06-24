@@ -10,7 +10,7 @@ maintainer:          paul@tsahyt.com
 copyright:           2019 Paul Ogris
 category:            Mobile
 build-type:          Simple
-cabal-version:       >=1.10
+cabal-version:       2.0
 extra-source-files:  README.md
 
 executable libhandy-demo-hs
@@ -19,11 +19,12 @@ executable libhandy-demo-hs
   main-is:             Main.hs
   other-modules:       DemoWindow
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5, gi-handy,
+  build-depends:       base >= 4.7 && < 5,
+                       gi-handy,
                        gi-gtk >= 3.0.32 && < 4.0,
                        gi-gio,
                        gi-gdk,
                        text,
                        gi-gtk-hs,
                        file-embed,
-                       haskell-gi-base == 0.23.*
+                       haskell-gi-base ^>= 0.24.0

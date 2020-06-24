@@ -20,7 +20,6 @@ import Control.Monad (when, replicateM_, forM_, forM)
 import qualified Data.ByteString.Char8 as B
 import Data.ByteString (ByteString)
 import Data.Maybe (fromMaybe)
-import Data.Monoid ((<>))
 import Data.Text (pack, unpack, Text)
 import Data.Text.IO (putStrLn)
 import Data.Word

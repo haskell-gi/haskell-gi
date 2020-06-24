@@ -1,26 +1,28 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances,
-  DeriveDataTypeable, TypeFamilies, ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds, TypeOperators, UndecidableInstances #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
+  DeriveDataTypeable, TypeFamilies, ScopedTypeVariables,
+  MultiParamTypeClasses, DataKinds, TypeOperators, UndecidableInstances,
+  AllowAmbiguousTypes #-}
 
 -- | Basic types used in the bindings.
 module Data.GI.Base.BasicTypes
     (
      -- * Memory management
       ManagedPtr(..)
-    , ManagedPtrNewtype
-    , BoxedObject(..)
-    , BoxedEnum(..)
-    , BoxedFlags(..)
-    , WrappedPtr(..)
+    , ManagedPtrNewtype(..)
+    , BoxedPtr(..)
+    , CallocPtr(..)
     , UnexpectedNullPointerReturn(..)
 
     -- * Basic GLib \/ GObject types
-    , GObject(..)
+    , TypedObject(..)
+    , GObject
     , GType(..)
     , CGType
     , gtypeName
     , GVariant(..)
+    , GBoxed
+    , BoxedEnum
+    , BoxedFlags
     , GParamSpec(..)
     , noGParamSpec
 
@@ -41,9 +43,8 @@ module Data.GI.Base.BasicTypes
 
 import Control.Exception (Exception)
 
-import Data.Coerce (Coercible)
+import Data.Coerce (coerce, Coercible)
 import Data.IORef (IORef)
-import Data.Proxy (Proxy)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
@@ -73,47 +74,66 @@ data ManagedPtr a = ManagedPtr {
 instance Eq (ManagedPtr a) where
   a == b = managedForeignPtr a == managedForeignPtr b
 
--- | A constraint ensuring that the given type is coercible to a
--- ManagedPtr. It will hold for newtypes of the form
---
--- > newtype Foo = Foo (ManagedPtr Foo)
---
--- which is the typical shape of wrapped 'GObject's.
-type ManagedPtrNewtype a = Coercible a (ManagedPtr ())
--- Notice that the Coercible here is to ManagedPtr (), instead of
+-- | A constraint ensuring that the given type is a newtype over a
+-- `ManagedPtr`.
+class Coercible a (ManagedPtr ()) => ManagedPtrNewtype a where
+  toManagedPtr :: a -> ManagedPtr a
+
+-- | A default instance for `IsManagedPtr` for newtypes over `ManagedPtr`.
+instance {-# OVERLAPPABLE #-} Coercible a (ManagedPtr ()) => ManagedPtrNewtype a where
+  toManagedPtr = coerce
+-- Notice that the Coercible here above to ManagedPtr (), instead of
 -- "ManagedPtr a", which would be the most natural thing. Both are
 -- representationally equivalent, so this is not a big deal. This is
 -- to work around a problem in ghc 7.10:
 -- https://ghc.haskell.org/trac/ghc/ticket/10715
+--
+-- Additionally, a simpler approach would be to simply do
+--
+-- > type IsManagedPtr a = Coercible a (ManagedPtr ())
+--
+-- but this requires the constructor of the datatype to be in scope,
+-- which is cumbersome (for instance, one often wants to call `castTo`
+-- on the results of `Gtk.builderGetObject`, which is a `GObject`,
+-- whose constructor is not necessarily in scope when using `GI.Gtk`).
+--
+-- When we make the bindings we will always add explicit instances,
+-- which cannot be hidden, avoiding the issue. We keep the default
+-- instance for convenience when writing new object types.
 
--- | Wrapped boxed structures, identified by their `GType`.
-class ManagedPtrNewtype a => BoxedObject a where
-    boxedType :: a -> IO GType -- This should not use the value of its
-                               -- argument.
+-- | Pointers to chunks of memory which we know how to copy and
+-- release.
+class ManagedPtrNewtype a => BoxedPtr a where
+  -- | Make a copy of the given `BoxedPtr`.
+  boxedPtrCopy   :: a -> IO a
+  -- | A pointer to a function for freeing the given pointer.
+  boxedPtrFree   :: a -> IO ()
+
+-- | A ptr to a memory block which we know how to allocate and fill
+-- with zero.
+class BoxedPtr a => CallocPtr a where
+  -- | Allocate a zero-initialized block of memory for the given type.
+  boxedPtrCalloc :: IO (Ptr a)
+
+-- | A wrapped object that has an associated GLib type. This does not
+-- necessarily descend from `GObject`, that constraint is implemented
+-- by the `GObject` type below.
+class HasParentTypes a => TypedObject a where
+  -- | The `GType` for this object.
+  glibType :: IO GType
+
+-- | Chunks of memory whose allocation/deallocation info has been
+-- registered with the GLib type system.
+class (ManagedPtrNewtype a, TypedObject a) => GBoxed a
+
+-- | A wrapped `GObject`, or any other type that descends from it.
+class (ManagedPtrNewtype a, TypedObject a) => GObject a
 
 -- | Enums with an associated `GType`.
-class BoxedEnum a where
-    boxedEnumType :: a -> IO GType
+class TypedObject a => BoxedEnum a
 
 -- | Flags with an associated `GType`.
-class BoxedFlags a where
-    boxedFlagsType :: Proxy a -> IO GType
-
--- | Pointers to structs/unions without an associated `GType`.
-class ManagedPtrNewtype a => WrappedPtr a where
-    -- | Allocate a zero-initialized block of memory for the given type.
-    wrappedPtrCalloc :: IO (Ptr a)
-    -- | Make a copy of the given `WrappedPtr`.
-    wrappedPtrCopy   :: a -> IO a
-    -- | A pointer to a function for freeing the given pointer, or
-    -- `Nothing` is the memory associated to the pointer does not need
-    -- to be freed.
-    wrappedPtrFree   :: Maybe (GDestroyNotify a)
-
--- | A wrapped `GObject`.
-class (ManagedPtrNewtype a, HasParentTypes a) => GObject a where
-    -- | The `GType` for this object.
-    gobjectType :: IO GType
+class TypedObject a => BoxedFlags a
 
 -- | A type identifier in the GLib type system. This is the low-level
 -- type associated with the representation in memory, when using this

@@ -5,7 +5,6 @@
 module Main where
 
 import Data.Int
-import Data.Monoid ( (<>) )
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 

@@ -59,8 +59,9 @@ import qualified Data.Text as T
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
                                 attrConstruct, attrTransfer,
                                 AttrInfo(..))
-import Data.GI.Base.BasicTypes (CGType, GType(..), GObject(..),
+import Data.GI.Base.BasicTypes (CGType, GType(..), GObject,
                                 GDestroyNotify, ManagedPtr(..), GParamSpec(..),
+                                TypedObject(glibType),
                                 gtypeName)
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
 import Data.GI.Base.CallStack (HasCallStack, prettyCallStack)
@@ -121,7 +122,7 @@ doConstructGObject constructor props = liftIO $ do
   names <- mallocBytes (nprops * sizeOf nullPtr)
   values <- mallocBytes (nprops * gvalueSize)
   fill names values props
-  gtype <- gobjectType @o
+  gtype <- glibType @o
   result <- g_object_new gtype (fromIntegral nprops) names values
   freeStrings nprops names
   free values
@@ -243,7 +244,7 @@ registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
     else do
       classInit <- mkClassInit (unwrapClassInit $ objectClassInit @o)
       instanceInit <- mkInstanceInit (unwrapInstanceInit $ objectInstanceInit @o)
-      (GType parentCGType) <- gobjectType @(GObjectParentType o)
+      (GType parentCGType) <- glibType @(GObjectParentType o)
       GType <$> register_gtype parentCGType cTypeName classInit instanceInit
 
    where
@@ -269,7 +270,7 @@ registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
        case maybeGetSet of
          Nothing -> do
            pspecName <- g_param_spec_get_name pspecPtr >>= cstringToText
-           typeName <- gobjectType @o >>= gtypeName
+           typeName <- glibType @o >>= gtypeName
            dbgLog $ "WARNING: Attempting to set unknown property \""
                     <> pspecName <> "\" of type \"" <> T.pack typeName <> "\"."
          Just pgs -> (propSetter pgs) objPtr gvPtr
@@ -280,7 +281,7 @@ registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
        case maybeGetSet of
          Nothing -> do
            pspecName <- g_param_spec_get_name pspecPtr >>= cstringToText
-           typeName <- gobjectType @o >>= gtypeName
+           typeName <- glibType @o >>= gtypeName
            dbgLog $ "WARNING: Attempting to get unknown property \""
                     <> pspecName <> "\" of type \"" <> T.pack typeName <> "\"."
          Just pgs -> (propGetter pgs) objPtr destGValuePtr

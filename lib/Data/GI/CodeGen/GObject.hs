@@ -32,6 +32,7 @@ apiDoParentSearch parent n api
            or <$> mapM (uncurry (apiDoParentSearch parent)) prereqs
       _ -> return False
 
+-- | Check whether the given type descends from GObject.
 isGObject :: Type -> CodeGen Bool
 isGObject = typeDoParentSearch $ Name "GObject" "Object"
 
@@ -39,5 +40,6 @@ isGObject = typeDoParentSearch $ Name "GObject" "Object"
 nameIsGObject :: Name -> CodeGen Bool
 nameIsGObject n = findAPIByName n >>= apiIsGObject n
 
+-- | Check whether the given API descends from GObject.
 apiIsGObject :: Name -> API -> CodeGen Bool
 apiIsGObject = apiDoParentSearch $ Name "GObject" "Object"

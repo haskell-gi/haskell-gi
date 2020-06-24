@@ -5,6 +5,7 @@ module Data.GI.CodeGen.Struct ( genStructOrUnionFields
                               , extractCallbacksInStruct
                               , fixAPIStructs
                               , ignoreStruct
+                              , genBoxed
                               , genWrappedPtr
                               ) where
 
@@ -455,7 +456,7 @@ genZeroSU n size isBoxed = group $ do
       line $ builder <> " = liftIO $ " <>
            if isBoxed
            then "callocBoxedBytes " <> tsize <> " >>= wrapBoxed " <> name
-           else "wrappedPtrCalloc >>= wrapPtr " <> name
+           else "boxedPtrCalloc >>= wrapPtr " <> name
       exportDecl builder
 
       blank
@@ -491,57 +492,102 @@ prefixedForeignImport prefix symbol prototype = group $ do
            <> " :: " <> prototype
   return (prefix <> symbol)
 
--- | Same as `prefixedForeignImport`, but import a `FunPtr` to the symbol.
-prefixedFunPtrImport :: Text -> Text -> Text -> CodeGen Text
-prefixedFunPtrImport prefix symbol prototype = group $ do
-  line $ "foreign import ccall \"&" <> symbol <> "\" " <> prefix <> symbol
-           <> " :: FunPtr (" <> prototype <> ")"
-  return (prefix <> symbol)
+-- | Generate a GValue instance for @GBoxed@ objects.
+genBoxedGValueInstance :: Name -> Text -> CodeGen ()
+genBoxedGValueInstance n get_type_fn = do
+  let name' = upperName n
+      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue' with 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
+
+  writeHaddock DocBeforeSymbol doc
+
+  group $ do
+    bline $ "instance B.GValue.IsGValue " <> name' <> " where"
+    indent $ group $ do
+      line $ "toGValue o = do"
+      indent $ group $ do
+        line $ "gtype <- " <> get_type_fn
+        line $ "B.ManagedPtr.withManagedPtr o (B.GValue.buildGValue gtype B.GValue.set_boxed)"
+      line $ "fromGValue gv = do"
+      indent $ group $ do
+        line $ "ptr <- B.GValue.get_boxed gv :: IO (Ptr " <> name' <> ")"
+        line $ "B.ManagedPtr.newBoxed " <> name' <> " ptr"
+
+-- | Allocation and deallocation for types registered as `GBoxed` in
+-- the GLib type system.
+genBoxed :: Name -> Text -> CodeGen ()
+genBoxed n typeInit = do
+  let name' = upperName n
+      get_type_fn = "c_" <> typeInit
+
+  group $ do
+    line $ "foreign import ccall \"" <> typeInit <> "\" " <>
+            get_type_fn <> " :: "
+    indent $ line "IO GType"
+
+  group $ do
+    line $ "type instance O.ParentTypes " <> name' <> " = '[]"
+    bline $ "instance O.HasParentTypes " <> name'
+
+  group $ do
+    bline $ "instance B.Types.TypedObject " <> name' <> " where"
+    indent $ line $ "glibType = " <> get_type_fn
+
+  group $ do
+    bline $ "instance B.Types.GBoxed " <> name'
+
+  genBoxedGValueInstance n get_type_fn
 
 -- | Generate the typeclass with information for how to
--- allocate/deallocate a given type.
+-- allocate/deallocate a given type which is not a `GBoxed`.
 genWrappedPtr :: Name -> AllocationInfo -> Int -> CodeGen ()
 genWrappedPtr n info size = group $ do
-  let name' = upperName n
-
   let prefix = \op -> "_" <> name' <> "_" <> op <> "_"
 
   when (size == 0 && allocFree info == AllocationOpUnknown) $
        line $ "-- XXX Wrapping a foreign struct/union with no known destructor or size, leak?"
 
-  calloc <- case allocCalloc info of
-              AllocationOp "none" ->
-                  return ("error \"calloc not permitted for " <> name' <> "\"")
-              AllocationOp op ->
-                  prefixedForeignImport (prefix "calloc") op "IO (Ptr a)"
-              AllocationOpUnknown ->
-                  if size > 0
-                  then return ("callocBytes " <> tshow size)
-                  else return "return nullPtr"
-
   copy <- case allocCopy info of
             AllocationOp op -> do
                 copy <- prefixedForeignImport (prefix "copy") op "Ptr a -> IO (Ptr a)"
-                return ("\\p -> withManagedPtr p (" <> copy <>
-                        " >=> wrapPtr " <> name' <> ")")
+                return ("\\p -> B.ManagedPtr.withManagedPtr p (" <> copy <>
+                        " >=> B.ManagedPtr.wrapPtr " <> name' <> ")")
             AllocationOpUnknown ->
                 if size > 0
-                then return ("\\p -> withManagedPtr p (copyBytes "
-                              <> tshow size <> " >=> wrapPtr " <> name' <> ")")
+                then return ("\\p -> B.ManagedPtr.withManagedPtr p (copyBytes "
+                              <> tshow size <>
+                              " >=> B.ManagedPtr.wrapPtr " <> name' <> ")")
                 else return "return"
 
   free <- case allocFree info of
-            AllocationOp op -> ("Just " <>) <$>
-                prefixedFunPtrImport (prefix "free") op "Ptr a -> IO ()"
+            AllocationOp op -> do
+              free <- prefixedForeignImport (prefix "free") op "Ptr a -> IO ()"
+              return $ "\\p -> B.ManagedPtr.withManagedPtr p " <> free
             AllocationOpUnknown ->
                 if size > 0
-                then return "Just ptr_to_g_free"
-                else return "Nothing"
+                then return "\\x -> SP.withManagedPtr x SP.freeMem"
+                else return "\\_x -> return ()"
 
-  line $ "instance WrappedPtr " <> name' <> " where"
+  bline $ "instance BoxedPtr " <> name' <> " where"
   indent $ do
-      line $ "wrappedPtrCalloc = " <> calloc
-      line $ "wrappedPtrCopy = " <> copy
-      line $ "wrappedPtrFree = " <> free
+      line $ "boxedPtrCopy = " <> copy
+      line $ "boxedPtrFree = " <> free
 
-  hsBoot $ line $ "instance WrappedPtr " <> name' <> " where"
+  case allocCalloc info of
+    AllocationOp "none" -> return ()
+    AllocationOp op -> do
+      calloc <- prefixedForeignImport (prefix "calloc") op "IO (Ptr a)"
+      callocInstance calloc
+    AllocationOpUnknown ->
+      if size > 0
+      then do
+        let calloc = "callocBytes " <> tshow size
+        callocInstance calloc
+      else return ()
+
+  where name' = upperName n
+
+        callocInstance :: Text -> CodeGen()
+        callocInstance calloc = group $ do
+          bline $ "instance CallocPtr " <> name' <> " where"
+          indent $ do
+            line $ "boxedPtrCalloc = " <> calloc

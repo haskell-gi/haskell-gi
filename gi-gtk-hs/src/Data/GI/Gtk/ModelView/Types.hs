@@ -89,7 +89,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Foreign.Marshal.Utils (with)
 import Data.GI.Base.BasicTypes
        (ManagedPtr(..), ManagedPtrNewtype, UnexpectedNullPointerReturn,
-        GObject(..))
+        TypedObject(..), GObject)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.GI.Base.GValue (GValue)
@@ -135,11 +135,10 @@ newtype TypedTreeModelSort row = TypedTreeModelSort (ManagedPtr (TypedTreeModelS
 instance HasParentTypes (TypedTreeModelSort row)
 type instance ParentTypes (TypedTreeModelSort row) = '[TreeSortable, TreeModel, TreeModelSort]
 
-instance GObject (TypedTreeModelSort row) where
-#if !MIN_VERSION_haskell_gi_base(0,20,1)
-    gobjectIsInitiallyUnowned _ = False
-#endif
-    gobjectType = gobjectType @TreeModelSort
+instance TypedObject (TypedTreeModelSort row) where
+  glibType = glibType @TreeModelSort
+
+instance GObject (TypedTreeModelSort row)
 
 unsafeTreeModelSortToGeneric :: TreeModelSort -> TypedTreeModelSort row
 unsafeTreeModelSortToGeneric = unsafeCoerce#

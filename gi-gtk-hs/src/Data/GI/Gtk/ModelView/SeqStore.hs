@@ -78,7 +78,7 @@ import Data.GI.Gtk.ModelView.CustomStore
         TreeModelIface(..), customStoreNew, DragDestIface(..),
         DragSourceIface(..), CustomStore(..))
 import Data.GI.Base.BasicTypes
-       (ManagedPtr(..), GObject(..), GObject)
+       (TypedObject(..), ManagedPtr(..), GObject)
 import Data.GI.Base.ManagedPtr (withManagedPtr)
 import GI.Gtk.Interfaces.TreeModel
        (treeModelRowDeleted, treeModelRowInserted,
@@ -113,11 +113,10 @@ mkSeqStore (CustomStore ptr) = SeqStore ptr
 instance HasParentTypes (SeqStore a)
 type instance ParentTypes (SeqStore a) = '[TreeModel]
 
-instance GObject (SeqStore a) where
-#if !MIN_VERSION_haskell_gi_base(0,20,1)
-    gobjectIsInitiallyUnowned _ = False
-#endif
-    gobjectType = gobjectType @TreeModel
+instance TypedObject (SeqStore a) where
+  glibType = glibType @TreeModel
+
+instance GObject (SeqStore a)
 
 instance IsTypedTreeModel SeqStore
 

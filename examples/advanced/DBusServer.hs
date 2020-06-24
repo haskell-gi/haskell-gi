@@ -11,7 +11,6 @@ import qualified GI.GLib as GLib
 import qualified GI.Gio as Gio
 
 import Data.GI.Base
-import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Word (Word32)
 

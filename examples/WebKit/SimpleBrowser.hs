@@ -13,7 +13,6 @@ import Data.GI.Base
 
 import System.Mem (performGC)
 
-import Data.Monoid ((<>))
 import qualified Data.Text as T
 import Data.Text (Text)
 import Data.Int (Int64)

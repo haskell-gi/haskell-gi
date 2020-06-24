@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, DataKinds #-}
 -- | A minimal wrapper for libgirepository.
 module Data.GI.CodeGen.LibGIRepository
     ( girRequire
@@ -29,9 +30,11 @@ import System.Environment (lookupEnv)
 import System.FilePath (searchPathSeparator)
 
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
-import Data.GI.Base.BasicTypes (BoxedObject(..), GType(..), CGType, ManagedPtr)
+import Data.GI.Base.BasicTypes (TypedObject(..), GBoxed,
+                                GType(..), CGType, ManagedPtr)
 import Data.GI.Base.GError (GError, checkGError)
 import Data.GI.Base.ManagedPtr (wrapBoxed, withManagedPtr)
+import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.GI.Base.Utils (allocMem, freeMem)
 import Data.GI.CodeGen.Util (splitOn)
 
@@ -55,10 +58,18 @@ data FieldInfo = FieldInfo {
       fieldInfoOffset    :: Int
     }
 
+-- | The (empty) set of parent types for `BaseInfo` visible to the
+-- Haskell type system.
+instance HasParentTypes BaseInfo
+type instance ParentTypes BaseInfo = '[]
+
 foreign import ccall "g_base_info_gtype_get_type" c_g_base_info_gtype_get_type :: IO GType
 
-instance BoxedObject BaseInfo where
-    boxedType _ = c_g_base_info_gtype_get_type
+instance TypedObject BaseInfo where
+  glibType = c_g_base_info_gtype_get_type
+
+-- | `BaseInfo`s are registered as boxed in the GLib type system.
+instance GBoxed BaseInfo
 
 foreign import ccall "g_irepository_prepend_search_path" g_irepository_prepend_search_path :: CString -> IO ()
 

@@ -27,6 +27,7 @@ module Data.GI.Base.Properties
     , setObjectPropertyHash
     , setObjectPropertyCallback
     , setObjectPropertyGError
+    , setObjectPropertyGValue
 
     , getObjectPropertyString
     , getObjectPropertyStringArray
@@ -54,6 +55,7 @@ module Data.GI.Base.Properties
     , getObjectPropertyHash
     , getObjectPropertyCallback
     , getObjectPropertyGError
+    , getObjectPropertyGValue
 
     , constructObjectPropertyString
     , constructObjectPropertyStringArray
@@ -81,6 +83,7 @@ module Data.GI.Base.Properties
     , constructObjectPropertyHash
     , constructObjectPropertyCallback
     , constructObjectPropertyGError
+    , constructObjectPropertyGValue
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -90,7 +93,6 @@ import Control.Monad ((>=>))
 
 import qualified Data.ByteString.Char8 as B
 import Data.Text (Text)
-import Data.Proxy (Proxy(..))
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions
@@ -341,44 +343,44 @@ getObjectPropertyGType obj propName =
 setObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
                            a -> String -> Maybe b -> IO ()
 setObjectPropertyObject obj propName maybeObject = do
-  gtype <- gobjectType @b
+  gtype <- glibType @b
   maybeWithManagedPtr maybeObject $ \objectPtr ->
       setObjectProperty obj propName objectPtr set_object gtype
 
 constructObjectPropertyObject :: forall a o. GObject a =>
                                  String -> Maybe a -> IO (GValueConstruct o)
 constructObjectPropertyObject propName maybeObject = do
-  gtype <- gobjectType @a
+  gtype <- glibType @a
   maybeWithManagedPtr maybeObject $ \objectPtr ->
       constructObjectProperty propName objectPtr set_object gtype
 
 getObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
                            a -> String -> (ManagedPtr b -> b) -> IO (Maybe b)
 getObjectPropertyObject obj propName constructor = do
-  gtype <- gobjectType @b
+  gtype <- glibType @b
   getObjectProperty obj propName
                         (\val -> (get_object val :: IO (Ptr b))
                             >>= flip convertIfNonNull (newObject constructor))
                       gtype
 
-setObjectPropertyBoxed :: forall a b. (GObject a, BoxedObject b) =>
+setObjectPropertyBoxed :: forall a b. (GObject a, GBoxed b) =>
                           a -> String -> Maybe b -> IO ()
 setObjectPropertyBoxed obj propName maybeBoxed = do
-  gtype <- boxedType (undefined :: b)
+  gtype <- glibType @b
   maybeWithManagedPtr maybeBoxed $ \boxedPtr ->
         setObjectProperty obj propName boxedPtr set_boxed gtype
 
-constructObjectPropertyBoxed :: forall a o. (BoxedObject a) =>
+constructObjectPropertyBoxed :: forall a o. (GBoxed a) =>
                                 String -> Maybe a -> IO (GValueConstruct o)
 constructObjectPropertyBoxed propName maybeBoxed = do
-  gtype <- boxedType (undefined :: a)
+  gtype <- glibType @a
   maybeWithManagedPtr maybeBoxed $ \boxedPtr ->
       constructObjectProperty propName boxedPtr set_boxed gtype
 
-getObjectPropertyBoxed :: forall a b. (GObject a, BoxedObject b) =>
+getObjectPropertyBoxed :: forall a b. (GObject a, GBoxed b) =>
                           a -> String -> (ManagedPtr b -> b) -> IO (Maybe b)
 getObjectPropertyBoxed obj propName constructor = do
-  gtype <- boxedType (undefined :: b)
+  gtype <- glibType @b
   getObjectProperty obj propName (get_boxed >=>
                                   flip convertIfNonNull (newBoxed constructor))
                     gtype
@@ -411,17 +413,17 @@ getObjectPropertyStringArray obj propName =
                        flip convertIfNonNull unpackZeroTerminatedUTF8CArray)
                       gtypeStrv
 
-setObjectPropertyEnum :: (GObject a, Enum b, BoxedEnum b) =>
+setObjectPropertyEnum :: forall a b. (GObject a, Enum b, BoxedEnum b) =>
                          a -> String -> b -> IO ()
 setObjectPropertyEnum obj propName enum = do
-  gtype <- boxedEnumType enum
+  gtype <- glibType @b
   let cEnum = (fromIntegral . fromEnum) enum
   setObjectProperty obj propName cEnum set_enum gtype
 
-constructObjectPropertyEnum :: (Enum a, BoxedEnum a) =>
+constructObjectPropertyEnum :: forall a o. (Enum a, BoxedEnum a) =>
                                String -> a -> IO (GValueConstruct o)
 constructObjectPropertyEnum propName enum = do
-  gtype <- boxedEnumType enum
+  gtype <- glibType @a
   let cEnum = (fromIntegral . fromEnum) enum
   constructObjectProperty propName cEnum set_enum gtype
 
@@ -429,7 +431,7 @@ getObjectPropertyEnum :: forall a b. (GObject a,
                                       Enum b, BoxedEnum b) =>
                          a -> String -> IO b
 getObjectPropertyEnum obj propName = do
-  gtype <- boxedEnumType (undefined :: b)
+  gtype <- glibType @b
   getObjectProperty obj propName
                     (\val -> toEnum . fromIntegral <$> get_enum val)
                     gtype
@@ -438,20 +440,20 @@ setObjectPropertyFlags :: forall a b. (IsGFlag b, BoxedFlags b, GObject a) =>
                           a -> String -> [b] -> IO ()
 setObjectPropertyFlags obj propName flags = do
   let cFlags = gflagsToWord flags
-  gtype <- boxedFlagsType (Proxy :: Proxy b)
+  gtype <- glibType @b
   setObjectProperty obj propName cFlags set_flags gtype
 
 constructObjectPropertyFlags :: forall a o. (IsGFlag a, BoxedFlags a)
                                 => String -> [a] -> IO (GValueConstruct o)
 constructObjectPropertyFlags propName flags = do
   let cFlags = gflagsToWord flags
-  gtype <- boxedFlagsType (Proxy :: Proxy a)
+  gtype <- glibType @a
   constructObjectProperty propName cFlags set_flags gtype
 
 getObjectPropertyFlags :: forall a b. (GObject a, IsGFlag b, BoxedFlags b) =>
                           a -> String -> IO [b]
 getObjectPropertyFlags obj propName = do
-  gtype <- boxedFlagsType (Proxy :: Proxy b)
+  gtype <- glibType @b
   getObjectProperty obj propName
                         (\val -> wordToGFlags <$> get_flags val)
                         gtype
@@ -575,3 +577,18 @@ getObjectPropertyGError :: forall a. GObject a =>
                             a -> String -> IO (Maybe GError)
 getObjectPropertyGError obj propName =
   getObjectPropertyBoxed obj propName GError
+
+-- | Set a property of type `GValue`.
+setObjectPropertyGValue :: forall a. GObject a =>
+                           a -> String -> Maybe GValue -> IO ()
+setObjectPropertyGValue = setObjectPropertyBoxed
+
+-- | Construct a property of type `GValue`.
+constructObjectPropertyGValue :: String -> Maybe GValue -> IO (GValueConstruct o)
+constructObjectPropertyGValue = constructObjectPropertyBoxed
+
+-- | Get the value of a property of type `GValue`.
+getObjectPropertyGValue :: forall a. GObject a =>
+                           a -> String -> IO (Maybe GValue)
+getObjectPropertyGValue obj propName =
+  getObjectPropertyBoxed obj propName GValue

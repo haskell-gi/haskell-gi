@@ -9,7 +9,6 @@ module SimpleExtension where
 import Control.Monad (void, forM)
 import Data.Int (Int64)
 import Data.Maybe (catMaybes)
-import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Word (Word32)
 import Foreign.Ptr (Ptr)

@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds, TypeFamilies #-}
 module Data.GI.Base.GValue
     (
     -- * Constructing GValues
@@ -9,7 +10,16 @@ module Data.GI.Base.GValue
 
     , newGValue
     , buildGValue
+    , disownGValue
     , noGValue
+    , newGValueFromPtr
+    , wrapGValuePtr
+    , unsetGValue
+
+    -- * Packing GValues into arrays
+    , packGValueArray
+    , unpackGValueArrayWithLength
+    , mapGValueArrayWithLength
 
     -- * Setters and getters
     , set_string
@@ -65,13 +75,14 @@ import Data.Text (Text, pack, unpack)
 import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..),
                         CLong(..), CULong(..))
 import Foreign.C.String (CString)
-import Foreign.Ptr (Ptr, nullPtr)
+import Foreign.Ptr (Ptr, nullPtr, plusPtr)
 import Foreign.StablePtr (StablePtr, castStablePtrToPtr, castPtrToStablePtr)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions (cstringToText, textToCString)
 import Data.GI.Base.GType
 import Data.GI.Base.ManagedPtr
+import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.GI.Base.Utils (callocBytes, freeMem)
 
 -- | Haskell-side representation of a @GValue@.
@@ -82,10 +93,19 @@ noGValue :: Maybe GValue
 noGValue = Nothing
 
 foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::
-    IO CGType
+    IO GType
 
-instance BoxedObject GValue where
-    boxedType _ = GType <$> c_g_value_get_type
+-- | There are no types in the bindings that a `GValue` can be safely
+-- cast to.
+type instance ParentTypes GValue = '[]
+instance HasParentTypes GValue
+
+-- | Find the associated `GType` for `GValue`.
+instance TypedObject GValue where
+  glibType = c_g_value_get_type
+
+-- | `GValue`s are registered as boxed in the GLib type system.
+instance GBoxed GValue
 
 foreign import ccall "g_value_init" g_value_init ::
     Ptr GValue -> CGType -> IO (Ptr GValue)
@@ -103,6 +123,15 @@ newGValue (GType gtype) = do
   gv <- wrapBoxed GValue gvptr
   return $! gv
 
+-- | Take ownership of a passed in 'Ptr'.
+wrapGValuePtr :: Ptr GValue -> IO GValue
+wrapGValuePtr ptr = wrapBoxed GValue ptr
+
+-- | Construct a Haskell wrapper for the given 'GValue', making a
+-- copy.
+newGValueFromPtr :: Ptr GValue -> IO GValue
+newGValueFromPtr ptr = newBoxed GValue ptr
+
 -- | A convenience function for building a new GValue and setting the
 -- initial value.
 buildGValue :: GType -> (GValue -> a -> IO ()) -> a -> IO GValue
@@ -110,6 +139,17 @@ buildGValue gtype setter val = do
   gv <- newGValue gtype
   setter gv val
   return gv
+
+-- | Disown a `GValue`, i.e. do not unref the underlying object when
+-- the Haskell object is garbage collected.
+disownGValue :: GValue -> IO (Ptr GValue)
+disownGValue = disownManagedPtr
+
+foreign import ccall "g_value_unset" g_value_unset :: Ptr GValue -> IO ()
+
+-- | Unset the `GValue`, freeing all resources associated to it.
+unsetGValue :: Ptr GValue -> IO ()
+unsetGValue = g_value_unset
 
 -- | A convenience class for marshaling back and forth between Haskell
 -- values and `GValue`s.
@@ -404,3 +444,48 @@ take_stablePtr = g_value_take_boxed
 -- | Get the value of a `GValue` containing a `StablePtr`
 get_stablePtr :: GValue -> IO (StablePtr a)
 get_stablePtr gv = castPtrToStablePtr <$> withManagedPtr gv _get_boxed
+
+foreign import ccall g_value_copy :: Ptr GValue -> Ptr GValue -> IO ()
+foreign import ccall "_haskell_gi_g_value_get_type" g_value_get_type :: Ptr GValue -> IO CGType
+
+-- | Pack the given list of GValues contiguously into a C array
+packGValueArray :: [GValue] -> IO (Ptr GValue)
+packGValueArray gvalues = withManagedPtrList gvalues $ \ptrs -> do
+  let nitems = length ptrs
+  mem <- callocBytes $ #{size GValue} * nitems
+  fill mem ptrs
+  return mem
+  where fill :: Ptr GValue -> [Ptr GValue] -> IO ()
+        fill _ [] = return ()
+        fill ptr (x:xs) = do
+          gtype <- g_value_get_type x
+          _ <- g_value_init ptr gtype
+          g_value_copy x ptr
+          fill (ptr `plusPtr` #{size GValue}) xs
+
+-- | Unpack an array of contiguous GValues into a list of GValues.
+unpackGValueArrayWithLength :: Integral a =>
+                               a -> Ptr GValue -> IO [GValue]
+unpackGValueArrayWithLength nitems gvalues = go (fromIntegral nitems) gvalues
+  where go :: Int -> Ptr GValue -> IO [GValue]
+        go 0 _ = return []
+        go n ptr = do
+          gv <- callocBytes #{size GValue}
+          gtype <- g_value_get_type ptr
+          _ <- g_value_init gv gtype
+          g_value_copy ptr gv
+          wrapped <- wrapGValuePtr gv
+          (wrapped :) <$> go (n-1) (ptr `plusPtr` #{size GValue})
+
+-- | Map over the `GValue`s inside a C array.
+mapGValueArrayWithLength :: Integral a =>
+                            a -> (Ptr GValue -> IO c) -> Ptr GValue -> IO ()
+mapGValueArrayWithLength nvalues f arrayPtr
+  | (arrayPtr == nullPtr) = return ()
+  | (nvalues <= 0) = return ()
+  | otherwise = go (fromIntegral nvalues) arrayPtr
+  where go :: Int -> Ptr GValue -> IO ()
+        go 0 _ = return ()
+        go n ptr = do
+          _ <- f ptr
+          go (n-1) (ptr `plusPtr` #{size GValue})

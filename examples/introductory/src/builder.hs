@@ -2,7 +2,6 @@
 
 {- Packing buttons with GtkBuilder example of GTK+ documentation. For information please refer to README -}
 
-import Data.Monoid ((<>))
 import qualified Data.Text.IO as T
 import Data.Text (Text, pack)
 import System.Environment (getArgs)

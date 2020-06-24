@@ -558,7 +558,7 @@ unpackBlockArrayWithLength size n ptr = go size (fromIntegral n) ptr
             buf <- g_memdup ptr (fromIntegral size)
             (buf :) <$> go size (n-1) (ptr `plusPtr` size)
 
-unpackBoxedArrayWithLength :: forall a b. (Integral a, BoxedObject b) =>
+unpackBoxedArrayWithLength :: forall a b. (Integral a, GBoxed b) =>
                               Int -> a -> Ptr b -> IO [Ptr b]
 unpackBoxedArrayWithLength size n ptr = go size (fromIntegral n) ptr
     where go       :: Int -> Int -> Ptr b -> IO [Ptr b]

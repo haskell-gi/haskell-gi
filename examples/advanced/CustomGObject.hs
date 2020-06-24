@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
 import Control.Monad (forM_, void)
-import Data.Monoid ((<>))
 import qualified Data.Text as T
 
 import Data.GI.Base
