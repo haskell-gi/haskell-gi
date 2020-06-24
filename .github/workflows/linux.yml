@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.4', '8.6', '8.8', '8.10']
+        ghc: ['8.8', '8.10']
 
     steps:
     - uses: actions/checkout@v1
@@ -87,7 +87,7 @@ jobs:
         popd
 
     - name: Build
-      run: cabal build all --allow-newer=cairo:Cabal
+      run: cabal build all
 
     - name: Run tests
-      run: cabal test --allow-newer=cairo:Cabal
+      run: cabal test
