@@ -331,8 +331,8 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
                line $ "return " <> result'
 
 genCallback :: Name -> Callback -> CodeGen ()
-genCallback n (Callback {cbCallable = cb, cbDocumentation = cbDoc }) = do
-  let name' = upperName n
+genCallback n callback@(Callback {cbCallable = cb, cbDocumentation = cbDoc }) = do
+  let Name _ name' = normalizedAPIName (APICallback callback) n
       cb' = fixupCallerAllocates cb
 
   line $ "-- callback " <> name'

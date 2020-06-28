@@ -26,6 +26,7 @@ module Data.GI.CodeGen.SymbolNaming
     , submoduleLocation
     , qualifiedAPI
     , qualifiedSymbol
+    , normalizedAPIName
     ) where
 
 #if !MIN_VERSION_base(4,11,0)
@@ -145,12 +146,25 @@ submoduleLocation n (APIObject _) = "Objects" /. upperName n
 submoduleLocation n (APIStruct _) = "Structs" /. upperName n
 submoduleLocation n (APIUnion _) = "Unions" /. upperName n
 
+-- | Construct the Haskell version of the name associated to the given
+-- API.
+normalizedAPIName :: API -> Name -> Name
+normalizedAPIName (APIConst _) (Name ns name) = Name ns (ucFirst name)
+normalizedAPIName (APIFunction _) n = n
+normalizedAPIName (APICallback _) n@(Name ns _) = Name ns (upperName n)
+normalizedAPIName (APIEnum _) n@(Name ns _) = Name ns (upperName n)
+normalizedAPIName (APIFlags _) n@(Name ns _) = Name ns (upperName n)
+normalizedAPIName (APIInterface _) n@(Name ns _) = Name ns (upperName n)
+normalizedAPIName (APIObject _) n@(Name ns _) = Name ns (upperName n)
+normalizedAPIName (APIStruct _) n@(Name ns _) = Name ns (upperName n)
+normalizedAPIName (APIUnion _) n@(Name ns _) = Name ns (upperName n)
+
 -- | Return an identifier for the given interface type valid in the current
 -- module.
-qualifiedAPI :: Name -> CodeGen Text
-qualifiedAPI n@(Name ns _) = do
-  api <- getAPI (TInterface n)
-  qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) n
+qualifiedAPI :: API -> Name -> CodeGen Text
+qualifiedAPI api n@(Name ns _) =
+  let normalized = normalizedAPIName api n
+  in qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) normalized
 
 -- | Construct an identifier for the given symbol in the given API.
 qualifiedSymbol :: Text -> Name -> CodeGen Text

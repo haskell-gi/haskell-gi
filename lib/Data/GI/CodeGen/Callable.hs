@@ -311,15 +311,16 @@ prepareInArg arg = do
 
 -- | Callbacks are a fairly special case, we treat them separately.
 prepareInCallback :: Arg -> Callback -> ExposeClosures -> CodeGen Text
-prepareInCallback arg (Callback {cbCallable = cb}) expose = do
+prepareInCallback arg callback@(Callback {cbCallable = cb}) expose = do
   let name = escapedArgName arg
       ptrName = "ptr" <> name
       scope = argScope arg
 
   (maker, wrapper, drop) <-
       case argType arg of
-        TInterface tn@(Name _ n) ->
+        TInterface tn ->
             do
+              let Name _ n = normalizedAPIName (APICallback callback) tn
               drop <- if callableHasClosures cb && expose == WithoutClosures
                       then Just <$> qualifiedSymbol (callbackDropClosures n) tn
                       else return Nothing
@@ -539,21 +540,26 @@ prepareClosures callable nameMap = do
                   Nothing -> badIntroError $ "Cannot find closure name!! "
                                            <> T.pack (ppShow callable) <> "\n"
                                            <> T.pack (ppShow nameMap)
-          case argScope cb of
-            ScopeTypeInvalid -> badIntroError $ "Invalid scope! "
+          -- Check that the given closure is an actual callback type.
+          maybeAPI <- findAPI (argType cb)
+          case maybeAPI of
+            Just (APICallback _) -> do
+              case argScope cb of
+                ScopeTypeInvalid -> badIntroError $ "Invalid scope! "
                                               <> T.pack (ppShow callable)
-            ScopeTypeNotified -> do
-                line $ "let " <> closureName <> " = castFunPtrToPtr " <> n'
-                case argDestroy cb of
-                  (-1) -> badIntroError $
-                          "ScopeTypeNotified without destructor! "
-                           <> T.pack (ppShow callable)
-                  k -> let destroyName =
-                            escapedArgName $ (args callable)!!k in
-                       line $ "let " <> destroyName <> " = safeFreeFunPtrPtr"
-            ScopeTypeAsync ->
-                line $ "let " <> closureName <> " = nullPtr"
-            ScopeTypeCall -> line $ "let " <> closureName <> " = nullPtr"
+                ScopeTypeNotified -> do
+                  line $ "let " <> closureName <> " = castFunPtrToPtr " <> n'
+                  case argDestroy cb of
+                    (-1) -> badIntroError $
+                            "ScopeTypeNotified without destructor! "
+                            <> T.pack (ppShow callable)
+                    k -> let destroyName =
+                               escapedArgName $ (args callable)!!k in
+                           line $ "let " <> destroyName <> " = safeFreeFunPtrPtr"
+                ScopeTypeAsync ->
+                  line $ "let " <> closureName <> " = nullPtr"
+                ScopeTypeCall -> line $ "let " <> closureName <> " = nullPtr"
+            _ -> badIntroError $ "Closure \"" <> n <> "\" is not a callback."
 
 freeCallCallbacks :: Callable -> Map.Map Text Text -> ExcCodeGen ()
 freeCallCallbacks callable nameMap =

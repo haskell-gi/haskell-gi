@@ -824,7 +824,8 @@ haskellType (TGClosure (Just inner@(TInterface n))) = do
   innerAPI <- getAPI inner
   case innerAPI of
     APICallback _ -> do
-      tname <- qualifiedSymbol (callbackCType $ name n) n
+      let n' = normalizedAPIName innerAPI n
+      tname <- qualifiedSymbol (callbackCType $ name n') n
       return $ "GClosure" `con` [con0 tname]
     -- The given inner type does not make sense, so we treat it as an
     -- untyped closure.
@@ -835,7 +836,7 @@ haskellType (TGClosure _) = do
 haskellType TGValue = return $ "GValue" `con` []
 haskellType t@(TInterface n) = do
   api <- getAPI t
-  tname <- qualifiedAPI n
+  tname <- qualifiedAPI api n
   return $ case api of
              (APIFlags _) -> "[]" `con` [tname `con` []]
              _ -> tname `con` []
@@ -872,8 +873,8 @@ isoHaskellType (TGClosure Nothing) =
 isoHaskellType t@(TInterface n) = do
   api <- findAPI t
   case api of
-    Just (APICallback cb) -> do
-        tname <- qualifiedAPI n
+    Just apiCB@(APICallback cb) -> do
+        tname <- qualifiedAPI apiCB n
         if callableHasClosures (cbCallable cb)
         then return ((callbackHTypeWithClosures tname) `con` [])
         else return (tname `con` [])
@@ -937,10 +938,11 @@ foreignType t@(TInterface n) = do
     APIEnum e -> return $ (ctypeForEnum e) `con` []
     APIFlags (Flags e) -> return $ (ctypeForEnum e) `con` []
     APICallback _ -> do
-      tname <- qualifiedSymbol (callbackCType $ name n) n
+      let n' = normalizedAPIName api n
+      tname <- qualifiedSymbol (callbackCType $ name n') n
       return (funptr $ tname `con` [])
     _ -> do
-      tname <- qualifiedAPI n
+      tname <- qualifiedAPI api n
       return (ptr $ tname `con` [])
 
 -- | Whether the give type corresponds to an enum or flag.

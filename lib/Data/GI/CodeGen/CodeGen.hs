@@ -38,7 +38,8 @@ import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
                   genBoxed, genWrappedPtr)
 import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint,
-                                     submoduleLocation, lowerName, qualifiedAPI)
+                                     submoduleLocation, lowerName, qualifiedAPI,
+                                     normalizedAPIName)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -72,7 +73,7 @@ genNewtype name' = do
 -- | Generate wrapper for structures.
 genStruct :: Name -> Struct -> CodeGen ()
 genStruct n s = unless (ignoreStruct n s) $ do
-   let name' = upperName n
+   let Name _ name' = normalizedAPIName (APIStruct s) n
 
    writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
    genNewtype name'
@@ -110,7 +111,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
 -- | Generated wrapper for unions.
 genUnion :: Name -> Union -> CodeGen ()
 genUnion n u = do
-  let name' = upperName n
+  let Name _ name' = normalizedAPIName (APIUnion u) n
 
   writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
   genNewtype name'
@@ -283,7 +284,8 @@ genCasts n cn_ parents = do
 
     blank
 
-    qualifiedParents <- mapM qualifiedAPI parents
+    parentAPIs <- mapM (\n -> getAPI (TInterface n)) parents
+    qualifiedParents <- mapM (uncurry qualifiedAPI) (zip parentAPIs parents)
     bline $ "instance O.HasParentTypes " <> name'
     line $ "type instance O.ParentTypes " <> name' <> " = '["
       <> T.intercalate ", " qualifiedParents <> "]"
@@ -310,7 +312,7 @@ genCasts n cn_ parents = do
 -- of objects, we deal with these separately.
 genObject :: Name -> Object -> CodeGen ()
 genObject n o = do
-  let name' = upperName n
+  let Name _ name' = normalizedAPIName (APIObject o) n
   let t = TInterface n
   isGO <- isGObject t
 
@@ -360,7 +362,7 @@ genObject n o = do
 
 genInterface :: Name -> Interface -> CodeGen ()
 genInterface n iface = do
-  let name' = upperName n
+  let Name _ name' = normalizedAPIName (APIInterface iface) n
 
   line $ "-- interface " <> name' <> " "
   writeHaddock DocBeforeSymbol ("Memory-managed wrapper type.")
