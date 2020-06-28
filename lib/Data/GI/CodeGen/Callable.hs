@@ -529,9 +529,9 @@ prepareClosures callable nameMap = do
   forM_ closures $ \closure ->
       case Map.lookup closure m of
         Nothing -> badIntroError $ "Closure not found! "
-                                <> T.pack (ppShow callable)
-                                <> "\n" <> T.pack (ppShow m)
-                                <> "\n" <> tshow closure
+                                <> "\nClosure: " <> tshow closure
+                                <> "\nc2cm: " <> T.pack (ppShow m)
+                                <> "\ncallable: " <> T.pack (ppShow callable)
         Just cb -> do
           let closureName = escapedArgName $ (args callable)!!closure
               n = escapedArgName cb
@@ -556,8 +556,15 @@ prepareClosures callable nameMap = do
                     k -> let destroyName =
                                escapedArgName $ (args callable)!!k in
                            line $ "let " <> destroyName <> " = safeFreeFunPtrPtr"
-                ScopeTypeAsync ->
+                ScopeTypeAsync -> do
                   line $ "let " <> closureName <> " = nullPtr"
+                  case argDestroy cb of
+                    -- Async callbacks don't really need destroy
+                    -- notifications, as they can always be released
+                    -- at the end of the callback.
+                    (-1) -> return ()
+                    n -> let destroyName = escapedArgName $ (args callable)!!n
+                         in line $ "let " <> destroyName <> " = FP.nullFunPtr"
                 ScopeTypeCall -> line $ "let " <> closureName <> " = nullPtr"
             _ -> badIntroError $ "Closure \"" <> n <> "\" is not a callback."
 
