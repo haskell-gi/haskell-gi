@@ -45,7 +45,6 @@ import Foreign.C.Types
 import Data.Maybe
 import Data.GI.Base.Properties
 import qualified Data.GI.Base.Overloading as O
-import qualified GI.Gdk
 import qualified GI.Gtk
 import GI.Gst
 import GI.GstVideo
