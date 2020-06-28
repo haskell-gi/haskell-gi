@@ -28,6 +28,7 @@ library
                        Data.GI.Base.BasicTypes,
                        Data.GI.Base.CallStack,
                        Data.GI.Base.Constructible,
+                       Data.GI.Base.GArray,
                        Data.GI.Base.GError,
                        Data.GI.Base.GClosure,
                        Data.GI.Base.GHashTable,

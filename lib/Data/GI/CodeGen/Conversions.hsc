@@ -964,6 +964,14 @@ typeAllocInfo :: Type -> CodeGen (Maybe TypeAllocInfo)
 typeAllocInfo TGValue =
   let n = #{size GValue}
   in return $ Just $ TypeAlloc ("SP.callocBytes " <> tshow n) n
+typeAllocInfo (TGArray t) = do
+  api <- findAPI t
+  case api of
+    Just (APIStruct s) -> case structSize s of
+                            0 -> return Nothing
+                            n -> let allocator = "B.GArray.allocGArray " <> tshow n
+                                 in return $ Just $ TypeAlloc allocator n
+    _ -> return Nothing
 typeAllocInfo t = do
   api <- findAPI t
   case api of

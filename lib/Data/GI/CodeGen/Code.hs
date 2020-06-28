@@ -926,6 +926,7 @@ moduleImports = T.unlines [
                 , "import qualified Data.GI.Base.Attributes as GI.Attributes"
                 , "import qualified Data.GI.Base.BasicTypes as B.Types"
                 , "import qualified Data.GI.Base.ManagedPtr as B.ManagedPtr"
+                , "import qualified Data.GI.Base.GArray as B.GArray"
                 , "import qualified Data.GI.Base.GClosure as B.GClosure"
                 , "import qualified Data.GI.Base.GError as B.GError"
                 , "import qualified Data.GI.Base.GVariant as B.GVariant"
