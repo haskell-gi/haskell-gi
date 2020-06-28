@@ -163,6 +163,8 @@ parseOneLine (T.stripPrefix "namespace-version " -> Just s) =
     withFlags $ parseNsVersion s
 parseOneLine (T.stripPrefix "set-attr " -> Just s) =
     withFlags $ parseSetAttr s
+parseOneLine (T.stripPrefix "delete-attr " -> Just s) =
+    withFlags $ parseDeleteAttr s
 parseOneLine (T.stripPrefix "add-node " -> Just s) =
     withFlags $ parseAdd s
 parseOneLine (T.stripPrefix "delete-node " -> Just s) =
@@ -260,6 +262,17 @@ parseSetAttr t =
     throwError ("set-attr syntax is of the form\n" <>
                "\t\"set-attr nodePath attrName newValue\"\n" <>
                "Got \"set-attr " <> t <> "\" instead.")
+
+-- | Delete the given attribute
+parseDeleteAttr :: Text -> Parser ()
+parseDeleteAttr (T.words -> [path, attr]) = do
+  pathSpec <- parsePathSpec path
+  parsedAttr <- parseXMLName attr
+  tell $ defaultOverrides {girFixups = [GIRDeleteAttr pathSpec parsedAttr]}
+parseDeleteAttr t =
+    throwError ("delete-attr syntax is of the form\n" <>
+               "\t\"delete-attr nodePath attrName\"\n" <>
+               "Got \"delete-attr " <> t <> "\" instead.")
 
 -- | Add the given child node to all nodes matching the path.
 parseAdd :: Text -> Parser ()

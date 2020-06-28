@@ -154,6 +154,8 @@ data GIRNameTag = GIRPlainName Text
 -- | A rule for modifying the GIR file.
 data GIRRule = GIRSetAttr (GIRPath, XML.Name) Text -- ^ (Path to element,
                                                    -- attrName), newValue.
+             | GIRDeleteAttr GIRPath XML.Name
+             -- ^ Delete the given attribute
              | GIRAddNode GIRPath XML.Name -- ^ Add a child node at
                                            -- the given selector.
              | GIRDeleteNode GIRPath -- ^ Delete any nodes matching
@@ -544,6 +546,8 @@ overrideGIR rules elem =
     where applyGIRRule :: XML.Node -> GIRRule -> Maybe XML.Node
           applyGIRRule n (GIRSetAttr (path, attr) newVal) =
             Just $ girSetAttr (path, attr) newVal n
+          applyGIRRule n (GIRDeleteAttr path attr) =
+            Just $ girDeleteAttr path attr n
           applyGIRRule n (GIRAddNode path new) =
             Just $ girAddNode path new n
           applyGIRRule n (GIRDeleteNode path) =
@@ -565,6 +569,23 @@ girSetAttr (spec:rest, attr) newVal n@(XML.NodeElement elem) =
                                        (XML.elementNodes elem)})
     else n
 girSetAttr _ _ n = n
+
+-- | Delete an attribute for the child element specified by the given
+-- path, if the attribute exists.
+girDeleteAttr :: GIRPath -> XML.Name -> XML.Node -> XML.Node
+girDeleteAttr (spec:rest) attr n@(XML.NodeElement elem) =
+    if specMatch spec n
+    then case rest of
+           -- Matched the full path, apply
+           [] -> XML.NodeElement (elem {XML.elementAttributes =
+                                        M.delete attr
+                                        (XML.elementAttributes elem)})
+           -- Still some selectors to apply
+           _ -> XML.NodeElement (elem {XML.elementNodes =
+                                       map (girDeleteAttr rest attr)
+                                       (XML.elementNodes elem)})
+    else n
+girDeleteAttr _ _ n = n
 
 -- | Add the given subnode to any nodes matching the given path
 girAddNode :: GIRPath -> XML.Name -> XML.Node -> XML.Node
