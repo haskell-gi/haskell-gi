@@ -8,6 +8,7 @@ packages: base/haskell-gi-base.cabal
           bindings/Atk/gi-atk.cabal
           bindings/Gio/gi-gio.cabal
           bindings/cairo/gi-cairo.cabal
+          bindings/HarfBuzz/gi-harfbuzz.cabal
           bindings/Pango/gi-pango.cabal
           bindings/PangoCairo/gi-pangocairo.cabal
           bindings/GdkPixbuf/gi-gdkpixbuf.cabal
@@ -15,4 +16,5 @@ packages: base/haskell-gi-base.cabal
           bindings/Gdk-4.0/gi-gdk.cabal
           bindings/GdkX11-4.0/gi-gdkx11.cabal
           bindings/Gsk/gi-gsk.cabal
+          bindings/xlib/gi-xlib.cabal
           bindings/Gtk-4.0/gi-gtk.cabal

@@ -1,0 +1,5 @@
+namespace HarfBuzz
+
+# Wrong annotations
+set-attr HarfBuzz/font_set_funcs/@parameters/klass closure -1
+set-attr HarfBuzz/font_set_funcs/@parameters/klass destroy -1
