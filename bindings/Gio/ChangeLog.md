@@ -1,3 +1,7 @@
+### 2.0.27
+
++ Upgrade to haskell-gi-base-0.24
+
 ### 2.0.26
 
 + Mark the return value of [appInfoGetIcon](https://hackage.haskell.org/package/gi-gio/docs/GI-Gio-Interfaces-AppInfo.html#v:appInfoGetIcon) as nullable.

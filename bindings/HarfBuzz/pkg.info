@@ -9,7 +9,7 @@
     "baseVersion": "base >= 4.7 && <5",
     "distributionPackages": {
         "ubuntu": [
-            "gir1.2-harfbuzz-0.0"
+            "libharfbuzz-dev"
         ],
         "fedora": [
             "harfbuzz-devel"

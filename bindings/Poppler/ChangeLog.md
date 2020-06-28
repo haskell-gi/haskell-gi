@@ -1,3 +1,7 @@
+### 0.18.23
+
++ Upgrade to haskell-gi-base-0.24
+
 ### 0.18.22
 
 + Mark the freeing functions in GI.Poppler.Objects.Page as taking ownership of the argument, to avoid crashes.

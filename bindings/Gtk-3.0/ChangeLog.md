@@ -1,3 +1,7 @@
+### 3.0.34
+
++ Upgrade to haskell-gi-base-0.24
+
 ### 3.0.33
 
 + Mark the return argument of [comboBoxTextGetActiveText](https://hackage.haskell.org/package/gi-gtk-3.0.33/docs/GI-Gtk-Objects-ComboBoxText.html#v:comboBoxTextGetActiveText) as nullable. See [issue 264](https://github.com/haskell-gi/haskell-gi/issues/264).
