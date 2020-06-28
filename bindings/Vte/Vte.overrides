@@ -20,3 +20,20 @@ set-attr Vte/Terminal/match_check_event/@return-value nullable 1
 
 # The return value is nullable, but it is not properly annotated as such
 set-attr Vte/Terminal/hyperlink_check_event/@return-value nullable 1
+
+# The introspection data for vte_terminal_spawn_async and
+# vte_pty_spawn_async is wrong
+
+set-attr Vte/Terminal/spawn_async/@parameters/child_setup scope async
+delete-attr Vte/Terminal/spawn_async/@parameters/child_setup_data scope
+delete-attr Vte/Terminal/spawn_async/@parameters/child_setup_data closure
+delete-attr Vte/Terminal/spawn_async/@parameters/child_setup_data_destroy scope
+delete-attr Vte/Terminal/spawn_async/@parameters/child_setup_data_destroy destroy
+delete-attr Vte/Terminal/spawn_async/@parameters/user_data closure
+
+set-attr Vte/Pty/spawn_async/@parameters/child_setup scope async
+delete-attr Vte/Pty/spawn_async/@parameters/child_setup_data scope
+delete-attr Vte/Pty/spawn_async/@parameters/child_setup_data closure
+delete-attr Vte/Pty/spawn_async/@parameters/child_setup_data_destroy scope
+delete-attr Vte/Pty/spawn_async/@parameters/child_setup_data_destroy destroy
+delete-attr Vte/Pty/spawn_async/@parameters/user_data closure

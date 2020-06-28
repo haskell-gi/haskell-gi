@@ -1,3 +1,7 @@
+### 2.91.27
+
++ Add overrides so code generation works for [vte_terminal_spawn_async](https://hackage.haskell.org/package/gi-vte-2.91.27/docs/GI-Vte-Objects-Terminal.html#g:method:spawnAsync) and [vte_pty_spawn_async](https://hackage.haskell.org/package/gi-vte-2.91.27/docs/GI-Vte-Objects-Pty.html#g:method:spawnAsync), see [issue 297](https://github.com/haskell-gi/haskell-gi/issues/297).
+
 ### 2.91.26
 
 + Upgrade to haskell-gi-base-0.24
