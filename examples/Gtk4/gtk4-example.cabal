@@ -7,7 +7,6 @@ author:         Iñaki García Etxebarria
 maintainer:     Iñaki García Etxebarria
 copyright:      2020 Iñaki García Etxebarria
 license:        LGPL-2.1-or-later
-license-file:   LICENSE
 build-type:     Simple
 
 executable gtk4-example
