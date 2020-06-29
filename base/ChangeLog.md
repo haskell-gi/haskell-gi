@@ -1,3 +1,11 @@
+### 0.24.1
+
++ Support for allocating `GArray`s.
+
+### 0.24.0
+
++ Support for non-GObject objects. As part of this work the GObject hierarchy has been slightly reworked. The main change is that 'gobjectType' has now become [glibType](https://hackage.haskell.org/package/haskell-gi-base-0.24.0/docs/Data-GI-Base-BasicTypes.html#v:glibType) (part of the [TypedObject](https://hackage.haskell.org/package/haskell-gi-base-0.24.0/docs/Data-GI-Base-BasicTypes.html#t:TypedObject) typeclass).
+
 ### 0.22.2
 
 + Reinstate the new' method.
