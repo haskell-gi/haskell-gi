@@ -1,3 +1,17 @@
+### 0.24.2
+
++ Support for allocating GArrays of known size structs in caller-allocates arguments.
+
+### 0.24.1
+
++ Add support for delete-attr override, to remove attributes.
+
++ Allow (but ignore) destroyers in scope async callbacks.
+
+### 0.24.0
+
++ Added support for non-GObject objects
+
 ### 0.23.2
 
 + Fix a possible segfault in functions that return an out pointer to a dynamically allocated array, but do not initialize the array if it has zero size. See [#289](https://github.com/haskell-gi/haskell-gi/issues/289) for an example.
