@@ -1,3 +1,7 @@
+### 3.0.35
+
++ Avoid a crash in [radioButtonNew](https://hackage.haskell.org/package/gi-gtk-3.0.35/docs/GI-Gtk-Objects-RadioButton.html#g:method:new), [radioMenuItemNew](https://hackage.haskell.org/package/gi-gtk-3.0.35/docs/GI-Gtk-Objects-RadioMenuItem.html#g:method:new) and [radioToolButtonNew](https://hackage.haskell.org/package/gi-gtk-3.0.35/docs/GI-Gtk-Objects-RadioToolButton.html#g:method:new) (and variants) due to wrong introspection data.
+
 ### 3.0.34
 
 + Upgrade to haskell-gi-base-0.24

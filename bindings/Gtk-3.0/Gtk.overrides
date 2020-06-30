@@ -18,6 +18,18 @@ ignore WidgetPath.iter_add_qclass
 # https://github.com/haskell-gi/haskell-gi/issues/104
 set-attr Gtk/Builder/add_callback_symbol/@parameters/callback_symbol scope notified
 
+# The group parameter here is stolen, leading to crashes if we try to free it ourselves.
+set-attr Gtk/RadioButton/new/@parameters/group transfer-ownership container
+set-attr Gtk/RadioButton/new_with_label/@parameters/group transfer-ownership container
+set-attr Gtk/RadioButton/new_with_mnemonic/@parameters/group transfer-ownership container
+set-attr Gtk/RadioButton/set_group/@parameters/group transfer-ownership container
+set-attr Gtk/RadioMenuItem/new/@parameters/group transfer-ownership container
+set-attr Gtk/RadioMenuItem/new_with_label/@parameters/group transfer-ownership container
+set-attr Gtk/RadioMenuItem/new_with_mnemonic/@parameters/group transfer-ownership container
+set-attr Gtk/RadioMenuItem/set_group/@parameters/group transfer-ownership container
+set-attr Gtk/RadioToolButton/new/@parameters/group transfer-ownership container
+set-attr Gtk/RadioMenuItem/new_from_stock/@parameters/group transfer-ownership container
+
 # It is useful to expose these class structs when deriving new types
 set-attr Gtk/WidgetClass haskell-gi-force-visible 1
 set-attr Gtk/ContainerClass haskell-gi-force-visible 1
