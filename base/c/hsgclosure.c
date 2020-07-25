@@ -366,3 +366,39 @@ haskell_gi_g_closure_is_floating (GClosure *closure)
 {
   return !!(closure->floating);
 }
+
+/* GParamSpec* types are registered as GObjects, but they do not have
+   an exported type_init function. They only export CPP macros, so
+   we have to provide our own. */
+#define PARAM_TYPE(CamelCase, UPPERCASE) \
+  GType haskell_gi_pspec_type_init_##CamelCase (void) { \
+    return G_TYPE_##UPPERCASE;                          \
+  }
+
+PARAM_TYPE(ParamSpec, PARAM);
+PARAM_TYPE(ParamSpecBoolean, PARAM_BOOLEAN);
+PARAM_TYPE(ParamSpecBoxed, PARAM_BOXED);
+PARAM_TYPE(ParamSpecChar, PARAM_CHAR);
+PARAM_TYPE(ParamSpecDouble, PARAM_DOUBLE);
+PARAM_TYPE(ParamSpecEnum, PARAM_ENUM);
+PARAM_TYPE(ParamSpecFlags, PARAM_FLAGS);
+PARAM_TYPE(ParamSpecFloat, PARAM_FLOAT);
+PARAM_TYPE(ParamSpecGType, PARAM_GTYPE);
+PARAM_TYPE(ParamSpecInt, PARAM_INT);
+PARAM_TYPE(ParamSpecInt64, PARAM_INT64);
+PARAM_TYPE(ParamSpecLong, PARAM_LONG);
+PARAM_TYPE(ParamSpecObject, PARAM_OBJECT);
+PARAM_TYPE(ParamSpecOverride, PARAM_OVERRIDE);
+PARAM_TYPE(ParamSpecParam, PARAM_PARAM);
+PARAM_TYPE(ParamSpecPointer, PARAM_POINTER);
+PARAM_TYPE(ParamSpecString, PARAM_STRING);
+PARAM_TYPE(ParamSpecUChar, PARAM_UCHAR);
+PARAM_TYPE(ParamSpecUInt, PARAM_UINT);
+PARAM_TYPE(ParamSpecUInt64, PARAM_UINT64);
+PARAM_TYPE(ParamSpecULong, PARAM_ULONG);
+PARAM_TYPE(ParamSpecUnichar, PARAM_UNICHAR);
+PARAM_TYPE(ParamSpecVariant, PARAM_VARIANT);
+/* The following is deprecated, ignore the warning that GLib raises. */
+#undef GLIB_DEPRECATED_MACRO
+#define GLIB_DEPRECATED_MACRO
+PARAM_TYPE(ParamSpecValueArray, PARAM_VALUE_ARRAY);

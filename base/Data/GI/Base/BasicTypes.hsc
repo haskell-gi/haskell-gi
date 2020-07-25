@@ -117,7 +117,7 @@ class BoxedPtr a => CallocPtr a where
 
 -- | A wrapped object that has an associated GLib type. This does not
 -- necessarily descend from `GObject`, that constraint is implemented
--- by the `GObject` type below.
+-- by `GObject` below.
 class HasParentTypes a => TypedObject a where
   -- | The `GType` for this object.
   glibType :: IO GType
