@@ -22,6 +22,9 @@ set-attr GObject/InitiallyUnownedClass haskell-gi-force-visible 1
 set-attr GObject/TypeClass haskell-gi-force-visible 1
 set-attr GObject/ObjectClass haskell-gi-force-visible 1
 
+# There is a typo in the introspection data
+set-attr GObject/ParamSpec glib:unref-func g_param_spec_unref
+
 # Generated from gobject 2.48.0 with xsltproc Nullable.xslt GObject-2.0.gir
 set-attr GObject/BindingTransformFunc/@parameters/user_data nullable 1
 set-attr GObject/CClosure/marshal_BOOLEAN__BOXED_BOXED/@parameters/invocation_hint nullable 1
