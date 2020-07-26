@@ -1,3 +1,7 @@
+### 2.0.24
+
++ Fix a typo in GParamSpec's unref function.
+
 ### 2.0.23
 
 + Upgrade to haskell-gi-base-0.24
