@@ -1,3 +1,7 @@
+### 0.24.3
+
++ Provide type init functions for GParamSpec types. This solves a puzzling linker error saying that the "intern" symbol could not be resolved, see [issue 297](https://github.com/haskell-gi/haskell-gi/issues/297) and [issue 298](https://github.com/haskell-gi/haskell-gi/issues/298).
+
 ### 0.24.2
 
 + Support for allocating GArrays of known size structs in caller-allocates arguments.
