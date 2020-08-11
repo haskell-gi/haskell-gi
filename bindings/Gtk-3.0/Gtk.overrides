@@ -13,6 +13,9 @@ ignore Overlay.get-child-position
 # upstream issue: https://bugzilla.gnome.org/show_bug.cgi?id=761339
 ignore WidgetPath.iter_add_qclass
 
+# The pixbuf parameter can be null if the request failed.
+set-attr Gtk/ClipboardImageReceivedFunc/@parameters/pixbuf nullable 1
+
 # Wrong introspection annotation, leading to crashes. See
 # https://bugzilla.gnome.org/show_bug.cgi?id=783381
 # https://github.com/haskell-gi/haskell-gi/issues/104

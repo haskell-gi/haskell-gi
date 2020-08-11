@@ -1,3 +1,7 @@
+### 3.0.36
+
++ The pixbuf parameter for [ClipboardImageReceivedFunc](https://hackage.haskell.org/package/gi-gtk-3.0.36/docs/GI-Gtk-Callbacks.html#g:signal:ClipboardImageReceivedFunc) is nullable, but it was not marked as such.
+
 ### 3.0.35
 
 + Avoid a crash in [radioButtonNew](https://hackage.haskell.org/package/gi-gtk-3.0.35/docs/GI-Gtk-Objects-RadioButton.html#g:method:new), [radioMenuItemNew](https://hackage.haskell.org/package/gi-gtk-3.0.35/docs/GI-Gtk-Objects-RadioMenuItem.html#g:method:new) and [radioToolButtonNew](https://hackage.haskell.org/package/gi-gtk-3.0.35/docs/GI-Gtk-Objects-RadioToolButton.html#g:method:new) (and variants) due to wrong introspection data.
