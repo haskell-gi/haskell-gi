@@ -512,18 +512,22 @@ main = do
         -- case. Specifying also makes the type errors in case
         -- something goes wrong easier to understand.
         win <- new Window [ #type := WindowTypeToplevel,
-                            #iconName := "applications-haskell"]
-        on win #destroy $ do
-                  putStrLn "Closing the program"
-                  mainQuit
+                            #iconName := "applications-haskell",
+                            On #destroy $ do
+                              putStrLn "Closing the program"
+                              mainQuit
+                          ]
 
         grid <- new Grid [ #orientation := OrientationVertical]
         set win [ #child := grid]
 
-        label <- new Label [ #label := "Test"]
-        on label #activateLink $ \uri -> do
-          testPolymorphicLenses win ("Link " ++ uri ++ " clicked, thanks!")
-          return True -- Link processed, do not open with the browser
+        label <- new Label [ #label := "Test",
+                             On #activateLink $ \uri -> do
+                               testPolymorphicLenses win
+                                 ("Link " ++ uri ++ " clicked, thanks!")
+                               return True -- Link processed, do not
+                                           -- open with the browser
+                           ]
         #add grid label
 
         button <- new Button [ #label := "_Click me!",

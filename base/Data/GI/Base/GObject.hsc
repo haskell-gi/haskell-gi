@@ -37,18 +37,19 @@ module Data.GI.Base.GObject
     , gobjectInstallCStringProperty
     ) where
 
+import Data.Maybe (catMaybes)
+import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.Proxy (Proxy(..))
 import Data.Coerce (coerce)
 
 import Foreign.C (CUInt(..), CString, newCString)
-#if !MIN_VERSION_base(4,13,0)
-import Foreign.Ptr (FunPtr)
+import Foreign.Ptr (Ptr, FunPtr, nullPtr, castPtr, plusPtr)
 import Foreign.StablePtr (newStablePtr, deRefStablePtr,
                           castStablePtrToPtr, castPtrToStablePtr)
-#endif
-import Foreign
+import Foreign.Storable (Storable(peek, poke, pokeByteOff, sizeOf))
+import Foreign (mallocBytes, copyBytes, free)
 
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
@@ -76,6 +77,7 @@ import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
                                 newObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
+import Data.GI.Base.Signals (on)
 import Data.GI.Base.Utils (dbgLog)
 
 #include <glib-object.h>
@@ -91,20 +93,28 @@ constructGObject :: forall o m. (GObject o, MonadIO m)
     -> [AttrOp o 'AttrConstruct]
     -> m o
 constructGObject constructor attrs = liftIO $ do
-  props <- mapM construct attrs
-  doConstructGObject constructor props
+  props <- catMaybes <$> mapM construct attrs
+  obj <- doConstructGObject constructor props
+  mapM_ (setSignal obj) attrs
+  return obj
   where
     construct :: AttrOp o 'AttrConstruct ->
-                 IO (GValueConstruct o)
+                 IO (Maybe (GValueConstruct o))
     construct ((_attr :: AttrLabelProxy label) := x) =
-      attrConstruct @(ResolveAttribute label o) x
+      Just <$> attrConstruct @(ResolveAttribute label o) x
 
     construct ((_attr :: AttrLabelProxy label) :=> x) =
-      x >>= attrConstruct @(ResolveAttribute label o)
+      Just <$> (x >>= attrConstruct @(ResolveAttribute label o))
 
-    construct ((_attr :: AttrLabelProxy label) :&= x) =
-      attrTransfer @(ResolveAttribute label o) (Proxy @o) x >>=
-      attrConstruct @(ResolveAttribute label o)
+    construct ((_attr :: AttrLabelProxy label) :&= x) = Just <$>
+      (attrTransfer @(ResolveAttribute label o) (Proxy @o) x >>=
+       attrConstruct @(ResolveAttribute label o))
+
+    construct (On _ _) = return Nothing
+
+    setSignal :: GObject o => o -> AttrOp o 'AttrConstruct -> IO ()
+    setSignal obj (On signal callback) = void $ on obj signal callback
+    setSignal _ _ = return ()
 
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.

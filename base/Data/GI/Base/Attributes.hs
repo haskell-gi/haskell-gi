@@ -146,10 +146,14 @@ module Data.GI.Base.Attributes (
   AttrLabelProxy(..)
   ) where
 
+import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
+import Data.GI.Base.BasicTypes (GObject)
 import Data.GI.Base.GValue (GValueConstruct)
 import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute)
+
+import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on)
 
 import Data.Proxy (Proxy(..))
 
@@ -434,6 +438,9 @@ data AttrOp obj (tag :: AttrOpTag) where
               (AttrTransferTypeConstraint info) b,
               AttrSetTypeConstraint info (AttrTransferType info)) =>
              AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
+    -- | Connect the given signal to a signal handler.
+    On    :: (GObject obj, SignalInfo info) =>
+             SignalProxy obj info -> HaskellCallbackType info -> AttrOp obj tag
 
 -- | Set a number of properties for some object.
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
@@ -457,6 +464,8 @@ set obj = liftIO . mapM_ app
    app ((_attr :: AttrLabelProxy label) :&= x) =
      attrTransfer @(ResolveAttribute label o) (Proxy @o) x >>=
      attrSet @(ResolveAttribute label o) obj
+
+   app (On signal callback) = void $ on obj signal callback
 
 -- | Constraints on a @obj@\/@attr@ pair so `get` is possible,
 -- producing a value of type @result@.
