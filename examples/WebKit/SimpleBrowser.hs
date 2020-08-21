@@ -42,8 +42,8 @@ createGUI sessionBus highlight = do
   win <- new Gtk.Window [#type := Gtk.WindowTypeToplevel,
                          #iconName := "applications-haskell",
                          #defaultWidth := 1024,
-                         #defaultHeight := 768]
-  on win #destroy Gtk.mainQuit
+                         #defaultHeight := 768,
+                         On #destroy Gtk.mainQuit]
 
   context <- new WK.WebContext []
   on context #initializeWebExtensions $ do
@@ -73,16 +73,26 @@ createGUI sessionBus highlight = do
     userData <- toGVariant ("Hi, extension!" :: T.Text, 57 :: Int64)
     #setWebExtensionsInitializationUserData context userData
 
-  contentManager <- new WK.UserContentManager []
-  on contentManager (#scriptMessageReceived ::: "haskell_gi_handler")
-    $ \result -> do
+  contentManager <- new WK.UserContentManager
+    [On (#scriptMessageReceived ::: "haskell_gi_handler") $ \result -> do
       resultAsString <- #getJsValue result >>= #toString
       putStrLn $ "Got a message: " <> show resultAsString
+    ]
   #registerScriptMessageHandler contentManager "haskell_gi_handler"
 
   view <- new WK.WebView [ #webContext := context
-                         , #userContentManager := contentManager ]
-  on view #close $ #destroy win
+                         , #userContentManager := contentManager
+                         , On #close (#destroy win)
+                         , On #loadChanged $ \event -> do
+                             putStrLn $ "Load: " <> show event
+                         , On #loadFailed $ \_ uri error -> do
+                             errMsg <- gerrorMessage error
+                             putStrLn . T.unpack $ "Error when reading \""
+                               <> uri <> "\": " <> errMsg
+                             -- Keep processing, so WebKit shows the error page
+                             return False
+                         ]
+
   #loadUri view "http://www.haskell.org"
 
   #add win view
@@ -107,15 +117,6 @@ createGUI sessionBus highlight = do
     uriEntry `set` [#progressFraction := if status /= 1.0
                                          then status
                                          else 0]
-
-  on view #loadChanged $ \event -> do
-    putStrLn $ "Load: " <> show event
-
-  on view #loadFailed $ \_ uri error -> do
-    errMsg <- gerrorMessage error
-    putStrLn . T.unpack $ "Error when reading \"" <> uri <> "\": " <> errMsg
-    -- Keep processing, so WebKit shows the error page
-    return False
 
   #showAll win
 
