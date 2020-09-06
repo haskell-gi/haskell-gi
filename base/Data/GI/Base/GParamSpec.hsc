@@ -20,6 +20,7 @@ module Data.GI.Base.GParamSpec
   , gParamSpecCString
   , CIntPropertyInfo(..)
   , gParamSpecCInt
+  , GParamFlag(..)
 
   -- * Get\/Set
   , PropGetSetter(..)
