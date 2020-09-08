@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DataKinds, TypeFamilies #-}
 {-# OPTIONS_HADDOCK hide #-}
 -----------------------------------------------------------------------------
 -- |
@@ -65,7 +66,8 @@ module GI.Cairo.Render.Types (
 
 {#import GI.Cairo.Render.Matrix#}
 
-import Data.GI.Base (ManagedPtr, BoxedObject(..), GType(..))
+import Data.GI.Base.Overloading (ParentTypes, HasParentTypes)
+import Data.GI.Base (ManagedPtr, TypedObject(..), GType(..), GBoxed(..))
 import Foreign hiding (rotate)
 import Foreign.C
 
@@ -79,12 +81,17 @@ foreign import ccall "cairo_gobject_context_get_type"
   c_cairo_gobject_context_get_type :: IO GType
 
 -- not visible
-newtype Cairo = Cairo (ManagedPtr Cairo) 
+newtype Cairo = Cairo (ManagedPtr Cairo)
 {#pointer *cairo_t as CairoPtr -> Cairo#}
 unCairo (Cairo x) = x
-        
-instance BoxedObject Cairo where
-  boxedType _ = c_cairo_gobject_context_get_type
+
+type instance ParentTypes Cairo = '[]
+instance HasParentTypes Cairo
+
+instance TypedObject Cairo where
+  glibType = c_cairo_gobject_context_get_type
+
+instance GBoxed Cairo
 
 -- | The medium to draw on.
 newtype Surface = Surface { unSurface :: ForeignPtr Surface }
