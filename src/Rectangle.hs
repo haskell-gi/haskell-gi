@@ -12,12 +12,13 @@ module Rectangle(
 where
 
 import Data.SafeCopy (SafeCopy(..), contain, safePut, safeGet) 
+import Data.Typeable
 
 type Point a = (a,a)
 
 data Rectangle a = Rectangle a a a a deriving(Eq, Show)
 
-instance SafeCopy a => SafeCopy (Rectangle a) where 
+instance (Typeable a, SafeCopy a) => SafeCopy (Rectangle a) where 
   putCopy (Rectangle x y w h) = contain $ do safePut x; safePut y; 
                                              safePut w; safePut h;
   getCopy = contain $ Rectangle <$> safeGet <*> safeGet 

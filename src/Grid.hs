@@ -11,6 +11,7 @@ module Grid(
 ) where 
 
 import Data.SafeCopy(SafeCopy(..), contain, safePut, safeGet)  
+import Data.Typeable
 import Rectangle
 
 type PointInGridCoordinates a = Point a
@@ -28,7 +29,7 @@ data Grid a = Grid {
   grBorderSize :: a
 } deriving(Eq, Show)
 
-instance SafeCopy a => SafeCopy (Grid a) where 
+instance (Typeable a, SafeCopy a) => SafeCopy (Grid a) where 
   putCopy (Grid ss r lr bs xbc ybc bos) = contain $ do safePut ss; safePut r; safePut lr; safePut bs;
                                                        safePut xbc; safePut ybc; safePut bos;
   getCopy = contain $ Grid <$> safeGet <*> safeGet <*> safeGet <*> safeGet <*> safeGet 
