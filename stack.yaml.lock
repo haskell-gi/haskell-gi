@@ -5,29 +5,15 @@
 
 packages:
 - completed:
-    hackage: search-algorithms-0.3.1@sha256:83d487688e79f7d354a638d893364cd34cb01352cac9281734c27ee640e31925,1825
-    pantry-tree:
-      size: 450
-      sha256: 1e007eb17329ea5b2bf9efc801fc8d2daa97040d19db4b8274b4743ee145df8b
-  original:
-    hackage: search-algorithms-0.3.1@sha256:83d487688e79f7d354a638d893364cd34cb01352cac9281734c27ee640e31925,1825
-- completed:
     hackage: gi-pangocairo-1.0.23@sha256:04dacf055fef4e19dd0276a8c2b5df08332877600b0014beecd2eaa764495ec6,3158
     pantry-tree:
       size: 370
       sha256: f2d5579ddc505b20b1ad0ee7933c03a3189df19fbe4dad9a38c94ec6dc34fa57
   original:
     hackage: gi-pangocairo-1.0.23@sha256:04dacf055fef4e19dd0276a8c2b5df08332877600b0014beecd2eaa764495ec6,3158
-- completed:
-    hackage: haskell-gi-overloading-0.0@sha256:e1ba6583d908525af55f45ede17224a0fe5e7c8980bb5962ac39ee8b429e5bae,631
-    pantry-tree:
-      size: 264
-      sha256: b76f20f1b0acbce7bce3e36d0d5feb28cc63dd90ced15c1e6176d8c583535543
-  original:
-    hackage: haskell-gi-overloading-0.0@sha256:e1ba6583d908525af55f45ede17224a0fe5e7c8980bb5962ac39ee8b429e5bae,631
 snapshots:
 - completed:
-    size: 524804
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/16.yaml
-    sha256: 4d1519a4372d051d47a5eae2241cf3fb54e113d7475f89707ddb6ec06add2888
-  original: lts-14.16
+    size: 532381
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/13.yaml
+    sha256: 6ee17f7996e5bc75ae4406250841f1362ad4196418a4d90a0615ff4f26ac98df
+  original: lts-16.13
