@@ -1,12 +1,12 @@
 Name:           gi-cairo-render
-Version:        0.0.3
+Version:        0.1.0.0
 License:        BSD3
 License-file:   LICENSE
 Copyright:      (c) 2018 Kilian Kilger, (c) 2001-2010 The Gtk2Hs Team, (c) Paolo Martini 2005, (c) Abraham Egnor 2003, 2004, (c) Aetion Technologies LLC 2004
 Author:         Axel Simon, Duncan Coutts
 Maintainer:     Kilian Kilger (kkilger@gmail.com)
 Build-Type:     Simple
-Cabal-Version:  >= 1.24
+Cabal-Version:  2.0
 Stability:      experimental
 homepage:       https://github.com/cohomology/gi-cairo-render
 bug-reports:    https://github.com/cohomology/gi-cairo-render/issues
@@ -15,7 +15,7 @@ Description:    Cairo is a library to render high quality vector graphics. There
                 exist various backends that allows rendering to Gtk windows, PDF,
                 PS, PNG and SVG documents, amongst others.
 Category:       Graphics
-Tested-With:    GHC == 8.4.4
+Tested-With:    GHC == 8.10.2, GHC == 8.6.4
 extra-source-files: include/gi-cairo-render.h
 
 Source-Repository head
