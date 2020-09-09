@@ -4,4 +4,4 @@
 dist/
 dist-newstyle/
 .stack-work
-
+.ghc.environment.x86_64-linux-*

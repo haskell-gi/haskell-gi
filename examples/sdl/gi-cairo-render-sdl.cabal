@@ -6,7 +6,7 @@ Copyright:      (c) 2018 Kilian Kilger, (c) 2001-2010 The Gtk2Hs Team, (c) Paolo
 Author:         Axel Simon, Duncan Coutts
 Maintainer:     Kilian Kilger (kkilger@gmail.com)
 Build-Type:     Simple
-Cabal-Version:  >= 1.24
+Cabal-Version:  2.0
 Stability:      experimental
 homepage:       https://github.com/cohomology/gi-cairo-render
 bug-reports:    https://github.com/cohomology/gi-cairo-render/issues
@@ -24,7 +24,7 @@ Source-Repository head
 
 Executable sdl-demo
         build-depends:  base >= 4 && < 5,
-                        sdl2 >= 2.0.4 && <2.6,
-                        gi-cairo-render == 0.0.*
-        main-is:        CairoSDL.hs 
+                        sdl2 >= 2.5 && <2.6,
+                        gi-cairo-render == 0.1.*
+        main-is:        CairoSDL.hs
         default-language:   Haskell2010
