@@ -1,58 +1,56 @@
 name: hlabyrinth
-version: '0.2.0.1'
+version: '0.3.0.0'
 category: Game
 author: Kilian Kilger
 maintainer: kkilger@gmail.com
 license: GPL-3
 extra-source-files:
 - ChangeLog.md
-default-extensions: 
-- MonoLocalBinds 
+default-extensions:
+- MonoLocalBinds
 other-extensions:
 - MultiParamTypeClasses
 - FlexibleInstances
 - FunctionalDependencies
 - TemplateHaskell
-ghc-options:
-- -rtsopts
 dependencies:
-- base
-- directory
-- filepath
-- optparse-applicative
-- haskell-gi-base
-- gi-gtk
-- gi-pango 
-- gi-cairo
-- gi-glib
-- gi-gdk
-- gi-pangocairo
-- gi-cairo-render
-- gi-cairo-connector
-- text
-- mtl
-- array
-- stm
-- transformers
-- errors 
-- mmorph 
-- search-algorithms 
-- pureMD5 
-- bytestring
-- cereal 
-- safecopy 
-- hxt-unicode
+  - base >= 4 && <5
+  - directory >=1.3 && <1.4
+  - filepath >=1.4 && <2
+  - optparse-applicative >=0.15.0 && <0.17
+  - haskell-gi-base >= 0.24.0 && <0.25
+  - gi-gtk >=3.0.36 && <4
+  - gi-pango >= 1.0.23 && <1.1
+  - gi-cairo >= 1.0.24 && <1.1
+  - gi-glib >= 2.0.24 && <2.1
+  - gi-gdk >= 3.0.23 && <4
+  - gi-pangocairo >= 1.0.24 && <1.1
+  - gi-cairo-render == 0.1.*
+  - gi-cairo-connector == 0.1.*
+  - text >=1.2.2.1 && <1.3
+  - mtl >=2.2.1 && <2.3
+  - array >=0.5.1 && <0.6
+  - stm >=2.5.0.0 && <2.6.0.0
+  - transformers >=0.5.2 && <0.6
+  - errors >=2.3 && <2.4
+  - mmorph >= 1.0.9 && <1.2
+  - search-algorithms >=0.3 && <0.4
+  - pureMD5 >= 2.1 && <2.2
+  - bytestring >=0.10 && <0.11
+  - cereal >= 0.5.5.0 && <0.6
+  - safecopy >=0.9.4.1 && <1
+  - hxt-unicode >=9.0 && <9.1-rtsopts
 executables:
   hlabyrinth:
     main: Main.hs
     source-dirs: src
-    when: 
+    when:
       - condition: flag(llvm)
         ghc-options:
         - -fllvm
       - condition: flag(threaded)
         ghc-options:
-        - -threaded 
+        - -threaded
       - condition: flag(optimize)
         ghc-options:
         - -O2
@@ -64,7 +62,7 @@ flags:
     description: Build with llvm backend
     manual: true
     default: false
-  threaded: 
+  threaded:
     description: Build with threaded ghc runtime
     manual: true
     default: true
