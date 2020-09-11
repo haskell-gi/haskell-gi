@@ -5,12 +5,96 @@
 
 packages:
 - completed:
-    hackage: gi-pangocairo-1.0.23@sha256:04dacf055fef4e19dd0276a8c2b5df08332877600b0014beecd2eaa764495ec6,3158
+    hackage: gi-cairo-1.0.24@sha256:451ba2f6f0954805c6d38f1e0bffd849607160e824abf4e077a95e999ef237dd,3727
+    pantry-tree:
+      size: 358
+      sha256: 3e8d149deabf1894faec5b3e9e35869ad8174f911be659c9766b183b92770994
+  original:
+    hackage: gi-cairo-1.0.24@sha256:451ba2f6f0954805c6d38f1e0bffd849607160e824abf4e077a95e999ef237dd,3727
+- completed:
+    hackage: gi-gdk-3.0.23@sha256:33ad689aa6e1463c57946762016a789b6cb663df174e31f9705956a9385b7b0f,9003
+    pantry-tree:
+      size: 355
+      sha256: 11ff63701019ed413a143b84849f058a83770ba251c8f5743a7edf5d252a1049
+  original:
+    hackage: gi-gdk-3.0.23@sha256:33ad689aa6e1463c57946762016a789b6cb663df174e31f9705956a9385b7b0f,9003
+- completed:
+    hackage: gi-glib-2.0.24@sha256:46726f0fb6b0ef0d6f6620d53025a9ca2a5bc273ab65496b368df7bc3dbe6d83,9558
+    pantry-tree:
+      size: 358
+      sha256: b51e43df984a63058ca529a99875a3c42a37827cf11694542abf77586cf28532
+  original:
+    hackage: gi-glib-2.0.24@sha256:46726f0fb6b0ef0d6f6620d53025a9ca2a5bc273ab65496b368df7bc3dbe6d83,9558
+- completed:
+    hackage: gi-gtk-3.0.36@sha256:ed4525766763f290aa03ae19e41a31c429a8d381729d4869e7c44e551351df6a,39016
+    pantry-tree:
+      size: 359
+      sha256: cd1718b99526699f158dce646c2c20cf51eedca7f78c33f8d6290e2ba46ccbb4
+  original:
+    hackage: gi-gtk-3.0.36@sha256:ed4525766763f290aa03ae19e41a31c429a8d381729d4869e7c44e551351df6a,39016
+- completed:
+    hackage: gi-pango-1.0.23@sha256:160443e93def8aa95e66fe1de40d51bb12ee922f7cafe6e33d6009f5490c66c5,8233
+    pantry-tree:
+      size: 360
+      sha256: fc5b1f6835549f148284950ab540df9d9f4d7a75df958b5de5e4c01d922dcb37
+  original:
+    hackage: gi-pango-1.0.23@sha256:160443e93def8aa95e66fe1de40d51bb12ee922f7cafe6e33d6009f5490c66c5,8233
+- completed:
+    hackage: gi-pangocairo-1.0.24@sha256:350b2088e04e4b899bd6daeffe61afcbf9ed3a751f7d7e5d90e5e50e45b2f284,3158
     pantry-tree:
       size: 370
-      sha256: f2d5579ddc505b20b1ad0ee7933c03a3189df19fbe4dad9a38c94ec6dc34fa57
+      sha256: 4ea5fb37173383c88de2eb89e199da9f72fe09e57b4b14187d51a0e6014d0ff7
   original:
-    hackage: gi-pangocairo-1.0.23@sha256:04dacf055fef4e19dd0276a8c2b5df08332877600b0014beecd2eaa764495ec6,3158
+    hackage: gi-pangocairo-1.0.24@sha256:350b2088e04e4b899bd6daeffe61afcbf9ed3a751f7d7e5d90e5e50e45b2f284,3158
+- completed:
+    hackage: haskell-gi-base-0.24.2@sha256:fd9d2c45ff7d7389bd0bb4b0ba6f40ea4eea0a5da227b13ee86776b11f18db2f,2392
+    pantry-tree:
+      size: 1798
+      sha256: 9deb82012c32a14b95f70b92b52d53cdf071f52297da803200bebde7929327d8
+  original:
+    hackage: haskell-gi-base-0.24.2@sha256:fd9d2c45ff7d7389bd0bb4b0ba6f40ea4eea0a5da227b13ee86776b11f18db2f,2392
+- completed:
+    hackage: gi-harfbuzz-0.0.3@sha256:0550f498854b7edac66b1a09f283e5b5c86033aff58b4ac30b024ae59e1bd866,5869
+    pantry-tree:
+      size: 364
+      sha256: f33e284484ab7520bb115508fe1ddae5585e42aa292c97f4f6abb2e7ec3d60eb
+  original:
+    hackage: gi-harfbuzz-0.0.3@sha256:0550f498854b7edac66b1a09f283e5b5c86033aff58b4ac30b024ae59e1bd866,5869
+- completed:
+    hackage: gi-atk-2.0.22@sha256:6ec2197aee4a1b5966302fc2875be05a9b3a54f694c4a6a9a330f4b0211223c5,6791
+    pantry-tree:
+      size: 355
+      sha256: b1398e06f447003ef9c9dde64ebae1cab214db2b20a179a85837604ddb0ac12b
+  original:
+    hackage: gi-atk-2.0.22
+- completed:
+    hackage: gi-gdkpixbuf-2.0.24@sha256:287c7233cfecb69a6aff0fb6a952862d759b5562b488bb8046229ee0f4372c6f,3842
+    pantry-tree:
+      size: 368
+      sha256: 9819be48b98d91cc69d84a9cc7c997262443e1c4d37a224a3a2f12b55c877740
+  original:
+    hackage: gi-gdkpixbuf-2.0.24
+- completed:
+    hackage: gi-gio-2.0.27@sha256:6535951e2ad0882bc7231da56457be52a85e99cb56acec9ec9919f1c15bed728,21981
+    pantry-tree:
+      size: 359
+      sha256: 75d3bd5fc1f9c00268537219d309ca289666da051835f6813bb636cebf4f1191
+  original:
+    hackage: gi-gio-2.0.27
+- completed:
+    hackage: gi-gobject-2.0.24@sha256:d008c0a517fd56dad010f0fd307ed476521bef72b17910cf345f1437014ee74d,9349
+    pantry-tree:
+      size: 364
+      sha256: edc001273e0a01b8956ddd5a8a8e007459d916b922125f35b649951213ece629
+  original:
+    hackage: gi-gobject-2.0.24
+- completed:
+    hackage: haskell-gi-0.24.4@sha256:e25b7d5260397397f1ea2c9a9e5f0398d5f0b3d796457d37a2dca054f752ecd2,5241
+    pantry-tree:
+      size: 4348
+      sha256: d46cd5db2e095f0f771f5812d46bcbda4c91f1e9d53f6a205f3316e7853ea3a4
+  original:
+    hackage: haskell-gi-0.24.4
 snapshots:
 - completed:
     size: 532381
