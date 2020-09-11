@@ -4,6 +4,7 @@ language: nix
 before_install:
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
+  - git config --global http.sslVerify false
   - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
   - nix-channel --add https://nixos.org/channels/nixos-19.09 nixpkgs
   - nix-channel --update
