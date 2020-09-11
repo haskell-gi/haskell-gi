@@ -31,3 +31,4 @@ install:
 script:
   - cabal v2-build all
   - cabal v2-test all
+  - cabal v2-haddock all
