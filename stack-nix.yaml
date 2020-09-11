@@ -1,20 +1,23 @@
 resolver: lts-16.13
-extra-deps: 
-- gi-pangocairo-1.0.24
-- gi-pango-1.0.23
-- gi-harfbuzz-0.0.3
-- haskell-gi-0.24.4
-- haskell-gi-base-0.24.2
-- gi-atk-2.0.22
-- gi-cairo-1.0.24
-- gi-gdk-3.0.23
-- gi-gdkpixbuf-2.0.24
-- gi-gio-2.0.27
-- gi-gtk-3.0.34
-- gi-gobject-2.0.23
-- gi-glib-2.0.24
+extra-deps:
+  - gi-cairo-1.0.24@sha256:451ba2f6f0954805c6d38f1e0bffd849607160e824abf4e077a95e999ef237dd,3727
+  - gi-gdk-3.0.23@sha256:33ad689aa6e1463c57946762016a789b6cb663df174e31f9705956a9385b7b0f,9003
+  - gi-glib-2.0.24@sha256:46726f0fb6b0ef0d6f6620d53025a9ca2a5bc273ab65496b368df7bc3dbe6d83,9558
+  - gi-gtk-3.0.36@sha256:ed4525766763f290aa03ae19e41a31c429a8d381729d4869e7c44e551351df6a,39016
+  - gi-pango-1.0.23@sha256:160443e93def8aa95e66fe1de40d51bb12ee922f7cafe6e33d6009f5490c66c5,8233
+  - gi-pangocairo-1.0.24@sha256:350b2088e04e4b899bd6daeffe61afcbf9ed3a751f7d7e5d90e5e50e45b2f284,3158
+  - haskell-gi-base-0.24.2@sha256:fd9d2c45ff7d7389bd0bb4b0ba6f40ea4eea0a5da227b13ee86776b11f18db2f,2392
+  - gi-harfbuzz-0.0.3@sha256:0550f498854b7edac66b1a09f283e5b5c86033aff58b4ac30b024ae59e1bd866,5869
+  - gi-atk-2.0.22@sha256:6ec2197aee4a1b5966302fc2875be05a9b3a54f694c4a6a9a330f4b0211223c5,6791
+  - gi-gdkpixbuf-2.0.24@sha256:287c7233cfecb69a6aff0fb6a952862d759b5562b488bb8046229ee0f4372c6f,3842
+  - gi-gio-2.0.27@sha256:6535951e2ad0882bc7231da56457be52a85e99cb56acec9ec9919f1c15bed728,21981
+  - gi-gobject-2.0.24@sha256:d008c0a517fd56dad010f0fd307ed476521bef72b17910cf345f1437014ee74d,9349
+  - haskell-gi-0.24.4@sha256:e25b7d5260397397f1ea2c9a9e5f0398d5f0b3d796457d37a2dca054f752ecd2,5241
+  - git: https://github.com/cohomology/gi-cairo-render
+    commit: 3178eb1869c3786109412e50cddf2c5c04c09390
+    subdirs:
+      - gi-cairo-render
+      - gi-cairo-connector
 nix:
   enable: true
   packages: [llvm_5,pkgconfig,cairo,pango,gtk3,glib,gobjectIntrospection,zlib]
-
-
