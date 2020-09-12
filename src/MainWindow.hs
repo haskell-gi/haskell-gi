@@ -1,5 +1,5 @@
 
-module MainWindow(CmdOptions(..), run) where
+module MainWindow(MainConfiguration(..), run) where
 
 import Data.List(intersect)
 import Data.Maybe(isJust, fromMaybe)
@@ -34,9 +34,10 @@ import Grid
 import UserTexts
 import GIHelper (dialogRun, dialogAddButton)
 
-data CmdOptions = CmdOptions
-  { cmdBoxSize :: Int ,
-    cmdBorderSize :: Int }
+data MainConfiguration = MainConfiguration
+  { cfgBoxSize :: Int ,
+    cfgBorderSize :: Int,
+    cfgLanguage :: Language }
 
 data LabyrinthState = LabyrinthState 
   { stRedrawFn    :: Rectangle Int -> IO (),
@@ -48,14 +49,11 @@ data LabyrinthState = LabyrinthState
     stWindow      :: GTK.Window,
     stLanguage    :: Language }
 
-run :: CmdOptions -> IO ()
+run :: MainConfiguration -> IO ()
 run option = do
-  let boxSize    = cmdBoxSize option
-      borderSize = cmdBorderSize option
-  GTK.init Nothing 
-  language <- GTK.getDefaultLanguage
-  languageString <- Pango.languageToString language 
-  let labyLanguage = getLanguage $ Text.unpack languageString 
+  let boxSize    = cfgBoxSize option
+      borderSize = cfgBorderSize option
+      labyLanguage = cfgLanguage option
   legendDimensions <- computeLegendDimensions labyLanguage
   window <- GTK.windowNew GTK.WindowTypeToplevel
   canvas <- GTK.drawingAreaNew
@@ -67,8 +65,8 @@ run option = do
   let state = LabyrinthState {
     stRedrawFn = redraw canvas,
     stSetCursorFn = setCursor canvas,
-    stBoxSize = cmdBoxSize option,
-    stBorderSize = cmdBorderSize option,
+    stBoxSize = cfgBoxSize option,
+    stBorderSize = cfgBorderSize option,
     stLabyrinth = labyrinth,
     stLegendDim = legendDimensions,
     stWindow = window,

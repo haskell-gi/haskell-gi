@@ -4,6 +4,11 @@ import Options.Applicative
 import Data.Semigroup ((<>))
 import System.Exit(die)
 
+import qualified GI.Gtk as GTK
+import qualified GI.Pango as Pango
+import qualified Data.Text as Text
+import UserTexts
+
 import MainWindow
 
 allowedBoxSizes :: [String]
@@ -15,53 +20,57 @@ defaultBoxSize = 64
 defaultBorderSize :: Int
 defaultBorderSize = 2
 
-checkBorderSize :: CmdOptions -> IO ()
-checkBorderSize opt = checkBorderSizeDo borderSize boxSize 
-  where borderSize = cmdBorderSize opt
-        boxSize = cmdBoxSize opt 
-        checkBorderSizeDo borderSize boxSize | borderSize < boxSize = return ()
-                                             | otherwise = die $ errorBorderSize borderSize boxSize
+checkBorderSize :: MainConfiguration -> IO ()
+checkBorderSize opt = checkBorderSizeDo borderSize boxSize language
+  where borderSize = cfgBorderSize opt
+        boxSize = cfgBoxSize opt 
+        language = cfgLanguage opt
+        checkBorderSizeDo borderSize boxSize language | borderSize < boxSize = return ()
+                                                      | otherwise = die $ errorBorderSize language borderSize boxSize
 
-errorBorderSize :: Int -> Int -> String
-errorBorderSize borderSize boxSize = 
-  "The border size " ++ show borderSize ++ " must be smaller \
-  \than the box size " ++ show boxSize ++ "."
+errorBorderSize :: Language -> Int -> Int -> String
+errorBorderSize language borderSize boxSize = 
+  translate language $ BorderSizeError borderSize boxSize
 
 main :: IO ()
 main = 
   do
-    options <- execParser opts
+    GTK.init Nothing 
+    language <- GTK.getDefaultLanguage
+    languageString <- Pango.languageToString language 
+    let language = getLanguage $ Text.unpack languageString 
+    options <- execParser (opts language)
     checkBorderSize options
     run options
     where
-      opts = info (cmdParser <**> helper)
+      opts lang = info ((cmdParser lang) <**> helper)
        ( fullDesc
-        <> progDesc "A simple labyrinth game" ) 
+        <> progDesc (translate lang ShortDescription) )
 
-cmdParser :: Parser CmdOptions
-cmdParser = CmdOptions
-          <$> option parseBoxSize
-              ( long "box-size"
-             <> short 's'
-             <> help helpBoxSize
-             <> value defaultBoxSize
-             <> metavar "SIZE" )
-          <*> option auto
-            ( long "border-size"
-             <> short 'b'
-             <> help helpBorderSize
-             <> value defaultBorderSize
-             <> metavar "SIZE" )
+cmdParser :: Language -> Parser MainConfiguration
+cmdParser lang = MainConfiguration
+                  <$> option (parseBoxSize lang)
+                      ( long "box-size"
+                    <> short 's'
+                    <> help (helpBoxSize lang)
+                    <> value defaultBoxSize
+                    <> metavar "SIZE" )
+                  <*> option auto
+                    ( long "border-size"
+                    <> short 'b'
+                    <> help (helpBorderSize lang)
+                    <> value defaultBorderSize
+                    <> metavar "SIZE" )
+                  <*> pure lang
 
-parseBoxSize :: ReadM Int
-parseBoxSize = str >>= \s -> 
-                   if s `elem` allowedBoxSizes then return ( read s :: Int )
-                   else readerError ( "Accepted box sizes are " ++ show allowedBoxSizes )
+parseBoxSize :: Language -> ReadM Int
+parseBoxSize lang = str >>= \s -> 
+                    if s `elem` allowedBoxSizes then return ( read s :: Int )
+                    else readerError $ translate lang $ BoxSizeError allowedBoxSizes
 
-helpBorderSize :: String
-helpBorderSize = "Size of the border in pixels (default " ++ show defaultBorderSize ++ ")" 
+helpBorderSize :: Language -> String
+helpBorderSize lang = translate lang $ BorderSizeHelp defaultBorderSize
 
-helpBoxSize :: String
-helpBoxSize = "Size of a single box in pixels " ++ show allowedBoxSizes 
-               ++ " (default " ++ show defaultBoxSize ++ ")"
-       
+helpBoxSize :: Language -> String
+helpBoxSize lang = translate lang $ BoxSizeHelp defaultBoxSize allowedBoxSizes
+

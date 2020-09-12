@@ -4,6 +4,7 @@ module UserTexts(
   DialogWidgetTexts(..),
   Language(..),
   BoxText(..),
+  AboutHelpText(..),
   getLanguage,
   renderLegend
 ) where
@@ -36,7 +37,9 @@ data ErrorMessage =
   FileReadPermissionError Path.FilePath Exception.IOException |
   FileWritePermissionError Path.FilePath Exception.IOException | 
   StartPointNotSet  | TargetPointNotSet | NoPathFound | 
-  InternalErrorInPathFinder | InternalError
+  InternalErrorInPathFinder | InternalError |
+  BorderSizeError Int Int |
+  BoxSizeError [String]
 
 data DialogWidgetTexts =
   FileSaveCaption | FileOpenCaption | FileSave | FileOpen |
@@ -47,6 +50,8 @@ data BoxText = BoxStartFieldText | BoxTargetFieldText
 data LegendText = DrawBoxText | ClearBoxText | QuitText | PlaceStartText | 
                   PlaceTargetText | ClearLabyrinthText | FindPathText | ResetPathText |
                   SaveText | LoadText deriving(Enum, Bounded)
+
+data AboutHelpText = ShortDescription | BorderSizeHelp Int | BoxSizeHelp Int [String] 
  
 instance UserText ErrorMessage where  
   translate English (FileInternalErrorWhileSaving file) = 
@@ -71,6 +76,10 @@ instance UserText ErrorMessage where
     Printf.printf "Internal error in path finding. Processing aborted."   
   translate English InternalError =
     Printf.printf "Internal error. Processing aborted."
+  translate English (BorderSizeError borderSize boxSize) =
+    Printf.printf "The border size \"%d\" must be smaller than the box size \"%d\"." borderSize boxSize
+  translate English (BoxSizeError lst) =
+    "Accepted box sizes are: " ++ show lst
 
   translate German (FileInternalErrorWhileSaving file) = 
     Printf.printf "Interner Fehler beim Speichern der Datei \"%s\"." file
@@ -94,6 +103,10 @@ instance UserText ErrorMessage where
     Printf.printf "Es wurde ein interner Fehler in der Wegbestimmung festgestellt. Der Vorgang wurde abgebrochen."    
   translate German InternalError =
     Printf.printf "Es ist ein interner Fehler aufgetreten. Der Vorgang wurde abgebrochen."
+  translate German (BorderSizeError borderSize boxSize) =
+    Printf.printf "The Rahmendicke \"%d\" muss kleiner als die Kästchengröße \"%d\" sein." borderSize boxSize
+  translate German (BoxSizeError lst) =
+    "Erlaubte Kästchengrößen: " ++ show lst
 
 instance UserText DialogWidgetTexts where  
   translate English FileSaveCaption = "Save File"
@@ -139,6 +152,19 @@ instance UserText LegendText where
   translate German ResetPathText      = "r: WEG ZURÜCKSETZEN"   
   translate German SaveText           = "F1: SPEICHERN"    
   translate German LoadText           = "F2: LADEN" 
+
+instance UserText AboutHelpText where
+  translate English ShortDescription  = "A simple labyrinth game"
+  translate English (BorderSizeHelp defaultBorderSize) = 
+    Printf.printf "Size of the border in pixels (default %d)" defaultBorderSize
+  translate English (BoxSizeHelp defaultBoxSize allowedBoxSizes) = 
+    Printf.printf "Size of a single box in pixels (default %d, possible values: %s)" defaultBoxSize (show allowedBoxSizes)
+
+  translate German ShortDescription   = "Ein einfaches Labyrinthspiel"
+  translate German (BorderSizeHelp defaultBorderSize) = 
+    Printf.printf "Rahmendicke in Pixeln (Standardwert: \"%d\")" defaultBorderSize
+  translate German (BoxSizeHelp defaultBoxSize allowedBoxSizes) = 
+    Printf.printf "Kästchengröße in Pixeln (Standardwert: \"%d\", erlaubte Werte: %s)" defaultBoxSize (show allowedBoxSizes)
 
 renderLegend :: Language -> String
 renderLegend language = 
