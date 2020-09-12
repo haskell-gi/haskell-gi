@@ -20,4 +20,4 @@ extra-deps:
       - gi-cairo-connector
 nix:
   enable: true
-  packages: [llvm_5,pkgconfig,cairo,pango,gtk3,glib,gobjectIntrospection,zlib]
+  packages: [llvm_7,pkgconfig,cairo,pango,gtk3,glib,gobjectIntrospection,zlib]

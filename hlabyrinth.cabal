@@ -1,10 +1,11 @@
--- This file has been generated from package.yaml by hpack version 0.28.2.
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 115e42f7687416d49b13526b9ed09d3faeba82bae1b90dea997484ce012c9056
+-- hash: 55bdde90c73e3c4d717ebb1f60adc47621758b5ea6961cc9fae1ae3c5f4c1800
 
-cabal-version:  >= 1.10
 name:           hlabyrinth
 version:        0.3.0.0
 category:       Game
