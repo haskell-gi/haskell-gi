@@ -6,6 +6,7 @@ maintainer: kkilger@gmail.com
 license: GPL-3
 extra-source-files:
 - ChangeLog.md
+- package.yaml
 default-extensions:
 - MonoLocalBinds
 other-extensions:

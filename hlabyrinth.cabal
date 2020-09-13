@@ -1,11 +1,10 @@
-cabal-version: 1.12
-
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.28.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 55bdde90c73e3c4d717ebb1f60adc47621758b5ea6961cc9fae1ae3c5f4c1800
+-- hash: e59e51584fa7463874f35cf7c2f60e7876fea8d4ead704e2036f9a90495274cf
 
+cabal-version:  >= 1.10
 name:           hlabyrinth
 version:        0.3.0.0
 category:       Game
@@ -16,6 +15,7 @@ license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     ChangeLog.md
+    package.yaml
 
 flag debug
   description: Use debug runtime for ghc
