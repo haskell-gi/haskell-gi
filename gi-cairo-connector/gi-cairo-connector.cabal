@@ -15,6 +15,7 @@ Synopsis:       GI friendly Binding to the Cairo library.
 Description:    This library contains glue code used to interconnect Haskell GI and Cairo
 Category:       Graphics
 Tested-With:    GHC == 8.10.2, GHC == 8.6.2
+extra-source-files: ChangeLog.md
 
 Source-Repository head
   type:         git

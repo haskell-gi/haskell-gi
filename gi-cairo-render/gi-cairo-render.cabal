@@ -16,7 +16,8 @@ Description:    Cairo is a library to render high quality vector graphics. There
                 PS, PNG and SVG documents, amongst others.
 Category:       Graphics
 Tested-With:    GHC == 8.10.2, GHC == 8.6.4
-extra-source-files: include/gi-cairo-render.h
+extra-source-files: include/gi-cairo-render.h,
+                    ChangeLog.md
 
 Source-Repository head
   type:         git
