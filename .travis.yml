@@ -1,21 +1,4 @@
-dist: bionic
-language: c
+language: nix
+nix: 2.3.6
 
-cache:
-  directories:
-    - $HOME/.stack
-
-before_install:
-  - unset CC
-  - sudo add-apt-repository ppa:hvr/ghc -y
-  - sudo apt-get update -q
-  - sudo apt-get install libsdl2-dev libgirepository1.0-dev libgtk-3-dev libcairo2-dev libcairo-gobject2 -y 
-  - mkdir -p ~/.local/bin
-  - export PATH="$HOME/.local/bin:$HOME/.cabal/bin:/opt/ghc/bin:/opt/cabal/bin:$PATH"
-  - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'    
-
-install:
-  - stack --version
-
-script:
-  - travis_wait stack --no-terminal --skip-ghc-check test
+script: nix-build release.nix
