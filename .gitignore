@@ -4,3 +4,4 @@ dist-newstyle
 cabal.sandbox.config
 .stack-work
 .nix-pkgconfig
+result
