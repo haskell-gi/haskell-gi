@@ -25,10 +25,12 @@ before_install:
   - curl -L https://nixos.org/nix/install | sh
 
 install:
-  - nix --version
   - cabal --version
   - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
   - travis_retry cabal v2-update
+
+before_script:
+  - source /home/travis/.nix-profile/etc/profile.d/nix.sh
 
 script:
   - cabal v2-build all
