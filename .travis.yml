@@ -1,5 +1,6 @@
 dist: bionic
-language: c
+language: nix
+nix: 2.3.7
 
 cache:
   directories:
@@ -32,3 +33,4 @@ script:
   - cabal v2-build all
   - cabal v2-test all
   - cabal v2-haddock all
+  - nix-build release.nix
