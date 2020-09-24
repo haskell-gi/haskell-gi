@@ -43,7 +43,7 @@ basicFreeFn (TGSList _) = Just "g_slist_free"
 basicFreeFn (TGHash _ _) = Just "unrefGHashTable"
 basicFreeFn (TError) = Nothing
 basicFreeFn (TVariant) = Nothing
-basicFreeFn (TGValue) = Just "B.GValue.unsetGValue"
+basicFreeFn (TGValue) = Nothing
 basicFreeFn (TParamSpec) = Nothing
 basicFreeFn (TGClosure _) = Nothing
 
