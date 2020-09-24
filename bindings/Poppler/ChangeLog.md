@@ -1,3 +1,7 @@
+### 0.18.24
+
++ Remove upper bound in the pkg-config version for poppler, as it changed its versioning scheme, see [issue 317](https://github.com/haskell-gi/haskell-gi/issues/317).
+
 ### 0.18.23
 
 + Upgrade to haskell-gi-base-0.24
