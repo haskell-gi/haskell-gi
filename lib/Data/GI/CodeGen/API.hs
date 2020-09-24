@@ -198,6 +198,7 @@ parseNSElement aliases ns@GIRNamespace{..} element
           "class" -> parse APIObject parseObject
           "interface" -> parse APIInterface parseInterface
           "boxed" -> ns -- Unsupported
+          "docsection" -> ns -- Ignored for now, see https://github.com/haskell-gi/haskell-gi/issues/318
           n -> error . T.unpack $ "Unknown GIR element \"" <> n <> "\" when processing namespace \"" <> nsName <> "\", aborting."
     where parse :: (a -> API) -> Parser (Name, a) -> GIRNamespace
           parse wrapper parser =
