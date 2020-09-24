@@ -140,8 +140,9 @@ class TypedObject a => BoxedFlags a
 -- on the Haskell side use `GType` below.
 type CGType = #type GType
 
--- | A newtype for use on the haskell side.
+-- | A newtype for use on the Haskell side.
 newtype GType = GType {gtypeToCGType :: CGType}
+  deriving (Eq, Show)
 
 foreign import ccall "g_type_name" g_type_name :: GType -> IO CString
 

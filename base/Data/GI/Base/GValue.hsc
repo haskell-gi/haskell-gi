@@ -15,6 +15,7 @@ module Data.GI.Base.GValue
     , newGValueFromPtr
     , wrapGValuePtr
     , unsetGValue
+    , gvalueGetType
 
     -- * Packing GValues into arrays
     , packGValueArray
@@ -144,6 +145,14 @@ buildGValue gtype setter val = do
 -- the Haskell object is garbage collected.
 disownGValue :: GValue -> IO (Ptr GValue)
 disownGValue = disownManagedPtr
+
+foreign import ccall "_haskell_gi_g_value_get_type" g_value_get_type :: Ptr GValue -> IO CGType
+
+-- | Return the `GType` contained by a `GValue`.
+gvalueGetType :: GValue -> IO GType
+gvalueGetType gv = withManagedPtr gv $ \gvptr -> do
+  cgtype <- g_value_get_type gvptr
+  return (GType cgtype)
 
 foreign import ccall "g_value_unset" g_value_unset :: Ptr GValue -> IO ()
 
@@ -446,7 +455,6 @@ get_stablePtr :: GValue -> IO (StablePtr a)
 get_stablePtr gv = castPtrToStablePtr <$> withManagedPtr gv _get_boxed
 
 foreign import ccall g_value_copy :: Ptr GValue -> Ptr GValue -> IO ()
-foreign import ccall "_haskell_gi_g_value_get_type" g_value_get_type :: Ptr GValue -> IO CGType
 
 -- | Pack the given list of GValues contiguously into a C array
 packGValueArray :: [GValue] -> IO (Ptr GValue)
