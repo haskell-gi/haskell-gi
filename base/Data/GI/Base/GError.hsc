@@ -108,7 +108,7 @@ instance TypedObject GError where
 instance GBoxed GError
 
 -- | A GQuark.
-type GQuark = #type GQuark
+type GQuark = #{type GQuark}
 
 -- | A code used to identify the "namespace" of the error. Within each error
 --   domain all the error codes are defined in an enumeration. Each gtk\/gnome
@@ -122,7 +122,7 @@ type GErrorDomain  = GQuark
 --   enumeration type for each error domain. Of course which enumeration to use
 --   depends on the error domain, but if you use 'catchGErrorJustDomain' or
 --   'handleGErrorJustDomain', this is worked out for you automatically.
-type GErrorCode = #type gint
+type GErrorCode = #{type gint}
 
 -- | A human readable error message.
 type GErrorMessage = Text

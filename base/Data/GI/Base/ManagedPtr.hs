@@ -98,9 +98,12 @@ ownedFinalizer :: IO () -> Ptr a -> Maybe CallStack -> IORef (Maybe CallStack)
 ownedFinalizer finalizer ptr allocCallStack callStackRef = do
   cs <- readIORef callStackRef
   -- cs will be @Just cs@ whenever the pointer has been disowned.
-  when (isNothing cs) $ do
-    maybe (return ()) (printAllocDebug ptr) allocCallStack
-    finalizer
+  when (isNothing cs) $ case allocCallStack of
+                          Just acs -> do
+                            printAllocDebug ptr acs
+                            finalizer
+                            dbgLog (T.pack "Released successfully.\n")
+                          Nothing -> finalizer
 
 -- | Print some debug diagnostics for an allocation.
 printAllocDebug :: Ptr a -> CallStack -> IO ()

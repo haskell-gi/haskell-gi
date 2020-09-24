@@ -1,3 +1,7 @@
+### 0.24.3
+
++ Require hsc2hs version 0.68.6 or higher
+
 ### 0.24.2
 
 + Provide type init functions for GParamSpec types.
