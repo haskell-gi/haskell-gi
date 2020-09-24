@@ -15,7 +15,7 @@ module Data.GI.Base.GValue
     , newGValueFromPtr
     , wrapGValuePtr
     , unsetGValue
-    , gvalueGetType
+    , gvalueType
 
     -- * Packing GValues into arrays
     , packGValueArray
@@ -149,8 +149,8 @@ disownGValue = disownManagedPtr
 foreign import ccall "_haskell_gi_g_value_get_type" g_value_get_type :: Ptr GValue -> IO CGType
 
 -- | Return the `GType` contained by a `GValue`.
-gvalueGetType :: GValue -> IO GType
-gvalueGetType gv = withManagedPtr gv $ \gvptr -> do
+gvalueType :: GValue -> IO GType
+gvalueType gv = withManagedPtr gv $ \gvptr -> do
   cgtype <- g_value_get_type gvptr
   return (GType cgtype)
 
