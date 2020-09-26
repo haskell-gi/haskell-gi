@@ -1,3 +1,9 @@
+### 0.24.5
+
++ Fix an accidental double free for GValues, see [issue 320](https://github.com/haskell-gi/haskell-gi/issues/320).
+
++ Accept docsections in gir files, although they are currently ignored. See [issue 318](https://github.com/haskell-gi/haskell-gi/issues/318).
+
 ### 0.24.4
 
 + Relax bound on ansi-terminal.
