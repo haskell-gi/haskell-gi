@@ -66,8 +66,6 @@ import Control.Exception
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
-import Data.Int
-import Data.Word
 
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -78,7 +76,8 @@ import Data.GI.Base.ManagedPtr (withManagedPtr, wrapBoxed, copyBoxed)
 import Data.GI.Base.Overloading (ParentTypes, HasParentTypes)
 import Data.GI.Base.Utils (allocMem, freeMem)
 
-#include <glib.h>
+import Data.GI.Base.Internal.CTypes (GQuark, C_gint, gerror_domain_offset,
+                                     gerror_code_offset, gerror_message_offset)
 
 -- | A GError, consisting of a domain, code and a human readable
 -- message. These can be accessed by 'gerrorDomain', 'gerrorCode' and
@@ -107,9 +106,6 @@ instance TypedObject GError where
 -- | `GError`s are registered as boxed in the GLib type system.
 instance GBoxed GError
 
--- | A GQuark.
-type GQuark = #{type GQuark}
-
 -- | A code used to identify the "namespace" of the error. Within each error
 --   domain all the error codes are defined in an enumeration. Each gtk\/gnome
 --   module that uses GErrors has its own error domain. The rationale behind
@@ -122,7 +118,7 @@ type GErrorDomain  = GQuark
 --   enumeration type for each error domain. Of course which enumeration to use
 --   depends on the error domain, but if you use 'catchGErrorJustDomain' or
 --   'handleGErrorJustDomain', this is worked out for you automatically.
-type GErrorCode = #{type gint}
+type GErrorCode = C_gint
 
 -- | A human readable error message.
 type GErrorMessage = Text
@@ -142,19 +138,19 @@ gerrorNew domain code message =
 gerrorDomain :: GError -> IO GQuark
 gerrorDomain gerror =
     withManagedPtr gerror $ \ptr ->
-      peek $ ptr `plusPtr` #{offset GError, domain}
+      peek $ ptr `plusPtr` gerror_domain_offset
 
 -- | The numeric code for the given `GError`.
 gerrorCode :: GError -> IO GErrorCode
 gerrorCode gerror =
     withManagedPtr gerror $ \ptr ->
-        peek $ ptr `plusPtr` #{offset GError, code}
+        peek $ ptr `plusPtr` gerror_code_offset
 
 -- | A text message describing the `GError`.
 gerrorMessage :: GError -> IO GErrorMessage
 gerrorMessage gerror =
     withManagedPtr gerror $ \ptr ->
-      (peek $ ptr `plusPtr` #{offset GError, message}) >>= cstringToText
+      (peek $ ptr `plusPtr` gerror_message_offset) >>= cstringToText
 
 -- | Each error domain's error enumeration type should be an instance of this
 --   class. This class helps to hide the raw error and domain codes from the

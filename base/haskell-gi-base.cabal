@@ -43,7 +43,8 @@ library
                        Data.GI.Base.Properties,
                        Data.GI.Base.ShortPrelude,
                        Data.GI.Base.Signals,
-                       Data.GI.Base.Utils
+                       Data.GI.Base.Utils,
+                       Data.GI.Base.Internal.CTypes
 
   pkgconfig-depends:   gobject-2.0 >= 2.42, glib-2.0
   build-depends:       base >= 4.9 && < 5,
@@ -53,7 +54,7 @@ library
 
   ghc-options: -Wall -Wno-redundant-constraints -fwarn-incomplete-patterns
 
-  build-tool-depends:  hsc2hs:hsc2hs >= 0.68.6
+  build-tool-depends:  hsc2hs:hsc2hs
   cc-options:          -fPIC
   default-language:    Haskell2010
   default-extensions:  CPP, ForeignFunctionInterface, DoAndIfThenElse, MonoLocalBinds

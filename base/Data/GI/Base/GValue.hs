@@ -66,8 +66,6 @@ module Data.GI.Base.GValue
     , take_stablePtr
     ) where
 
-#include <glib-object.h>
-
 import Data.Coerce (coerce)
 import Data.Word
 import Data.Int
@@ -85,6 +83,7 @@ import Data.GI.Base.GType
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.GI.Base.Utils (callocBytes, freeMem)
+import Data.GI.Base.Internal.CTypes (cgvalueSize)
 
 -- | Haskell-side representation of a @GValue@.
 newtype GValue = GValue (ManagedPtr GValue)
@@ -119,7 +118,7 @@ data GValueConstruct o = GValueConstruct String GValue
 -- | Build a new, empty, `GValue` of the given type.
 newGValue :: GType -> IO GValue
 newGValue (GType gtype) = do
-  gvptr <- callocBytes (#size GValue)
+  gvptr <- callocBytes cgvalueSize
   _ <- g_value_init gvptr gtype
   gv <- wrapBoxed GValue gvptr
   return $! gv
@@ -460,7 +459,7 @@ foreign import ccall g_value_copy :: Ptr GValue -> Ptr GValue -> IO ()
 packGValueArray :: [GValue] -> IO (Ptr GValue)
 packGValueArray gvalues = withManagedPtrList gvalues $ \ptrs -> do
   let nitems = length ptrs
-  mem <- callocBytes $ #{size GValue} * nitems
+  mem <- callocBytes $ cgvalueSize * nitems
   fill mem ptrs
   return mem
   where fill :: Ptr GValue -> [Ptr GValue] -> IO ()
@@ -469,7 +468,7 @@ packGValueArray gvalues = withManagedPtrList gvalues $ \ptrs -> do
           gtype <- g_value_get_type x
           _ <- g_value_init ptr gtype
           g_value_copy x ptr
-          fill (ptr `plusPtr` #{size GValue}) xs
+          fill (ptr `plusPtr` cgvalueSize) xs
 
 -- | Unpack an array of contiguous GValues into a list of GValues.
 unpackGValueArrayWithLength :: Integral a =>
@@ -478,12 +477,12 @@ unpackGValueArrayWithLength nitems gvalues = go (fromIntegral nitems) gvalues
   where go :: Int -> Ptr GValue -> IO [GValue]
         go 0 _ = return []
         go n ptr = do
-          gv <- callocBytes #{size GValue}
+          gv <- callocBytes cgvalueSize
           gtype <- g_value_get_type ptr
           _ <- g_value_init gv gtype
           g_value_copy ptr gv
           wrapped <- wrapGValuePtr gv
-          (wrapped :) <$> go (n-1) (ptr `plusPtr` #{size GValue})
+          (wrapped :) <$> go (n-1) (ptr `plusPtr` cgvalueSize)
 
 -- | Map over the `GValue`s inside a C array.
 mapGValueArrayWithLength :: Integral a =>
@@ -496,4 +495,4 @@ mapGValueArrayWithLength nvalues f arrayPtr
         go 0 _ = return ()
         go n ptr = do
           _ <- f ptr
-          go (n-1) (ptr `plusPtr` #{size GValue})
+          go (n-1) (ptr `plusPtr` cgvalueSize)
