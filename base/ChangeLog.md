@@ -1,3 +1,7 @@
+### 0.24.4
+
++ Add a workaround for old hsc2hs versions, so drop the constraint on hsc2hs.
+
 ### 0.24.3
 
 + Require hsc2hs version 0.68.6 or higher
