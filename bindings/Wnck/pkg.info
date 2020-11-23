@@ -11,7 +11,7 @@
         "ubuntu": [
             "libwnck-3-dev"
         ],
-        "fedora": []
+        "fedora": ["libwnck3-devel"]
     },
     "giDepends": [
         "gi-gdk == 3.0.*",

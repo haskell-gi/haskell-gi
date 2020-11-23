@@ -11,7 +11,7 @@
         "ubuntu": [
             "libvte-2.91-dev"
         ],
-        "fedora": []
+        "fedora": ["vte291-devel"]
     },
     "giDepends": [
         "gi-pango == 1.0.*",

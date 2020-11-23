@@ -11,7 +11,7 @@
         "ubuntu": [
             "libpoppler-glib-dev"
         ],
-        "fedora": []
+        "fedora": ["poppler-glib-devel"]
     },
     "giDepends": [
         "gi-cairo == 1.0.*",

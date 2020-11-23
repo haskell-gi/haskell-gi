@@ -8,7 +8,7 @@
     "girOverrides": "Handy.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "distributionPackages": {
-        "fedora": []
+        "fedora": ["libhandy-devel"]
     },
     "giDepends": [
         "gi-gtk == 3.0.*",

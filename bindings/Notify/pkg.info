@@ -11,7 +11,7 @@
         "ubuntu": [
             "libnotify-dev"
         ],
-        "fedora": []
+        "fedora": ["libnotify-devel"]
     },
     "giDepends": [
         "gi-gdkpixbuf == 2.0.*",

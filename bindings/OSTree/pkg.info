@@ -11,7 +11,7 @@
         "ubuntu": [
             "libostree-dev"
         ],
-        "fedora": []
+        "fedora": ["ostree-devel"]
     },
     "giDepends": [
         "gi-gio == 2.0.*",
