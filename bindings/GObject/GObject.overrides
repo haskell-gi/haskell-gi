@@ -3,9 +3,6 @@ namespace GObject
 # Can be ignored in the bindings.
 ignore signal_set_va_marshaller
 
-# The semantics for the DirectionIn pointer here are somewhat ambiguous.
-ignore ClosureMarshal
-
 # Requires support for non-GObject objects, which we do not support.
 ignore TypePluginClass
 
