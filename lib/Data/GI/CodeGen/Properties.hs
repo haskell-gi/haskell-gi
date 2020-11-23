@@ -33,7 +33,7 @@ import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, classConstraint,
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
 
-propTypeStr :: Type -> CodeGen Text
+propTypeStr :: Type -> ExcCodeGen Text
 propTypeStr t = case t of
    TBasicType TUTF8 -> return "String"
    TBasicType TFileName -> return "String"
@@ -74,22 +74,22 @@ propTypeStr t = case t of
        APICallback _ -> return "Callback"
        APIStruct s -> if structIsBoxed s
                       then return "Boxed"
-                      else error $ "Unboxed struct property : " ++ show t
+                      else notImplementedError $ "Unboxed struct property : " <> tshow t
        APIUnion u -> if unionIsBoxed u
                      then return "Boxed"
-                     else error $ "Unboxed union property : " ++ show t
+                     else notImplementedError $ "Unboxed union property : " <> tshow t
        APIObject _ -> do
                 isGO <- isGObject t
                 if isGO
                 then return "Object"
-                else error $ "Non-GObject object property : " ++ show t
+                else notImplementedError $ "Non-GObject object property : " <> tshow t
        APIInterface _ -> do
                 isGO <- isGObject t
                 if isGO
                 then return "Object"
-                else error $ "Non-GObject interface property : " ++ show t
-       _ -> error $ "Unknown interface property of type : " ++ show t
-   _ -> error $ "Don't know how to handle properties of type " ++ show t
+                else notImplementedError $ "Non-GObject interface property : " <> tshow t
+       _ -> notImplementedError $ "Unknown interface property of type : " <> tshow t
+   _ -> notImplementedError $ "Don't know how to handle properties of type " <> tshow t
 
 -- | The constraint for setting the given type in properties.
 propSetTypeConstraint :: Type -> CodeGen Text
@@ -180,7 +180,7 @@ setterDoc n prop = T.unlines [
     <> " 'Data.GI.Base.Attributes.:=' value ]"
   , "@"]
 
-genPropertySetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
+genPropertySetter :: Text -> Name -> HaddockSection -> Property -> ExcCodeGen ()
 genPropertySetter setter n docSection prop = group $ do
   (constraints, t) <- attrType prop
   isNullable <- typeIsNullable (propType prop)
@@ -208,7 +208,7 @@ getterDoc n prop = T.unlines [
   , "'Data.GI.Base.Attributes.get' " <> lowerName n <> " #" <> hPropName prop
   , "@"]
 
-genPropertyGetter :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
+genPropertyGetter :: Text -> Name -> HaddockSection -> Property -> ExcCodeGen ()
 genPropertyGetter getter n docSection prop = group $ do
   isNullable <- typeIsNullable (propType prop)
   let isMaybe = isNullable && propReadNullable prop /= Just False
@@ -248,7 +248,7 @@ constructorDoc prop = T.unlines [
     "Construct a `GValueConstruct` with valid value for the “@" <> propName prop <> "@” property. This is rarely needed directly, but it is used by `Data.GI.Base.Constructible.new`."
     ]
 
-genPropertyConstructor :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
+genPropertyConstructor :: Text -> Name -> HaddockSection -> Property -> ExcCodeGen ()
 genPropertyConstructor constructor n docSection prop = group $ do
   (constraints, t) <- attrType prop
   tStr <- propTypeStr $ propType prop
@@ -277,7 +277,7 @@ clearDoc prop = T.unlines [
   , "'Data.GI.Base.Attributes.clear'" <> " #" <> hPropName prop
   , "@"]
 
-genPropertyClear :: Text -> Name -> HaddockSection -> Property -> CodeGen ()
+genPropertyClear :: Text -> Name -> HaddockSection -> Property -> ExcCodeGen ()
 genPropertyClear clear n docSection prop = group $ do
   cls <- classConstraint n
   let constraints = ["MonadIO m", cls <> " o"]
