@@ -553,9 +553,16 @@ prepareClosures callable nameMap = do
                     (-1) -> badIntroError $
                             "ScopeTypeNotified without destructor! "
                             <> T.pack (ppShow callable)
-                    k -> let destroyName =
-                               escapedArgName $ (args callable)!!k in
-                           line $ "let " <> destroyName <> " = safeFreeFunPtrPtr"
+                    k -> do
+                      let destroyArg = (args callable)!!k
+                          destroyName = escapedArgName destroyArg
+                      destroyFun <- case argType destroyArg of
+                        TInterface (Name "GLib" "DestroyNotify") ->
+                          return "SP.safeFreeFunPtrPtr"
+                        TInterface (Name "GObject" "ClosureNotify") ->
+                          return "SP.safeFreeFunPtrPtr'"
+                        _ -> notImplementedError $ "Unknown destroy type: " <> tshow (argType destroyArg)
+                      line $ "let " <> destroyName <> " = " <> destroyFun
                 ScopeTypeAsync -> do
                   line $ "let " <> closureName <> " = nullPtr"
                   case argDestroy cb of

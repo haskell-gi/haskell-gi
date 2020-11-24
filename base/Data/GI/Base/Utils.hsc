@@ -21,6 +21,7 @@ module Data.GI.Base.Utils
     , memcpy
     , safeFreeFunPtr
     , safeFreeFunPtrPtr
+    , safeFreeFunPtrPtr'
     , maybeReleaseFunPtr
     , checkUnexpectedReturnNULL
     , checkUnexpectedNothing
@@ -171,6 +172,12 @@ foreign import ccall "safeFreeFunPtr" safeFreeFunPtr ::
 -- | A pointer to `safeFreeFunPtr`.
 foreign import ccall "& safeFreeFunPtr" safeFreeFunPtrPtr ::
     FunPtr (Ptr a -> IO ())
+
+-- | Similar to 'safeFreeFunPtrPtr', but accepts an additional
+-- (ignored) argument. The first argument is interpreted as a
+-- 'FunPtr', and released.
+foreign import ccall "& safeFreeFunPtr2" safeFreeFunPtrPtr' ::
+    FunPtr (Ptr a -> Ptr b -> IO ())
 
 -- | If given a pointer to the memory location, free the `FunPtr` at
 -- that location, and then the pointer itself. Useful for freeing the

@@ -277,6 +277,12 @@ void safeFreeFunPtr(void *ptr)
     freeHaskellFunctionPtr(ptr);
 }
 
+/* Same as safeFreeFunPtr, but it accepts (but ignores) an extra argument */
+void safeFreeFunPtr2(void *ptr, void *unused)
+{
+  safeFreeFunPtr(ptr);
+}
+
 /* Returns the GType associated to a class instance */
 GType haskell_gi_gtype_from_class (gpointer klass)
 {
