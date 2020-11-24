@@ -5,6 +5,26 @@ C-docs-url Gtk https://developer.gnome.org/gtk4/stable
 set-attr Gtk/TreeModelFilterModifyFunc/@parameters/value direction in
 set-attr Gtk/TreeModelFilterModifyFunc/@parameters/value caller-allocates 0
 
+# The introspection annotation marks the parameters as
+# (inout transfer=full), but it is just a pointer to a GtkTreeIter.
+set-attr Gtk/TreeStore/remove/@parameters/iter direction in
+set-attr Gtk/TreeStore/remove/@parameters/iter transfer-ownership none
+
+# The introspection annotation marks the parameters as
+# (inout transfer=full), but it is just a pointer to a GtkTreeIter.
+set-attr Gtk/TreeModel/iter_next/@parameters/iter direction in
+set-attr Gtk/TreeModel/iter_next/@parameters/iter transfer-ownership none
+
+# The introspection annotation marks the parameters as
+# (inout transfer=full), but it is just a pointer to a GtkTreeIter.
+set-attr Gtk/TreeModel/iter_previous/@parameters/iter direction in
+set-attr Gtk/TreeModel/iter_previous/@parameters/iter transfer-ownership none
+
+# The introspection annotation marks the parameters as
+# (out caller-allocates), but it is just a pointer to a GtkTreeIter.
+set-attr Gtk/TreeModel/iter_nth_child/@parameters/iter direction in
+set-attr Gtk/TreeModel/iter_nth_child/@parameters/iter caller-allocates 0
+
 # It is useful to expose these class structs when deriving new types
 set-attr Gtk/WidgetClass haskell-gi-force-visible 1
 set-attr Gtk/ContainerClass haskell-gi-force-visible 1
