@@ -496,21 +496,22 @@ prefixedForeignImport prefix symbol prototype = group $ do
 genBoxedGValueInstance :: Name -> Text -> CodeGen ()
 genBoxedGValueInstance n get_type_fn = do
   let name' = upperName n
-      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue' with 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
+      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
 
   writeHaddock DocBeforeSymbol doc
 
   group $ do
-    bline $ "instance B.GValue.IsGValue " <> name' <> " where"
+    bline $ "instance B.GValue.IsGValue (Maybe " <> name' <> ") where"
     indent $ group $ do
-      line $ "toGValue o = do"
-      indent $ group $ do
-        line $ "gtype <- " <> get_type_fn
-        line $ "B.ManagedPtr.withManagedPtr o (B.GValue.buildGValue gtype B.GValue.set_boxed)"
-      line $ "fromGValue gv = do"
+      line $ "gvalueGType_ = " <> get_type_fn
+      line $ "gvalueSet_ gv P.Nothing = B.GValue.set_boxed gv (FP.nullPtr :: FP.Ptr " <> name' <> ")"
+      line $ "gvalueSet_ gv (P.Just obj) = B.ManagedPtr.withManagedPtr obj (B.GValue.set_boxed gv)"
+      line $ "gvalueGet_ gv = do"
       indent $ group $ do
         line $ "ptr <- B.GValue.get_boxed gv :: IO (Ptr " <> name' <> ")"
-        line $ "B.ManagedPtr.newBoxed " <> name' <> " ptr"
+        line $ "if ptr /= FP.nullPtr"
+        line $ "then P.Just <$> B.ManagedPtr.newBoxed " <> name' <> " ptr"
+        line $ "else return P.Nothing"
 
 -- | Allocation and deallocation for types registered as `GBoxed` in
 -- the GLib type system.

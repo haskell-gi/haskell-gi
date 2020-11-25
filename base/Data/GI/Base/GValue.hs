@@ -1,11 +1,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds, TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Data.GI.Base.GValue
     (
     -- * Constructing GValues
       GValue(..)
     , IsGValue(..)
+    , toGValue
+    , fromGValue
     , GValueConstruct(..)
 
     , newGValue
@@ -23,34 +29,6 @@ module Data.GI.Base.GValue
     , mapGValueArrayWithLength
 
     -- * Setters and getters
-    , set_string
-    , get_string
-    , set_pointer
-    , get_pointer
-    , set_int
-    , get_int
-    , set_uint
-    , get_uint
-    , set_long
-    , get_long
-    , set_ulong
-    , get_ulong
-    , set_int32
-    , get_int32
-    , set_uint32
-    , get_uint32
-    , set_int64
-    , get_int64
-    , set_uint64
-    , get_uint64
-    , set_float
-    , get_float
-    , set_double
-    , get_double
-    , set_boolean
-    , get_boolean
-    , set_gtype
-    , get_gtype
     , set_object
     , get_object
     , set_boxed
@@ -64,6 +42,7 @@ module Data.GI.Base.GValue
     , set_stablePtr
     , get_stablePtr
     , take_stablePtr
+
     ) where
 
 import Data.Coerce (coerce)
@@ -134,10 +113,10 @@ newGValueFromPtr ptr = newBoxed GValue ptr
 
 -- | A convenience function for building a new GValue and setting the
 -- initial value.
-buildGValue :: GType -> (GValue -> a -> IO ()) -> a -> IO GValue
+buildGValue :: GType -> (Ptr GValue -> a -> IO ()) -> a -> IO GValue
 buildGValue gtype setter val = do
   gv <- newGValue gtype
-  setter gv val
+  withManagedPtr gv $ \gvPtr -> setter gvPtr val
   return gv
 
 -- | Disown a `GValue`, i.e. do not unref the underlying object when
@@ -159,289 +138,258 @@ foreign import ccall "g_value_unset" g_value_unset :: Ptr GValue -> IO ()
 unsetGValue :: Ptr GValue -> IO ()
 unsetGValue = g_value_unset
 
--- | A convenience class for marshaling back and forth between Haskell
--- values and `GValue`s.
+-- | Class for types that can be marshaled back and forth between
+-- Haskell values and `GValue`s. These are low-level methods, you
+-- might want to use `toGValue` and `fromGValue` instead for a higher
+-- level interface.
 class IsGValue a where
-    toGValue :: a -> IO GValue
-    fromGValue :: GValue -> IO a
+  gvalueGType_ :: IO GType     -- ^ `GType` for the `GValue`
+                               -- containing values of this type.
+  gvalueSet_   :: Ptr GValue -> a -> IO ()  -- ^ Set the `GValue` to
+                                            -- the given Haskell
+                                            -- value.
+  gvalueGet_   :: Ptr GValue -> IO a -- ^ Get the Haskel value inside
+                                     -- the `GValue`.
+
+-- | Create a `GValue` from the given Haskell value.
+toGValue :: forall a. IsGValue a => a -> IO GValue
+toGValue val = do
+  gvptr <- callocBytes cgvalueSize
+  GType gtype <- gvalueGType_ @a
+  _ <- g_value_init gvptr gtype
+  gvalueSet_ gvptr val
+  gv <- wrapBoxed GValue gvptr
+  return $! gv
+
+-- | Create a Haskell object out of the given `GValue`.
+fromGValue :: IsGValue a => GValue -> IO a
+fromGValue gv = withManagedPtr gv gvalueGet_
 
 instance IsGValue (Maybe String) where
-    toGValue = buildGValue gtypeString set_string . fmap pack
-    fromGValue v = (fmap unpack) <$> get_string v
+  gvalueGType_ = return gtypeString
+  gvalueSet_ gvPtr mstr = set_string gvPtr (pack <$> mstr)
+  gvalueGet_ v = (fmap unpack) <$> get_string v
 
 instance IsGValue (Maybe Text) where
-    toGValue = buildGValue gtypeString set_string
-    fromGValue = get_string
+  gvalueGType_ = return gtypeString
+  gvalueSet_ = set_string
+  gvalueGet_ = get_string
 
 instance IsGValue (Ptr a) where
-    toGValue = buildGValue gtypePointer set_pointer
-    fromGValue = get_pointer
+  gvalueGType_ = return gtypePointer
+  gvalueSet_ = set_pointer
+  gvalueGet_ = get_pointer
 
 instance IsGValue Int32 where
-    toGValue = buildGValue gtypeInt set_int32
-    fromGValue = get_int32
+  gvalueGType_ = return gtypeInt
+  gvalueSet_ = set_int32
+  gvalueGet_ = get_int32
 
 instance IsGValue Word32 where
-    toGValue = buildGValue gtypeUInt set_uint32
-    fromGValue = get_uint32
+  gvalueGType_ = return gtypeUInt
+  gvalueSet_ = set_uint32
+  gvalueGet_ = get_uint32
 
 instance IsGValue CInt where
-    toGValue = buildGValue gtypeInt set_int
-    fromGValue = get_int
+  gvalueGType_ = return gtypeInt
+  gvalueSet_ = set_int
+  gvalueGet_ = get_int
 
 instance IsGValue CUInt where
-    toGValue = buildGValue gtypeUInt set_uint
-    fromGValue = get_uint
+  gvalueGType_ = return gtypeUInt
+  gvalueSet_ = set_uint
+  gvalueGet_ = get_uint
 
 instance IsGValue CLong where
-    toGValue = buildGValue gtypeLong set_long
-    fromGValue = get_long
+  gvalueGType_ = return gtypeLong
+  gvalueSet_ = set_long
+  gvalueGet_ = get_long
 
 instance IsGValue CULong where
-    toGValue = buildGValue gtypeULong set_ulong
-    fromGValue = get_ulong
+  gvalueGType_ = return gtypeULong
+  gvalueSet_ = set_ulong
+  gvalueGet_ = get_ulong
 
 instance IsGValue Int64 where
-    toGValue = buildGValue gtypeInt64 set_int64
-    fromGValue = get_int64
+  gvalueGType_ = return gtypeInt64
+  gvalueSet_ = set_int64
+  gvalueGet_ = get_int64
 
 instance IsGValue Word64 where
-    toGValue = buildGValue gtypeUInt64 set_uint64
-    fromGValue = get_uint64
+  gvalueGType_ = return gtypeUInt64
+  gvalueSet_ = set_uint64
+  gvalueGet_ = get_uint64
 
 instance IsGValue Float where
-    toGValue = buildGValue gtypeFloat set_float
-    fromGValue = get_float
+  gvalueGType_ = return gtypeFloat
+  gvalueSet_ = set_float
+  gvalueGet_ = get_float
 
 instance IsGValue Double where
-    toGValue = buildGValue gtypeDouble set_double
-    fromGValue = get_double
+  gvalueGType_ = return gtypeDouble
+  gvalueSet_ = set_double
+  gvalueGet_ = get_double
 
 instance IsGValue Bool where
-    toGValue = buildGValue gtypeBoolean set_boolean
-    fromGValue = get_boolean
+  gvalueGType_ = return gtypeBoolean
+  gvalueSet_ = set_boolean
+  gvalueGet_ = get_boolean
 
 instance IsGValue GType where
-    toGValue = buildGValue gtypeGType set_gtype
-    fromGValue = get_gtype
+  gvalueGType_ = return gtypeGType
+  gvalueSet_ = set_gtype
+  gvalueGet_ = get_gtype
 
 instance IsGValue (StablePtr a) where
-    toGValue = buildGValue gtypeStablePtr set_stablePtr
-    fromGValue = get_stablePtr
+  gvalueGType_ = return gtypeStablePtr
+  gvalueSet_ = set_stablePtr
+  gvalueGet_ = get_stablePtr
 
 foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
 foreign import ccall "g_value_get_string" _get_string ::
     Ptr GValue -> IO CString
 
-set_string :: GValue -> Maybe Text -> IO ()
-set_string gv maybeStr =
-    withManagedPtr gv $ \ptr -> do
-      cstr <- case maybeStr of
-                Just str -> textToCString str
-                Nothing -> return nullPtr
-      _set_string ptr cstr
-      freeMem cstr
+set_string :: Ptr GValue -> Maybe Text -> IO ()
+set_string ptr maybeStr = do
+  cstr <- case maybeStr of
+            Just str -> textToCString str
+            Nothing -> return nullPtr
+  _set_string ptr cstr
+  freeMem cstr
 
-get_string :: GValue -> IO (Maybe Text)
-get_string gv = withManagedPtr gv $ \gvptr -> do
-                  cstr <- _get_string gvptr
-                  if cstr /= nullPtr
-                  then Just <$> cstringToText cstr
-                  else return Nothing
+get_string :: Ptr GValue -> IO (Maybe Text)
+get_string gvptr = do
+  cstr <- _get_string gvptr
+  if cstr /= nullPtr
+    then Just <$> cstringToText cstr
+    else return Nothing
 
-foreign import ccall unsafe "g_value_set_pointer" _set_pointer ::
+foreign import ccall unsafe "g_value_set_pointer" set_pointer ::
     Ptr GValue -> Ptr a -> IO ()
-foreign import ccall unsafe "g_value_get_pointer" _get_pointer ::
+foreign import ccall unsafe "g_value_get_pointer" get_pointer ::
     Ptr GValue -> IO (Ptr b)
 
-set_pointer :: GValue -> Ptr a -> IO ()
-set_pointer gv ptr = withManagedPtr gv $ flip _set_pointer ptr
-
-get_pointer :: GValue -> IO (Ptr b)
-get_pointer gv = withManagedPtr gv _get_pointer
-
-foreign import ccall unsafe "g_value_set_int" _set_int ::
+foreign import ccall unsafe "g_value_set_int" set_int ::
     Ptr GValue -> CInt -> IO ()
-foreign import ccall unsafe "g_value_get_int" _get_int ::
+foreign import ccall unsafe "g_value_get_int" get_int ::
     Ptr GValue -> IO CInt
 
-set_int32 :: GValue -> Int32 -> IO ()
-set_int32 gv n = withManagedPtr gv $ flip _set_int (coerce n)
+set_int32 :: Ptr GValue -> Int32 -> IO ()
+set_int32 gv n = set_int gv (coerce n)
 
-get_int32 :: GValue -> IO Int32
-get_int32 gv = coerce <$> withManagedPtr gv _get_int
+get_int32 :: Ptr GValue -> IO Int32
+get_int32 gv = coerce <$> get_int gv
 
-set_int :: GValue -> CInt -> IO ()
-set_int gv n = withManagedPtr gv $ flip _set_int n
-
-get_int :: GValue -> IO CInt
-get_int gv = withManagedPtr gv _get_int
-
-foreign import ccall unsafe "g_value_set_uint" _set_uint ::
+foreign import ccall unsafe "g_value_set_uint" set_uint ::
     Ptr GValue -> CUInt -> IO ()
-foreign import ccall unsafe "g_value_get_uint" _get_uint ::
+foreign import ccall unsafe "g_value_get_uint" get_uint ::
     Ptr GValue -> IO CUInt
 
-set_uint32 :: GValue -> Word32 -> IO ()
-set_uint32 gv n = withManagedPtr gv $ flip _set_uint (coerce n)
+set_uint32 :: Ptr GValue -> Word32 -> IO ()
+set_uint32 gv n = set_uint gv (coerce n)
 
-get_uint32 :: GValue -> IO Word32
-get_uint32 gv = coerce <$> withManagedPtr gv _get_uint
+get_uint32 :: Ptr GValue -> IO Word32
+get_uint32 gv = coerce <$> get_uint gv
 
-set_uint :: GValue -> CUInt -> IO ()
-set_uint gv n = withManagedPtr gv $ flip _set_uint n
-
-get_uint :: GValue -> IO CUInt
-get_uint gv = withManagedPtr gv _get_uint
-
-foreign import ccall unsafe "g_value_set_long" _set_long ::
+foreign import ccall unsafe "g_value_set_long" set_long ::
     Ptr GValue -> CLong -> IO ()
-foreign import ccall unsafe "g_value_get_long" _get_long ::
+foreign import ccall unsafe "g_value_get_long" get_long ::
     Ptr GValue -> IO CLong
 
-set_long :: GValue -> CLong -> IO ()
-set_long gv n = withManagedPtr gv $ flip _set_long n
-
-get_long :: GValue -> IO CLong
-get_long gv = withManagedPtr gv _get_long
-
-foreign import ccall unsafe "g_value_set_ulong" _set_ulong ::
+foreign import ccall unsafe "g_value_set_ulong" set_ulong ::
     Ptr GValue -> CULong -> IO ()
-foreign import ccall unsafe "g_value_get_ulong" _get_ulong ::
+foreign import ccall unsafe "g_value_get_ulong" get_ulong ::
     Ptr GValue -> IO CULong
 
-set_ulong :: GValue -> CULong -> IO ()
-set_ulong gv n = withManagedPtr gv $ flip _set_ulong n
-
-get_ulong :: GValue -> IO CULong
-get_ulong gv = withManagedPtr gv _get_ulong
-
-foreign import ccall unsafe "g_value_set_int64" _set_int64 ::
+foreign import ccall unsafe "g_value_set_int64" set_int64 ::
     Ptr GValue -> Int64 -> IO ()
-foreign import ccall unsafe "g_value_get_int64" _get_int64 ::
+foreign import ccall unsafe "g_value_get_int64" get_int64 ::
     Ptr GValue -> IO Int64
 
-set_int64 :: GValue -> Int64 -> IO ()
-set_int64 gv n = withManagedPtr gv $ flip _set_int64 n
-
-get_int64 :: GValue -> IO Int64
-get_int64 gv = withManagedPtr gv _get_int64
-
-foreign import ccall unsafe "g_value_set_uint64" _set_uint64 ::
+foreign import ccall unsafe "g_value_set_uint64" set_uint64 ::
     Ptr GValue -> Word64 -> IO ()
-foreign import ccall unsafe "g_value_get_uint64" _get_uint64 ::
+foreign import ccall unsafe "g_value_get_uint64" get_uint64 ::
     Ptr GValue -> IO Word64
-
-set_uint64 :: GValue -> Word64 -> IO ()
-set_uint64 gv n = withManagedPtr gv $ flip _set_uint64 n
-
-get_uint64 :: GValue -> IO Word64
-get_uint64 gv = withManagedPtr gv _get_uint64
 
 foreign import ccall unsafe "g_value_set_float" _set_float ::
     Ptr GValue -> CFloat -> IO ()
 foreign import ccall unsafe "g_value_get_float" _get_float ::
     Ptr GValue -> IO CFloat
 
-set_float :: GValue -> Float -> IO ()
-set_float gv f = withManagedPtr gv $ flip _set_float (realToFrac f)
+set_float :: Ptr GValue -> Float -> IO ()
+set_float gv f = _set_float gv (realToFrac f)
 
-get_float :: GValue -> IO Float
-get_float gv = realToFrac <$> withManagedPtr gv _get_float
+get_float :: Ptr GValue -> IO Float
+get_float gv = realToFrac <$> _get_float gv
 
 foreign import ccall unsafe "g_value_set_double" _set_double ::
     Ptr GValue -> CDouble -> IO ()
 foreign import ccall unsafe "g_value_get_double" _get_double ::
     Ptr GValue -> IO CDouble
 
-set_double :: GValue -> Double -> IO ()
-set_double gv d = withManagedPtr gv $ flip _set_double (realToFrac d)
+set_double :: Ptr GValue -> Double -> IO ()
+set_double gv d = _set_double gv (realToFrac d)
 
-get_double :: GValue -> IO Double
-get_double gv = realToFrac <$> withManagedPtr gv _get_double
+get_double :: Ptr GValue -> IO Double
+get_double gv = realToFrac <$> _get_double gv
 
 foreign import ccall unsafe "g_value_set_boolean" _set_boolean ::
     Ptr GValue -> CInt -> IO ()
 foreign import ccall unsafe "g_value_get_boolean" _get_boolean ::
     Ptr GValue -> IO CInt
 
-set_boolean :: GValue -> Bool -> IO ()
-set_boolean gv b = withManagedPtr gv $ \ptr ->
-                   _set_boolean ptr (fromIntegral $ fromEnum b)
+set_boolean :: Ptr GValue -> Bool -> IO ()
+set_boolean gv b = _set_boolean gv (fromIntegral $ fromEnum b)
 
-get_boolean :: GValue -> IO Bool
-get_boolean gv = withManagedPtr gv $ \ptr -> (/= 0) <$> _get_boolean ptr
+get_boolean :: Ptr GValue -> IO Bool
+get_boolean gv = (/= 0) <$> _get_boolean gv
 
 foreign import ccall unsafe "g_value_set_gtype" _set_gtype ::
     Ptr GValue -> CGType -> IO ()
 foreign import ccall unsafe "g_value_get_gtype" _get_gtype ::
     Ptr GValue -> IO CGType
 
-set_gtype :: GValue -> GType -> IO ()
-set_gtype gv (GType g) = withManagedPtr gv $ \ptr -> _set_gtype ptr g
+set_gtype :: Ptr GValue -> GType -> IO ()
+set_gtype gv (GType g) = _set_gtype gv g
 
-get_gtype :: GValue -> IO GType
-get_gtype gv = GType <$> withManagedPtr gv _get_gtype
+get_gtype :: Ptr GValue -> IO GType
+get_gtype gv = GType <$> _get_gtype gv
 
 foreign import ccall "g_value_set_object" _set_object ::
     Ptr GValue -> Ptr a -> IO ()
 foreign import ccall "g_value_get_object" _get_object ::
     Ptr GValue -> IO (Ptr a)
 
-set_object :: GObject a => GValue -> Ptr a -> IO ()
-set_object gv o = withManagedPtr gv $ flip _set_object o
+set_object :: GObject a => Ptr GValue -> Ptr a -> IO ()
+set_object = _set_object
 
-get_object :: GObject b => GValue -> IO (Ptr b)
-get_object gv = withManagedPtr gv _get_object
+get_object :: GObject a => Ptr GValue -> IO (Ptr a)
+get_object = _get_object
 
-foreign import ccall "g_value_set_boxed" _set_boxed ::
+foreign import ccall "g_value_set_boxed" set_boxed ::
     Ptr GValue -> Ptr a -> IO ()
-foreign import ccall "g_value_get_boxed" _get_boxed ::
+foreign import ccall "g_value_get_boxed" get_boxed ::
     Ptr GValue -> IO (Ptr b)
 
-set_boxed :: GValue -> Ptr a -> IO ()
-set_boxed gv b = withManagedPtr gv $ flip _set_boxed b
-
-get_boxed :: GValue -> IO (Ptr b)
-get_boxed gv = withManagedPtr gv _get_boxed
-
-foreign import ccall "g_value_set_variant" _set_variant ::
+foreign import ccall "g_value_set_variant" set_variant ::
     Ptr GValue -> Ptr GVariant -> IO ()
-foreign import ccall "g_value_get_variant" _get_variant ::
+foreign import ccall "g_value_get_variant" get_variant ::
     Ptr GValue -> IO (Ptr GVariant)
 
-set_variant :: GValue -> Ptr GVariant -> IO ()
-set_variant gv v = withManagedPtr gv $ flip _set_variant v
-
-get_variant :: GValue -> IO (Ptr GVariant)
-get_variant gv = withManagedPtr gv _get_variant
-
-foreign import ccall unsafe "g_value_set_enum" _set_enum ::
+foreign import ccall unsafe "g_value_set_enum" set_enum ::
     Ptr GValue -> CUInt -> IO ()
-foreign import ccall unsafe "g_value_get_enum" _get_enum ::
+foreign import ccall unsafe "g_value_get_enum" get_enum ::
     Ptr GValue -> IO CUInt
 
-set_enum :: GValue -> CUInt -> IO ()
-set_enum gv e = withManagedPtr gv $ flip _set_enum e
-
-get_enum :: GValue -> IO CUInt
-get_enum gv = withManagedPtr gv _get_enum
-
-foreign import ccall unsafe "g_value_set_flags" _set_flags ::
+foreign import ccall unsafe "g_value_set_flags" set_flags ::
     Ptr GValue -> CUInt -> IO ()
-foreign import ccall unsafe "g_value_get_flags" _get_flags ::
+foreign import ccall unsafe "g_value_get_flags" get_flags ::
     Ptr GValue -> IO CUInt
-
-set_flags :: GValue -> CUInt -> IO ()
-set_flags gv f = withManagedPtr gv $ flip _set_flags f
-
-get_flags :: GValue -> IO CUInt
-get_flags gv = withManagedPtr gv _get_flags
 
 -- | Set the value of `GValue` containing a `StablePtr`
-set_stablePtr :: GValue -> StablePtr a -> IO ()
-set_stablePtr gv ptr = withManagedPtr gv $ flip _set_boxed (castStablePtrToPtr ptr)
+set_stablePtr :: Ptr GValue -> StablePtr a -> IO ()
+set_stablePtr gv ptr = set_boxed gv (castStablePtrToPtr ptr)
 
 foreign import ccall g_value_take_boxed :: Ptr GValue -> StablePtr a -> IO ()
 
@@ -450,8 +398,8 @@ take_stablePtr :: Ptr GValue -> StablePtr a -> IO ()
 take_stablePtr = g_value_take_boxed
 
 -- | Get the value of a `GValue` containing a `StablePtr`
-get_stablePtr :: GValue -> IO (StablePtr a)
-get_stablePtr gv = castPtrToStablePtr <$> withManagedPtr gv _get_boxed
+get_stablePtr :: Ptr GValue -> IO (StablePtr a)
+get_stablePtr gv = castPtrToStablePtr <$> get_boxed gv
 
 foreign import ccall g_value_copy :: Ptr GValue -> Ptr GValue -> IO ()
 

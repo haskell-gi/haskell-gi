@@ -38,12 +38,13 @@
   EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 
-import Data.GI.Base.GType (gtypeString)
 import Data.GI.Base.GValue
 import Data.GI.Base.ManagedPtr
 import Data.GI.Base
 import GI.GObject.Functions
 import qualified GI.Gtk
+
+import Data.Text (Text)
 
 main :: IO ()
 main = do
@@ -65,7 +66,6 @@ main = do
 
   -- When the text entry is ready
   _ <- on entry #realize $ do
-
     -- Get the GType for the GtkEntry
     gtype <- glibType @GI.Gtk.Entry
 
@@ -74,26 +74,23 @@ main = do
     -- and the GType GtkEntry
     (_, signalId, detail) <- signalParseName "insert-at-cursor" gtype False
 
-    -- Get access to our GtkEntry* entryPtr (pointer to GtkEntry)
-    withManagedPtr entry $ \ entryPtr -> do
+    -- Create a managed GValue* with the type GObject
+    object <- toGValue (Just entry)
 
-      -- Create a managed GValue* with the type GObject
-      object <- buildGValue gtype set_object entryPtr
+    -- Create a managed GValue* with the type gchar* (string)
+    -- The `H` is the character we will insert at the beginning
+    -- of the text entry to complete the word Haskell
+    string <- toGValue (Just "H" :: Maybe Text)
 
-      -- Create a managed GValue* with the type gchar* (string)
-      -- The `H` is the character we will insert at the beginning
-      -- of the text entry to complete the word Haskell
-      string <- buildGValue gtypeString set_string (Just "H")
+    -- Emit the signal to object making sure to place
+    -- it first in the parameter array
+    -- The rest of the array holds the parameters that the
+    -- signal accepts
+    -- In this case `insert-at-cursor` accepts a string
+    -- parameter
+    _ <- signalEmitv [object, string] signalId detail
 
-      -- Emit the signal to object making sure to place
-      -- it first in the parameter array
-      -- The rest of the array holds the parameters that the
-      -- signal accepts
-      -- In this case `insert-at-cursor` accepts a string
-      -- parameter
-      _ <- signalEmitv [object, string] signalId detail
-
-      return ()
+    return ()
 
   -- Show the window containing our text entry
   #showAll win

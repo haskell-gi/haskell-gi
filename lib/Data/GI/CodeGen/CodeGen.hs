@@ -227,21 +227,22 @@ genMethod cn m@(Method {
 genGObjectGValueInstance :: Name -> Text -> CodeGen ()
 genGObjectGValueInstance n get_type_fn = do
   let name' = upperName n
-      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue' with 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
+      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
 
   writeHaddock DocBeforeSymbol doc
 
   group $ do
-    bline $ "instance B.GValue.IsGValue " <> name' <> " where"
+    bline $ "instance B.GValue.IsGValue (Maybe " <> name' <> ") where"
     indent $ group $ do
-      line $ "toGValue o = do"
-      indent $ group $ do
-        line $ "gtype <- " <> get_type_fn
-        line $ "B.ManagedPtr.withManagedPtr o (B.GValue.buildGValue gtype B.GValue.set_object)"
-      line $ "fromGValue gv = do"
+      line $ "gvalueGType_ = " <> get_type_fn
+      line $ "gvalueSet_ gv P.Nothing = B.GValue.set_object gv (FP.nullPtr :: FP.Ptr " <> name' <> ")"
+      line $ "gvalueSet_ gv (P.Just obj) = B.ManagedPtr.withManagedPtr obj (B.GValue.set_object gv)"
+      line $ "gvalueGet_ gv = do"
       indent $ group $ do
         line $ "ptr <- B.GValue.get_object gv :: IO (Ptr " <> name' <> ")"
-        line $ "B.ManagedPtr.newObject " <> name' <> " ptr"
+        line $ "if ptr /= FP.nullPtr"
+        line $ "then P.Just <$> B.ManagedPtr.newObject " <> name' <> " ptr"
+        line $ "else return P.Nothing"
 
 -- Type casting with type checking
 genCasts :: Name -> Text -> [Name] -> CodeGen ()

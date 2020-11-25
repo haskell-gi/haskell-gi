@@ -147,16 +147,16 @@ objectFromPtr objPtr = newObject @o @o (coerce @_ @(ManagedPtr o -> o) GObjectCo
 wrapGetSet :: forall o a. (GObject o, IsGValue a) =>
               (o -> IO a)       -- ^ Haskell side getter
            -> (o -> a -> IO ()) -- ^ Haskell side setter
-           -> (GValue -> a -> IO ()) -- ^ Setter for the `GValue`
+           -> (Ptr GValue -> a -> IO ()) -- ^ Setter for the `GValue`
            -> PropGetSetter o
 wrapGetSet getter setter gvalueSetter = PropGetSetter {
   propGetter = \objPtr destPtr -> do
       value <- objectFromPtr objPtr >>= getter
-      withTransient GValue destPtr $ \dest -> gvalueSetter dest value
+      gvalueSetter destPtr value
   , propSetter = \objPtr newGValuePtr ->
       withTransient GValue newGValuePtr $ \newGValue -> do
         obj <- objectFromPtr objPtr
-        value <- fromGValue newGValue
+        value <- GV.fromGValue newGValue
         setter obj value
   }
 
@@ -217,7 +217,7 @@ gParamSpecValue (PropertyInfo {..}) =
     setter' :: Ptr o -> (Ptr GValue) -> IO ()
     setter' objPtr gvPtr = withTransient GValue gvPtr $ \gv -> do
       obj <- objectFromPtr objPtr
-      val <- fromGValue gv >>= deRefStablePtr
+      val <- GV.fromGValue gv >>= deRefStablePtr
       setter obj val
 
 -- | Information on a property of type `CInt` to be registered. A
@@ -271,7 +271,7 @@ gParamSpecCInt (CIntPropertyInfo {..}) =
                                      defaultValue
                                      (maybe defaultFlags gflagsToWord flags)
         quark <- pspecQuark
-        gParamSpecSetQData pspecPtr quark (wrapGetSet getter setter GV.set_int)
+        gParamSpecSetQData pspecPtr quark (wrapGetSet getter setter gvalueSet_)
         wrapGParamSpecPtr pspecPtr
 
 -- | Information on a property of type `Text` to be registered. A
@@ -317,7 +317,7 @@ gParamSpecCString (CStringPropertyInfo {..}) =
               g_param_spec_string cname cnick cblurb cdefault
                     (maybe defaultFlags gflagsToWord flags)
         quark <- pspecQuark
-        gParamSpecSetQData pspecPtr quark (wrapGetSet getter setter GV.set_string)
+        gParamSpecSetQData pspecPtr quark (wrapGetSet getter setter gvalueSet_)
         wrapGParamSpecPtr pspecPtr
 
 foreign import ccall g_param_spec_set_qdata_full ::

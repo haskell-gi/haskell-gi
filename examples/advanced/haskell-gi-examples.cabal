@@ -74,6 +74,7 @@ executable gtk-emit-signal
                       , gi-gobject
                       , gi-glib
                       , gi-gtk
+                      , text
   default-language:   Haskell2010
   ghc-options:        -Wall -threaded -with-rtsopts=-N -Wall
 

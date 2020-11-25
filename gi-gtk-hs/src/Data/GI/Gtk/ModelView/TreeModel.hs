@@ -120,8 +120,8 @@ import Prelude ()
 import Prelude.Compat
 import Data.Int (Int32)
 import Data.Text (Text)
-import Data.GI.Base.GValue (fromGValue, get_object)
-import Data.GI.Base.ManagedPtr (newObject)
+import Data.GI.Base.GValue (GValue(..), fromGValue, get_object)
+import Data.GI.Base.ManagedPtr (withManagedPtr, newObject)
 import Foreign.Ptr (Ptr)
 import GI.GdkPixbuf.Objects.Pixbuf (Pixbuf(..))
 import GI.Gtk.Structs.TreeIter (TreeIter)
@@ -152,7 +152,11 @@ makeColumnIdString = ColumnId (\v -> fromJust <$> fromGValue v) CAString
 
 -- | Create a 'ColumnId' to extract an 'Pixbuf'.
 makeColumnIdPixbuf :: Int32 -> ColumnId row Pixbuf
-makeColumnIdPixbuf = ColumnId (\v -> (get_object v :: IO (Ptr Pixbuf)) >>= newObject Pixbuf) CAPixbuf
+makeColumnIdPixbuf = ColumnId gvalueToPixbuf CAPixbuf
+  where gvalueToPixbuf :: GValue -> IO Pixbuf
+        gvalueToPixbuf gv = withManagedPtr gv $ \gvPtr -> do
+          objPtr <- get_object gvPtr :: IO (Ptr Pixbuf)
+          newObject Pixbuf objPtr
 
 -- | Convert a 'ColumnId' to a bare number.
 columnIdToNumber :: ColumnId row ty -> Int32

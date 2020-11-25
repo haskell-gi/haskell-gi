@@ -114,231 +114,224 @@ import Foreign.C.Types (CInt, CUInt, CLong, CULong)
 foreign import ccall "g_object_set_property" g_object_set_property ::
     Ptr a -> CString -> Ptr GValue -> IO ()
 
-setObjectProperty :: GObject a => a -> String -> b ->
-                     (GValue -> b -> IO ()) -> GType -> IO ()
-setObjectProperty obj propName propValue setter (GType gtype) = do
-  gvalue <- buildGValue (GType gtype) setter propValue
+-- | Set a property on an object to the given `GValue`.
+gobjectSetProperty :: GObject a => a -> String -> GValue -> IO ()
+gobjectSetProperty obj propName gvalue =
   withManagedPtr obj $ \objPtr ->
       withCString propName $ \cPropName ->
           withManagedPtr gvalue $ \gvalueptr ->
               g_object_set_property objPtr cPropName gvalueptr
 
+-- | A convenience wrapper over `gobjectSetProperty` that does the
+-- wrapping of a value into a `GValue`.
+setObjectProperty :: GObject a => a -> String -> b ->
+                     (Ptr GValue -> b -> IO ()) -> GType -> IO ()
+setObjectProperty obj propName propValue setter (GType gtype) = do
+  gvalue <- buildGValue (GType gtype) setter propValue
+  gobjectSetProperty obj propName gvalue
+
 foreign import ccall "g_object_get_property" g_object_get_property ::
     Ptr a -> CString -> Ptr GValue -> IO ()
 
-getObjectProperty :: GObject a => a -> String ->
-                     (GValue -> IO b) -> GType -> IO b
-getObjectProperty obj propName getter gtype = do
+-- | Get the `GValue` for the given property.
+gobjectGetProperty :: GObject a => a -> String -> GType -> IO GValue
+gobjectGetProperty obj propName gtype = do
   gvalue <- newGValue gtype
   withManagedPtr obj $ \objPtr ->
       withCString propName $ \cPropName ->
           withManagedPtr gvalue $ \gvalueptr ->
               g_object_get_property objPtr cPropName gvalueptr
-  getter gvalue
+  return gvalue
 
-constructObjectProperty :: String -> b -> (GValue -> b -> IO ()) ->
+-- | A convenience wrapper over `gobjectGetProperty` that unwraps the
+-- `GValue` into a Haskell value.
+getObjectProperty :: GObject a => a -> String ->
+                     (Ptr GValue -> IO b) -> GType -> IO b
+getObjectProperty obj propName getter gtype = do
+  gv <- gobjectGetProperty obj propName gtype
+  withManagedPtr gv getter
+
+constructObjectProperty :: String -> b -> (Ptr GValue -> b -> IO ()) ->
                            GType -> IO (GValueConstruct o)
 constructObjectProperty propName propValue setter gtype = do
   gvalue <- buildGValue gtype setter propValue
   return (GValueConstruct propName gvalue)
 
+-- | Set a property for a type with a `IsGValue` instance.
+setProperty :: (GObject a, IsGValue b) => a -> String -> b -> IO ()
+setProperty obj propName maybeVal = do
+  gvalue <- toGValue maybeVal
+  gobjectSetProperty obj propName gvalue
+
+-- | Construct a property for a type with a `IsGValue` instance.
+constructProperty :: IsGValue b => String -> b -> IO (GValueConstruct o)
+constructProperty propName maybeVal = do
+  gvalue <- toGValue maybeVal
+  return (GValueConstruct propName gvalue)
+
+-- | Get a nullable property for a type with a `IsGValue` instance.
+getProperty :: forall a b. (GObject a, IsGValue b) =>
+                       a -> String -> IO b
+getProperty obj propName = do
+  gtype <- gvalueGType_ @b
+  gv <- gobjectGetProperty obj propName gtype
+  fromGValue gv
+
 setObjectPropertyString :: GObject a =>
                            a -> String -> Maybe Text -> IO ()
-setObjectPropertyString obj propName str =
-    setObjectProperty obj propName str set_string gtypeString
+setObjectPropertyString = setProperty
 
 constructObjectPropertyString :: String -> Maybe Text ->
                                  IO (GValueConstruct o)
-constructObjectPropertyString propName str =
-    constructObjectProperty propName str set_string gtypeString
+constructObjectPropertyString = constructProperty
 
 getObjectPropertyString :: GObject a =>
                            a -> String -> IO (Maybe Text)
-getObjectPropertyString obj propName =
-    getObjectProperty obj propName get_string gtypeString
+getObjectPropertyString = getProperty
 
 setObjectPropertyPtr :: GObject a =>
                         a -> String -> Ptr b -> IO ()
-setObjectPropertyPtr obj propName ptr =
-    setObjectProperty obj propName ptr set_pointer gtypePointer
+setObjectPropertyPtr = setProperty
 
 constructObjectPropertyPtr :: String -> Ptr b ->
                               IO (GValueConstruct o)
-constructObjectPropertyPtr propName ptr =
-    constructObjectProperty propName ptr set_pointer gtypePointer
+constructObjectPropertyPtr = constructProperty
 
 getObjectPropertyPtr :: GObject a =>
                         a -> String -> IO (Ptr b)
-getObjectPropertyPtr obj propName =
-    getObjectProperty obj propName get_pointer gtypePointer
+getObjectPropertyPtr = getProperty
 
 setObjectPropertyInt :: GObject a =>
                          a -> String -> CInt -> IO ()
-setObjectPropertyInt obj propName int =
-    setObjectProperty obj propName int set_int gtypeInt
+setObjectPropertyInt = setProperty
 
 constructObjectPropertyInt :: String -> CInt ->
                               IO (GValueConstruct o)
-constructObjectPropertyInt propName int =
-    constructObjectProperty propName int set_int gtypeInt
+constructObjectPropertyInt = constructProperty
 
 getObjectPropertyInt :: GObject a => a -> String -> IO CInt
-getObjectPropertyInt obj propName =
-    getObjectProperty obj propName get_int gtypeInt
+getObjectPropertyInt = getProperty
 
 setObjectPropertyUInt :: GObject a =>
                           a -> String -> CUInt -> IO ()
-setObjectPropertyUInt obj propName uint =
-    setObjectProperty obj propName uint set_uint gtypeUInt
+setObjectPropertyUInt = setProperty
 
 constructObjectPropertyUInt :: String -> CUInt ->
                                 IO (GValueConstruct o)
-constructObjectPropertyUInt propName uint =
-    constructObjectProperty propName uint set_uint gtypeUInt
+constructObjectPropertyUInt = constructProperty
 
 getObjectPropertyUInt :: GObject a => a -> String -> IO CUInt
-getObjectPropertyUInt obj propName =
-    getObjectProperty obj propName get_uint gtypeUInt
+getObjectPropertyUInt = getProperty
 
 setObjectPropertyLong :: GObject a =>
                          a -> String -> CLong -> IO ()
-setObjectPropertyLong obj propName int =
-    setObjectProperty obj propName int set_long gtypeLong
+setObjectPropertyLong = setProperty
 
 constructObjectPropertyLong :: String -> CLong ->
                                IO (GValueConstruct o)
-constructObjectPropertyLong propName int =
-    constructObjectProperty propName int set_long gtypeLong
+constructObjectPropertyLong = constructProperty
 
 getObjectPropertyLong :: GObject a => a -> String -> IO CLong
-getObjectPropertyLong obj propName =
-    getObjectProperty obj propName get_long gtypeLong
+getObjectPropertyLong = getProperty
 
 setObjectPropertyULong :: GObject a =>
                           a -> String -> CULong -> IO ()
-setObjectPropertyULong obj propName uint =
-    setObjectProperty obj propName uint set_ulong gtypeULong
+setObjectPropertyULong = setProperty
 
 constructObjectPropertyULong :: String -> CULong ->
                                 IO (GValueConstruct o)
-constructObjectPropertyULong propName uint =
-    constructObjectProperty propName uint set_ulong gtypeULong
+constructObjectPropertyULong = constructProperty
 
 getObjectPropertyULong :: GObject a => a -> String -> IO CULong
-getObjectPropertyULong obj propName =
-    getObjectProperty obj propName get_ulong gtypeULong
+getObjectPropertyULong = getProperty
 
 setObjectPropertyInt32 :: GObject a =>
                           a -> String -> Int32 -> IO ()
-setObjectPropertyInt32 obj propName int32 =
-    setObjectProperty obj propName int32 set_int32 gtypeInt
+setObjectPropertyInt32 = setProperty
 
 constructObjectPropertyInt32 :: String -> Int32 ->
                                 IO (GValueConstruct o)
-constructObjectPropertyInt32 propName int32 =
-    constructObjectProperty propName int32 set_int32 gtypeInt
+constructObjectPropertyInt32 = constructProperty
 
 getObjectPropertyInt32 :: GObject a => a -> String -> IO Int32
-getObjectPropertyInt32 obj propName =
-    getObjectProperty obj propName get_int32 gtypeInt
+getObjectPropertyInt32 = getProperty
 
 setObjectPropertyUInt32 :: GObject a =>
                           a -> String -> Word32 -> IO ()
-setObjectPropertyUInt32 obj propName uint32 =
-    setObjectProperty obj propName uint32 set_uint32 gtypeUInt
+setObjectPropertyUInt32 = setProperty
 
 constructObjectPropertyUInt32 :: String -> Word32 ->
                                  IO (GValueConstruct o)
-constructObjectPropertyUInt32 propName uint32 =
-    constructObjectProperty propName uint32 set_uint32 gtypeUInt
+constructObjectPropertyUInt32 = constructProperty
 
 getObjectPropertyUInt32 :: GObject a => a -> String -> IO Word32
-getObjectPropertyUInt32 obj propName =
-    getObjectProperty obj propName get_uint32 gtypeUInt
+getObjectPropertyUInt32 = getProperty
 
 setObjectPropertyInt64 :: GObject a =>
                           a -> String -> Int64 -> IO ()
-setObjectPropertyInt64 obj propName int64 =
-    setObjectProperty obj propName int64 set_int64 gtypeInt64
+setObjectPropertyInt64 = setProperty
 
 constructObjectPropertyInt64 :: String -> Int64 ->
                                 IO (GValueConstruct o)
-constructObjectPropertyInt64 propName int64 =
-    constructObjectProperty propName int64 set_int64 gtypeInt64
+constructObjectPropertyInt64 = constructProperty
 
 getObjectPropertyInt64 :: GObject a => a -> String -> IO Int64
-getObjectPropertyInt64 obj propName =
-    getObjectProperty obj propName get_int64 gtypeInt64
+getObjectPropertyInt64 = getProperty
 
 setObjectPropertyUInt64 :: GObject a =>
                           a -> String -> Word64 -> IO ()
-setObjectPropertyUInt64 obj propName uint64 =
-    setObjectProperty obj propName uint64 set_uint64 gtypeUInt64
+setObjectPropertyUInt64 = setProperty
 
 constructObjectPropertyUInt64 :: String -> Word64 ->
                                  IO (GValueConstruct o)
-constructObjectPropertyUInt64 propName uint64 =
-    constructObjectProperty propName uint64 set_uint64 gtypeUInt64
+constructObjectPropertyUInt64 = constructProperty
 
 getObjectPropertyUInt64 :: GObject a => a -> String -> IO Word64
-getObjectPropertyUInt64 obj propName =
-    getObjectProperty obj propName get_uint64 gtypeUInt64
+getObjectPropertyUInt64 = getProperty
 
 setObjectPropertyFloat :: GObject a =>
                            a -> String -> Float -> IO ()
-setObjectPropertyFloat obj propName float =
-    setObjectProperty obj propName float set_float gtypeFloat
+setObjectPropertyFloat = setProperty
 
 constructObjectPropertyFloat :: String -> Float ->
                                  IO (GValueConstruct o)
-constructObjectPropertyFloat propName float =
-    constructObjectProperty propName float set_float gtypeFloat
+constructObjectPropertyFloat = constructProperty
 
 getObjectPropertyFloat :: GObject a =>
                            a -> String -> IO Float
-getObjectPropertyFloat obj propName =
-    getObjectProperty obj propName get_float gtypeFloat
+getObjectPropertyFloat = getProperty
 
 setObjectPropertyDouble :: GObject a =>
                             a -> String -> Double -> IO ()
-setObjectPropertyDouble obj propName double =
-    setObjectProperty obj propName double set_double gtypeDouble
+setObjectPropertyDouble = setProperty
 
 constructObjectPropertyDouble :: String -> Double ->
                                   IO (GValueConstruct o)
-constructObjectPropertyDouble propName double =
-    constructObjectProperty propName double set_double gtypeDouble
+constructObjectPropertyDouble = constructProperty
 
 getObjectPropertyDouble :: GObject a =>
                             a -> String -> IO Double
-getObjectPropertyDouble obj propName =
-    getObjectProperty obj propName get_double gtypeDouble
+getObjectPropertyDouble = getProperty
 
 setObjectPropertyBool :: GObject a =>
                          a -> String -> Bool -> IO ()
-setObjectPropertyBool obj propName bool =
-    setObjectProperty obj propName bool set_boolean gtypeBoolean
+setObjectPropertyBool = setProperty
 
 constructObjectPropertyBool :: String -> Bool -> IO (GValueConstruct o)
-constructObjectPropertyBool propName bool =
-    constructObjectProperty propName bool set_boolean gtypeBoolean
+constructObjectPropertyBool = constructProperty
 
 getObjectPropertyBool :: GObject a => a -> String -> IO Bool
-getObjectPropertyBool obj propName =
-    getObjectProperty obj propName get_boolean gtypeBoolean
+getObjectPropertyBool = getProperty
 
 setObjectPropertyGType :: GObject a =>
                          a -> String -> GType -> IO ()
-setObjectPropertyGType obj propName gtype =
-    setObjectProperty obj propName gtype set_gtype gtypeGType
+setObjectPropertyGType = setProperty
 
 constructObjectPropertyGType :: String -> GType -> IO (GValueConstruct o)
-constructObjectPropertyGType propName bool =
-    constructObjectProperty propName bool set_gtype gtypeGType
+constructObjectPropertyGType = constructProperty
 
 getObjectPropertyGType :: GObject a => a -> String -> IO GType
-getObjectPropertyGType obj propName =
-    getObjectProperty obj propName get_gtype gtypeGType
+getObjectPropertyGType = getProperty
 
 setObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
                            a -> String -> Maybe b -> IO ()
@@ -533,7 +526,7 @@ constructObjectPropertyPtrGList propName ptrs = do
 getObjectPropertyPtrGList :: GObject a =>
                               a -> String -> IO [Ptr b]
 getObjectPropertyPtrGList obj propName =
-    getObjectProperty obj propName (get_pointer >=> unpackGList) gtypePointer
+  getObjectProperty obj propName (gvalueGet_ >=> unpackGList) gtypePointer
 
 setObjectPropertyHash :: GObject a => a -> String -> b -> IO ()
 setObjectPropertyHash =
@@ -549,16 +542,16 @@ getObjectPropertyHash =
 
 setObjectPropertyCallback :: GObject a => a -> String -> FunPtr b -> IO ()
 setObjectPropertyCallback obj propName funPtr =
-    setObjectProperty obj propName (castFunPtrToPtr funPtr) set_pointer gtypePointer
+    setObjectProperty obj propName (castFunPtrToPtr funPtr) gvalueSet_ gtypePointer
 
 constructObjectPropertyCallback :: String -> FunPtr b -> IO (GValueConstruct o)
 constructObjectPropertyCallback propName funPtr =
-  constructObjectProperty propName (castFunPtrToPtr funPtr) set_pointer gtypePointer
+  constructObjectProperty propName (castFunPtrToPtr funPtr) gvalueSet_ gtypePointer
 
 getObjectPropertyCallback :: GObject a => a -> String ->
                              (FunPtr b -> c) -> IO (Maybe c)
 getObjectPropertyCallback obj propName wrapper = do
-  ptr <- getObjectProperty obj propName get_pointer gtypePointer
+  ptr <- getObjectProperty obj propName gvalueGet_ gtypePointer
   if ptr /= nullPtr
     then return . Just . wrapper $ castPtrToFunPtr ptr
     else return Nothing
