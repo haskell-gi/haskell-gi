@@ -223,9 +223,27 @@ genMethod cn m@(Method {
     cppIf CPPOverloading $
          genMethodInfo cn (m {methodCallable = c''})
 
+-- | Generate an import for the gvalue getter for the given type. It
+-- returns the name of the function on the Haskell side.
+genGValueGetter :: Text -> Text -> CodeGen Text
+genGValueGetter name' get_value_fn = group $ do
+  let symb = "gv_get_" <> get_value_fn
+  line $ "foreign import ccall \"" <> get_value_fn <> "\" " <> symb <> " ::"
+  indent $ line $ "FP.Ptr B.GValue.GValue -> IO (FP.Ptr " <> name' <> ")"
+  return symb
+
+-- | Generate an import for the gvalue setter for the given type. It
+-- returns the name of the function on the Haskell side.
+genGValueSetter :: Text -> Text -> CodeGen Text
+genGValueSetter name' set_value_fn = group $ do
+  let symb = "gv_set_" <> set_value_fn
+  line $ "foreign import ccall \"" <> set_value_fn <> "\" " <> symb <> " ::"
+  indent $ line $ "FP.Ptr B.GValue.GValue -> FP.Ptr " <> name' <> " -> IO ()"
+  return symb
+
 -- | Generate the GValue instances for the given GObject.
-genGObjectGValueInstance :: Name -> Text -> CodeGen ()
-genGObjectGValueInstance n get_type_fn = do
+genGValueInstance :: Name -> Text -> Text -> Text -> Text -> CodeGen ()
+genGValueInstance n get_type_fn newFn get_value_fn set_value_fn = do
   let name' = upperName n
       doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
 
@@ -235,17 +253,18 @@ genGObjectGValueInstance n get_type_fn = do
     bline $ "instance B.GValue.IsGValue (Maybe " <> name' <> ") where"
     indent $ group $ do
       line $ "gvalueGType_ = " <> get_type_fn
-      line $ "gvalueSet_ gv P.Nothing = B.GValue.set_object gv (FP.nullPtr :: FP.Ptr " <> name' <> ")"
-      line $ "gvalueSet_ gv (P.Just obj) = B.ManagedPtr.withManagedPtr obj (B.GValue.set_object gv)"
+      line $ "gvalueSet_ gv P.Nothing = " <> set_value_fn <> " gv (FP.nullPtr :: FP.Ptr " <> name' <> ")"
+      line $ "gvalueSet_ gv (P.Just obj) = B.ManagedPtr.withManagedPtr obj (" <> set_value_fn <> " gv)"
       line $ "gvalueGet_ gv = do"
       indent $ group $ do
-        line $ "ptr <- B.GValue.get_object gv :: IO (Ptr " <> name' <> ")"
+        line $ "ptr <- " <> get_value_fn <> " gv :: IO (Ptr " <> name' <> ")"
         line $ "if ptr /= FP.nullPtr"
-        line $ "then P.Just <$> B.ManagedPtr.newObject " <> name' <> " ptr"
+        line $ "then P.Just <$> " <> newFn <> " " <> name' <> " ptr"
         line $ "else return P.Nothing"
 
--- Type casting with type checking
-genCasts :: Name -> Text -> [Name] -> CodeGen ()
+-- | Type casting with type checking, returns the function returning the
+-- GType for the oject.
+genCasts :: Name -> Text -> [Name] -> CodeGen Text
 genCasts n ti parents = do
   isGO <- isGObject (TInterface n)
   let name' = upperName n
@@ -264,8 +283,6 @@ genCasts n ti parents = do
 
   when isGO $ group $ do
       bline $ "instance B.Types.GObject " <> name'
-
-  when isGO $ genGObjectGValueInstance n get_type_fn
 
   className <- classConstraint n
   group $ do
@@ -301,6 +318,8 @@ genCasts n ti parents = do
     line $ safeCast <> " :: (MonadIO m, " <> className <> " o) => o -> m " <> name'
     line $ safeCast <> " = liftIO . unsafeCastTo " <> name'
 
+  return get_type_fn
+
   where castDoc :: Text -> Text
         castDoc name' = "Cast to `" <> name' <>
                         "`, for types for which this is known to be safe. " <>
@@ -327,7 +346,16 @@ genObject n o = do
 
   -- Type safe casting to parent objects, and implemented interfaces.
   parents <- instanceTree n
-  genCasts n (objTypeInit o) (parents <> objInterfaces o)
+  get_type_fn <- genCasts n (objTypeInit o) (parents <> objInterfaces o)
+
+  if isGO
+    then genGValueInstance n get_type_fn "B.ManagedPtr.newObject" "B.GValue.get_object" "B.GValue.set_object"
+    else case (objGetValueFunc o, objSetValueFunc o) of
+           (Just get_value_fn, Just set_value_fn) -> do
+             getter <- genGValueGetter name' get_value_fn
+             setter <- genGValueSetter name' set_value_fn
+             genGValueInstance n get_type_fn "B.ManagedPtr.newPtr" getter setter
+           _ -> line $ "--- XXX Missing getter and/or setter, so no GValue instance could be generated."
 
   cppIf CPPOverloading $
        fullObjectMethodList n o >>= genMethodList n
@@ -382,7 +410,8 @@ genInterface n iface = do
     gobjectPrereqs <- filterM nameIsGObject (ifPrerequisites iface)
     allParents <- forM gobjectPrereqs $ \p -> (p : ) <$> instanceTree p
     let uniqueParents = nub (concat allParents)
-    genCasts n cn_ uniqueParents
+    get_type_fn <- genCasts n cn_ uniqueParents
+    genGValueInstance n get_type_fn "B.ManagedPtr.newObject" "B.GValue.get_object" "B.GValue.set_object"
 
     genInterfaceProperties n iface
     cppIf CPPOverloading $

@@ -19,6 +19,8 @@ data Object = Object {
     objCType :: Maybe Text,
     objRefFunc :: Maybe Text,
     objUnrefFunc :: Maybe Text,
+    objSetValueFunc :: Maybe Text,
+    objGetValueFunc :: Maybe Text,
     objInterfaces :: [Name],
     objDeprecated :: Maybe DeprecationInfo,
     objDocumentation :: Documentation,
@@ -46,6 +48,8 @@ parseObject = do
   signals <- parseChildrenWithNSName GLibGIRNS "signal" parseSignal
   refFunc <- queryAttrWithNamespace GLibGIRNS "ref-func"
   unrefFunc <- queryAttrWithNamespace GLibGIRNS "unref-func"
+  setValueFunc <- queryAttrWithNamespace GLibGIRNS "set-value-func"
+  getValueFunc <- queryAttrWithNamespace GLibGIRNS "get-value-func"
 
   ctype <- queryCType
   return (name,
@@ -55,6 +59,8 @@ parseObject = do
           , objCType = ctype
           , objRefFunc = refFunc
           , objUnrefFunc = unrefFunc
+          , objSetValueFunc = setValueFunc
+          , objGetValueFunc = getValueFunc
           , objTypeName = typeName
           , objInterfaces = interfaces
           , objDeprecated = deprecated
