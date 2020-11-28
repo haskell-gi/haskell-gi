@@ -1,7 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
 module Data.GI.Base.Properties
-    ( setObjectPropertyString
+    ( setObjectPropertyIsGValueInstance
+    , setObjectPropertyString
     , setObjectPropertyStringArray
     , setObjectPropertyPtr
     , setObjectPropertyInt
@@ -29,6 +30,7 @@ module Data.GI.Base.Properties
     , setObjectPropertyGError
     , setObjectPropertyGValue
 
+    , getObjectPropertyIsGValueInstance
     , getObjectPropertyString
     , getObjectPropertyStringArray
     , getObjectPropertyPtr
@@ -57,6 +59,7 @@ module Data.GI.Base.Properties
     , getObjectPropertyGError
     , getObjectPropertyGValue
 
+    , constructObjectPropertyIsGValueInstance
     , constructObjectPropertyString
     , constructObjectPropertyStringArray
     , constructObjectPropertyPtr
@@ -158,180 +161,181 @@ constructObjectProperty propName propValue setter gtype = do
   return (GValueConstruct propName gvalue)
 
 -- | Set a property for a type with a `IsGValue` instance.
-setProperty :: (GObject a, IsGValue b) => a -> String -> b -> IO ()
-setProperty obj propName maybeVal = do
+setObjectPropertyIsGValueInstance :: (GObject a, IsGValue b) =>
+                                     a -> String -> b -> IO ()
+setObjectPropertyIsGValueInstance obj propName maybeVal = do
   gvalue <- toGValue maybeVal
   gobjectSetProperty obj propName gvalue
 
 -- | Construct a property for a type with a `IsGValue` instance.
-constructProperty :: IsGValue b => String -> b -> IO (GValueConstruct o)
-constructProperty propName maybeVal = do
+constructObjectPropertyIsGValueInstance :: IsGValue b => String -> b -> IO (GValueConstruct o)
+constructObjectPropertyIsGValueInstance propName maybeVal = do
   gvalue <- toGValue maybeVal
   return (GValueConstruct propName gvalue)
 
 -- | Get a nullable property for a type with a `IsGValue` instance.
-getProperty :: forall a b. (GObject a, IsGValue b) =>
+getObjectPropertyIsGValueInstance :: forall a b. (GObject a, IsGValue b) =>
                        a -> String -> IO b
-getProperty obj propName = do
+getObjectPropertyIsGValueInstance obj propName = do
   gtype <- gvalueGType_ @b
   gv <- gobjectGetProperty obj propName gtype
   fromGValue gv
 
 setObjectPropertyString :: GObject a =>
                            a -> String -> Maybe Text -> IO ()
-setObjectPropertyString = setProperty
+setObjectPropertyString = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyString :: String -> Maybe Text ->
                                  IO (GValueConstruct o)
-constructObjectPropertyString = constructProperty
+constructObjectPropertyString = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyString :: GObject a =>
                            a -> String -> IO (Maybe Text)
-getObjectPropertyString = getProperty
+getObjectPropertyString = getObjectPropertyIsGValueInstance
 
 setObjectPropertyPtr :: GObject a =>
                         a -> String -> Ptr b -> IO ()
-setObjectPropertyPtr = setProperty
+setObjectPropertyPtr = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyPtr :: String -> Ptr b ->
                               IO (GValueConstruct o)
-constructObjectPropertyPtr = constructProperty
+constructObjectPropertyPtr = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyPtr :: GObject a =>
                         a -> String -> IO (Ptr b)
-getObjectPropertyPtr = getProperty
+getObjectPropertyPtr = getObjectPropertyIsGValueInstance
 
 setObjectPropertyInt :: GObject a =>
                          a -> String -> CInt -> IO ()
-setObjectPropertyInt = setProperty
+setObjectPropertyInt = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyInt :: String -> CInt ->
                               IO (GValueConstruct o)
-constructObjectPropertyInt = constructProperty
+constructObjectPropertyInt = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyInt :: GObject a => a -> String -> IO CInt
-getObjectPropertyInt = getProperty
+getObjectPropertyInt = getObjectPropertyIsGValueInstance
 
 setObjectPropertyUInt :: GObject a =>
                           a -> String -> CUInt -> IO ()
-setObjectPropertyUInt = setProperty
+setObjectPropertyUInt = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyUInt :: String -> CUInt ->
                                 IO (GValueConstruct o)
-constructObjectPropertyUInt = constructProperty
+constructObjectPropertyUInt = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyUInt :: GObject a => a -> String -> IO CUInt
-getObjectPropertyUInt = getProperty
+getObjectPropertyUInt = getObjectPropertyIsGValueInstance
 
 setObjectPropertyLong :: GObject a =>
                          a -> String -> CLong -> IO ()
-setObjectPropertyLong = setProperty
+setObjectPropertyLong = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyLong :: String -> CLong ->
                                IO (GValueConstruct o)
-constructObjectPropertyLong = constructProperty
+constructObjectPropertyLong = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyLong :: GObject a => a -> String -> IO CLong
-getObjectPropertyLong = getProperty
+getObjectPropertyLong = getObjectPropertyIsGValueInstance
 
 setObjectPropertyULong :: GObject a =>
                           a -> String -> CULong -> IO ()
-setObjectPropertyULong = setProperty
+setObjectPropertyULong = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyULong :: String -> CULong ->
                                 IO (GValueConstruct o)
-constructObjectPropertyULong = constructProperty
+constructObjectPropertyULong = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyULong :: GObject a => a -> String -> IO CULong
-getObjectPropertyULong = getProperty
+getObjectPropertyULong = getObjectPropertyIsGValueInstance
 
 setObjectPropertyInt32 :: GObject a =>
                           a -> String -> Int32 -> IO ()
-setObjectPropertyInt32 = setProperty
+setObjectPropertyInt32 = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyInt32 :: String -> Int32 ->
                                 IO (GValueConstruct o)
-constructObjectPropertyInt32 = constructProperty
+constructObjectPropertyInt32 = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyInt32 :: GObject a => a -> String -> IO Int32
-getObjectPropertyInt32 = getProperty
+getObjectPropertyInt32 = getObjectPropertyIsGValueInstance
 
 setObjectPropertyUInt32 :: GObject a =>
                           a -> String -> Word32 -> IO ()
-setObjectPropertyUInt32 = setProperty
+setObjectPropertyUInt32 = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyUInt32 :: String -> Word32 ->
                                  IO (GValueConstruct o)
-constructObjectPropertyUInt32 = constructProperty
+constructObjectPropertyUInt32 = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyUInt32 :: GObject a => a -> String -> IO Word32
-getObjectPropertyUInt32 = getProperty
+getObjectPropertyUInt32 = getObjectPropertyIsGValueInstance
 
 setObjectPropertyInt64 :: GObject a =>
                           a -> String -> Int64 -> IO ()
-setObjectPropertyInt64 = setProperty
+setObjectPropertyInt64 = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyInt64 :: String -> Int64 ->
                                 IO (GValueConstruct o)
-constructObjectPropertyInt64 = constructProperty
+constructObjectPropertyInt64 = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyInt64 :: GObject a => a -> String -> IO Int64
-getObjectPropertyInt64 = getProperty
+getObjectPropertyInt64 = getObjectPropertyIsGValueInstance
 
 setObjectPropertyUInt64 :: GObject a =>
                           a -> String -> Word64 -> IO ()
-setObjectPropertyUInt64 = setProperty
+setObjectPropertyUInt64 = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyUInt64 :: String -> Word64 ->
                                  IO (GValueConstruct o)
-constructObjectPropertyUInt64 = constructProperty
+constructObjectPropertyUInt64 = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyUInt64 :: GObject a => a -> String -> IO Word64
-getObjectPropertyUInt64 = getProperty
+getObjectPropertyUInt64 = getObjectPropertyIsGValueInstance
 
 setObjectPropertyFloat :: GObject a =>
                            a -> String -> Float -> IO ()
-setObjectPropertyFloat = setProperty
+setObjectPropertyFloat = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyFloat :: String -> Float ->
                                  IO (GValueConstruct o)
-constructObjectPropertyFloat = constructProperty
+constructObjectPropertyFloat = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyFloat :: GObject a =>
                            a -> String -> IO Float
-getObjectPropertyFloat = getProperty
+getObjectPropertyFloat = getObjectPropertyIsGValueInstance
 
 setObjectPropertyDouble :: GObject a =>
                             a -> String -> Double -> IO ()
-setObjectPropertyDouble = setProperty
+setObjectPropertyDouble = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyDouble :: String -> Double ->
                                   IO (GValueConstruct o)
-constructObjectPropertyDouble = constructProperty
+constructObjectPropertyDouble = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyDouble :: GObject a =>
                             a -> String -> IO Double
-getObjectPropertyDouble = getProperty
+getObjectPropertyDouble = getObjectPropertyIsGValueInstance
 
 setObjectPropertyBool :: GObject a =>
                          a -> String -> Bool -> IO ()
-setObjectPropertyBool = setProperty
+setObjectPropertyBool = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyBool :: String -> Bool -> IO (GValueConstruct o)
-constructObjectPropertyBool = constructProperty
+constructObjectPropertyBool = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyBool :: GObject a => a -> String -> IO Bool
-getObjectPropertyBool = getProperty
+getObjectPropertyBool = getObjectPropertyIsGValueInstance
 
 setObjectPropertyGType :: GObject a =>
                          a -> String -> GType -> IO ()
-setObjectPropertyGType = setProperty
+setObjectPropertyGType = setObjectPropertyIsGValueInstance
 
 constructObjectPropertyGType :: String -> GType -> IO (GValueConstruct o)
-constructObjectPropertyGType = constructProperty
+constructObjectPropertyGType = constructObjectPropertyIsGValueInstance
 
 getObjectPropertyGType :: GObject a => a -> String -> IO GType
-getObjectPropertyGType = getProperty
+getObjectPropertyGType = getObjectPropertyIsGValueInstance
 
 setObjectPropertyObject :: forall a b. (GObject a, GObject b) =>
                            a -> String -> Maybe b -> IO ()

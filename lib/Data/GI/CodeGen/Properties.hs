@@ -29,7 +29,7 @@ import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, classConstraint,
                                      hyphensToCamelCase, qualifiedSymbol,
                                      typeConstraint, callbackDynamicWrapper,
                                      callbackHaskellToForeign,
-                                     callbackWrapperAllocator)
+                                     callbackWrapperAllocator, safeCast)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
 
@@ -78,11 +78,13 @@ propTypeStr t = case t of
        APIUnion u -> if unionIsBoxed u
                      then return "Boxed"
                      else notImplementedError $ "Unboxed union property : " <> tshow t
-       APIObject _ -> do
+       APIObject o -> do
                 isGO <- isGObject t
                 if isGO
                 then return "Object"
-                else notImplementedError $ "Non-GObject object property : " <> tshow t
+                else case (objGetValueFunc o, objSetValueFunc o) of
+                  (Just _, Just _) -> return "IsGValueInstance"
+                  _ -> notImplementedError $ "Non-GObject object property without known gvalue_set and/or gvalue_get: " <> tshow t
        APIInterface _ -> do
                 isGO <- isGObject t
                 if isGO
@@ -90,6 +92,31 @@ propTypeStr t = case t of
                 else notImplementedError $ "Non-GObject interface property : " <> tshow t
        _ -> notImplementedError $ "Unknown interface property of type : " <> tshow t
    _ -> notImplementedError $ "Don't know how to handle properties of type " <> tshow t
+
+-- | Some types need casting to a concrete type before we can set or
+-- construct properties. For example, for non-GObject object
+-- properties we accept any instance of @IsX@ for convenience, but
+-- instance resolution of the IsGValueSetter requires a concrete
+-- type. The following code implements the cast on the given variable,
+-- if needed, and returns the name of the new variable of concrete
+-- type.
+castProp :: Type -> Text -> CodeGen Text
+castProp t@(TInterface n) val = do
+  api <- findAPIByName n
+  case api of
+    APIObject o -> do
+      isGO <- isGObject t
+      if not isGO
+        then case (objGetValueFunc o, objSetValueFunc o) of
+               (Just _, Just _) -> do
+                 let val' = prime val
+                 cast <- safeCast n
+                 line $ val' <> " <- " <> cast <> " " <> val
+                 return val'
+               _ -> return val
+        else return val
+    _ -> return val
+castProp _ val = return val
 
 -- | The constraint for setting the given type in properties.
 propSetTypeConstraint :: Type -> CodeGen Text
@@ -191,11 +218,14 @@ genPropertySetter setter n docSection prop = group $ do
   writeHaddock DocBeforeSymbol (setterDoc n prop)
   line $ setter <> " :: (" <> T.intercalate ", " constraints'
            <> ") => o -> " <> t <> " -> m ()"
-  line $ setter <> " obj val = liftIO $ B.Properties.setObjectProperty" <> tStr
-           <> " obj \"" <> propName prop
-           <> if isNullable && (not isCallback)
-              then "\" (Just val)"
-              else "\" val"
+  line $ setter <> " obj val = MIO.liftIO $ do"
+  indent $ do
+    val' <- castProp (propType prop) "val"
+    line $ "B.Properties.setObjectProperty" <> tStr
+             <> " obj \"" <> propName prop
+             <> if isNullable && (not isCallback)
+                then "\" (Just " <> val' <> ")"
+                else "\" " <> val'
   export docSection setter
 
 -- | Generate documentation for the given getter.
@@ -238,7 +268,7 @@ genPropertyGetter getter n docSection prop = group $ do
   writeHaddock DocBeforeSymbol (getterDoc n prop)
   line $ getter <> " :: " <> constraints <>
                 " => o -> " <> returnType
-  line $ getter <> " obj = liftIO $ " <> getProp
+  line $ getter <> " obj = MIO.liftIO $ " <> getProp
            <> " obj \"" <> propName prop <> "\"" <> constructorArg
   export docSection getter
 
@@ -260,11 +290,14 @@ genPropertyConstructor constructor n docSection prop = group $ do
   writeHaddock DocBeforeSymbol (constructorDoc prop)
   line $ constructor <> " :: " <> pconstraints
            <> t <> " -> m (GValueConstruct o)"
-  line $ constructor <> " val = MIO.liftIO $ B.Properties.constructObjectProperty" <> tStr
+  line $ constructor <> " val = MIO.liftIO $ do"
+  indent $ do
+    val' <- castProp (propType prop) "val"
+    line $ "MIO.liftIO $ B.Properties.constructObjectProperty" <> tStr
            <> " \"" <> propName prop
            <> if isNullable && (not isCallback)
-              then "\" (P.Just val)"
-              else "\" val"
+              then "\" (P.Just " <> val' <> ")"
+              else "\" " <> val'
   export docSection constructor
 
 -- | Generate documentation for the given setter.

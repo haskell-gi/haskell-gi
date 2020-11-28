@@ -39,7 +39,7 @@ import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   genBoxed, genWrappedPtr)
 import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint,
                                      submoduleLocation, lowerName, qualifiedAPI,
-                                     normalizedAPIName)
+                                     normalizedAPIName, safeCast)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
@@ -257,7 +257,7 @@ genGValueInstance n get_type_fn newFn get_value_fn set_value_fn = do
       line $ "gvalueSet_ gv (P.Just obj) = B.ManagedPtr.withManagedPtr obj (" <> set_value_fn <> " gv)"
       line $ "gvalueGet_ gv = do"
       indent $ group $ do
-        line $ "ptr <- " <> get_value_fn <> " gv :: IO (Ptr " <> name' <> ")"
+        line $ "ptr <- " <> get_value_fn <> " gv :: IO (FP.Ptr " <> name' <> ")"
         line $ "if ptr /= FP.nullPtr"
         line $ "then P.Just <$> " <> newFn <> " " <> name' <> " ptr"
         line $ "else return P.Nothing"
@@ -312,11 +312,11 @@ genCasts n ti parents = do
 
   -- Safe downcasting.
   group $ do
-    let safeCast = "to" <> name'
-    exportDecl safeCast
+    cast <- safeCast n
+    exportDecl cast
     writeHaddock DocBeforeSymbol (castDoc name')
-    line $ safeCast <> " :: (MonadIO m, " <> className <> " o) => o -> m " <> name'
-    line $ safeCast <> " = liftIO . unsafeCastTo " <> name'
+    bline $ cast <> " :: (MIO.MonadIO m, " <> className <> " o) => o -> m " <> name'
+    line $ cast <> " = MIO.liftIO . B.ManagedPtr.unsafeCastTo " <> name'
 
   return get_type_fn
 

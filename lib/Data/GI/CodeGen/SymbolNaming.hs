@@ -7,6 +7,7 @@ module Data.GI.CodeGen.SymbolNaming
 
     , classConstraint
     , typeConstraint
+    , safeCast
 
     , hyphensToCamelCase
     , underscoresToCamelCase
@@ -45,6 +46,11 @@ import Data.GI.CodeGen.Util (lcFirst, ucFirst, modifyQualified)
 -- (which should correspond to a valid `TInterface`).
 classConstraint :: Name -> CodeGen Text
 classConstraint n@(Name _ s) = qualifiedSymbol ("Is" <> s) n
+
+-- | Return a qualified form of the function mapping instances of
+-- @IsX@ to haskell values of type @X@.
+safeCast :: Name -> CodeGen Text
+safeCast n@(Name _ s) = qualifiedSymbol ("to" <> ucFirst s) n
 
 -- | Same as `classConstraint`, but applicable directly to a type. The
 -- type should be a `TInterface`, otherwise an error will be raised.
