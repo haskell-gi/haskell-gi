@@ -20,6 +20,9 @@ set-attr Gio/AppInfo/get_icon/@return-value nullable 1
 # https://github.com/haskell-gi/haskell-gi/issues/139
 set-attr Gio/Volume/get_mount/@return-value nullable 1
 
+# Return value is nullable, but is only marked as such in recent
+# versions.
+set-attr Gio/InetAddress/new_from_string/@return-value nullable 1
 
 # These are included by mistake in the introspection data of
 # glib-2.60.0, but they are linux-specific.

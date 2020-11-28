@@ -186,7 +186,7 @@ testImportedLenses :: IO ()
 testImportedLenses = do
   performGC
   putStrLn "*** Imported lenses test"
-  address <- Gio.inetAddressNewFromString "173.194.40.51"
+  Just address <- Gio.inetAddressNewFromString "173.194.40.51"
   print =<< address `get` #family
   performGC
   putStrLn "+++ Imported lenses test done"
@@ -436,7 +436,7 @@ testOverloadedLabels :: IO ()
 testOverloadedLabels = do
   performGC
   putStrLn "*** Overloaded labels test"
-  address <- Gio.inetAddressNewFromString "173.194.40.51"
+  Just address <- Gio.inetAddressNewFromString "173.194.40.51"
   -- Overloaded attributes
   family <- address `get` #family
   when (family /= Gio.SocketFamilyIpv4) $
