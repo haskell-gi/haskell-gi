@@ -517,7 +517,7 @@ customDragSourceDragDataGet_static mPtr storePtr pathPtr selectionPtr = do
   model <- newObject TreeModel mPtr
   store <- customTreeDragSourceIface <$> deRefStablePtr storePtr
   path <- treePathCopy . TreePath =<< newManagedPtr_ pathPtr
-  selection <- selectionDataCopy . SelectionData =<< newManagedPtr_ selectionPtr
+  selection <- SelectionData <$> newManagedPtr_ selectionPtr
   fromBool <$> customDragSourceDragDataGet store (unsafeTreeModelToGeneric model) path selection
 
 foreign export ccall "gtk2hs_store_drag_data_get_impl"
