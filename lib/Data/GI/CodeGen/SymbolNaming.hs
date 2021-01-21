@@ -242,6 +242,7 @@ escapeReserved "peek" = "peek_"
 escapeReserved "poke" = "poke_"
 escapeReserved "sizeOf" = "sizeOf_"
 escapeReserved "when" = "when_"
+escapeReserved "_" = "_'"
 escapeReserved "default" = "default_"
 escapeReserved s
     | "set_" `T.isPrefixOf` s = s <> "_"
