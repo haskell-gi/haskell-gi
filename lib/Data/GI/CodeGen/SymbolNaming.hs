@@ -211,6 +211,7 @@ underscoresToCamelCase =
 -- argument name (and escaping it if not).
 escapedArgName :: Arg -> Text
 escapedArgName arg
+    | argCName arg == "_" = "_'"  -- "_" denotes a hole, so we need to escape it
     | "_" `T.isPrefixOf` argCName arg = argCName arg
     | otherwise =
         escapeReserved . lcFirst . underscoresToCamelCase . argCName $ arg
@@ -242,7 +243,6 @@ escapeReserved "peek" = "peek_"
 escapeReserved "poke" = "poke_"
 escapeReserved "sizeOf" = "sizeOf_"
 escapeReserved "when" = "when_"
-escapeReserved "_" = "_'"
 escapeReserved "default" = "default_"
 escapeReserved s
     | "set_" `T.isPrefixOf` s = s <> "_"
