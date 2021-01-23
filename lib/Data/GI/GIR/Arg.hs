@@ -69,6 +69,12 @@ parseArg = do
   closure <- optionalAttr "closure" (-1) parseIntegral
   destroy <- optionalAttr "destroy" (-1) parseIntegral
   nullable <- optionalAttr "nullable" False parseBool
+  allowNone <- optionalAttr "allow-none" False parseBool
+  -- "allow-none" is deprecated, but still produced by Vala. Support
+  -- it for in arguments.
+  let mayBeNull = if d == DirectionIn
+                  then nullable || allowNone
+                  else nullable
   callerAllocates <- optionalAttr "caller-allocates" False parseBool
   t <- parseType
   doc <- parseDocumentation
@@ -76,7 +82,7 @@ parseArg = do
                , argType = t
                , argDoc = doc
                , direction = d
-               , mayBeNull = nullable
+               , mayBeNull = mayBeNull
                , argScope = scope
                , argClosure = closure
                , argDestroy = destroy
