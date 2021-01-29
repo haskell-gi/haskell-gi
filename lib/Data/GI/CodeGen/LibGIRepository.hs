@@ -15,6 +15,9 @@ module Data.GI.CodeGen.LibGIRepository
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>))
 #endif
+#if !MIN_VERSION_base(4,13,0)
+import Data.Monoid ((<>))
+#endif
 
 import Control.Monad (forM, (>=>))
 import qualified Data.Map as M
