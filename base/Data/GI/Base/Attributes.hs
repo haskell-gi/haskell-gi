@@ -440,7 +440,7 @@ data AttrOp obj (tag :: AttrOpTag) where
              AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
     -- | Connect the given signal to a signal handler.
     On    :: (GObject obj, SignalInfo info) =>
-             SignalProxy obj info -> HaskellCallbackType info -> AttrOp obj tag
+             SignalProxy obj slot info -> HaskellCallbackType info -> AttrOp obj tag
 
 -- | Set a number of properties for some object.
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()

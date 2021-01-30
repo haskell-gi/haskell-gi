@@ -57,7 +57,7 @@ genOverloadedSignalConnectors allAPIs = do
   forM_ signalNames $ \sn -> group $ do
     let camelName = hyphensToCamelCase sn
     line $ "pattern " <> camelName <>
-             " :: SignalProxy object (ResolveSignal \""
+             " :: SignalProxy object \"" <> lcFirst camelName <> "\" (ResolveSignal \""
              <> lcFirst camelName <> "\" object)"
     line $ "pattern " <> camelName <> " = SignalProxy"
     exportDecl $ "pattern " <> camelName

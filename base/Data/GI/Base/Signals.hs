@@ -83,21 +83,21 @@ import GHC.OverloadedLabels (IsLabel(..))
 type SignalHandlerId = CULong
 
 -- | Support for overloaded signal connectors.
-data SignalProxy (object :: *) (info :: *) where
+data SignalProxy (object :: *) (slot :: Symbol) (info :: *) where
   -- | A basic signal name connector.
-  SignalProxy :: SignalProxy o info
+  SignalProxy :: SignalProxy o slot info
   -- | A signal connector annotated with a detail.
-  (:::) :: forall o info. SignalProxy o info -> Text -> SignalProxy o info
+  (:::) :: forall o slot info. SignalProxy o slot info -> Text -> SignalProxy o slot info
   -- | A signal connector for the @notify@ signal on the given property.
   PropertyNotify :: (info ~ ResolveAttribute propName o,
                      AttrInfo info,
                      pl ~ AttrLabel info, KnownSymbol pl) =>
                     AttrLabelProxy propName ->
-                    SignalProxy o GObjectNotifySignalInfo
+                    SignalProxy o slot GObjectNotifySignalInfo
 
 -- | Support for overloaded labels.
 instance (info ~ ResolveSignal slot object) =>
-    IsLabel slot (SignalProxy object info) where
+    IsLabel slot (SignalProxy object slot info) where
 #if MIN_VERSION_base(4,10,0)
     fromLabel = SignalProxy
 #else
@@ -124,23 +124,23 @@ data SignalConnectMode = SignalConnectBefore  -- ^ Run before the default handle
         | SignalConnectAfter -- ^ Run after the default handler.
 
 -- | Connect a signal to a signal handler.
-on :: forall object info m.
+on :: forall object slot info m.
       (GObject object, MonadIO m, SignalInfo info) =>
-      object -> SignalProxy object info
+      object -> SignalProxy object slot info
              -> HaskellCallbackType info -> m SignalHandlerId
 on o p c =
   liftIO $ connectSignal @info o c SignalConnectBefore (proxyDetail p)
 
 -- | Connect a signal to a handler, running the handler after the default one.
-after :: forall object info m.
+after :: forall object slot info m.
       (GObject object, MonadIO m, SignalInfo info) =>
-      object -> SignalProxy object info
+      object -> SignalProxy object slot info
              -> HaskellCallbackType info -> m SignalHandlerId
 after o p c =
   liftIO $ connectSignal @info o c SignalConnectAfter (proxyDetail p)
 
 -- | Given a signal proxy, determine the corresponding detail.
-proxyDetail :: forall object info. SignalProxy object info -> Maybe Text
+proxyDetail :: forall object slot info. SignalProxy object slot info -> Maybe Text
 proxyDetail p = case p of
   SignalProxy -> Nothing
   (_ ::: detail) -> Just detail
