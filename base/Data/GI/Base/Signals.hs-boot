@@ -12,6 +12,7 @@ import Data.GI.Base.BasicTypes (GObject)
 import Control.Monad.IO.Class (MonadIO)
 import Foreign.C (CULong)
 import Data.Text (Text)
+import Data.GI.Base.Overloading (ResolveSignal)
 
 data SignalConnectMode = SignalConnectBefore
         | SignalConnectAfter
@@ -31,6 +32,6 @@ data SignalProxy object (slot::Symbol) info where
 type SignalHandlerId = CULong
 
 on :: forall object slot info m.
-      (GObject object, MonadIO m, SignalInfo info) =>
+      (GObject object, MonadIO m, SignalInfo info, info ~ ResolveSignal slot object) =>
        object -> SignalProxy object slot info
              -> HaskellCallbackType info -> m SignalHandlerId

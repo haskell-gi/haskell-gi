@@ -151,7 +151,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.GI.Base.BasicTypes (GObject)
 import Data.GI.Base.GValue (GValueConstruct)
-import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute)
+import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute, ResolveSignal)
 
 import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on)
 
@@ -439,7 +439,7 @@ data AttrOp obj (tag :: AttrOpTag) where
               AttrSetTypeConstraint info (AttrTransferType info)) =>
              AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
     -- | Connect the given signal to a signal handler.
-    On    :: (GObject obj, SignalInfo info) =>
+    On    :: (GObject obj, SignalInfo info, info ~ ResolveSignal slot obj) =>
              SignalProxy obj slot info -> HaskellCallbackType info -> AttrOp obj tag
 
 -- | Set a number of properties for some object.

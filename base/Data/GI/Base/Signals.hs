@@ -125,7 +125,7 @@ data SignalConnectMode = SignalConnectBefore  -- ^ Run before the default handle
 
 -- | Connect a signal to a signal handler.
 on :: forall object slot info m.
-      (GObject object, MonadIO m, SignalInfo info) =>
+      (GObject object, MonadIO m, SignalInfo info, info ~ ResolveSignal slot object) =>
       object -> SignalProxy object slot info
              -> HaskellCallbackType info -> m SignalHandlerId
 on o p c =
