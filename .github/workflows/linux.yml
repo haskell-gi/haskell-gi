@@ -39,8 +39,6 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo add-apt-repository -y ppa:gnome3-team/gnome3-staging
-        sudo add-apt-repository -y ppa:gnome3-team/gnome3
         sudo apt-get update
         ./bindings/PKGS.sh deps ubuntu-ci | sudo xargs apt-get install -y
 
