@@ -15,6 +15,7 @@ cabal-version:       2.0
 executable genBuildInfo
   main-is:              genBuildInfo.hs
   default-language:     Haskell2010
+  default-extensions:   CPP
 
   other-modules:        ProjectInfo
 

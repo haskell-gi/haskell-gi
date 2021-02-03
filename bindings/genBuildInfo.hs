@@ -9,6 +9,10 @@ import System.IO (hPutStrLn, stderr, hFlush, stdout)
 import System.Exit (exitFailure, ExitCode(..))
 import System.Process (rawSystem)
 
+#if !MIN_VERSION_base(4,13,0)
+import Data.Monoid ((<>))
+#endif
+
 import Control.Monad (forM_)
 
 import qualified Data.Aeson as A
