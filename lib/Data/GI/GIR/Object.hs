@@ -4,6 +4,10 @@ module Data.GI.GIR.Object
     , parseObject
     ) where
 
+#if !MIN_VERSION_base(4,13,0)
+import Data.Monoid ((<>))
+#endif
+
 import Data.Text (Text)
 
 import Data.GI.GIR.Method (Method, parseMethod, MethodType(..))
