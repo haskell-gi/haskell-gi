@@ -66,6 +66,7 @@ import Foreign.Ptr (nullPtr)
 #endif
 
 import GHC.TypeLits
+import Data.Kind (Type)
 
 import qualified Data.Text as T
 import Data.Text (Text)
@@ -83,7 +84,7 @@ import GHC.OverloadedLabels (IsLabel(..))
 type SignalHandlerId = CULong
 
 -- | Support for overloaded signal connectors.
-data SignalProxy (object :: *) (info :: *) where
+data SignalProxy (object :: Type) (info :: Type) where
   -- | A basic signal name connector.
   SignalProxy :: SignalProxy o info
   -- | A signal connector annotated with a detail.
@@ -105,9 +106,9 @@ instance (info ~ ResolveSignal slot object) =>
 #endif
 
 -- | Information about an overloaded signal.
-class SignalInfo (info :: *) where
+class SignalInfo (info :: Type) where
     -- | The type for the signal handler.
-    type HaskellCallbackType info :: *
+    type HaskellCallbackType info :: Type
     -- | Connect a Haskell function to a signal of the given
     -- `GObject`, specifying whether the handler will be called before
     -- or after the default handler.
@@ -218,7 +219,7 @@ connectGObjectNotify obj cb mode detail = do
 
 -- | Generate an informative type error whenever one tries to use a
 -- signal for which code generation has failed.
-type family SignalCodeGenError (signalName :: Symbol) :: * where
+type family SignalCodeGenError (signalName :: Symbol) :: Type where
   SignalCodeGenError signalName = TypeError
     ('Text "The signal ‘"
      ':<>: 'Text signalName

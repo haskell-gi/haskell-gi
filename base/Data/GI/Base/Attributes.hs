@@ -156,6 +156,7 @@ import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute)
 import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on)
 
 import Data.Proxy (Proxy(..))
+import Data.Kind (Type)
 
 import GHC.TypeLits
 import GHC.Exts (Constraint)
@@ -176,28 +177,28 @@ instance a ~ x => IsLabel x (AttrLabelProxy a) where
 #endif
 
 -- | Info describing an attribute.
-class AttrInfo (info :: *) where
+class AttrInfo (info :: Type) where
     -- | The operations that are allowed on the attribute.
     type AttrAllowedOps info :: [AttrOpTag]
 
     -- | Constraint on the type for which we are allowed to
     -- create\/set\/get the attribute.
-    type AttrBaseTypeConstraint info :: * -> Constraint
+    type AttrBaseTypeConstraint info :: Type -> Constraint
 
     -- | Type returned by `attrGet`.
     type AttrGetType info
 
     -- | Constraint on the value being set.
-    type AttrSetTypeConstraint info :: * -> Constraint
+    type AttrSetTypeConstraint info :: Type -> Constraint
     type AttrSetTypeConstraint info = (~) (AttrGetType info)
 
     -- | Constraint on the value being set, with allocation allowed
     -- (see ':&=' below).
-    type AttrTransferTypeConstraint info :: * -> Constraint
+    type AttrTransferTypeConstraint info :: Type -> Constraint
     type AttrTransferTypeConstraint info = (~) (AttrTransferType info)
 
     -- | Type resulting from the allocation.
-    type AttrTransferType info :: *
+    type AttrTransferType info :: Type
     type AttrTransferType info = AttrGetType info
 
     -- | Name of the attribute.
@@ -280,7 +281,7 @@ type family TypeOriginInfo definingType useType :: ErrorMessage where
 
 -- | Look in the given list to see if the given `AttrOp` is a member,
 -- if not return an error type.
-type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Symbol) (definingType :: *) (useType :: *) :: Constraint where
+type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Symbol) (definingType :: Type) (useType :: Type) :: Constraint where
     AttrOpIsAllowed tag '[] label definingType useType =
         TypeError ('Text "Attribute ‘" ':<>: 'Text label ':<>:
                    'Text "’ for type " ':<>:
@@ -292,7 +293,7 @@ type family AttrOpIsAllowed (tag :: AttrOpTag) (ops :: [AttrOpTag]) (label :: Sy
 
 -- | Whether a given `AttrOpTag` is allowed on an attribute, given the
 -- info type.
-type family AttrOpAllowed (tag :: AttrOpTag) (info :: *) (useType :: *) :: Constraint where
+type family AttrOpAllowed (tag :: AttrOpTag) (info :: Type) (useType :: Type) :: Constraint where
     AttrOpAllowed tag info useType =
         AttrOpIsAllowed tag (AttrAllowedOps info) (AttrLabel info) (AttrOrigin info) useType
 

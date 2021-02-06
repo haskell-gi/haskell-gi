@@ -33,6 +33,7 @@ module Data.GI.Base.Overloading
     ) where
 
 import Data.Coerce (coerce)
+import Data.Kind (Type)
 
 import GHC.Exts (Constraint)
 import GHC.TypeLits
@@ -42,15 +43,15 @@ import Data.GI.Base.BasicTypes (ManagedPtrNewtype, ManagedPtr(..))
 -- | Look in the given list of (symbol, tag) tuples for the tag
 -- corresponding to the given symbol. If not found raise the given
 -- type error.
-type family FindElement (m :: Symbol) (ms :: [(Symbol, *)])
-    (typeError :: ErrorMessage) :: * where
+type family FindElement (m :: Symbol) (ms :: [(Symbol, Type)])
+    (typeError :: ErrorMessage) :: Type where
     FindElement m '[] typeError = TypeError typeError
     FindElement m ('(m, o) ': ms) typeError = o
     FindElement m ('(m', o) ': ms) typeError = FindElement m ms typeError
 
 -- | Check whether a type appears in a list. We specialize the
 -- names/types a bit so the error messages are more informative.
-type family CheckForAncestorType t (a :: *) (as :: [*]) :: Constraint where
+type family CheckForAncestorType t (a :: Type) (as :: [Type]) :: Constraint where
   CheckForAncestorType t a '[] = TypeError ('Text "Required ancestor ‘"
                                             ':<>: 'ShowType a
                                             ':<>: 'Text "’ not found for type ‘"
@@ -60,19 +61,19 @@ type family CheckForAncestorType t (a :: *) (as :: [*]) :: Constraint where
 
 -- | Check that a type is in the list of `ParentTypes` of another
 -- type.
-type family IsDescendantOf (parent :: *) (descendant :: *) :: Constraint where
+type family IsDescendantOf (parent :: Type) (descendant :: Type) :: Constraint where
     -- Every object is defined to be a descendant of itself.
     IsDescendantOf d d = ()
     IsDescendantOf p d = CheckForAncestorType d p (ParentTypes d)
 
 -- | All the types that are ascendants of this type, including
 -- interfaces that the type implements.
-type family ParentTypes a :: [*]
+type family ParentTypes a :: [Type]
 
 -- | A constraint on a type, to be fulfilled whenever it has a type
 -- instance for `ParentTypes`. This leads to nicer errors, thanks to
 -- the overlappable instance below.
-class HasParentTypes (o :: *)
+class HasParentTypes (o :: Type)
 
 -- | Default instance, which will give rise to an error for types
 -- without an associated `ParentTypes` instance.
@@ -95,7 +96,7 @@ asA obj _constructor = coerce obj
 -- of the attribute, and the second the type encoding the information
 -- of the attribute. This type will be an instance of
 -- `Data.GI.Base.Attributes.AttrInfo`.
-type family AttributeList a :: [(Symbol, *)]
+type family AttributeList a :: [(Symbol, Type)]
 
 -- | A constraint on a type, to be fulfilled whenever it has a type
 -- instance for `AttributeList`. This is here for nicer error
@@ -111,7 +112,7 @@ instance {-# OVERLAPPABLE #-}
 
 -- | Return the type encoding the attribute information for a given
 -- type and attribute.
-type family ResolveAttribute (s :: Symbol) (o :: *) :: * where
+type family ResolveAttribute (s :: Symbol) (o :: Type) :: Type where
     ResolveAttribute s o = FindElement s (AttributeList o)
                            ('Text "Unknown attribute ‘" ':<>:
                             'Text s ':<>: 'Text "’ for object ‘" ':<>:
@@ -119,14 +120,14 @@ type family ResolveAttribute (s :: Symbol) (o :: *) :: * where
 
 -- | Whether a given type is in the given list. If found, return
 -- @success@, otherwise return @failure@.
-type family IsElem (e :: Symbol) (es :: [(Symbol, *)]) (success :: k)
+type family IsElem (e :: Symbol) (es :: [(Symbol, Type)]) (success :: k)
     (failure :: ErrorMessage) :: k where
     IsElem e '[] success failure = TypeError failure
     IsElem e ( '(e, t) ': es) success failure = success
     IsElem e ( '(other, t) ': es) s f = IsElem e es s f
 
 -- | A constraint imposing that the given object has the given attribute.
-type family HasAttribute (attr :: Symbol) (o :: *) :: Constraint where
+type family HasAttribute (attr :: Symbol) (o :: Type) :: Constraint where
     HasAttribute attr o = IsElem attr (AttributeList o)
                           (() :: Constraint) -- success
                           ('Text "Attribute ‘" ':<>: 'Text attr ':<>:
@@ -134,7 +135,7 @@ type family HasAttribute (attr :: Symbol) (o :: *) :: Constraint where
                            'ShowType o ':<>: 'Text "’.")
 
 -- | A constraint that enforces that the given type has a given attribute.
-class HasAttr (attr :: Symbol) (o :: *)
+class HasAttr (attr :: Symbol) (o :: Type)
 instance HasAttribute attr o => HasAttr attr o
 
 -- | The list of signals defined for a given type. Each element of the
@@ -142,11 +143,11 @@ instance HasAttribute attr o => HasAttr attr o
 -- the signal, and the second the type encoding the information of the
 -- signal. This type will be an instance of
 -- `Data.GI.Base.Signals.SignalInfo`.
-type family SignalList a :: [(Symbol, *)]
+type family SignalList a :: [(Symbol, Type)]
 
 -- | Return the type encoding the signal information for a given
 -- type and signal.
-type family ResolveSignal (s :: Symbol) (o :: *) :: * where
+type family ResolveSignal (s :: Symbol) (o :: Type) :: Type where
     ResolveSignal s o = FindElement s (SignalList o)
                         ('Text "Unknown signal ‘" ':<>:
                          'Text s ':<>: 'Text "’ for object ‘" ':<>:
@@ -154,7 +155,7 @@ type family ResolveSignal (s :: Symbol) (o :: *) :: * where
 
 -- | A constraint enforcing that the signal exists for the given
 -- object, or one of its ancestors.
-type family HasSignal (s :: Symbol) (o :: *) :: Constraint where
+type family HasSignal (s :: Symbol) (o :: Type) :: Constraint where
     HasSignal s o = IsElem s (SignalList o)
                     (() :: Constraint) -- success
                     ('Text "Signal ‘" ':<>: 'Text s ':<>:
@@ -163,7 +164,7 @@ type family HasSignal (s :: Symbol) (o :: *) :: Constraint where
 
 -- | A constraint that always fails with a type error, for
 -- documentation purposes.
-type family UnsupportedMethodError (s :: Symbol) (o :: *) :: * where
+type family UnsupportedMethodError (s :: Symbol) (o :: Type) :: Type where
   UnsupportedMethodError s o =
     TypeError ('Text "Unsupported method ‘" ':<>:
                'Text s ':<>: 'Text "’ for object ‘" ':<>:
@@ -171,7 +172,7 @@ type family UnsupportedMethodError (s :: Symbol) (o :: *) :: * where
 
 -- | Returned when the method is not found, hopefully making
 -- the resulting error messages somewhat clearer.
-type family MethodResolutionFailed (method :: Symbol) (o :: *) where
+type family MethodResolutionFailed (method :: Symbol) (o :: Type) where
     MethodResolutionFailed m o =
         TypeError ('Text "Unknown method ‘" ':<>:
                    'Text m ':<>: 'Text "’ for type ‘" ':<>:
