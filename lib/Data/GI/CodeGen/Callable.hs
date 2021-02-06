@@ -68,7 +68,7 @@ hOutType callable outArgs = do
 
 -- | Generate a foreign import for the given C symbol. Return the name
 -- of the corresponding Haskell identifier.
-mkForeignImport :: Text -> Callable -> CodeGen Text
+mkForeignImport :: Text -> Callable -> CodeGen e Text
 mkForeignImport cSymbol callable = do
     line first
     indent $ do
@@ -96,7 +96,7 @@ mkForeignImport cSymbol callable = do
 
 -- | Make a wrapper for foreign `FunPtr`s of the given type. Return
 -- the name of the resulting dynamic Haskell wrapper.
-mkDynamicImport :: Text -> CodeGen Text
+mkDynamicImport :: Text -> CodeGen e Text
 mkDynamicImport typeSynonym = do
   line $ "foreign import ccall \"dynamic\" " <> dynamic <> " :: FunPtr "
            <> typeSynonym <> " -> " <> typeSynonym
@@ -108,7 +108,7 @@ mkDynamicImport typeSynonym = do
 -- sanity checking to make sure that the argument is actually nullable
 -- (a relatively common annotation mistake is to mix up (optional)
 -- with (nullable)).
-wrapMaybe :: Arg -> CodeGen Bool
+wrapMaybe :: Arg -> CodeGen e Bool
 wrapMaybe arg = if mayBeNull arg
                 then typeIsNullable (argType arg)
                 else return False
@@ -310,7 +310,7 @@ prepareInArg arg = do
                 return maybeName)
 
 -- | Callbacks are a fairly special case, we treat them separately.
-prepareInCallback :: Arg -> Callback -> ExposeClosures -> CodeGen Text
+prepareInCallback :: Arg -> Callback -> ExposeClosures -> CodeGen e Text
 prepareInCallback arg callback@(Callback {cbCallable = cb}) expose = do
   let name = escapedArgName arg
       ptrName = "ptr" <> name
@@ -765,7 +765,7 @@ convertOutArgs callable nameMap hOutArgs =
     forM hOutArgs (convertOutArg callable nameMap)
 
 -- | Invoke the given C function, taking care of errors.
-invokeCFunction :: Callable -> ForeignSymbol -> [Text] -> CodeGen ()
+invokeCFunction :: Callable -> ForeignSymbol -> [Text] -> CodeGen e ()
 invokeCFunction callable symbol argNames = do
   let returnBind = case returnType callable of
                      Nothing -> ""
@@ -783,7 +783,7 @@ invokeCFunction callable symbol argNames = do
            <> call <> (T.concat . map (" " <>)) argNames
 
 -- | Return the result of the call, possibly including out arguments.
-returnResult :: Callable -> Text -> [Text] -> CodeGen ()
+returnResult :: Callable -> Text -> [Text] -> CodeGen e ()
 returnResult callable result pps =
     if skipRetVal callable || returnType callable == Nothing
     then case pps of
@@ -911,7 +911,7 @@ data DynamicWrapper = DynamicWrapper {
     }
 
 -- | Some debug info for the callable.
-genCallableDebugInfo :: Callable -> CodeGen ()
+genCallableDebugInfo :: Callable -> CodeGen e ()
 genCallableDebugInfo callable =
     group $ do
       commentShow "Args" (args callable)
@@ -922,7 +922,7 @@ genCallableDebugInfo callable =
       when (skipReturn callable && returnType callable /= Just (TBasicType TBoolean)) $
            do line "-- XXX return value ignored, but it is not a boolean."
               line "--     This may be a memory leak?"
-  where commentShow :: Show a => Text -> a -> CodeGen ()
+  where commentShow :: Show a => Text -> a -> CodeGen e ()
         commentShow prefix s =
           let padding = T.replicate (T.length prefix + 2) " "
               padded = case T.lines (T.pack $ ppShow s) of

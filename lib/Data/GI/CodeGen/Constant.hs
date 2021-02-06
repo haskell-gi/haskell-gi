@@ -29,7 +29,7 @@ type PSType = Text
 type PSView = Text
 type PSExpression = Text
 
-writePattern :: Text -> PatternSynonym -> CodeGen ()
+writePattern :: Text -> PatternSynonym -> CodeGen e ()
 writePattern name (SimpleSynonym value t) = line $
       "pattern " <> ucFirst name <> " = " <> value <> " :: " <> t
 writePattern name (ExplicitSynonym view expression value t) = do
@@ -40,7 +40,7 @@ writePattern name (ExplicitSynonym view expression value t) = do
   indent $ line $
           ucFirst name <> " = " <> expression <> " " <> value <> " :: " <> t
 
-genConstant :: Name -> Constant -> CodeGen ()
+genConstant :: Name -> Constant -> CodeGen e ()
 genConstant (Name _ name) c = group $ do
   setLanguagePragmas ["PatternSynonyms", "ScopedTypeVariables", "ViewPatterns"]
   deprecatedPragma name (constantDeprecated c)

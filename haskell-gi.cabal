@@ -1,5 +1,5 @@
 name:                haskell-gi
-version:             0.24.8
+version:             0.25.0
 synopsis:            Generate Haskell bindings for GObject Introspection capable libraries
 description:         Generate Haskell bindings for GObject Introspection capable libraries. This includes most notably
                      Gtk+, but many other libraries in the GObject ecosystem provide introspection data too.
@@ -33,7 +33,7 @@ Library
   default-language:    Haskell2010
   pkgconfig-depends:   gobject-introspection-1.0 >= 1.32, gobject-2.0 >= 2.32
   build-depends:       base >= 4.9 && < 5,
-                       haskell-gi-base >= 0.24.5 && <0.25,
+                       haskell-gi-base >= 0.25.0 && <0.26,
                        Cabal >= 1.24,
                        attoparsec >= 0.13,
                        containers,

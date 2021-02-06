@@ -44,17 +44,17 @@ import Data.GI.CodeGen.Util (lcFirst, ucFirst, modifyQualified)
 
 -- | Return a qualified form of the constraint for the given name
 -- (which should correspond to a valid `TInterface`).
-classConstraint :: Name -> CodeGen Text
+classConstraint :: Name -> CodeGen e Text
 classConstraint n@(Name _ s) = qualifiedSymbol ("Is" <> s) n
 
 -- | Return a qualified form of the function mapping instances of
 -- @IsX@ to haskell values of type @X@.
-safeCast :: Name -> CodeGen Text
+safeCast :: Name -> CodeGen e Text
 safeCast n@(Name _ s) = qualifiedSymbol ("to" <> ucFirst s) n
 
 -- | Same as `classConstraint`, but applicable directly to a type. The
 -- type should be a `TInterface`, otherwise an error will be raised.
-typeConstraint :: Type -> CodeGen Text
+typeConstraint :: Type -> CodeGen e Text
 typeConstraint (TInterface n) = classConstraint n
 typeConstraint t = error $ "Class constraint for non-interface type: " <> show t
 
@@ -167,13 +167,13 @@ normalizedAPIName (APIUnion _) n@(Name ns _) = Name ns (upperName n)
 
 -- | Return an identifier for the given interface type valid in the current
 -- module.
-qualifiedAPI :: API -> Name -> CodeGen Text
+qualifiedAPI :: API -> Name -> CodeGen e Text
 qualifiedAPI api n@(Name ns _) =
   let normalized = normalizedAPIName api n
   in qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) normalized
 
 -- | Construct an identifier for the given symbol in the given API.
-qualifiedSymbol :: Text -> Name -> CodeGen Text
+qualifiedSymbol :: Text -> Name -> CodeGen e Text
 qualifiedSymbol s n@(Name ns _) = do
   api <- getAPI (TInterface n)
   qualified (toModulePath (ucFirst ns) <> submoduleLocation n api) (Name ns s)
@@ -250,7 +250,7 @@ escapeReserved s
     | otherwise = s
 
 -- | Qualified name for the "(sigName, info)" tag for a given signal.
-signalInfoName :: Name -> Signal -> CodeGen Text
+signalInfoName :: Name -> Signal -> CodeGen e Text
 signalInfoName n signal = do
   let infoName = upperName n <> (ucFirst . signalHaskellName . sigName) signal
                  <> "SignalInfo"

@@ -87,7 +87,7 @@ genEnumOrFlags docSection n@(Name ns name) e = do
 
   maybe (return ()) (genErrorDomain docSection name') (enumErrorDomain e)
 
-genBoxedEnum :: Name -> Text -> CodeGen ()
+genBoxedEnum :: Name -> Text -> CodeGen e ()
 genBoxedEnum n typeInit = do
   let name' = upperName n
 
@@ -106,7 +106,7 @@ genBoxedEnum n typeInit = do
   group $ do
     bline $ "instance B.Types.BoxedEnum " <> name'
 
-genEnum :: Name -> Enumeration -> CodeGen ()
+genEnum :: Name -> Enumeration -> CodeGen e ()
 genEnum n@(Name _ name) enum = do
   line $ "-- Enum " <> name
 
@@ -119,7 +119,7 @@ genEnum n@(Name _ name) enum = do
                     Nothing -> return ()
                     Just ti -> genBoxedEnum n ti)
 
-genBoxedFlags :: Name -> Text -> CodeGen ()
+genBoxedFlags :: Name -> Text -> CodeGen e ()
 genBoxedFlags n typeInit = do
   let name' = upperName n
 
@@ -140,7 +140,7 @@ genBoxedFlags n typeInit = do
 
 -- | Very similar to enums, but we also declare ourselves as members of
 -- the IsGFlag typeclass.
-genFlags :: Name -> Flags -> CodeGen ()
+genFlags :: Name -> Flags -> CodeGen e ()
 genFlags n@(Name _ name) (Flags enum) = do
   line $ "-- Flags " <> name
 
@@ -159,7 +159,7 @@ genFlags n@(Name _ name) (Flags enum) = do
                 group $ bline $ "instance IsGFlag " <> name')
 
 -- | Support for enums encapsulating error codes.
-genErrorDomain :: HaddockSection -> Text -> Text -> CodeGen ()
+genErrorDomain :: HaddockSection -> Text -> Text -> CodeGen e ()
 genErrorDomain docSection name' domain = do
   group $ do
     line $ "instance GErrorClass " <> name' <> " where"

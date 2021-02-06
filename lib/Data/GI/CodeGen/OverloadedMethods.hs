@@ -20,14 +20,14 @@ import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, qualifiedSymbol)
 import Data.GI.CodeGen.Util (ucFirst)
 
 -- | Qualified name for the info for a given method.
-methodInfoName :: Name -> Method -> CodeGen Text
+methodInfoName :: Name -> Method -> CodeGen e Text
 methodInfoName n method =
     let infoName = upperName n <> (ucFirst . lowerName . methodName) method
                    <> "MethodInfo"
     in qualifiedSymbol infoName n
 
 -- | Appropriate instances so overloaded labels are properly resolved.
-genMethodResolver :: Text -> CodeGen ()
+genMethodResolver :: Text -> CodeGen e ()
 genMethodResolver n = do
   addLanguagePragma "TypeApplications"
   group $ do
@@ -42,7 +42,7 @@ genMethodResolver n = do
 
 -- | Generate the `MethodList` instance given the list of methods for
 -- the given named type.
-genMethodList :: Name -> [(Name, Method)] -> CodeGen ()
+genMethodList :: Name -> [(Name, Method)] -> CodeGen e ()
 genMethodList n methods = do
   let name = upperName n
   let filteredMethods = filter isOrdinaryMethod methods
@@ -98,7 +98,7 @@ genMethodInfo n m =
 
 -- | Generate a method info that is not actually callable, but rather
 -- gives a type error when trying to use it.
-genUnsupportedMethodInfo :: Name -> Method -> CodeGen ()
+genUnsupportedMethodInfo :: Name -> Method -> CodeGen e ()
 genUnsupportedMethodInfo n m = do
   infoName <- methodInfoName n m
   line $ "-- XXX: Dummy instance, since code generation failed.\n"

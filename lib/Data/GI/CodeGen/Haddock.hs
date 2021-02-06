@@ -189,7 +189,7 @@ escape = T.concatMap escapeChar
 
 -- | Get the base url for the online C language documentation for the
 -- module being currently generated.
-getDocBase :: CodeGen Text
+getDocBase :: CodeGen e Text
 getDocBase = do
   mod <- modName <$> config
   docsMap <- (onlineDocsMap . overrides) <$> config
@@ -200,7 +200,7 @@ getDocBase = do
 
 -- | Write the deprecation pragma for the given `DeprecationInfo`, if
 -- not `Nothing`.
-deprecatedPragma :: Text -> Maybe DeprecationInfo -> CodeGen ()
+deprecatedPragma :: Text -> Maybe DeprecationInfo -> CodeGen e ()
 deprecatedPragma _  Nothing = return ()
 deprecatedPragma name (Just info) = do
   c2h <- getC2HMap
@@ -228,7 +228,7 @@ formatDocumentation c2h docBase doc = do
                    Just ver -> "\n\n/Since: " <> ver <> "/"
 
 -- | Write the given documentation into generated code.
-writeDocumentation :: RelativeDocPosition -> Documentation -> CodeGen ()
+writeDocumentation :: RelativeDocPosition -> Documentation -> CodeGen e ()
 writeDocumentation pos doc = do
   c2h <- getC2HMap
   docBase <- getDocBase
@@ -236,7 +236,7 @@ writeDocumentation pos doc = do
 
 -- | Like `writeDocumentation`, but allows us to pass explicitly the
 -- Haddock comment to write.
-writeHaddock :: RelativeDocPosition -> Text -> CodeGen ()
+writeHaddock :: RelativeDocPosition -> Text -> CodeGen e ()
 writeHaddock pos haddock =
   let marker = case pos of
         DocBeforeSymbol -> "|"
@@ -247,7 +247,7 @@ writeHaddock pos haddock =
   in mapM_ line lines
 
 -- | Write the documentation for the given argument.
-writeArgDocumentation :: Arg -> CodeGen ()
+writeArgDocumentation :: Arg -> CodeGen e ()
 writeArgDocumentation arg =
   case rawDocText (argDoc arg) of
     Nothing -> return ()
@@ -259,7 +259,7 @@ writeArgDocumentation arg =
       writeHaddock DocAfterSymbol haddock
 
 -- | Write the documentation for the given return value.
-writeReturnDocumentation :: Callable -> Bool -> CodeGen ()
+writeReturnDocumentation :: Callable -> Bool -> CodeGen e ()
 writeReturnDocumentation callable skip = do
   c2h <- getC2HMap
   docBase <- getDocBase
@@ -278,7 +278,7 @@ writeReturnDocumentation callable skip = do
     writeHaddock DocAfterSymbol fullInfo
 
 -- | Add the given text to the documentation for the section being generated.
-addSectionDocumentation :: HaddockSection -> Documentation -> CodeGen ()
+addSectionDocumentation :: HaddockSection -> Documentation -> CodeGen e ()
 addSectionDocumentation section doc = do
   c2h <- getC2HMap
   docBase <- getDocBase

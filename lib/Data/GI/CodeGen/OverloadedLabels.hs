@@ -21,10 +21,10 @@ import Data.GI.CodeGen.Util (lcFirst)
 
 -- | A list of all overloadable identifiers in the set of APIs (current
 -- properties and methods).
-findOverloaded :: [(Name, API)] -> CodeGen [Text]
+findOverloaded :: [(Name, API)] -> CodeGen e [Text]
 findOverloaded apis = S.toList <$> go apis S.empty
     where
-      go :: [(Name, API)] -> S.Set Text -> CodeGen (S.Set Text)
+      go :: [(Name, API)] -> S.Set Text -> CodeGen e (S.Set Text)
       go [] set = return set
       go ((_, api):apis) set =
         case api of
@@ -75,14 +75,14 @@ findOverloaded apis = S.toList <$> go apis S.empty
       filterFields = filter (\f -> fieldVisible f &&
                             (not . T.null . fieldName) f)
 
-genOverloadedLabel :: Text -> CodeGen ()
+genOverloadedLabel :: Text -> CodeGen e ()
 genOverloadedLabel l = group $ do
   line $ "_" <> l <> " :: IsLabelProxy \"" <> l <> "\" a => a"
   line $ "_" <> l <> " = fromLabelProxy (Proxy :: Proxy \""
            <> l <> "\")"
   export ToplevelSection ("_" <> l)
 
-genOverloadedLabels :: [(Name, API)] -> CodeGen ()
+genOverloadedLabels :: [(Name, API)] -> CodeGen e ()
 genOverloadedLabels allAPIs = do
   setLanguagePragmas ["DataKinds", "FlexibleContexts", "CPP"]
   setModuleFlags [ImplicitPrelude]

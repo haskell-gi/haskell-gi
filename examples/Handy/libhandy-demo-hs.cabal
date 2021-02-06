@@ -27,4 +27,4 @@ executable libhandy-demo-hs
                        text,
                        gi-gtk-hs,
                        file-embed,
-                       haskell-gi-base ^>= 0.24.0
+                       haskell-gi-base ^>= 0.25.0

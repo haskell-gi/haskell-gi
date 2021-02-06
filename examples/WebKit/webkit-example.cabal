@@ -31,7 +31,7 @@ foreign-library simple-webextension
                        DBusServersInfo
 
   build-depends:       base >=4.7 && <5,
-                       haskell-gi-base ^>= 0.24.0,
+                       haskell-gi-base ^>= 0.25.0,
                        gi-webkit2webextension == 4.0.*,
                        gi-gio == 2.0.*,
                        text >= 1.0
@@ -45,7 +45,7 @@ executable SimpleBrowser
                        DBusServersInfo
 
   build-depends:       base >= 4.7 && < 5,
-                       haskell-gi-base ^>= 0.24.0,
+                       haskell-gi-base ^>= 0.25.0,
                        gi-glib == 2.0.*,
                        gi-gio == 2.0.*,
                        gi-gtk == 3.0.*,

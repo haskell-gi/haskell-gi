@@ -127,7 +127,7 @@ readMajorMinor version =
 
 -- | Generate the cabal project.
 genCabalProject :: (GIRInfo, PkgInfo) -> [(GIRInfo, PkgInfo)] ->
-                   [Text] -> BaseVersion -> CodeGen ()
+                   [Text] -> BaseVersion -> CodeGen e ()
 genCabalProject (gir, PkgInfo {pkgName = pcName, pkgMajor = major,
                                pkgMinor = minor})
   deps exposedModules minBaseVersion = do

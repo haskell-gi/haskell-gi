@@ -13,12 +13,12 @@ import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Type
 
 -- Returns whether the given type is a descendant of the given parent.
-typeDoParentSearch :: Name -> Type -> CodeGen Bool
+typeDoParentSearch :: Name -> Type -> CodeGen e Bool
 typeDoParentSearch parent (TInterface n) = findAPIByName n >>=
                                            apiDoParentSearch parent n
 typeDoParentSearch _ _ = return False
 
-apiDoParentSearch :: Name -> Name -> API -> CodeGen Bool
+apiDoParentSearch :: Name -> Name -> API -> CodeGen e Bool
 apiDoParentSearch parent n api
     | parent == n = return True
     | otherwise   = case api of
@@ -33,13 +33,13 @@ apiDoParentSearch parent n api
       _ -> return False
 
 -- | Check whether the given type descends from GObject.
-isGObject :: Type -> CodeGen Bool
+isGObject :: Type -> CodeGen e Bool
 isGObject = typeDoParentSearch $ Name "GObject" "Object"
 
 -- | Check whether the given name descends from GObject.
-nameIsGObject :: Name -> CodeGen Bool
+nameIsGObject :: Name -> CodeGen e Bool
 nameIsGObject n = findAPIByName n >>= apiIsGObject n
 
 -- | Check whether the given API descends from GObject.
-apiIsGObject :: Name -> API -> CodeGen Bool
+apiIsGObject :: Name -> API -> CodeGen e Bool
 apiIsGObject = apiDoParentSearch $ Name "GObject" "Object"

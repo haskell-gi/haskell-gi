@@ -51,7 +51,7 @@ basicFreeFn (TGClosure _) = Nothing
 -- run in the exception handler, so any type which we ref/allocate
 -- with the expectation that the called function will consume it (on
 -- TransferEverything) should be freed here.
-basicFreeFnOnError :: Type -> Transfer -> CodeGen (Maybe Text)
+basicFreeFnOnError :: Type -> Transfer -> CodeGen e (Maybe Text)
 basicFreeFnOnError (TBasicType TUTF8) _ = return $ Just "freeMem"
 basicFreeFnOnError (TBasicType TFileName) _ = return $ Just "freeMem"
 basicFreeFnOnError (TBasicType _) _ = return Nothing
@@ -119,7 +119,7 @@ basicFreeFnOnError (TGHash _ _) _ = return $ Just "unrefGHashTable"
 basicFreeFnOnError (TError) _ = return Nothing
 
 -- Free just the container, but not the elements.
-freeContainer :: Type -> Text -> CodeGen [Text]
+freeContainer :: Type -> Text -> CodeGen e [Text]
 freeContainer t label =
     case basicFreeFn t of
       Nothing -> return []
@@ -228,7 +228,7 @@ freeInGHashTable TransferContainer label =
                         <> label
 freeInGHashTable TransferNothing label = return ["unrefGHashTable " <> label]
 
-freeOut :: Text -> CodeGen [Text]
+freeOut :: Text -> CodeGen e [Text]
 freeOut label = return ["freeMem " <> label]
 
 -- | Given an input argument to a C callable, and its label in the code,

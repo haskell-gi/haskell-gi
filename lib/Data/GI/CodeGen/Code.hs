@@ -3,10 +3,9 @@ module Data.GI.CodeGen.Code
     ( Code
     , ModuleInfo(moduleCode, sectionDocs)
     , ModuleFlag(..)
-    , BaseCodeGen
     , CodeGen
     , ExcCodeGen
-    , CGError(..)
+    , CGError
     , genCode
     , evalCodeGen
 
@@ -259,25 +258,17 @@ emptyCGState = CGState { cgsCPPConditionals = []
                        , cgsNextAvailableTyvar = SingleCharTyvar 'a'
                        }
 
--- | The base type for the code generator monad.
-type BaseCodeGen excType a =
+-- | The base type for the code generator monad. Generators that
+-- cannot throw errors are parametric in the exception type 'excType'.
+type CodeGen excType a =
   ReaderT CodeGenConfig (StateT (CGState, ModuleInfo) (Except excType)) a
 
--- | The code generator monad, for generators that cannot throw
--- errors. The fact that they cannot throw errors is encoded in the
--- forall, which disallows any operation on the error, except
--- discarding it or passing it along without inspecting. This last
--- operation is useful in order to allow embedding `CodeGen`
--- computations inside `ExcCodeGen` computations, while disallowing
--- the opposite embedding without explicit error handling.
-type CodeGen a = forall e. BaseCodeGen e a
-
 -- | Code generators that can throw errors.
-type ExcCodeGen a = BaseCodeGen CGError a
+type ExcCodeGen a = CodeGen CGError a
 
 -- | Run a `CodeGen` with given `Config` and initial state, returning
 -- either the resulting exception, or the result and final module info.
-runCodeGen :: BaseCodeGen e a -> CodeGenConfig -> (CGState, ModuleInfo) ->
+runCodeGen :: CodeGen e a -> CodeGenConfig -> (CGState, ModuleInfo) ->
               (Either e (a, ModuleInfo))
 runCodeGen cg cfg state =
   dropCGState <$> runExcept (runStateT (runReaderT cg cfg) state)
@@ -295,13 +286,13 @@ cleanInfo info = info { moduleCode = emptyCode, submodules = M.empty,
 -- | Run the given code generator using the state and config of an
 -- ambient CodeGen, but without adding the generated code to
 -- `moduleCode`, instead returning it explicitly.
-recurseCG :: BaseCodeGen e a -> BaseCodeGen e (a, Code)
+recurseCG :: CodeGen e a -> CodeGen e (a, Code)
 recurseCG = recurseWithState id
 
 -- | Like `recurseCG`, but we allow for explicitly setting the state
 -- of the inner code generator.
-recurseWithState :: (CGState -> CGState) -> BaseCodeGen e a
-                 -> BaseCodeGen e (a, Code)
+recurseWithState :: (CGState -> CGState) -> CodeGen e a
+                 -> CodeGen e (a, Code)
 recurseWithState cgsSet cg = do
   cfg <- ask
   (cgs, oldInfo) <- get
@@ -314,7 +305,7 @@ recurseWithState cgsSet cg = do
 
 -- | Like `recurseCG`, giving explicitly the set of loaded APIs and C to
 -- Haskell map for the subgenerator.
-recurseWithAPIs :: M.Map Name API -> CodeGen () -> CodeGen ()
+recurseWithAPIs :: M.Map Name API -> CodeGen e () -> CodeGen e ()
 recurseWithAPIs apis cg = do
   cfg <- ask
   (cgs, oldInfo) <- get
@@ -363,7 +354,7 @@ addSubmodule modName submodule (cgs, current) =
 -- current module. Note that we do not generate the submodule if the
 -- code generator generated no code and the module does not have
 -- submodules.
-submodule' :: Text -> BaseCodeGen e () -> BaseCodeGen e ()
+submodule' :: Text -> CodeGen e () -> CodeGen e ()
 submodule' modName cg = do
   cfg <- ask
   (_, oldInfo) <- get
@@ -377,13 +368,13 @@ submodule' modName cg = do
 
 -- | Run the given CodeGen in order to generate a submodule (specified
 -- an an ordered list) of the current module.
-submodule :: ModulePath -> BaseCodeGen e () -> BaseCodeGen e ()
+submodule :: ModulePath -> CodeGen e () -> CodeGen e ()
 submodule (ModulePath []) cg = cg
 submodule (ModulePath (m:ms)) cg = submodule' m (submodule (ModulePath ms) cg)
 
 -- | Try running the given `action`, and if it fails run `fallback`
 -- instead.
-handleCGExc :: (CGError -> CodeGen a) -> ExcCodeGen a -> CodeGen a
+handleCGExc :: (CGError -> CodeGen e a) -> ExcCodeGen a -> CodeGen e a
 handleCGExc fallback
  action = do
     cfg <- ask
@@ -396,25 +387,25 @@ handleCGExc fallback
         return r
 
 -- | Return the currently loaded set of dependencies.
-getDeps :: CodeGen Deps
+getDeps :: CodeGen e Deps
 getDeps = moduleDeps . snd <$> get
 
 -- | Return the ambient configuration for the code generator.
-config :: CodeGen Config
+config :: CodeGen e Config
 config = hConfig <$> ask
 
 -- | Return the name of the current module.
-currentModule :: CodeGen Text
+currentModule :: CodeGen e Text
 currentModule = do
   (_, s) <- get
   return (dotWithPrefix (modulePath s))
 
 -- | Return the list of APIs available to the generator.
-getAPIs :: CodeGen (M.Map Name API)
+getAPIs :: CodeGen e (M.Map Name API)
 getAPIs = loadedAPIs <$> ask
 
 -- | Return the C -> Haskell available to the generator.
-getC2HMap :: CodeGen (M.Map CRef Hyperlink)
+getC2HMap :: CodeGen e (M.Map CRef Hyperlink)
 getC2HMap = c2hMap <$> ask
 
 -- | Due to the `forall` in the definition of `CodeGen`, if we want to
@@ -423,7 +414,7 @@ getC2HMap = c2hMap <$> ask
 -- is perfectly safe, since there is no way to construct a computation
 -- in the `CodeGen` monad that throws an exception, due to the higher
 -- rank type.
-unwrapCodeGen :: CodeGen a -> CodeGenConfig -> (CGState, ModuleInfo)
+unwrapCodeGen :: CodeGen e a -> CodeGenConfig -> (CGState, ModuleInfo)
               -> (a, ModuleInfo)
 unwrapCodeGen cg cfg info =
     case runCodeGen cg cfg info of
@@ -433,7 +424,7 @@ unwrapCodeGen cg cfg info =
 -- | Run a code generator, and return the information for the
 -- generated module together with the return value of the generator.
 evalCodeGen :: Config -> M.Map Name API ->
-               ModulePath -> CodeGen a -> (a, ModuleInfo)
+               ModulePath -> CodeGen e a -> (a, ModuleInfo)
 evalCodeGen cfg apis mPath cg =
   let initialInfo = emptyModule mPath
       cfg' = CodeGenConfig {hConfig = cfg, loadedAPIs = apis,
@@ -442,11 +433,11 @@ evalCodeGen cfg apis mPath cg =
 
 -- | Like `evalCodeGen`, but discard the resulting output value.
 genCode :: Config -> M.Map Name API ->
-           ModulePath -> CodeGen () -> ModuleInfo
+           ModulePath -> CodeGen e () -> ModuleInfo
 genCode cfg apis mPath cg = snd $ evalCodeGen cfg apis mPath cg
 
 -- | Mark the given dependency as used by the module.
-registerNSDependency :: Text -> CodeGen ()
+registerNSDependency :: Text -> CodeGen e ()
 registerNSDependency name = do
     deps <- getDeps
     unless (Set.member name deps) $ do
@@ -462,7 +453,7 @@ transitiveModuleDeps minfo =
 
 -- | Given a module name and a symbol in the module (including a
 -- proper namespace), return a qualified name for the symbol.
-qualified :: ModulePath -> Name -> CodeGen Text
+qualified :: ModulePath -> Name -> CodeGen e Text
 qualified mp (Name ns s) = do
   cfg <- config
   -- Make sure the module is listed as a dependency.
@@ -478,7 +469,7 @@ qualified mp (Name ns s) = do
 -- | Import the given module name qualified (as a source import if the
 -- namespace is the same as the current one), and return the name
 -- under which the module was imported.
-qualifiedImport :: ModulePath -> CodeGen Text
+qualifiedImport :: ModulePath -> CodeGen e Text
 qualifiedImport mp = do
   modify' $ \(cgs, s) -> (cgs, s {qualifiedImports = Set.insert mp (qualifiedImports s)})
   return (qualifiedModuleName mp)
@@ -500,7 +491,7 @@ minBaseVersion minfo =
             : map minBaseVersion (M.elems $ submodules minfo))
 
 -- | Print, as a comment, a friendly textual description of the error.
-printCGError :: CGError -> CodeGen ()
+printCGError :: CGError -> CodeGen e ()
 printCGError (CGErrorNotImplemented e) = do
   comment $ "Not implemented: " <> e
 printCGError (CGErrorBadIntrospectionInfo e) =
@@ -518,7 +509,7 @@ missingInfoError :: Text -> ExcCodeGen a
 missingInfoError s = throwError $ CGErrorMissingInfo s
 
 -- | Get a type variable unused in the current scope.
-getFreshTypeVariable :: CodeGen Text
+getFreshTypeVariable :: CodeGen e Text
 getFreshTypeVariable = do
   (cgs@(CGState{cgsNextAvailableTyvar = available}), s) <- get
   let (tyvar, next) =
@@ -535,23 +526,23 @@ getFreshTypeVariable = do
 
 -- | Introduce a new scope for type variable naming: the next fresh
 -- variable will be called 'a'.
-resetTypeVariableScope :: CodeGen ()
+resetTypeVariableScope :: CodeGen e ()
 resetTypeVariableScope =
   modify' (\(cgs, s) -> (cgs {cgsNextAvailableTyvar = SingleCharTyvar 'a'}, s))
 
 -- | Try to find the API associated with a given type, if known.
-findAPI :: HasCallStack => Type -> CodeGen (Maybe API)
+findAPI :: HasCallStack => Type -> CodeGen e (Maybe API)
 findAPI (TInterface n) = Just <$> findAPIByName n
 findAPI _ = return Nothing
 
 -- | Find the API associated with a given type. If the API cannot be
 -- found this raises an `error`.
-getAPI :: HasCallStack => Type -> CodeGen API
+getAPI :: HasCallStack => Type -> CodeGen e API
 getAPI t = findAPI t >>= \case
            Just a -> return a
            Nothing -> terror ("Could not resolve type \"" <> tshow t <> "\".")
 
-findAPIByName :: HasCallStack => Name -> CodeGen API
+findAPIByName :: HasCallStack => Name -> CodeGen e API
 findAPIByName n@(Name ns _) = do
     apis <- getAPIs
     case M.lookup n apis of
@@ -560,29 +551,29 @@ findAPIByName n@(Name ns _) = do
             terror $ "couldn't find API description for " <> ns <> "." <> name n
 
 -- | Add some code to the current generator.
-tellCode :: CodeToken -> CodeGen ()
+tellCode :: CodeToken -> CodeGen e ()
 tellCode c = modify' (\(cgs, s) -> (cgs, s {moduleCode = moduleCode s <>
                                                          codeSingleton c}))
 
 -- | Print out a (newline-terminated) line.
-line :: Text -> CodeGen ()
+line :: Text -> CodeGen e ()
 line = tellCode . Line
 
 -- | Print out the given line both to the normal module, and to the
 -- HsBoot file.
-bline :: Text -> CodeGen ()
+bline :: Text -> CodeGen e ()
 bline l = hsBoot (line l) >> line l
 
 -- | A blank line
-blank :: CodeGen ()
+blank :: CodeGen e ()
 blank = line ""
 
 -- | A (possibly multi line) comment, separated by newlines
-comment :: Text -> CodeGen ()
+comment :: Text -> CodeGen e ()
 comment = tellCode . Comment . T.lines
 
 -- | Increase the indent level for code generation.
-indent :: BaseCodeGen e a -> BaseCodeGen e a
+indent :: CodeGen e a -> CodeGen e a
 indent cg = do
   (x, code) <- recurseCG cg
   tellCode (Indent code)
@@ -590,11 +581,11 @@ indent cg = do
 
 -- | Increase the indentation level for the rest of the lines in the
 -- current group.
-increaseIndent :: CodeGen ()
+increaseIndent :: CodeGen e ()
 increaseIndent = tellCode IncreaseIndent
 
 -- | Group a set of related code.
-group :: BaseCodeGen e a -> BaseCodeGen e a
+group :: CodeGen e a -> CodeGen e a
 group cg = do
   (x, code) <- recurseCG cg
   tellCode (Group code)
@@ -602,7 +593,7 @@ group cg = do
   return x
 
 -- | Guard a block of code with @#if@.
-cppIfBlock :: Text -> BaseCodeGen e a -> BaseCodeGen e a
+cppIfBlock :: Text -> CodeGen e a -> CodeGen e a
 cppIfBlock cond cg = do
   (x, code) <- recurseWithState addConditional cg
   tellCode (CPPBlock (CPPIf cond) code)
@@ -617,11 +608,11 @@ data CPPGuard = CPPOverloading -- ^ Enable overloading
 
 -- | Guard a code block with CPP code, such that it is included only
 -- if the specified feature is enabled.
-cppIf :: CPPGuard -> BaseCodeGen e a -> BaseCodeGen e a
+cppIf :: CPPGuard -> CodeGen e a -> CodeGen e a
 cppIf CPPOverloading = cppIfBlock "defined(ENABLE_OVERLOADING)"
 
 -- | Write the given code into the .hs-boot file for the current module.
-hsBoot :: BaseCodeGen e a -> BaseCodeGen e a
+hsBoot :: CodeGen e a -> CodeGen e a
 hsBoot cg = do
   (x, code) <- recurseCG cg
   modify' (\(cgs, s) -> (cgs, s{bootCode = bootCode s <>
@@ -632,52 +623,52 @@ hsBoot cg = do
         addGuards (cond : conds) c = codeSingleton $ CPPBlock cond (addGuards conds c)
 
 -- | Add a export to the current module.
-exportPartial :: ([CPPConditional] -> Export) -> CodeGen ()
+exportPartial :: ([CPPConditional] -> Export) -> CodeGen e ()
 exportPartial partial =
     modify' $ \(cgs, s) -> (cgs,
                             let e = partial $ cgsCPPConditionals cgs
                             in s{moduleExports = moduleExports s |> e})
 
 -- | Reexport a whole module.
-exportModule :: SymbolName -> CodeGen ()
+exportModule :: SymbolName -> CodeGen e ()
 exportModule m = exportPartial (Export ExportModule m)
 
 -- | Add a type declaration-related export.
-exportDecl :: SymbolName -> CodeGen ()
+exportDecl :: SymbolName -> CodeGen e ()
 exportDecl d = exportPartial (Export ExportTypeDecl d)
 
 -- | Export a symbol in the given haddock subsection.
-export :: HaddockSection -> SymbolName -> CodeGen ()
+export :: HaddockSection -> SymbolName -> CodeGen e ()
 export s n = exportPartial (Export (ExportSymbol s) n)
 
 -- | Set the language pragmas for the current module.
-setLanguagePragmas :: [Text] -> CodeGen ()
+setLanguagePragmas :: [Text] -> CodeGen e ()
 setLanguagePragmas ps =
     modify' $ \(cgs, s) -> (cgs, s{modulePragmas = Set.fromList ps})
 
 -- | Add a language pragma for the current module.
-addLanguagePragma :: Text -> CodeGen ()
+addLanguagePragma :: Text -> CodeGen e ()
 addLanguagePragma p =
   modify' $ \(cgs, s) -> (cgs, s{modulePragmas =
                                  Set.insert p (modulePragmas s)})
 
 -- | Set the GHC options for compiling this module (in a OPTIONS_GHC pragma).
-setGHCOptions :: [Text] -> CodeGen ()
+setGHCOptions :: [Text] -> CodeGen e ()
 setGHCOptions opts =
     modify' $ \(cgs, s) -> (cgs, s{moduleGHCOpts = Set.fromList opts})
 
 -- | Set the given flags for the module.
-setModuleFlags :: [ModuleFlag] -> CodeGen ()
+setModuleFlags :: [ModuleFlag] -> CodeGen e ()
 setModuleFlags flags =
     modify' $ \(cgs, s) -> (cgs, s{moduleFlags = Set.fromList flags})
 
 -- | Set the minimum base version supported by the current module.
-setModuleMinBase :: BaseVersion -> CodeGen ()
+setModuleMinBase :: BaseVersion -> CodeGen e ()
 setModuleMinBase v =
     modify' $ \(cgs, s) -> (cgs, s{moduleMinBase = max v (moduleMinBase s)})
 
 -- | Add documentation for a given section.
-addSectionFormattedDocs :: HaddockSection -> Text -> CodeGen ()
+addSectionFormattedDocs :: HaddockSection -> Text -> CodeGen e ()
 addSectionFormattedDocs section docs =
     modify' $ \(cgs, s) -> (cgs, s{sectionDocs = M.insertWith (<>) section
                                                  docs (sectionDocs s)})

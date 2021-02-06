@@ -43,7 +43,7 @@ import Data.GI.CodeGen.SymbolNaming (upperName, classConstraint,
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util (tshow)
 
-genFunction :: Name -> Function -> CodeGen ()
+genFunction :: Name -> Function -> CodeGen e ()
 genFunction n (Function symbol fnMovedTo callable) =
     -- Only generate the function if it has not been moved.
     when (Nothing == fnMovedTo) $
@@ -60,7 +60,7 @@ genFunction n (Function symbol fnMovedTo callable) =
                         )
 
 -- | Create the newtype wrapping the ManagedPtr for the given type.
-genNewtype :: Text -> CodeGen ()
+genNewtype :: Text -> CodeGen e ()
 genNewtype name' = do
   group $ do
     bline $ "newtype " <> name' <> " = " <> name' <> " (SP.ManagedPtr " <> name' <> ")"
@@ -71,7 +71,7 @@ genNewtype name' = do
     indent $ line $ "toManagedPtr (" <> name' <> " p) = p"
 
 -- | Generate wrapper for structures.
-genStruct :: Name -> Struct -> CodeGen ()
+genStruct :: Name -> Struct -> CodeGen e ()
 genStruct n s = unless (ignoreStruct n s) $ do
    let Name _ name' = normalizedAPIName (APIStruct s) n
 
@@ -109,7 +109,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
         genMethodList n (catMaybes methods)
 
 -- | Generated wrapper for unions.
-genUnion :: Name -> Union -> CodeGen ()
+genUnion :: Name -> Union -> CodeGen e ()
 genUnion n u = do
   let Name _ name' = normalizedAPIName (APIUnion u) n
 
@@ -225,7 +225,7 @@ genMethod cn m@(Method {
 
 -- | Generate an import for the gvalue getter for the given type. It
 -- returns the name of the function on the Haskell side.
-genGValueGetter :: Text -> Text -> CodeGen Text
+genGValueGetter :: Text -> Text -> CodeGen e Text
 genGValueGetter name' get_value_fn = group $ do
   let symb = "gv_get_" <> get_value_fn
   line $ "foreign import ccall \"" <> get_value_fn <> "\" " <> symb <> " ::"
@@ -234,7 +234,7 @@ genGValueGetter name' get_value_fn = group $ do
 
 -- | Generate an import for the gvalue setter for the given type. It
 -- returns the name of the function on the Haskell side.
-genGValueSetter :: Text -> Text -> CodeGen Text
+genGValueSetter :: Text -> Text -> CodeGen e Text
 genGValueSetter name' set_value_fn = group $ do
   let symb = "gv_set_" <> set_value_fn
   line $ "foreign import ccall \"" <> set_value_fn <> "\" " <> symb <> " ::"
@@ -242,7 +242,7 @@ genGValueSetter name' set_value_fn = group $ do
   return symb
 
 -- | Generate the GValue instances for the given GObject.
-genGValueInstance :: Name -> Text -> Text -> Text -> Text -> CodeGen ()
+genGValueInstance :: Name -> Text -> Text -> Text -> Text -> CodeGen e ()
 genGValueInstance n get_type_fn newFn get_value_fn set_value_fn = do
   let name' = upperName n
       doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
@@ -264,7 +264,7 @@ genGValueInstance n get_type_fn newFn get_value_fn set_value_fn = do
 
 -- | Type casting with type checking, returns the function returning the
 -- GType for the oject.
-genCasts :: Name -> Text -> [Name] -> CodeGen Text
+genCasts :: Name -> Text -> [Name] -> CodeGen e Text
 genCasts n ti parents = do
   isGO <- isGObject (TInterface n)
   let name' = upperName n
@@ -332,7 +332,7 @@ genCasts n ti parents = do
 -- | Wrap a given Object. We enforce that every Object that we wrap is a
 -- GObject. This is the case for everything except the ParamSpec* set
 -- of objects, we deal with these separately.
-genObject :: Name -> Object -> CodeGen ()
+genObject :: Name -> Object -> CodeGen e ()
 genObject n o = do
   let Name _ name' = normalizedAPIName (APIObject o) n
   let t = TInterface n
@@ -391,7 +391,7 @@ genObject n o = do
                             genUnsupportedMethodInfo n f)
                 (genMethod n f)
 
-genInterface :: Name -> Interface -> CodeGen ()
+genInterface :: Name -> Interface -> CodeGen e ()
 genInterface n iface = do
   let Name _ name' = normalizedAPIName (APIInterface iface) n
 
@@ -470,7 +470,7 @@ genInterface n iface = do
 -- "moved-to" annotation), we don't generate the method.
 --
 -- It may be more expedient to keep a map of symbol -> function.
-symbolFromFunction :: Text -> CodeGen Bool
+symbolFromFunction :: Text -> CodeGen e Bool
 symbolFromFunction sym = do
     apis <- getAPIs
     return $ any (hasSymbol sym . snd) $ M.toList apis
@@ -480,7 +480,7 @@ symbolFromFunction sym = do
             sym1 == sym2 && movedTo == Nothing
         hasSymbol _ _ = False
 
-genAPI :: Name -> API -> CodeGen ()
+genAPI :: Name -> API -> CodeGen e ()
 genAPI n (APIConst c) = genConstant n c
 genAPI n (APIFunction f) = genFunction n f
 genAPI n (APIEnum e) = genEnum n e
@@ -492,10 +492,10 @@ genAPI n (APIObject o) = genObject n o
 genAPI n (APIInterface i) = genInterface n i
 
 -- | Generate the code for a given API in the corresponding module.
-genAPIModule :: Name -> API -> CodeGen ()
+genAPIModule :: Name -> API -> CodeGen e ()
 genAPIModule n api = submodule (submoduleLocation n api) $ genAPI n api
 
-genModule' :: M.Map Name API -> CodeGen ()
+genModule' :: M.Map Name API -> CodeGen e ()
 genModule' apis = do
   mapM_ (uncurry genAPIModule)
     -- We provide these ourselves
@@ -526,7 +526,7 @@ genModule' apis = do
     handWritten (Name "GObject" "Closure", _) = True
     handWritten _ = False
 
-genModule :: M.Map Name API -> CodeGen ()
+genModule :: M.Map Name API -> CodeGen e ()
 genModule apis = do
   -- Reexport Data.GI.Base for convenience (so it does not need to be
   -- imported separately).

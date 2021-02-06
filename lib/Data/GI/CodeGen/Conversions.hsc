@@ -133,7 +133,7 @@ literal f = liftF $ Literal f ()
 lambdaConvert :: Text -> Converter
 lambdaConvert c = liftF $ LambdaConvert c ()
 
-genConversion :: Text -> Converter -> CodeGen Text
+genConversion :: Text -> Converter -> CodeGen e Text
 genConversion l (Pure ()) = return l
 genConversion l (Free k) = do
   let l' = prime l
@@ -180,7 +180,7 @@ computeArrayLength _ t =
     notImplementedError $ "computeArrayLength called on non-CArray type "
                             <> tshow t
 
-convert :: Text -> BaseCodeGen e Converter -> BaseCodeGen e Text
+convert :: Text -> CodeGen e Converter -> CodeGen e Text
 convert l c = do
   c' <- c
   genConversion l c'
@@ -199,25 +199,25 @@ hObjectToF t transfer =
   -- type.
   else return $ M "unsafeManagedPtrCastPtr"
 
-hVariantToF :: Transfer -> CodeGen Constructor
+hVariantToF :: Transfer -> CodeGen e Constructor
 hVariantToF transfer =
   if transfer == TransferEverything
   then return $ M "B.GVariant.disownGVariant"
   else return $ M "unsafeManagedPtrGetPtr"
 
-hValueToF :: Transfer -> CodeGen Constructor
+hValueToF :: Transfer -> CodeGen e Constructor
 hValueToF transfer =
   if transfer == TransferEverything
   then return $ M "B.GValue.disownGValue"
   else return $ M "unsafeManagedPtrGetPtr"
 
-hParamSpecToF :: Transfer -> CodeGen Constructor
+hParamSpecToF :: Transfer -> CodeGen e Constructor
 hParamSpecToF transfer =
   if transfer == TransferEverything
   then return $ M "B.GParamSpec.disownGParamSpec"
   else return $ M "unsafeManagedPtrGetPtr"
 
-hClosureToF :: Transfer -> Maybe Type -> CodeGen Constructor
+hClosureToF :: Transfer -> Maybe Type -> CodeGen e Constructor
 -- Untyped closures
 hClosureToF transfer Nothing =
   if transfer == TransferEverything
@@ -232,7 +232,7 @@ hClosureToF transfer (Just _) =
   then return $ M "B.GClosure.disownGClosure"
   else return $ M "unsafeManagedPtrGetPtr"
 
-hBoxedToF :: Transfer -> CodeGen Constructor
+hBoxedToF :: Transfer -> CodeGen e Constructor
 hBoxedToF transfer =
   if transfer == TransferEverything
   then return $ M "B.ManagedPtr.disownBoxed"
@@ -424,13 +424,13 @@ hToF t transfer = do
   constructor <- hToF' t a hType fType transfer
   return $ apply constructor
 
-boxedForeignPtr :: Text -> Transfer -> CodeGen Constructor
+boxedForeignPtr :: Text -> Transfer -> CodeGen e Constructor
 boxedForeignPtr constructor transfer = return $
    case transfer of
      TransferEverything -> M $ parenthesize $ "wrapBoxed " <> constructor
      _ -> M $ parenthesize $ "newBoxed " <> constructor
 
-suForeignPtr :: Bool -> TypeRep -> Transfer -> CodeGen Constructor
+suForeignPtr :: Bool -> TypeRep -> Transfer -> CodeGen e Constructor
 suForeignPtr isBoxed hType transfer = do
   let constructor = typeConName hType
   if isBoxed then
@@ -440,11 +440,11 @@ suForeignPtr isBoxed hType transfer = do
          TransferEverything -> "wrapPtr " <> constructor
          _ -> "newPtr " <> constructor
 
-structForeignPtr :: Struct -> TypeRep -> Transfer -> CodeGen Constructor
+structForeignPtr :: Struct -> TypeRep -> Transfer -> CodeGen e Constructor
 structForeignPtr s =
     suForeignPtr (structIsBoxed s)
 
-unionForeignPtr :: Union -> TypeRep -> Transfer -> CodeGen Constructor
+unionForeignPtr :: Union -> TypeRep -> Transfer -> CodeGen e Constructor
 unionForeignPtr u =
     suForeignPtr (unionIsBoxed u)
 
@@ -471,25 +471,25 @@ fCallbackToH _ transfer =
   notImplementedError ("ForeignCallback with unsupported transfer type `"
                        <> tshow transfer <> "'")
 
-fVariantToH :: Transfer -> CodeGen Constructor
+fVariantToH :: Transfer -> CodeGen e Constructor
 fVariantToH transfer =
   return $ M $ case transfer of
                   TransferEverything -> "B.GVariant.wrapGVariantPtr"
                   _ -> "B.GVariant.newGVariantFromPtr"
 
-fValueToH :: Transfer -> CodeGen Constructor
+fValueToH :: Transfer -> CodeGen e Constructor
 fValueToH transfer =
   return $ M $ case transfer of
                   TransferEverything -> "B.GValue.wrapGValuePtr"
                   _ -> "B.GValue.newGValueFromPtr"
 
-fParamSpecToH :: Transfer -> CodeGen Constructor
+fParamSpecToH :: Transfer -> CodeGen e Constructor
 fParamSpecToH transfer =
   return $ M $ case transfer of
                   TransferEverything -> "B.GParamSpec.wrapGParamSpecPtr"
                   _ -> "B.GParamSpec.newGParamSpecFromPtr"
 
-fClosureToH :: Transfer -> Maybe Type -> CodeGen Constructor
+fClosureToH :: Transfer -> Maybe Type -> CodeGen e Constructor
 -- Untyped closures
 fClosureToH transfer Nothing =
   return $ M $ case transfer of
@@ -658,7 +658,7 @@ transientToH t@(TInterface _) TransferNothing = do
 transientToH t transfer = fToH t transfer
 
 -- | Wrap the given transient.
-wrapTransient :: Type -> CodeGen Converter
+wrapTransient :: Type -> CodeGen e Converter
 wrapTransient t = do
   hCon <- typeConName <$> haskellType t
   return $ lambdaConvert $ "B.ManagedPtr.withTransient " <> hCon
@@ -723,7 +723,7 @@ data ExposeClosures = WithClosures
 -- | Given a type find the typeclasses the type belongs to, and return
 -- the representation of the type in the function signature and the
 -- list of typeclass constraints for the type.
-argumentType :: Type -> ExposeClosures -> CodeGen (Text, [Text])
+argumentType :: Type -> ExposeClosures -> CodeGen e (Text, [Text])
 argumentType (TGList a) expose = do
   (name, constraints) <- argumentType a expose
   return ("[" <> name <> "]", constraints)
@@ -793,7 +793,7 @@ haskellBasicType TIntPtr   = con0 "CIntPtr"
 haskellBasicType TUIntPtr  = con0 "CUIntPtr"
 
 -- | This translates GI types to the types used for generated Haskell code.
-haskellType :: Type -> CodeGen TypeRep
+haskellType :: Type -> CodeGen e TypeRep
 haskellType (TBasicType bt) = return $ haskellBasicType bt
 -- There is no great choice in this case, so we simply pass the
 -- pointer along. This is useful for GdkPixbufNotify, for example.
@@ -851,7 +851,7 @@ callableHasClosures :: Callable -> Bool
 callableHasClosures = any (/= -1) . map argClosure . args
 
 -- | Check whether the given type corresponds to a callback.
-typeIsCallback :: Type -> CodeGen Bool
+typeIsCallback :: Type -> CodeGen e Bool
 typeIsCallback t@(TInterface _) = do
   api <- findAPI t
   case api of
@@ -871,7 +871,7 @@ typeIsCallback _ = return False
 -- want this when they appear as arguments to callbacks/signals, or
 -- return types of properties, as it would force the type synonym/type
 -- family to depend on the type variable.
-isoHaskellType :: Type -> CodeGen TypeRep
+isoHaskellType :: Type -> CodeGen e TypeRep
 isoHaskellType (TGClosure Nothing) =
   return $ "GClosure" `con` [con0 "()"]
 isoHaskellType t@(TInterface n) = do
@@ -897,7 +897,7 @@ foreignBasicType TGType    = "CGType" `con` []
 foreignBasicType t         = haskellBasicType t
 
 -- This translates GI types to the types used in foreign function calls.
-foreignType :: Type -> CodeGen TypeRep
+foreignType :: Type -> CodeGen e TypeRep
 foreignType (TBasicType t) = return $ foreignBasicType t
 foreignType (TCArray _ _ _ TGValue) = return $ ptr ("B.GValue.GValue" `con` [])
 foreignType (TCArray zt _ _ t) = do
@@ -950,7 +950,7 @@ foreignType t@(TInterface n) = do
       return (ptr $ tname `con` [])
 
 -- | Whether the give type corresponds to an enum or flag.
-typeIsEnumOrFlag :: Type -> CodeGen Bool
+typeIsEnumOrFlag :: Type -> CodeGen e Bool
 typeIsEnumOrFlag t = do
   a <- findAPI t
   case a of
@@ -964,7 +964,7 @@ typeIsEnumOrFlag t = do
 data TypeAllocInfo = TypeAlloc Text Int
 
 -- | Information on how to allocate the given type, if known.
-typeAllocInfo :: Type -> CodeGen (Maybe TypeAllocInfo)
+typeAllocInfo :: Type -> CodeGen e (Maybe TypeAllocInfo)
 typeAllocInfo TGValue =
   let n = #{size GValue}
   in return $ Just $ TypeAlloc ("SP.callocBytes " <> tshow n) n
@@ -990,7 +990,7 @@ typeAllocInfo t = do
 
 -- | Returns whether the given type corresponds to a `ManagedPtr`
 -- instance (a thin wrapper over a `ForeignPtr`).
-isManaged   :: Type -> CodeGen Bool
+isManaged   :: Type -> CodeGen e Bool
 isManaged TError = return True
 isManaged TVariant = return True
 isManaged TGValue = return True
@@ -1008,7 +1008,7 @@ isManaged _ = return False
 
 -- | Returns whether the given type is represented by a pointer on the
 -- C side.
-typeIsPtr :: Type -> CodeGen Bool
+typeIsPtr :: Type -> CodeGen e Bool
 typeIsPtr t = isJust <$> typePtrType t
 
 -- | Distinct types of foreign pointers.
@@ -1017,7 +1017,7 @@ data FFIPtrType = FFIPtr    -- ^ Ordinary `Ptr`.
 
 -- | For those types represented by pointers on the C side, return the
 -- type of pointer which represents them on the Haskell FFI.
-typePtrType :: Type -> CodeGen (Maybe FFIPtrType)
+typePtrType :: Type -> CodeGen e (Maybe FFIPtrType)
 typePtrType (TBasicType TPtr) = return (Just FFIPtr)
 typePtrType (TBasicType TUTF8) = return (Just FFIPtr)
 typePtrType (TBasicType TFileName) = return (Just FFIPtr)
@@ -1031,7 +1031,7 @@ typePtrType t = do
 -- | If the passed in type is nullable, return the conversion function
 -- between the FFI pointer type (may be a `Ptr` or a `FunPtr`) and the
 -- corresponding `Maybe` type.
-maybeNullConvert :: Type -> CodeGen (Maybe Text)
+maybeNullConvert :: Type -> CodeGen e (Maybe Text)
 maybeNullConvert (TBasicType TPtr) = return Nothing
 maybeNullConvert (TGList _) = return Nothing
 maybeNullConvert (TGSList _) = return Nothing
@@ -1044,7 +1044,7 @@ maybeNullConvert t = do
 
 -- | An appropriate NULL value for the given type, for types which are
 -- represented by pointers on the C side.
-nullPtrForType :: Type -> CodeGen (Maybe Text)
+nullPtrForType :: Type -> CodeGen e (Maybe Text)
 nullPtrForType t = do
   pt <- typePtrType t
   case pt of
@@ -1058,7 +1058,7 @@ nullPtrForType t = do
 -- G(S)Lists, for which NULL is a valid G(S)List, and raw pointers,
 -- which we just pass through to the Haskell side. Notice that
 -- introspection annotations can override this.
-typeIsNullable :: Type -> CodeGen Bool
+typeIsNullable :: Type -> CodeGen e Bool
 typeIsNullable t = isJust <$> maybeNullConvert t
 
 -- | If the given type maps to a list in Haskell, return the type of the

@@ -80,7 +80,7 @@ genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
 
 -- | Generate the type synonym for the prototype of the callback on
 -- the C side. Returns the name given to the type synonym.
-genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen Text
+genCCallbackPrototype :: Text -> Callable -> Text -> Bool -> CodeGen e Text
 genCCallbackPrototype subsec cb name' isSignal = group $ do
     let ctypeName = callbackCType name'
 
@@ -110,7 +110,7 @@ genCCallbackPrototype subsec cb name' isSignal = group $ do
     ccallbackDoc = "Type for the callback on the (unwrapped) C side."
 
 -- | Generator for wrappers callable from C
-genCallbackWrapperFactory :: Text -> Text -> CodeGen ()
+genCallbackWrapperFactory :: Text -> Text -> CodeGen e ()
 genCallbackWrapperFactory subsec name' = group $ do
     let factoryName = callbackWrapperAllocator name'
     writeHaddock DocBeforeSymbol factoryDoc
@@ -125,7 +125,7 @@ genCallbackWrapperFactory subsec name' = group $ do
 
 -- | Wrap the Haskell `cb` callback into a foreign function of the
 -- right type. Returns the name of the wrapped value.
-genWrappedCallback :: Callable -> Text -> Text -> Bool -> CodeGen Text
+genWrappedCallback :: Callable -> Text -> Text -> Bool -> CodeGen e Text
 genWrappedCallback cb cbArg callback isSignal = do
   drop <- if callableHasClosures cb
           then do
@@ -141,7 +141,7 @@ genWrappedCallback cb cbArg callback isSignal = do
   return (prime drop)
 
 -- | Generator of closures
-genClosure :: Text -> Callable -> Text -> Text -> Bool -> CodeGen ()
+genClosure :: Text -> Callable -> Text -> Text -> Bool -> CodeGen e ()
 genClosure subsec cb callback name isSignal = group $ do
   let closure = callbackClosureGenerator name
   export (NamedSubsection SignalSection subsec) closure
@@ -160,7 +160,7 @@ genClosure subsec cb callback name isSignal = group $ do
 
 -- Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.
-convertNullable :: Text -> BaseCodeGen e Text -> BaseCodeGen e Text
+convertNullable :: Text -> CodeGen e Text -> CodeGen e Text
 convertNullable aname c = do
   line $ "maybe" <> ucFirst aname <> " <-"
   indent $ do
@@ -241,7 +241,7 @@ saveOutArg arg = do
   line $ "poke " <> name <> " " <> name''
 
 -- | A simple wrapper that drops every closure argument.
-genDropClosures :: Text -> Callable -> Text -> CodeGen ()
+genDropClosures :: Text -> Callable -> Text -> CodeGen e ()
 genDropClosures subsec cb name' = group $ do
   let dropper = callbackDropClosures name'
       (inWithClosures, _) = callableHInArgs cb WithClosures
@@ -330,7 +330,7 @@ genCallbackWrapper subsec cb name' isSignal = group $ do
                result' <- convert rname $ hToF r (returnTransfer cb)
                line $ "return " <> result'
 
-genCallback :: Name -> Callback -> CodeGen ()
+genCallback :: Name -> Callback -> CodeGen e ()
 genCallback n callback@(Callback {cbCallable = cb, cbDocumentation = cbDoc }) = do
   let Name _ name' = normalizedAPIName (APICallback callback) n
       cb' = fixupCallerAllocates cb
@@ -383,7 +383,7 @@ genCallback n callback@(Callback {cbCallable = cb, cbDocumentation = cbDoc }) = 
         genCallbackWrapper name' cb' name' False
 
 -- | Generate the given signal instance for the given API object.
-genSignalInfoInstance :: Name -> Signal -> CodeGen ()
+genSignalInfoInstance :: Name -> Signal -> CodeGen e ()
 genSignalInfoInstance owner signal = group $ do
   let name = upperName owner
   let sn = (ucFirst . signalHaskellName . sigName) signal
@@ -400,7 +400,7 @@ genSignalInfoInstance owner signal = group $ do
 
 -- | Write some simple debug message when signal generation fails, and
 -- generate a placeholder SignalInfo instance.
-processSignalError :: Signal -> Name -> CGError -> CodeGen ()
+processSignalError :: Signal -> Name -> CGError -> CodeGen e ()
 processSignalError signal owner err = do
   let qualifiedSignalName = upperName owner <> "::" <> sigName signal
       sn = (ucFirst . signalHaskellName . sigName) signal
@@ -422,7 +422,7 @@ processSignalError signal owner err = do
     export (NamedSubsection SignalSection $ lcFirst sn) si
 
 -- | Generate a wrapper for a signal.
-genSignal :: Signal -> Name -> CodeGen ()
+genSignal :: Signal -> Name -> CodeGen e ()
 genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
   handleCGExc (processSignalError s on) $ do
   let on' = upperName on
@@ -538,7 +538,7 @@ genSignalConnector :: Signal
                    -> Text -- ^ Callback type
                    -> Text -- ^ SignalConnectBefore or SignalConnectAfter
                    -> Text -- ^ Detail
-                   -> CodeGen ()
+                   -> CodeGen e ()
 genSignalConnector (Signal {sigName = sn, sigCallable = cb}) cbType when detail = do
   cb' <- genWrappedCallback cb "cb" cbType True
   let cb'' = prime cb'

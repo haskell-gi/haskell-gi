@@ -26,10 +26,10 @@ import Data.GI.CodeGen.Util (lcFirst)
 
 -- A list of distinct signal names for all GObjects appearing in the
 -- given list of APIs.
-findSignalNames :: [(Name, API)] -> CodeGen [Text]
+findSignalNames :: [(Name, API)] -> CodeGen e [Text]
 findSignalNames apis = S.toList <$> go apis S.empty
     where
-      go :: [(Name, API)] -> S.Set Text -> CodeGen (S.Set Text)
+      go :: [(Name, API)] -> S.Set Text -> CodeGen e (S.Set Text)
       go [] set = return set
       go ((_, api):apis) set =
           case api of
@@ -43,7 +43,7 @@ findSignalNames apis = S.toList <$> go apis S.empty
       insertSignals props set = foldr (S.insert . sigName) set props
 
 -- | Generate the overloaded signal connectors: "Clicked", "ActivateLink", ...
-genOverloadedSignalConnectors :: [(Name, API)] -> CodeGen ()
+genOverloadedSignalConnectors :: [(Name, API)] -> CodeGen e ()
 genOverloadedSignalConnectors allAPIs = do
   setLanguagePragmas ["DataKinds", "PatternSynonyms", "CPP",
                       -- For ghc 7.8 support
@@ -63,7 +63,7 @@ genOverloadedSignalConnectors allAPIs = do
     exportDecl $ "pattern " <> camelName
 
 -- | Signal instances for (GObject-derived) objects.
-genObjectSignals :: Name -> Object -> CodeGen ()
+genObjectSignals :: Name -> Object -> CodeGen e ()
 genObjectSignals n o = do
   let name = upperName n
   isGO <- apiIsGObject n (APIObject o)
@@ -80,7 +80,7 @@ genObjectSignals n o = do
                   <> T.intercalate ", " infos <> "] :: [(Symbol, *)])"
 
 -- | Signal instances for interfaces.
-genInterfaceSignals :: Name -> Interface -> CodeGen ()
+genInterfaceSignals :: Name -> Interface -> CodeGen e ()
 genInterfaceSignals n iface = do
   let name = upperName n
   infos <- fullInterfaceSignalList n iface >>=

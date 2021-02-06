@@ -34,7 +34,7 @@ getParent (APIObject o) = rename $ objParent o
 getParent _ = Nothing
 
 -- | Compute the (ordered) list of parents of the current object.
-instanceTree :: Name -> CodeGen [Name]
+instanceTree :: Name -> CodeGen e [Name]
 instanceTree n = do
   api <- findAPIByName n
   case getParent api of
@@ -67,7 +67,7 @@ instance Inheritable Method where
 -- (including those defined by its ancestors and the interfaces it
 -- implements), together with the name of the interface defining the
 -- property.
-apiInheritables :: Inheritable i => Name -> CodeGen [(Name, i)]
+apiInheritables :: Inheritable i => Name -> CodeGen e [(Name, i)]
 apiInheritables n = do
   api <- findAPIByName n
   case dropMovedItems api of
@@ -75,7 +75,7 @@ apiInheritables n = do
     Just (APIObject object) -> return $ map ((,) n) (objInheritables object)
     _ -> error $ "apiInheritables : Unexpected API : " ++ show n
 
-fullAPIInheritableList :: Inheritable i => Name -> CodeGen [(Name, i)]
+fullAPIInheritableList :: Inheritable i => Name -> CodeGen e [(Name, i)]
 fullAPIInheritableList n = do
   api <- findAPIByName n
   case api of
@@ -84,14 +84,14 @@ fullAPIInheritableList n = do
     _ -> error $ "FullAPIInheritableList : Unexpected API : " ++ show n
 
 fullObjectInheritableList :: Inheritable i => Name -> Object ->
-                             CodeGen [(Name, i)]
+                             CodeGen e [(Name, i)]
 fullObjectInheritableList n obj = do
   iT <- instanceTree n
   (++) <$> (concat <$> mapM apiInheritables (n : iT))
        <*> (concat <$> mapM apiInheritables (objInterfaces obj))
 
 fullInterfaceInheritableList :: Inheritable i => Name -> Interface ->
-                                CodeGen [(Name, i)]
+                                CodeGen e [(Name, i)]
 fullInterfaceInheritableList n iface =
   (++) (map ((,) n) (ifInheritables iface))
     <$> (concat <$> mapM fullAPIInheritableList (ifPrerequisites iface))
@@ -103,13 +103,13 @@ fullInterfaceInheritableList n iface =
 -- setters/getters that we can call, but they are all isomorphic). If
 -- they are not isomorphic we print a warning, and choose to use the
 -- one closest to the leaves of the object hierarchy.
-removeDuplicates :: forall i. (Eq i, Show i, Inheritable i) =>
-                        Bool -> [(Name, i)] -> CodeGen [(Name, i)]
+removeDuplicates :: forall i e. (Eq i, Show i, Inheritable i) =>
+                        Bool -> [(Name, i)] -> CodeGen e [(Name, i)]
 removeDuplicates verbose inheritables =
     (filterTainted . M.toList) <$> foldM filterDups M.empty inheritables
     where
       filterDups :: M.Map Text (Bool, Name, i) -> (Name, i) ->
-                    CodeGen (M.Map Text (Bool, Name, i))
+                    CodeGen e (M.Map Text (Bool, Name, i))
       filterDups m (name, prop) =
         case M.lookup (iName prop) m of
           Just (tainted, n, p)
@@ -129,36 +129,36 @@ removeDuplicates verbose inheritables =
 
 -- | List all properties defined for an object, including those
 -- defined by its ancestors.
-fullObjectPropertyList :: Name -> Object -> CodeGen [(Name, Property)]
+fullObjectPropertyList :: Name -> Object -> CodeGen e [(Name, Property)]
 fullObjectPropertyList n o = fullObjectInheritableList n o >>=
                          removeDuplicates True
 
 -- | List all properties defined for an interface, including those
 -- defined by its prerequisites.
-fullInterfacePropertyList :: Name -> Interface -> CodeGen [(Name, Property)]
+fullInterfacePropertyList :: Name -> Interface -> CodeGen e [(Name, Property)]
 fullInterfacePropertyList n i = fullInterfaceInheritableList n i >>=
                             removeDuplicates True
 
 -- | List all signals defined for an object, including those
 -- defined by its ancestors.
-fullObjectSignalList :: Name -> Object -> CodeGen [(Name, Signal)]
+fullObjectSignalList :: Name -> Object -> CodeGen e [(Name, Signal)]
 fullObjectSignalList n o = fullObjectInheritableList n o >>=
                            removeDuplicates True
 
 -- | List all signals defined for an interface, including those
 -- defined by its prerequisites.
-fullInterfaceSignalList :: Name -> Interface -> CodeGen [(Name, Signal)]
+fullInterfaceSignalList :: Name -> Interface -> CodeGen e [(Name, Signal)]
 fullInterfaceSignalList n i = fullInterfaceInheritableList n i >>=
                               removeDuplicates True
 
 -- | List all methods defined for an object, including those defined
 -- by its ancestors.
-fullObjectMethodList :: Name -> Object -> CodeGen [(Name, Method)]
+fullObjectMethodList :: Name -> Object -> CodeGen e [(Name, Method)]
 fullObjectMethodList n o = fullObjectInheritableList n o >>=
                            removeDuplicates False
 
 -- | List all methods defined for an interface, including those
 -- defined by its prerequisites.
-fullInterfaceMethodList :: Name -> Interface -> CodeGen [(Name, Method)]
+fullInterfaceMethodList :: Name -> Interface -> CodeGen e [(Name, Method)]
 fullInterfaceMethodList n i = fullInterfaceInheritableList n i >>=
                               removeDuplicates False
