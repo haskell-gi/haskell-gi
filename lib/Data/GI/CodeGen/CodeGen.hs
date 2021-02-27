@@ -32,7 +32,7 @@ import Data.GI.CodeGen.Properties (genInterfaceProperties, genObjectProperties,
                       genNamespacedPropLabels)
 import Data.GI.CodeGen.OverloadedSignals (genInterfaceSignals, genObjectSignals)
 import Data.GI.CodeGen.OverloadedMethods (genMethodList, genMethodInfo,
-                             genUnsupportedMethodInfo, methodListDocumentation)
+                             genUnsupportedMethodInfo)
 import Data.GI.CodeGen.Signal (genSignal, genCallback)
 import Data.GI.CodeGen.Struct (genStructOrUnionFields, extractCallbacksInStruct,
                   fixAPIStructs, ignoreStruct, genZeroStruct, genZeroUnion,
@@ -105,9 +105,7 @@ genStruct n s = unless (ignoreStruct n s) $ do
        else return Nothing
 
    -- Overloaded methods
-   methods <- cppIf CPPOverloading (genMethodList n (catMaybes methods))
-
-   prependSectionFormattedDocs (Section MethodSection) =<< methodListDocumentation methods
+   cppIf CPPOverloading (genMethodList n (catMaybes methods))
 
 -- | Generated wrapper for unions.
 genUnion :: Name -> Union -> CodeGen e ()
@@ -144,9 +142,7 @@ genUnion n u = do
       else return Nothing
 
   -- Overloaded methods
-  methods <- cppIf CPPOverloading $ genMethodList n (catMaybes methods)
-
-  prependSectionFormattedDocs (Section MethodSection) =<< methodListDocumentation methods
+  cppIf CPPOverloading $ genMethodList n (catMaybes methods)
 
 -- | When parsing the GIR file we add the implicit object argument to
 -- methods of an object.  Since we are prepending an argument we need
@@ -359,9 +355,7 @@ genObject n o = do
              genGValueInstance n get_type_fn "B.ManagedPtr.newPtr" getter setter
            _ -> line $ "--- XXX Missing getter and/or setter, so no GValue instance could be generated."
 
-  methods <- cppIf CPPOverloading $ fullObjectMethodList n o >>= genMethodList n
-
-  prependSectionFormattedDocs (Section MethodSection) =<< methodListDocumentation methods
+  cppIf CPPOverloading $ fullObjectMethodList n o >>= genMethodList n
 
   if isGO
     then do
@@ -443,9 +437,7 @@ genInterface n iface = do
        comment $ "XXX Skipping property generation for non-GObject interface"
 
   -- Methods
-  methods <- cppIf CPPOverloading $ fullInterfaceMethodList n iface >>= genMethodList n
-
-  prependSectionFormattedDocs (Section MethodSection) =<< methodListDocumentation methods
+  cppIf CPPOverloading $ fullInterfaceMethodList n iface >>= genMethodList n
 
   forM_ (ifMethods iface) $ \f -> do
       let mn = methodName f

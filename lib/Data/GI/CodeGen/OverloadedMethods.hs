@@ -2,7 +2,6 @@ module Data.GI.CodeGen.OverloadedMethods
     ( genMethodList
     , genMethodInfo
     , genUnsupportedMethodInfo
-    , methodListDocumentation
     ) where
 
 import Control.Monad (forM, forM_, when)
@@ -43,20 +42,10 @@ genMethodResolver n = do
     indent $ line $ "fromLabel _ = O.overloadedMethod @info"
     line $ "#endif"
 
--- | Information about the list of methods available for a given type.
-data AvailableMethods = AvailableMethods
-  { ordinaryMethods :: [(Name, Method)]
-    -- ^ Those methods which are not getters or setters.
-  , getterMethods   :: [(Name, Method)]
-    -- ^ Getters
-  , setterMethods   :: [(Name, Method)]
-    -- ^ Setters
-  }
-
 -- | Generate the `MethodList` instance given the list of methods for
 -- the given named type. Returns a Haddock comment summarizing the
 -- list of methods available.
-genMethodList :: Name -> [(Name, Method)] -> CodeGen e AvailableMethods
+genMethodList :: Name -> [(Name, Method)] -> CodeGen e ()
 genMethodList n methods = do
   let name = upperName n
   let filteredMethods = filter isOrdinaryMethod methods
@@ -69,7 +58,7 @@ genMethodList n methods = do
               return ((lowerName . methodName) method, mi)
   group $ do
     let resolver = "Resolve" <> name <> "Method"
-    export (NamedSubsection MethodSection "Overloaded methods") resolver
+    export (Section MethodSection) resolver
     line $ "type family " <> resolver <> " (t :: Symbol) (o :: *) :: * where"
     indent $ forM_ infos $ \(label, info) -> do
         line $ resolver <> " \"" <> label <> "\" o = " <> info
@@ -77,8 +66,8 @@ genMethodList n methods = do
 
   genMethodResolver name
 
-  return $ AvailableMethods {ordinaryMethods = others, getterMethods = gets,
-                             setterMethods = sets}
+  docs <- methodListDocumentation others gets sets
+  prependSectionFormattedDocs (Section MethodSection) docs
 
   where isOrdinaryMethod :: (Name, Method) -> Bool
         isOrdinaryMethod (_, m) = methodType m == OrdinaryMethod
@@ -91,17 +80,18 @@ genMethodList n methods = do
 
 -- | Format a haddock comment with the information about available
 -- methods.
-methodListDocumentation :: AvailableMethods -> CodeGen e Text
-methodListDocumentation (AvailableMethods [] [] []) = return ""
-methodListDocumentation available = do
-  ordinaryFormatted <- formatMethods (ordinaryMethods available)
-  getterFormatted <- formatMethods (getterMethods available)
-  setterFormatted <- formatMethods (setterMethods available)
+methodListDocumentation :: [(Name, Method)] -> [(Name, Method)]
+                           -> [(Name, Method)] -> CodeGen e Text
+methodListDocumentation [] [] [] = return ""
+methodListDocumentation ordinary getters setters = do
+  ordinaryFormatted <- formatMethods ordinary
+  gettersFormatted <- formatMethods getters
+  settersFormatted <- formatMethods setters
 
   return $ "\n\n === __Click to display all available methods, including inherited ones__\n"
     <> "==== Methods\n" <> ordinaryFormatted
-    <> "\n==== Getters\n" <> getterFormatted
-    <> "\n==== Setters\n" <> setterFormatted
+    <> "\n==== Getters\n" <> gettersFormatted
+    <> "\n==== Setters\n" <> settersFormatted
 
   where formatMethods :: [(Name, Method)] -> CodeGen e Text
         formatMethods [] = return "/None/.\n"
@@ -113,7 +103,6 @@ methodListDocumentation available = do
               "](\"" <> dotModulePath (moduleLocation owner api)
               <> "#g:method:" <> mn <> "\")"
           return $ T.intercalate ", " qualifiedMethods <> ".\n"
-
 
 -- | Generate the `MethodInfo` type and instance for the given method.
 genMethodInfo :: Name -> Method -> ExcCodeGen ()
