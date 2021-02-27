@@ -1,3 +1,7 @@
+### 2.0.23
+
++ Update to haskell-gi(-base)-0.25
+
 ### 2.0.22
 
 + Upgrade to haskell-gi-base-0.24

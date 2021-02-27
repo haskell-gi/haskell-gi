@@ -1,3 +1,7 @@
+### 3.0.10
+
++ Update to haskell-gi(-base)-0.25
+
 ### 3.0.9
 
 + The return value of [windowGet](https://hackage.haskell.org/package/gi-wnck-3.0.9/docs/GI-Wnck-Objects-Window.html#g:method:get) is nullable, but it was not marked as such in the introspection data, see [issue 302](https://github.com/haskell-gi/haskell-gi/issues/302).

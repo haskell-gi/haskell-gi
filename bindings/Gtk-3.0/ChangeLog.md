@@ -1,3 +1,7 @@
+### 3.0.37
+
++ Update to haskell-gi(-base)-0.25
+
 ### 3.0.36
 
 + The pixbuf parameter for [ClipboardImageReceivedFunc](https://hackage.haskell.org/package/gi-gtk-3.0.36/docs/GI-Gtk-Callbacks.html#g:signal:ClipboardImageReceivedFunc) is nullable, but it was not marked as such.
