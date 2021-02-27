@@ -55,6 +55,7 @@ module Data.GI.CodeGen.Code
     , NamedSection(..)
 
     , addSectionFormattedDocs
+    , prependSectionFormattedDocs
 
     , findAPI
     , getAPI
@@ -140,6 +141,7 @@ type Deps = Set.Set Text
 -- | Subsection of the haddock documentation where the export should
 -- be located, or alternatively the toplevel section.
 data HaddockSection = ToplevelSection
+                    | Section NamedSection
                     | NamedSubsection NamedSection Text
   deriving (Show, Eq, Ord)
 
@@ -670,8 +672,14 @@ setModuleMinBase v =
 -- | Add documentation for a given section.
 addSectionFormattedDocs :: HaddockSection -> Text -> CodeGen e ()
 addSectionFormattedDocs section docs =
-    modify' $ \(cgs, s) -> (cgs, s{sectionDocs = M.insertWith (<>) section
-                                                 docs (sectionDocs s)})
+    modify' $ \(cgs, s) -> (cgs, s{sectionDocs = M.insertWith (flip (<>))
+                                                 section docs (sectionDocs s)})
+
+-- | Prepend documentation at the beginning of a given section.
+prependSectionFormattedDocs :: HaddockSection -> Text -> CodeGen e ()
+prependSectionFormattedDocs section docs =
+    modify' $ \(cgs, s) -> (cgs, s{sectionDocs = M.insertWith (<>)
+                                                 section docs (sectionDocs s)})
 
 -- | Format a CPP conditional.
 cppCondFormat :: CPPConditional -> (Text, Text)
@@ -776,11 +784,16 @@ mainSectionName EnumSection = "Enumerations"
 mainSectionName FlagSection = "Flags"
 
 -- | Format a given section made of subsections.
-formatSection :: NamedSection -> [(Subsection, Export)] -> Maybe Text
-formatSection section exports =
+formatSection :: M.Map HaddockSection Text ->
+                 NamedSection -> [(Subsection, Export)] -> Maybe Text
+formatSection docs section exports =
     if null exports
     then Nothing
-    else Just . T.unlines $ [" -- * " <> mainSectionName section
+    else let docstring = case M.lookup (Section section) docs of
+                           Nothing -> ""
+                           Just s -> formatHaddockComment s
+      in Just . T.unlines $ [" -- * " <> mainSectionName section
+                            , docstring
                             , ( T.unlines
                               . map formatSubsection
                               . M.toList ) exportedSubsections]
@@ -809,7 +822,7 @@ formatSection section exports =
 
 -- | Format the list of exports into grouped sections.
 formatSubsectionExports :: M.Map HaddockSection Text -> [Export] -> [Maybe Text]
-formatSubsectionExports docs exports = map (uncurry formatSection)
+formatSubsectionExports docs exports = map (uncurry (formatSection docs))
                                        (M.toAscList collectedExports)
   where collectedExports :: M.Map NamedSection [(Subsection, Export)]
         collectedExports = foldl classifyExport M.empty exports

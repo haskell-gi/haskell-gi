@@ -19,8 +19,8 @@ import Data.GI.CodeGen.API (API(..), Name(..), Callback(..),
                             Interface(..), Object(..),
                             Function(..), Method(..), Struct(..), Union(..),
                             Signal(..))
-import Data.GI.CodeGen.ModulePath (ModulePath, dotModulePath, (/.))
-import Data.GI.CodeGen.SymbolNaming (submoduleLocation, lowerName, upperName,
+import Data.GI.CodeGen.ModulePath (dotModulePath)
+import Data.GI.CodeGen.SymbolNaming (moduleLocation, lowerName, upperName,
                                      signalHaskellName)
 import Data.GI.CodeGen.Util (ucFirst)
 
@@ -64,20 +64,15 @@ cToHaskellMap apis = M.union (M.fromList builtins)
                     (TypeRef "GVariant", TypeIdentifier "GVariant"),
                     (ConstantRef "NULL", ValueIdentifier "P.Nothing")]
 
--- | Obtain the absolute location of the module where the given `API`
--- lives.
-location :: Name -> API -> ModulePath
-location n api = ("GI" /. ucFirst (namespace n)) <> submoduleLocation n api
-
 -- | Obtain the fully qualified symbol pointing to a value.
 fullyQualifiedValue :: Name -> API -> Text -> Hyperlink
 fullyQualifiedValue n api symbol =
-  ValueIdentifier $ dotModulePath (location n api) <> "." <> symbol
+  ValueIdentifier $ dotModulePath (moduleLocation n api) <> "." <> symbol
 
 -- | Obtain the fully qualified symbol pointing to a type.
 fullyQualifiedType :: Name -> API -> Text -> Hyperlink
 fullyQualifiedType n api symbol =
-  TypeIdentifier $ dotModulePath (location n api) <> "." <> symbol
+  TypeIdentifier $ dotModulePath (moduleLocation n api) <> "." <> symbol
 
 -- | Extract the C name of a constant. These are often referred to as
 -- types, so we allow that too.
@@ -118,7 +113,7 @@ signalRefs :: Name -> API -> Maybe Text -> [Signal] -> [(CRef, Hyperlink)]
 signalRefs n api maybeCName signals = map signalRef signals
   where signalRef :: Signal -> (CRef, Hyperlink)
         signalRef (Signal {sigName = sn}) =
-          let mod = dotModulePath (location n api)
+          let mod = dotModulePath (moduleLocation n api)
               sn' = signalHaskellName sn
               ownerCName = case maybeCName of
                 Just cname -> cname

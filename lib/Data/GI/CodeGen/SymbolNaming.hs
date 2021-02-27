@@ -25,6 +25,7 @@ module Data.GI.CodeGen.SymbolNaming
     , signalInfoName
 
     , submoduleLocation
+    , moduleLocation
     , qualifiedAPI
     , qualifiedSymbol
     , normalizedAPIName
@@ -151,6 +152,12 @@ submoduleLocation n (APIInterface _) = "Interfaces" /. upperName n
 submoduleLocation n (APIObject _) = "Objects" /. upperName n
 submoduleLocation n (APIStruct _) = "Structs" /. upperName n
 submoduleLocation n (APIUnion _) = "Unions" /. upperName n
+
+-- | Obtain the absolute location of the module where the given `API`
+-- lives.
+moduleLocation :: Name -> API -> ModulePath
+moduleLocation n api =
+  ("GI" /. ucFirst (namespace n)) <> submoduleLocation n api
 
 -- | Construct the Haskell version of the name associated to the given
 -- API.
