@@ -784,23 +784,26 @@ mainSectionName EnumSection = "Enumerations"
 mainSectionName FlagSection = "Flags"
 
 -- | Format a given section made of subsections.
-formatSection :: M.Map HaddockSection Text ->
-                 NamedSection -> [(Subsection, Export)] -> Maybe Text
-formatSection docs section exports =
-    if null exports
+formatSection :: M.Map HaddockSection Text -> NamedSection ->
+                 (Set.Set Export, [(Subsection, Export)]) -> Maybe Text
+formatSection docs section (sectionExports, subsectionExports) =
+    if null subsectionExports && Set.null sectionExports
     then Nothing
     else let docstring = case M.lookup (Section section) docs of
                            Nothing -> ""
                            Just s -> formatHaddockComment s
       in Just . T.unlines $ [" -- * " <> mainSectionName section
                             , docstring
+                            , ( T.concat
+                              . map (formatExport exportSymbol)
+                              . Set.toList ) sectionExports
                             , ( T.unlines
                               . map formatSubsection
                               . M.toList ) exportedSubsections]
 
     where
       exportedSubsections :: M.Map Subsection (Set.Set Export)
-      exportedSubsections = foldr extract M.empty exports
+      exportedSubsections = foldr extract M.empty subsectionExports
 
       extract :: (Subsection, Export) -> M.Map Subsection (Set.Set Export)
               -> M.Map Subsection (Set.Set Export)
@@ -824,16 +827,21 @@ formatSection docs section exports =
 formatSubsectionExports :: M.Map HaddockSection Text -> [Export] -> [Maybe Text]
 formatSubsectionExports docs exports = map (uncurry (formatSection docs))
                                        (M.toAscList collectedExports)
-  where collectedExports :: M.Map NamedSection [(Subsection, Export)]
+  where collectedExports :: M.Map NamedSection (Set.Set Export, [(Subsection, Export)])
         collectedExports = foldl classifyExport M.empty exports
 
-        classifyExport :: M.Map NamedSection [(Subsection, Export)] ->
-                          Export -> M.Map NamedSection [(Subsection, Export)]
+        classifyExport :: M.Map NamedSection (Set.Set Export, [(Subsection, Export)]) ->
+                          Export ->
+                          M.Map NamedSection (Set.Set Export, [(Subsection, Export)])
         classifyExport m export =
-          case exportType export of
+          let join (snew, exnew) (sold, exold) = (Set.union snew sold,
+                                                  exnew ++ exold)
+          in case exportType export of
             ExportSymbol hs@(NamedSubsection ms n) ->
               let subsec = subsecWithPrefix ms n (M.lookup hs docs)
-              in M.insertWith (++) ms [(subsec, export)] m
+              in M.insertWith join ms (Set.empty, [(subsec, export)]) m
+            ExportSymbol (Section s) ->
+              M.insertWith join s (Set.singleton export, []) m
             _ -> m
 
 -- | Format the given export list. This is just the inside of the
