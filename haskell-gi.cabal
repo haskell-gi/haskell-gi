@@ -104,7 +104,6 @@ Library
                        Data.GI.CodeGen.LibGIRepository,
                        Data.GI.CodeGen.ModulePath,
                        Data.GI.CodeGen.OverloadedSignals,
-                       Data.GI.CodeGen.OverloadedLabels,
                        Data.GI.CodeGen.OverloadedMethods,
                        Data.GI.CodeGen.Overrides,
                        Data.GI.CodeGen.PkgConfig,
