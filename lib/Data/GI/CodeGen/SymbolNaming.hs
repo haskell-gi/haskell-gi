@@ -29,6 +29,8 @@ module Data.GI.CodeGen.SymbolNaming
     , qualifiedAPI
     , qualifiedSymbol
     , normalizedAPIName
+
+    , hackageModuleLink
     ) where
 
 #if !MIN_VERSION_base(4,11,0)
@@ -38,8 +40,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import Data.GI.CodeGen.API
-import Data.GI.CodeGen.Code (CodeGen, qualified, getAPI)
-import Data.GI.CodeGen.ModulePath (ModulePath, (/.), toModulePath)
+import Data.GI.CodeGen.Code (CodeGen, qualified, getAPI, findAPIByName, config)
+import Data.GI.CodeGen.Config (Config(..))
+import Data.GI.CodeGen.ModulePath (ModulePath, (/.), toModulePath, dotModulePath)
 import Data.GI.CodeGen.Type (Type(TInterface))
 import Data.GI.CodeGen.Util (lcFirst, ucFirst, modifyQualified)
 
@@ -267,3 +270,17 @@ signalInfoName n signal = do
 signalHaskellName :: Text -> Text
 signalHaskellName sn = let (w:ws) = T.split (== '-') sn
                        in w <> T.concat (map ucFirst ws)
+
+
+-- | Return a link to the hackage package for the given name. Note
+-- that the generated link will only be valid if the name belongs to
+-- the binding which is currently being generated.
+hackageModuleLink :: Name -> CodeGen e Text
+hackageModuleLink n = do
+  api <- findAPIByName n
+  cfg <- config
+  let location = T.replace "." "-" $ dotModulePath (moduleLocation n api)
+      pkg = ghcPkgName cfg <> "-" <> ghcPkgVersion cfg
+  return $ "https://hackage.haskell.org/package/" <> pkg <> "/docs/"
+           <> location <> ".html"
+

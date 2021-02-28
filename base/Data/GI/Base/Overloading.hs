@@ -1,7 +1,8 @@
 {-# LANGUAGE TypeOperators, KindSignatures, DataKinds, PolyKinds,
              TypeFamilies, UndecidableInstances, EmptyDataDecls,
              MultiParamTypeClasses, FlexibleInstances, ConstraintKinds,
-             AllowAmbiguousTypes, FlexibleContexts #-}
+             AllowAmbiguousTypes, FlexibleContexts, ScopedTypeVariables,
+             TypeApplications, OverloadedStrings #-}
 
 -- | Helpers for dealing with overladed properties, signals and
 -- methods.
@@ -29,7 +30,11 @@ module Data.GI.Base.Overloading
     -- * Looking up methods in parent types
     , MethodResolutionFailed
     , UnsupportedMethodError
+    , OverloadedMethodInfo(..)
+    , OverloadedMethod(..)
+    , MethodProxy(..)
     , MethodInfo(..)
+    , resolveMethod
     ) where
 
 import Data.Coerce (coerce)
@@ -39,6 +44,9 @@ import GHC.Exts (Constraint)
 import GHC.TypeLits
 
 import Data.GI.Base.BasicTypes (ManagedPtrNewtype, ManagedPtr(..))
+
+import Data.Text (Text)
+import qualified Data.Text as T
 
 -- | Look in the given list of (symbol, tag) tuples for the tag
 -- corresponding to the given symbol. If not found raise the given
@@ -180,5 +188,34 @@ type family MethodResolutionFailed (method :: Symbol) (o :: Type) where
 
 -- | Class for types containing the information about an overloaded
 -- method of type @o -> s@.
-class MethodInfo i o s where
-    overloadedMethod :: o -> s
+class OverloadedMethod i o s where
+  overloadedMethod :: o -> s -- ^ The actual method being invoked.
+
+-- | Information about the method that will be invoked, for debugging
+-- purposes.
+data MethodInfo = MethodInfo { overloadedMethodName    :: Text
+                             , overloadedMethodURL     :: Text
+                             }
+
+instance Show MethodInfo where
+  -- Format as a hyperlink on modern terminals (older
+  -- terminals should ignore the hyperlink part).
+  show info = T.unpack ("\ESC]8;;" <> overloadedMethodURL info
+                         <> "\ESC\\" <> overloadedMethodName info
+                         <> "\ESC]8;;\ESC\\")
+
+-- | This is for debugging purposes, see `resolveMethod` below.
+class OverloadedMethodInfo i o where
+  overloadedMethodInfo :: MethodInfo
+
+-- | A proxy for carrying the types `MethodInfoName` needs (this is used
+-- for `resolveMethod`, see below).
+data MethodProxy (info :: Type) (obj :: Type) = MethodProxy
+
+-- | Return the fully qualified method name that a given overloaded
+-- method call resolves to (mostly useful for debugging).
+--
+-- > resolveMethod #show widget
+resolveMethod :: forall info obj. (OverloadedMethodInfo info obj) =>
+                 MethodProxy info obj -> obj -> MethodInfo
+resolveMethod _p _o = overloadedMethodInfo @info @obj

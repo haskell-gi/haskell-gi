@@ -115,13 +115,24 @@ type instance O.SignalList HdyDemoWindow = O.SignalList Gtk.ApplicationWindow
 
 -- Overloaded methods:
 instance (info ~ Gtk.ResolveApplicationWindowMethod t HdyDemoWindow,
-          O.MethodInfo info HdyDemoWindow p)
+          O.OverloadedMethod info HdyDemoWindow p)
          => OL.IsLabel t (HdyDemoWindow -> p) where
 #if MIN_VERSION_base(4,10,0)
     fromLabel = O.overloadedMethod @info
 #else
     fromLabel _ = O.overloadedMethod @info
 #endif
+
+-- This is useful for debugging
+instance (info ~ Gtk.ResolveApplicationWindowMethod t HdyDemoWindow,
+          O.OverloadedMethodInfo info HdyDemoWindow)
+         => OL.IsLabel t (O.MethodProxy info HdyDemoWindow) where
+#if MIN_VERSION_base(4,10,0)
+    fromLabel = O.MethodProxy
+#else
+    fromLabel _ = O.MethodProxy
+#endif
+
 
 -- | Things to do when registering the 'HdyDemoWindow' type.
 hdyDemoWindowClassInit :: GObjectClass -> IO ()

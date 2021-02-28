@@ -115,9 +115,11 @@ writeSetup fname info deps =
            , T.unlines (map buildInfo (S.toList deps))
            , ""
            , "main :: IO ()"
-           , "main = setupBinding name version verbose overridesFile inheritedOverrides outputDir"
+           , "main = setupBinding name version pkgName pkgVersion verbose overridesFile inheritedOverrides outputDir"
            , "  where name = " <> tshow (girName info)
            , "        version = " <> tshow (girVersion info)
+           , "        pkgName = " <> tshow (name info)
+           , "        pkgVersion = " <> tshow (version info)
            , "        overridesFile = " <> tshow (girOverrides info)
            , "        verbose = False"
            , "        outputDir = Nothing"
@@ -139,7 +141,7 @@ writeSetup fname info deps =
 
 exposedModulesAndDeps :: FilePath -> ProjectInfo -> IO ([Text], S.Set Text)
 exposedModulesAndDeps dir info =
-  configureDryRun (girName info) (girVersion info)
+  configureDryRun (girName info) (girVersion info) (name info) (version info)
                   ((dir </>) <$> girOverrides info) []
 
 writeLicense :: FilePath -> ProjectInfo -> IO ()

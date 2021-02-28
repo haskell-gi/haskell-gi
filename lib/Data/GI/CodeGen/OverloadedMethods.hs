@@ -18,7 +18,7 @@ import Data.GI.CodeGen.Callable (callableSignature, Signature(..),
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.ModulePath (dotModulePath)
 import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, qualifiedSymbol,
-                                     moduleLocation)
+                                     moduleLocation, hackageModuleLink)
 import Data.GI.CodeGen.Util (ucFirst)
 
 -- | Qualified name for the info for a given method.
@@ -34,12 +34,23 @@ genMethodResolver n = do
   addLanguagePragma "TypeApplications"
   group $ do
     line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
-          <> "O.MethodInfo info " <> n <> " p) => OL.IsLabel t ("
+          <> "O.OverloadedMethod info " <> n <> " p) => OL.IsLabel t ("
           <> n <> " -> p) where"
     line $ "#if MIN_VERSION_base(4,10,0)"
     indent $ line $ "fromLabel = O.overloadedMethod @info"
     line $ "#else"
     indent $ line $ "fromLabel _ = O.overloadedMethod @info"
+    line $ "#endif"
+
+  group $ do
+    line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
+          <> "O.OverloadedMethodInfo info " <> n <> ") => "
+          <> "OL.IsLabel t (O.MethodProxy info "
+          <> n <> ") where"
+    line $ "#if MIN_VERSION_base(4,10,0)"
+    indent $ line $ "fromLabel = O.MethodProxy"
+    line $ "#else"
+    indent $ line $ "fromLabel _ = O.MethodProxy"
     line $ "#endif"
 
 -- | Generate the `MethodList` instance given the list of methods for
@@ -109,6 +120,7 @@ genMethodInfo :: Name -> Method -> ExcCodeGen ()
 genMethodInfo n m =
     when (methodType m == OrdinaryMethod) $
       group $ do
+        api <- findAPIByName n
         infoName <- methodInfoName n m
         let callable = fixupCallerAllocates (methodCallable m)
         sig <- callableSignature callable (KnownForeignSymbol undefined) WithoutClosures
@@ -120,12 +132,30 @@ genMethodInfo n m =
         let (obj:otherTypes) = map snd (signatureArgTypes sig)
             sigConstraint = "signature ~ (" <> T.intercalate " -> "
               (otherTypes ++ [signatureReturnType sig]) <> ")"
-        line $ "instance (" <> T.intercalate ", " (sigConstraint :
-                                                   signatureConstraints sig)
-                 <> ") => O.MethodInfo " <> infoName <> " " <> obj <> " signature where"
+
+        hackageLink <- hackageModuleLink n
         let mn = methodName m
             mangled = lowerName (mn {name = name n <> "_" <> name mn})
-        indent $ line $ "overloadedMethod = " <> mangled
+            dbgInfo = dotModulePath (moduleLocation n api) <> "." <> mangled
+
+        group $ do
+          line $ "instance ("
+            <> T.intercalate ", " (sigConstraint : signatureConstraints sig)
+            <> ") => O.OverloadedMethod " <> infoName <> " " <> obj
+            <> " signature where"
+          indent $ line $ "overloadedMethod = " <> mangled
+
+        group $ do
+          line $ "instance O.OverloadedMethodInfo " <> infoName <> " " <> obj
+            <> " where"
+          indent $ do
+            line $ "overloadedMethodInfo = O.MethodInfo {"
+            indent $ do
+              line $ "O.overloadedMethodName = \"" <> dbgInfo <> "\","
+              line $ "O.overloadedMethodURL = \"" <>
+                hackageLink <> "#v:" <> mangled <> "\""
+              line $ "}"
+
         export (NamedSubsection MethodSection $ lowerName mn) infoName
 
 -- | Generate a method info that is not actually callable, but rather
@@ -136,8 +166,16 @@ genUnsupportedMethodInfo n m = do
   line $ "-- XXX: Dummy instance, since code generation failed.\n"
            <> "-- Please file a bug at http://github.com/haskell-gi/haskell-gi."
   bline $ "data " <> infoName
-  line $ "instance (p ~ (), o ~ O.UnsupportedMethodError \""
-           <> lowerName (methodName m) <> "\" " <> name n
-           <> ") => O.MethodInfo " <> infoName <> " o p where"
-  indent $ line $ "overloadedMethod = undefined"
+  group $ do
+    line $ "instance (p ~ (), o ~ O.UnsupportedMethodError \""
+      <> lowerName (methodName m) <> "\" " <> name n
+      <> ") => O.OverloadedMethod " <> infoName <> " o p where"
+    indent $ line $ "overloadedMethod = undefined"
+
+  group $ do
+    line $ "instance (o ~ O.UnsupportedMethodError \""
+      <> lowerName (methodName m) <> "\" " <> name n
+      <> ") => O.OverloadedMethodInfo " <> infoName <> " o where"
+    indent $ line $ "overloadedMethodInfo = undefined"
+
   export ToplevelSection infoName

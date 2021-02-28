@@ -1,8 +1,7 @@
 -- | Convenience hooks for writing custom @Setup.hs@ files for
 -- bindings.
 module Data.GI.CodeGen.CabalHooks
-    ( setupHaskellGIBinding
-    , setupBinding
+    ( setupBinding
     , configureDryRun
     , TaggedOverride(..)
     ) where
@@ -52,10 +51,12 @@ data TaggedOverride =
 -- | Generate the code for the given module.
 genModuleCode :: Text -- ^ name
               -> Text -- ^ version
+              -> Text -- ^ pkgName
+              -> Text -- ^ pkgVersion
               -> Bool -- ^ verbose
               -> [TaggedOverride] -- ^ Explicit overrides
               -> IO ModuleInfo
-genModuleCode name version verbosity overrides = do
+genModuleCode name version pkgName pkgVersion verbosity overrides = do
   setupTypelibSearchPath []
 
   parsed <- forM overrides $ \(TaggedOverride tag ovText) -> do
@@ -71,6 +72,9 @@ genModuleCode name version verbosity overrides = do
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
       cfg = Config {modName = name,
+                    modVersion = version,
+                    ghcPkgName = pkgName,
+                    ghcPkgVersion = pkgVersion,
                     verbose = verbosity,
                     overrides = ovs}
 
@@ -111,19 +115,22 @@ genConfigModule outputDir modName maybeGiven = do
 -- given module are generated in the @configure@ step of @cabal@.
 confCodeGenHook :: Text -- ^ name
                 -> Text -- ^ version
+                -> Text -- ^ pkgName
+                -> Text -- ^ pkgVersion
                 -> Bool -- ^ verbose
                 -> Maybe FilePath -- ^ overrides file
                 -> [TaggedOverride] -- ^ other overrides
                 -> Maybe FilePath -- ^ output dir
                 -> ConfHook -- ^ previous `confHook`
                 -> ConfHook
-confCodeGenHook name version verbosity overridesFile inheritedOverrides outputDir
+confCodeGenHook name version pkgName pkgVersion verbosity
+                overridesFile inheritedOverrides outputDir
                 defaultConfHook (gpd, hbi) flags = do
 
   givenOvs <- traverse (\fname -> TaggedOverride (T.pack fname) <$> utf8ReadFile fname) overridesFile
 
   let ovs = maybe inheritedOverrides (:inheritedOverrides) givenOvs
-  m <- genModuleCode name version verbosity ovs
+  m <- genModuleCode name version pkgName pkgVersion verbosity ovs
 
   let buildInfo = MN.fromString . T.unpack $ "GI." <> ucFirst name <> ".Config"
       em' = buildInfo : map (MN.fromString . T.unpack) (listModuleTree m)
@@ -147,26 +154,20 @@ confCodeGenHook name version verbosity overridesFile inheritedOverrides outputDi
   return (lbi {withOptimization = NoOptimisation})
 
 -- | The entry point for @Setup.hs@ files in bindings.
-setupHaskellGIBinding :: Text -- ^ name
-                      -> Text -- ^ version
-                      -> Bool -- ^ verbose
-                      -> Maybe FilePath -- ^ overrides file
-                      -> Maybe FilePath -- ^ output dir
-                      -> IO ()
-setupHaskellGIBinding name version verbose overridesFile outputDir =
-  setupBinding name version verbose overridesFile [] outputDir
-
--- | The entry point for @Setup.hs@ files in bindings.
 setupBinding :: Text -- ^ name
              -> Text -- ^ version
+             -> Text -- ^ pkgName
+             -> Text -- ^ pkgVersion
              -> Bool -- ^ verbose
              -> Maybe FilePath -- ^ overrides file
              -> [TaggedOverride] -- ^ Explicit overrides
              -> Maybe FilePath -- ^ output dir
              -> IO ()
-setupBinding name version verbose overridesFile overrides outputDir =
+setupBinding name version pkgName pkgVersion verbose overridesFile overrides outputDir =
     defaultMainWithHooks (simpleUserHooks {
-                            confHook = confCodeGenHook name version verbose
+                            confHook = confCodeGenHook name version
+                                       pkgName pkgVersion
+                                       verbose
                                        overridesFile overrides outputDir
                                        (confHook simpleUserHooks)
                           })
@@ -176,14 +177,16 @@ setupBinding name version verbose overridesFile overrides outputDir =
 -- generating the code.
 configureDryRun :: Text -- ^ name
                 -> Text -- ^ version
+                -> Text -- ^ pkgName
+                -> Text -- ^ pkgVersion
                 -> Maybe FilePath -- ^ Overrides file
                 -> [TaggedOverride] -- ^ Other overrides to load
                 -> IO ([Text], S.Set Text)
-configureDryRun name version overridesFile inheritedOverrides = do
+configureDryRun name version pkgName pkgVersion overridesFile inheritedOverrides = do
   givenOvs <- traverse (\fname -> TaggedOverride (T.pack fname) <$> utf8ReadFile fname) overridesFile
 
   let ovs = maybe inheritedOverrides (:inheritedOverrides) givenOvs
-  m <- genModuleCode name version False ovs
+  m <- genModuleCode name version pkgName pkgVersion False ovs
 
   return (("GI." <> ucFirst name <> ".Config") : listModuleTree m,
            transitiveModuleDeps m)

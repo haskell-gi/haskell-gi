@@ -223,13 +223,24 @@ type family ResolveCustomContainerMethod t o where
 -- Make overloaded labels applied to CustomContainers resolve to
 -- methods.
 instance (info ~ ResolveCustomContainerMethod t CustomContainer,
-          O.MethodInfo info CustomContainer p)
+          O.OverloadedMethod info CustomContainer p)
          => OL.IsLabel t (CustomContainer -> p) where
 #if MIN_VERSION_base(4,10,0)
     fromLabel = O.overloadedMethod @info
 #else
     fromLabel _ = O.overloadedMethod @info
 #endif
+
+-- This is useful for debugging
+instance (info ~ ResolveCustomContainerMethod t CustomContainer,
+          O.OverloadedMethodInfo info CustomContainer)
+         => OL.IsLabel t (O.MethodProxy info CustomContainer) where
+#if MIN_VERSION_base(4,10,0)
+    fromLabel = O.MethodProxy
+#else
+    fromLabel _ = O.MethodProxy
+#endif
+
 
 -- This method is run at class creation time.
 customContainerClassInit :: GObjectClass -> IO ()
