@@ -1,0 +1,3 @@
+# In most APIs these are used as guint, but they are declared as gint.
+# See https://github.com/haskell-gi/haskell-gi/issues/58
+set-attr Gdk/~KEY_.*@constant/@type name guint
