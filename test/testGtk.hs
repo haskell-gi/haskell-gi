@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, OverloadedLabels, LambdaCase #-}
+{-# LANGUAGE CPP, TypeApplications, DataKinds #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Prelude hiding (error, (++), putStrLn, show)
@@ -25,6 +26,10 @@ import Data.Text.IO (putStrLn)
 import Data.Word
 import Data.Int
 import qualified Data.Map as M
+
+#if MIN_VERSION_base(4,13,0)
+import qualified GHC.Records as R
+#endif
 
 import System.Environment (getProgName)
 import System.Random (randomRIO)
@@ -475,6 +480,18 @@ testTypedClosures win = do
   performGC
   putStrLn "+++ Typed closures test done"
 
+testOverloadedRecords :: Button -> IO ()
+testOverloadedRecords button = do
+#if MIN_VERSION_base(4,13,0)
+  performGC
+  putStrLn "*** Overloaded records test"
+  label <- (R.getField @"getLabel") button
+  putStrLn (show label)
+  performGC
+  putStrLn "+++ Overloaded records test done"
+#endif
+  return ()
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -576,6 +593,7 @@ main = do
         testConstructible
         testSignalsDisconnect button
         testTypedClosures win
+        testOverloadedRecords button
 
         #showAll win
 

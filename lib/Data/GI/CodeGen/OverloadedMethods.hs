@@ -42,6 +42,17 @@ genMethodResolver n = do
     indent $ line $ "fromLabel _ = O.overloadedMethod @info"
     line $ "#endif"
 
+  -- The circular instance trick is to avoid the liberal coverage
+  -- condition. We should be using DYSFUNCTIONAL pragmas instead, once
+  -- those are implemented:
+  -- https://github.com/ghc-proposals/ghc-proposals/pull/374
+  cppIf (CPPMinVersion "base" (4,13,0)) $ group $ do
+    line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
+          <> "O.OverloadedMethod info " <> n <> " p, "
+          <> "R.HasField t " <> n <> " p) => "
+          <> "R.HasField t " <> n <> " p where"
+    indent $ line $ "getField = O.overloadedMethod @info"
+
   group $ do
     line $ "instance (info ~ Resolve" <> n <> "Method t " <> n <> ", "
           <> "O.OverloadedMethodInfo info " <> n <> ") => "

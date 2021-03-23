@@ -607,11 +607,15 @@ cppIfBlock cond cg = do
 
 -- | Possible features to test via CPP.
 data CPPGuard = CPPOverloading -- ^ Enable overloading
+              | CPPMinVersion Text (Integer, Integer, Integer)
+                -- ^ Require a specific version of the given package.
 
 -- | Guard a code block with CPP code, such that it is included only
 -- if the specified feature is enabled.
 cppIf :: CPPGuard -> CodeGen e a -> CodeGen e a
 cppIf CPPOverloading = cppIfBlock "defined(ENABLE_OVERLOADING)"
+cppIf (CPPMinVersion pkg (a,b,c)) = cppIfBlock $ "MIN_VERSION_" <> pkg <>
+  "(" <> tshow a <> "," <> tshow b <> "," <> tshow c <> ")"
 
 -- | Write the given code into the .hs-boot file for the current module.
 hsBoot :: CodeGen e a -> CodeGen e a
@@ -952,7 +956,8 @@ moduleImports = T.unlines [
                 , "import qualified Data.ByteString.Char8 as B"
                 , "import qualified Data.Map as Map"
                 , "import qualified Foreign.Ptr as FP"
-                , "import qualified GHC.OverloadedLabels as OL" ]
+                , "import qualified GHC.OverloadedLabels as OL"
+                , "import qualified GHC.Records as R" ]
 
 -- | Like `dotModulePath`, but add a "GI." prefix.
 dotWithPrefix :: ModulePath -> Text
