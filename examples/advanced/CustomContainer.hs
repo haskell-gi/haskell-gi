@@ -45,6 +45,10 @@ import Foreign.C (CInt(..))
 
 import GHC.OverloadedLabels as OL
 
+#if MIN_VERSION_base(4,13,0)
+import qualified GHC.Records as R
+#endif
+
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
 
@@ -219,6 +223,19 @@ type instance O.SignalList CustomContainer = O.SignalList Gtk.Container
 -- type.
 type family ResolveCustomContainerMethod t o where
   ResolveCustomContainerMethod t o = Gtk.ResolveContainerMethod t o
+
+#if MIN_VERSION_base(4,13,0)
+{- The circular instance trick is to avoid the liberal coverage
+condition. We should be using DYSFUNCTIONAL pragmas instead, once
+those are implemented:
+https://github.com/ghc-proposals/ghc-proposals/pull/374
+-}
+instance (info ~ ResolveCustomContainerMethod method CustomContainer,
+          O.OverloadedMethod info CustomContainer p,
+          R.HasField method CustomContainer p)
+    => R.HasField method CustomContainer p where
+  getField = O.overloadedMethod @info
+#endif
 
 -- Make overloaded labels applied to CustomContainers resolve to
 -- methods.
