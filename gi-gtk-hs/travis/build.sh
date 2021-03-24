@@ -1,4 +1,6 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
+
+set -ex
 
 echo $PATH
 export LC_ALL=C.UTF-8
