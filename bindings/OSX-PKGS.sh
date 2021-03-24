@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 basever=$(ghc-pkg list base)
 unamestr=$(uname)
 

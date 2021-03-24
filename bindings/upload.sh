@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 for sdist in sdists/*; do
     echo "Uploading $sdist"
