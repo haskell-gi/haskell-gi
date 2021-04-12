@@ -18,7 +18,7 @@
 
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (runReaderT)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromMaybe)
 import Data.IORef
 import System.Time
 
@@ -302,12 +302,14 @@ main :: IO ()
 main = do
   _ <- Gtk.init Nothing
 
+  clockIcon <- (fromMaybe $ error "Could not load cairo-clock-icon.png")
+               <$> GP.pixbufNewFromFile "cairo-clock-icon.png"
   window <- new Gtk.Window
             [ #decorated      := False
             , #resizable      := True
             , #windowPosition := Gtk.WindowPositionCenterAlways
             , #appPaintable   := True
-            , #icon           :=> GP.pixbufNewFromFile "cairo-clock-icon.png"
+            , #icon           := clockIcon
             , #title          := "Haskell-gi Cairo Clock"
             , #defaultWidth   := fromIntegral initialSize
             , #defaultHeight  := fromIntegral initialSize
