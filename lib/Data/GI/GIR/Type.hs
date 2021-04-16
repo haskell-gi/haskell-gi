@@ -94,6 +94,7 @@ parseCArrayType = do
 -- | A hash table.
 parseHashTable :: Parser Type
 parseHashTable = parseTypeElements >>= \case
+                 [] -> return $ TGHash (TBasicType TPtr) (TBasicType TPtr)
                  [Just key, Just value] -> return $ TGHash key value
                  other -> parseError $ "Unsupported hash type: "
                                        <> T.pack (show other)
