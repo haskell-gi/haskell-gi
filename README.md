@@ -121,6 +121,8 @@ Hopefully this helps to get started! For any further questions there is a gitter
 
 It should be rather easy to generate bindings to any library with `gobject-introspection` support, see the examples in the [bindings](https://github.com/haskell-gi/haskell-gi/tree/master/bindings) folder. Pull requests appreciated!
 
+When adding new bindings, it may be necessary to augment the search paths used for `.gir` and `.typelib`. This can be done by setting the environment variables `HASKELL_GI_GIR_SEARCH_PATH` and `HASKELL_GI_TYPELIB_SEARCHPATH` resepctively.
+
 ## Higher-Level Bindings
 
 The bindings in `haskell-gi` aim for complete coverage of the bound APIs, but as a result they are imperative in flavour. For nicer, higher-level approaches based on these bindings, see:
