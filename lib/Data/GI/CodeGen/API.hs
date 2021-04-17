@@ -109,7 +109,8 @@ import Data.GI.Base.BasicTypes (GType(..), CGType, gtypeName)
 import Data.GI.Base.Utils (allocMem, freeMem)
 import Data.GI.CodeGen.LibGIRepository (girRequire, Typelib, FieldInfo(..),
                                         girStructFieldInfo, girUnionFieldInfo,
-                                        girLoadGType, girIsSymbolResolvable)
+                                        girLoadGType, girIsSymbolResolvable,
+                                        setupTypelibSearchPath)
 import Data.GI.CodeGen.GType (gtypeIsBoxed)
 import Data.GI.CodeGen.Type (Type)
 import Data.GI.CodeGen.Util (printWarning, terror, tshow)
@@ -518,6 +519,7 @@ loadGIRInfo verbose name version extraPaths rules =  do
     Right (docGIR, depsGIR) -> do
       if girNSName docGIR == name
       then do
+        setupTypelibSearchPath extraPaths
         typelibMap <- M.fromList <$> (forM (docGIR : depsGIR) $ \info -> do
              typelib <- girRequire (girNSName info) (girNSVersion info)
              return (girNSName info, typelib))
