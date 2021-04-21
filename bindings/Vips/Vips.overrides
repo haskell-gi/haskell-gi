@@ -3,6 +3,12 @@ namespace Vips
 # emit ObjectClass struct
 delete-attr Vips/ObjectClass glib:is-gtype-struct-for
 
+# prevent Int32 overflow warning on literals
+set-attr Vips/MAGIC_INTEL/@type name guint32
+set-attr Vips/MAGIC_INTEL/@type c:type guint32
+set-attr Vips/MAGIC_SPARC/@type name guint32
+set-attr Vips/MAGIC_SPARC/@type c:type guint32
+
 # Generated from vips 8.10.6 with xsltproc DuplicateParams.xslt Vips-8.0.gir
 set-attr Vips/col_C2Ccmc/@parameters/C name C_
 set-attr Vips/col_Ch2ab/@parameters/C name C_
