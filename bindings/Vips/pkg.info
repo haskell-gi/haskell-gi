@@ -15,7 +15,7 @@
             "libvips-dev"
         ]
     },
-    "pkgconfigDepends": "vips >= 8.10.3",
+    "pkgconfigDepends": "vips >= 8.9.1",
     "giDepends": [
         "gi-gobject == 2.0.*",
         "gi-glib == 2.0.*"
