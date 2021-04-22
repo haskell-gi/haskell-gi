@@ -17,6 +17,7 @@ import Control.Monad (forM_)
 
 import qualified Data.Aeson as A
 import qualified Data.ByteString as B
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as S
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
@@ -47,7 +48,7 @@ writeCabal fname info exposed =
        , "homepage:             " <> PI.homepage
        , "license:              " <> PI.license
        , "license-file:         LICENSE"
-       , "author:               " <> PI.authors
+       , "author:               " <> fromMaybe PI.maintainers (author info)
        , "maintainer:           " <> PI.maintainers
        , "category:             " <> PI.category
        , "build-type:           Custom"

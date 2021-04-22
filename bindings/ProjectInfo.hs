@@ -2,14 +2,12 @@
 
 module ProjectInfo
     ( ProjectInfo(..)
-    , emptyProjectInfo
     , prettyConfig
     ) where
 
 import GHC.Generics
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
-import qualified Data.Map as M
 
 import Data.Map (Map)
 import Data.Text (Text)
@@ -17,6 +15,10 @@ import Data.Text (Text)
 data ProjectInfo = ProjectInfo {
       name              :: Text -- ^ Name of the haskell package
     , version           :: Text -- ^ Its version
+    , author            :: Maybe Text -- ^ Auhor. If not specified the
+                                      -- current maintainer (from
+                                      -- Data.GI.CodeGen.ProjectInfo)
+                                      -- will be used.
     , synopsis          :: Text
     , description       :: Text
     , pkgconfigDepends  :: Text
@@ -33,25 +35,10 @@ data ProjectInfo = ProjectInfo {
 instance A.FromJSON ProjectInfo
 instance A.ToJSON ProjectInfo
 
-emptyProjectInfo :: ProjectInfo
-emptyProjectInfo = ProjectInfo {
-                     name = error "name missing"
-                   , version = error "version missing"
-                   , synopsis = error "synopsis missing"
-                   , description = error "description missing"
-                   , pkgconfigDepends = error "pkgconfigDepends missing"
-                   , giDepends = []
-                   , baseVersion = error "baseVersion missing"
-                   , girName = error "girName missing"
-                   , girVersion = error "girVersion missing"
-                   , girOverrides = error "girOverrides missing"
-                   , distributionPackages = M.empty
-                   }
-
 prettyConfig :: AP.Config
 prettyConfig = AP.defConfig { AP.confCompare = AP.keyOrder
                               ["name", "version", "description", "synopsis",
-                               "girName", "girVersion",
+                               "author", "girName", "girVersion",
                                "girOverrides", "pkgConfig", "depends",
                                "baseVersion",
                                "distributionPackages"]}
