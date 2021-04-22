@@ -19,3 +19,4 @@ packages: base/haskell-gi-base.cabal
           bindings/Gsk/gi-gsk.cabal
           bindings/xlib/gi-xlib.cabal
           bindings/Gtk-4.0/gi-gtk.cabal
+          bindings/Vips/gi-vips.cabal
