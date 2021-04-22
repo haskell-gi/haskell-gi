@@ -7,10 +7,8 @@ homepage:            https://github.com/haskell-gi/haskell-gi
 license:             LGPL-2.1
                      -- or above
 license-file:        LICENSE
-author:              Will Thompson,
-                     Iñaki García Etxebarria,
-                     Jonas Platte
-maintainer:          Iñaki García Etxebarria (inaki@blueleaf.cc)
+author:              Will Thompson and Iñaki García Etxebarria
+maintainer:          Iñaki García Etxebarria (github@the.blueleaf.cc)
 stability:           Experimental
 category:            Development
 build-type:          Custom

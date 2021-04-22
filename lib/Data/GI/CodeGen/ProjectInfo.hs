@@ -24,7 +24,7 @@ homepage :: Text
 homepage = "https://github.com/haskell-gi/haskell-gi"
 
 authors :: Text
-authors = "Will Thompson, Iñaki García Etxebarria and Jonas Platte"
+authors = "Will Thompson and Iñaki García Etxebarria"
 
 maintainers :: Text
 maintainers = "Iñaki García Etxebarria"
