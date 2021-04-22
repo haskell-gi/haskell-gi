@@ -1,0 +1,62 @@
+namespace Vips
+
+# emit ObjectClass struct
+delete-attr Vips/ObjectClass glib:is-gtype-struct-for
+
+# prevent Int32 overflow warning on literals
+set-attr Vips/MAGIC_INTEL/@type name guint32
+set-attr Vips/MAGIC_INTEL/@type c:type guint32
+set-attr Vips/MAGIC_SPARC/@type name guint32
+set-attr Vips/MAGIC_SPARC/@type c:type guint32
+
+# Generated from vips 8.10.6 with xsltproc DuplicateParams.xslt Vips-8.0.gir
+set-attr Vips/col_C2Ccmc/@parameters/C name C_
+set-attr Vips/col_Ch2ab/@parameters/C name C_
+set-attr Vips/col_Ch2hcmc/@parameters/C name C_
+set-attr Vips/col_Chcmc2h/@parameters/C name C_
+set-attr Vips/col_L2Lcmc/@parameters/L name L_
+set-attr Vips/col_Lab2XYZ/@parameters/L name L_
+set-attr Vips/col_Lab2XYZ/@parameters/X name X_
+set-attr Vips/col_Lab2XYZ/@parameters/Y name Y_
+set-attr Vips/col_Lab2XYZ/@parameters/Z name Z_
+set-attr Vips/col_XYZ2Lab/@parameters/X name X_
+set-attr Vips/col_XYZ2Lab/@parameters/Y name Y_
+set-attr Vips/col_XYZ2Lab/@parameters/Z name Z_
+set-attr Vips/col_XYZ2Lab/@parameters/L name L_
+set-attr Vips/col_XYZ2scRGB/@parameters/X name X_
+set-attr Vips/col_XYZ2scRGB/@parameters/Y name Y_
+set-attr Vips/col_XYZ2scRGB/@parameters/Z name Z_
+set-attr Vips/col_XYZ2scRGB/@parameters/R name R_
+set-attr Vips/col_XYZ2scRGB/@parameters/G name G_
+set-attr Vips/col_XYZ2scRGB/@parameters/B name B_
+set-attr Vips/col_ab2Ch/@parameters/C name C_
+set-attr Vips/col_sRGB2scRGB_16/@parameters/R name R_
+set-attr Vips/col_sRGB2scRGB_16/@parameters/G name G_
+set-attr Vips/col_sRGB2scRGB_16/@parameters/B name B_
+set-attr Vips/col_sRGB2scRGB_16_noclip/@parameters/R name R_
+set-attr Vips/col_sRGB2scRGB_16_noclip/@parameters/G name G_
+set-attr Vips/col_sRGB2scRGB_16_noclip/@parameters/B name B_
+set-attr Vips/col_sRGB2scRGB_8/@parameters/R name R_
+set-attr Vips/col_sRGB2scRGB_8/@parameters/G name G_
+set-attr Vips/col_sRGB2scRGB_8/@parameters/B name B_
+set-attr Vips/col_sRGB2scRGB_8_noclip/@parameters/R name R_
+set-attr Vips/col_sRGB2scRGB_8_noclip/@parameters/G name G_
+set-attr Vips/col_sRGB2scRGB_8_noclip/@parameters/B name B_
+set-attr Vips/col_scRGB2BW_16/@parameters/R name R_
+set-attr Vips/col_scRGB2BW_16/@parameters/G name G_
+set-attr Vips/col_scRGB2BW_16/@parameters/B name B_
+set-attr Vips/col_scRGB2BW_8/@parameters/R name R_
+set-attr Vips/col_scRGB2BW_8/@parameters/G name G_
+set-attr Vips/col_scRGB2BW_8/@parameters/B name B_
+set-attr Vips/col_scRGB2XYZ/@parameters/R name R_
+set-attr Vips/col_scRGB2XYZ/@parameters/G name G_
+set-attr Vips/col_scRGB2XYZ/@parameters/B name B_
+set-attr Vips/col_scRGB2XYZ/@parameters/X name X_
+set-attr Vips/col_scRGB2XYZ/@parameters/Y name Y_
+set-attr Vips/col_scRGB2XYZ/@parameters/Z name Z_
+set-attr Vips/col_scRGB2sRGB_16/@parameters/R name R_
+set-attr Vips/col_scRGB2sRGB_16/@parameters/G name G_
+set-attr Vips/col_scRGB2sRGB_16/@parameters/B name B_
+set-attr Vips/col_scRGB2sRGB_8/@parameters/R name R_
+set-attr Vips/col_scRGB2sRGB_8/@parameters/G name G_
+set-attr Vips/col_scRGB2sRGB_8/@parameters/B name B_
