@@ -154,7 +154,8 @@ import Data.GI.Base.BasicTypes (GObject)
 import Data.GI.Base.GValue (GValueConstruct)
 import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute)
 
-import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on)
+import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..), SignalProxy,
+                                            on, after)
 
 import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
@@ -445,6 +446,11 @@ data AttrOp obj (tag :: AttrOpTag) where
              SignalProxy obj info
           -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info)
           -> AttrOp obj tag
+    -- | Like 'On', but connect after the default signal.
+    After :: (GObject obj, SignalInfo info) =>
+             SignalProxy obj info
+          -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info)
+          -> AttrOp obj tag
 
 -- | Set a number of properties for some object.
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
@@ -470,6 +476,7 @@ set obj = liftIO . mapM_ app
      attrSet @(ResolveAttribute label o) obj
 
    app (On signal callback) = void $ on obj signal callback
+   app (After signal callback) = void $ after obj signal callback
 
 -- | Constraints on a @obj@\/@attr@ pair so `get` is possible,
 -- producing a value of type @result@.

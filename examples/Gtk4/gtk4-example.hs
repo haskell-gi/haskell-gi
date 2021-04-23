@@ -29,8 +29,7 @@ onActivate app = do
   spinButton <- new Gtk.SpinButton [#adjustment := adjustment]
   #append box spinButton
 
-  controller <- new Gtk.GestureClick []
-  after controller #pressed pressedCB
+  controller <- new Gtk.GestureClick [After #pressed pressedCB]
   #addController slider controller
 
   window <- new Gtk.ApplicationWindow [#application := app,

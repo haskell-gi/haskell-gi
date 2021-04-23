@@ -6,7 +6,7 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on) where
+module Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on, after) where
 
 import Data.GI.Base.BasicTypes (GObject)
 import Control.Monad.IO.Class (MonadIO)
@@ -32,6 +32,11 @@ data SignalProxy object info where
 type SignalHandlerId = CULong
 
 on :: forall object info m.
+      (GObject object, MonadIO m, SignalInfo info) =>
+       object -> SignalProxy object info
+             -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info) -> m SignalHandlerId
+
+after :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
        object -> SignalProxy object info
              -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info) -> m SignalHandlerId

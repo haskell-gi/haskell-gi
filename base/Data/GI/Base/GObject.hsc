@@ -77,7 +77,7 @@ import Data.GI.Base.GValue (GValue(..), GValueConstruct(..))
 import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
                                 newObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
-import Data.GI.Base.Signals (on)
+import Data.GI.Base.Signals (on, after)
 import Data.GI.Base.Utils (dbgLog)
 
 #include <glib-object.h>
@@ -111,9 +111,11 @@ constructGObject constructor attrs = liftIO $ do
        attrConstruct @(ResolveAttribute label o))
 
     construct (On _ _) = return Nothing
+    construct (After _ _) = return Nothing
 
     setSignal :: GObject o => o -> AttrOp o 'AttrConstruct -> IO ()
     setSignal obj (On signal callback) = void $ on obj signal callback
+    setSignal obj (After signal callback) = void $ after obj signal callback
     setSignal _ _ = return ()
 
 -- | Construct the given `GObject`, given a set of actions
