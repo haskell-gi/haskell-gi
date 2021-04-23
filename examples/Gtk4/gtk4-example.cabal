@@ -12,8 +12,7 @@ build-type:     Simple
 executable gtk4-example
   main-is: gtk4-example.hs
   ghc-options: -Wall -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
-  build-depends:
-      base >=4.7 && <5
-    , gi-gtk == 4.0.*
-    , haskell-gi-base
+  build-depends: base >=4.7 && <5
+               , gi-gtk == 4.0.*
+               , haskell-gi-base
   default-language: Haskell2010

@@ -1,10 +1,22 @@
-{-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings, OverloadedLabels, ImplicitParams #-}
 
 import Control.Monad (void)
 import System.Environment (getArgs, getProgName)
 
+import Data.Int (Int32)
+
 import qualified GI.Gtk as Gtk
 import Data.GI.Base
+
+-- | An example of a signal callback accessing the ?self parameter
+-- (that is, the object raising the callback). See
+-- https://github.com/haskell-gi/haskell-gi/issues/346
+-- for why this is necessary when dealing with even controllers in gtk4.
+pressedCB :: (?self :: Gtk.GestureClick) => Int32 -> Double -> Double -> IO ()
+pressedCB nPress x y = do
+    button <- #getCurrentButton ?self
+    putStrLn $ "Button pressed: " <> show nPress <> " "
+      <> show x <> " " <> show y <> " button: " <> show button
 
 onActivate :: Gtk.Application -> IO ()
 onActivate app = do
@@ -17,10 +29,13 @@ onActivate app = do
   spinButton <- new Gtk.SpinButton [#adjustment := adjustment]
   #append box spinButton
 
+  controller <- new Gtk.GestureClick []
+  after controller #pressed pressedCB
+  #addController slider controller
+
   window <- new Gtk.ApplicationWindow [#application := app,
                                        #title := "Hello",
                                        #child := box]
-
   #show window
 
 main :: IO ()
