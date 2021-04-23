@@ -3,6 +3,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on) where
 
@@ -16,9 +18,10 @@ data SignalConnectMode = SignalConnectBefore
 
 class SignalInfo info where
   type HaskellCallbackType info
+  type HaskellSignalOwner info
   connectSignal :: GObject o =>
                      o ->
-                     HaskellCallbackType info ->
+                     (HaskellSignalOwner info -> HaskellCallbackType info) ->
                      SignalConnectMode ->
                      Maybe Text ->
                      IO SignalHandlerId
@@ -31,4 +34,4 @@ type SignalHandlerId = CULong
 on :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
        object -> SignalProxy object info
-             -> HaskellCallbackType info -> m SignalHandlerId
+             -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info) -> m SignalHandlerId

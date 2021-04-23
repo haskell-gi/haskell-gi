@@ -13,6 +13,8 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE RankNTypes #-}
 
 -- | Routines for connecting `GObject`s to signals. There are two
 -- basic variants, 'on' and 'after', which correspond to
@@ -109,12 +111,18 @@ instance (info ~ ResolveSignal slot object) =>
 class SignalInfo (info :: Type) where
     -- | The type for the signal handler.
     type HaskellCallbackType info :: Type
+    -- | The type defining the signal.
+    type HaskellSignalOwner info :: Type
     -- | Connect a Haskell function to a signal of the given
     -- `GObject`, specifying whether the handler will be called before
-    -- or after the default handler.
+    -- or after the default handler. Note that the callback being
+    -- passed here admits an extra initial parameter with respect to
+    -- the usual Haskell callback type. This is the type of the type
+    -- that registered the signal, and will be passed as an /implicit/
+    -- @?self@ argument to the Haskell callback.
     connectSignal :: GObject o =>
                      o ->
-                     HaskellCallbackType info ->
+                     (HaskellSignalOwner info -> HaskellCallbackType info) ->
                      SignalConnectMode ->
                      Maybe Text ->
                      IO SignalHandlerId
@@ -128,17 +136,23 @@ data SignalConnectMode = SignalConnectBefore  -- ^ Run before the default handle
 on :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
       object -> SignalProxy object info
-             -> HaskellCallbackType info -> m SignalHandlerId
+   -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info)
+   -> m SignalHandlerId
 on o p c =
-  liftIO $ connectSignal @info o c SignalConnectBefore (proxyDetail p)
+  liftIO $ connectSignal @info o w SignalConnectBefore (proxyDetail p)
+  where w :: HaskellSignalOwner info -> HaskellCallbackType info
+        w parent = let ?self = parent in c
 
 -- | Connect a signal to a handler, running the handler after the default one.
 after :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
       object -> SignalProxy object info
-             -> HaskellCallbackType info -> m SignalHandlerId
+      -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info)
+      -> m SignalHandlerId
 after o p c =
-  liftIO $ connectSignal @info o c SignalConnectAfter (proxyDetail p)
+  liftIO $ connectSignal @info o w SignalConnectAfter (proxyDetail p)
+  where w :: HaskellSignalOwner info -> HaskellCallbackType info
+        w parent = let ?self = parent in c
 
 -- | Given a signal proxy, determine the corresponding detail.
 proxyDetail :: forall object info. SignalProxy object info -> Maybe Text
@@ -191,16 +205,17 @@ disconnectSignalHandler obj handlerId =
 data GObjectNotifySignalInfo
 instance SignalInfo GObjectNotifySignalInfo where
   type HaskellCallbackType GObjectNotifySignalInfo = GObjectNotifyCallback
+  type HaskellSignalOwner GObjectNotifySignalInfo = ()
   connectSignal = connectGObjectNotify
 
 -- | Type for a `GObject` "notify" callback.
 type GObjectNotifyCallback = GParamSpec -> IO ()
 
-gobjectNotifyCallbackWrapper ::
-    GObjectNotifyCallback -> Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
-gobjectNotifyCallbackWrapper _cb _ pspec _ = do
+gobjectNotifyCallbackWrapper :: (() -> GObjectNotifyCallback) ->
+  Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
+gobjectNotifyCallbackWrapper _cb _selfPtr pspec _ = do
     pspec' <- newGParamSpecFromPtr pspec
-    _cb pspec'
+    _cb () pspec'
 
 type GObjectNotifyCallbackC = Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
 
@@ -209,7 +224,7 @@ foreign import ccall "wrapper"
 
 -- | Connect the given notify callback for a GObject.
 connectGObjectNotify :: GObject o =>
-                        o -> GObjectNotifyCallback ->
+                        o -> (() -> GObjectNotifyCallback) ->
                         SignalConnectMode ->
                         Maybe Text ->
                         IO SignalHandlerId
