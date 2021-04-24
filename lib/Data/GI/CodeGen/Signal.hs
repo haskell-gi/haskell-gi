@@ -37,8 +37,8 @@ import Data.GI.GIR.Documentation (Documentation)
 -- | The prototype of the callback on the Haskell side (what users of
 -- the binding will see)
 genHaskellCallbackPrototype :: Text -> Callable -> Text -> ExposeClosures ->
-                               Documentation -> ExcCodeGen ()
-genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
+                               Bool -> Documentation -> ExcCodeGen ()
+genHaskellCallbackPrototype subsec cb htype expose isSignal doc = group $ do
     let name' = case expose of
                   WithClosures -> callbackHTypeWithClosures htype
                   WithoutClosures -> htype
@@ -65,13 +65,14 @@ genHaskellCallbackPrototype subsec cb htype expose doc = group $ do
       line $ returnArrow <> typeShow (io ret)
       writeReturnDocumentation cb False
 
-    blank
+    when (not isSignal) $ do
+      blank
 
-    -- For optional parameters, in case we want to pass Nothing.
-    export (NamedSubsection SignalSection subsec) ("no" <> name')
-    writeHaddock DocBeforeSymbol (noCallbackDoc name')
-    line $ "no" <> name' <> " :: Maybe " <> name'
-    line $ "no" <> name' <> " = Nothing"
+      -- For optional parameters, in case we want to pass Nothing.
+      export (NamedSubsection SignalSection subsec) ("no" <> name')
+      writeHaddock DocBeforeSymbol (noCallbackDoc name')
+      line $ "no" <> name' <> " :: Maybe " <> name'
+      line $ "no" <> name' <> " = Nothing"
 
   where noCallbackDoc :: Text -> Text
         noCallbackDoc typeName =
@@ -84,9 +85,11 @@ genCCallbackPrototype :: Text -> Callable -> Text ->
                          Maybe Text -> CodeGen e Text
 genCCallbackPrototype subsec cb name' maybeOwner = group $ do
     let ctypeName = callbackCType name'
+        isSignal = isJust maybeOwner
 
-    export (NamedSubsection SignalSection subsec) ctypeName
-    writeHaddock DocBeforeSymbol ccallbackDoc
+    when (not isSignal) $ do
+      export (NamedSubsection SignalSection subsec) ctypeName
+      writeHaddock DocBeforeSymbol ccallbackDoc
 
     line $ "type " <> ctypeName <> " ="
     indent $ do
@@ -113,14 +116,15 @@ genCCallbackPrototype subsec cb name' maybeOwner = group $ do
     ccallbackDoc = "Type for the callback on the (unwrapped) C side."
 
 -- | Generator for wrappers callable from C
-genCallbackWrapperFactory :: Text -> Text -> CodeGen e ()
-genCallbackWrapperFactory subsec name' = group $ do
+genCallbackWrapperFactory :: Text -> Text -> Bool -> CodeGen e ()
+genCallbackWrapperFactory subsec name' isSignal = group $ do
     let factoryName = callbackWrapperAllocator name'
     writeHaddock DocBeforeSymbol factoryDoc
     line "foreign import ccall \"wrapper\""
     indent $ line $ factoryName <> " :: " <> callbackCType name'
                <> " -> IO (FunPtr " <> callbackCType name' <> ")"
-    export (NamedSubsection SignalSection subsec) factoryName
+    when (not isSignal) $ do
+      export (NamedSubsection SignalSection subsec) factoryName
 
   where factoryDoc :: Text
         factoryDoc = "Generate a function pointer callable from C code, from a `"
@@ -144,8 +148,8 @@ genWrappedCallback cb cbArg callback isSignal = do
   return (prime drop)
 
 -- | Generator of closures
-genClosure :: Text -> Callable -> Text -> Text -> Bool -> CodeGen e ()
-genClosure subsec cb callback name isSignal = group $ do
+genClosure :: Text -> Callable -> Text -> Text -> CodeGen e ()
+genClosure subsec cb callback name = group $ do
   let closure = callbackClosureGenerator name
   export (NamedSubsection SignalSection subsec) closure
   writeHaddock DocBeforeSymbol closureDoc
@@ -154,7 +158,7 @@ genClosure subsec cb callback name isSignal = group $ do
                      <> callbackCType callback <> ")"
       line $ closure <> " cb = liftIO $ do"
       indent $ do
-            wrapped <- genWrappedCallback cb "cb" callback isSignal
+            wrapped <- genWrappedCallback cb "cb" callback False
             line $ callbackWrapperAllocator callback <> " " <> wrapped
                      <> " >>= B.GClosure.newGClosure"
   where
@@ -280,16 +284,16 @@ genCallbackWrapper subsec cb name' maybeOwner = group $ do
                    callbackCType name' <> "`."
       isSignal = isJust maybeOwner
 
-  export (NamedSubsection SignalSection subsec) wrapperName
-  writeHaddock DocBeforeSymbol wrapperDoc
+  when (not isSignal) $ do
+    export (NamedSubsection SignalSection subsec) wrapperName
+    writeHaddock DocBeforeSymbol wrapperDoc
 
   group $ do
-    line $ wrapperName <> " ::"
+    line $ wrapperName <> " :: "
     indent $ do
-      case maybeOwner of
-        Just owner ->
-          line $ "((?self :: " <> owner <> ") => " <> name' <> ") ->"
-        Nothing -> do
+      if isSignal
+        then line $ "GObject a => (a -> " <> name' <> ") ->"
+        else do
            line $ "Maybe (Ptr (FunPtr " <> callbackCType name' <> ")) ->"
            let hType = if callableHasClosures cb
                        then callbackHTypeWithClosures name'
@@ -300,8 +304,8 @@ genCallbackWrapper subsec cb name' maybeOwner = group $ do
 
     let cArgNames = map escapedArgName (args cb)
         allArgs = if isSignal
-                  then T.unwords $ ["_cb", "gi'selfPtr"] <> cArgNames <> ["_"]
-                  else T.unwords $ ["funptrptr", "_cb"] <> cArgNames
+                  then T.unwords $ ["gi'cb", "gi'selfPtr"] <> cArgNames <> ["_"]
+                  else T.unwords $ ["gi'funptrptr", "gi'cb"] <> cArgNames
     line $ wrapperName <> " " <> allArgs <> " = do"
     indent $ do
       hInNames <- forM hInArgs (prepareArgForCall cb)
@@ -316,16 +320,17 @@ genCallbackWrapper subsec cb name' maybeOwner = group $ do
                          [r] -> r <> " <- "
                          _   -> mkTuple returnVars <> " <- "
 
-      case maybeOwner of
-        Just on -> line $ returnBind
-                   <> "B.ManagedPtr.withTransient " <> on
-                   <> " gi'selfPtr $ \\gi'self -> let ?self = gi'self in "
-                   <> "_cb " <> T.concat (map (" " <>) hInNames)
-        Nothing -> line $ returnBind <> "_cb " <> T.concat (map (" " <>) hInNames)
+      if isSignal
+      then line $ returnBind
+                  <> "B.ManagedPtr.withTransient"
+                  <> " gi'selfPtr $ \\gi'self -> "
+                  <> "gi'cb (Coerce.coerce gi'self) "
+                  <> T.concat (map (" " <>) hInNames)
+      else line $ returnBind <> "gi'cb " <> T.concat (map (" " <>) hInNames)
 
       forM_ hOutArgs saveOutArg
 
-      unless isSignal $ line "maybeReleaseFunPtr funptrptr"
+      unless isSignal $ line "maybeReleaseFunPtr gi'funptrptr"
 
       case returnType cb of
         Nothing -> return ()
@@ -333,7 +338,7 @@ genCallbackWrapper subsec cb name' maybeOwner = group $ do
            nullableReturnType <- typeIsNullable r
            if returnMayBeNull cb && nullableReturnType
            then do
-             line "maybeM nullPtr result $ \\result' -> do"
+             line "maybeM FP.nullPtr result $ \\result' -> do"
              indent $ unwrapped "result'"
            else unwrapped "result"
            where
@@ -362,11 +367,11 @@ genCallback n callback@(Callback {cbCallable = cb, cbDocumentation = cbDoc }) = 
       typeSynonym <- genCCallbackPrototype name' cb' name' Nothing
       dynamic <- genDynamicCallableWrapper n typeSynonym cb
       export (NamedSubsection SignalSection name') dynamic
-      genCallbackWrapperFactory name' name'
+      genCallbackWrapperFactory name' name' False
       deprecatedPragma name' (callableDeprecated cb')
-      genHaskellCallbackPrototype name' cb' name' WithoutClosures cbDoc
+      genHaskellCallbackPrototype name' cb' name' WithoutClosures False cbDoc
       when (callableHasClosures cb') $ do
-           genHaskellCallbackPrototype name' cb' name' WithClosures cbDoc
+           genHaskellCallbackPrototype name' cb' name' WithClosures False cbDoc
            genDropClosures name' cb' name'
       if callableThrows cb'
       then do
@@ -390,7 +395,7 @@ genCallback n callback@(Callback {cbCallable = cb, cbDocumentation = cbDoc }) = 
         line $ "-- No Haskell->C wrapper generated since the function throws."
         blank
       else do
-        genClosure name' cb' name' name' False
+        genClosure name' cb' name' name'
         genCallbackWrapper name' cb' name' Nothing
 
 -- | Generate the given signal instance for the given API object.
@@ -405,12 +410,9 @@ genSignalInfoInstance owner signal = group $ do
       let signalConnectorName = name <> sn
           cbHaskellType = signalConnectorName <> "Callback"
       line $ "type HaskellCallbackType " <> si <> " = " <> cbHaskellType
-      line $ "type HaskellSignalOwner " <> si <> " = " <> name
       line $ "connectSignal obj cb connectMode detail = do"
       indent $ do
-        line $ "let wrapped :: (?self :: " <> name <> ") => " <> cbHaskellType
-        line $ "    wrapped = cb ?self"
-        genSignalConnector signal cbHaskellType "connectMode" "detail" "wrapped"
+        genSignalConnector signal cbHaskellType "connectMode" "detail" "cb"
   export (NamedSubsection SignalSection $ lcFirst sn) si
 
 -- | Write some simple debug message when signal generation fails, and
@@ -433,8 +435,6 @@ processSignalError signal owner err = do
     indent $ do
       line $ "type HaskellCallbackType " <> si <>
         " = B.Signals.SignalCodeGenError \"" <> qualifiedSignalName <> "\""
-      line $ "type HaskellSignalOwner " <> si <>
-        " = B.Signals.SignalCodeGenError \"" <> qualifiedSignalName <> "\""
       line $ "connectSignal = undefined"
     export (NamedSubsection SignalSection $ lcFirst sn) si
 
@@ -453,18 +453,17 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
 
   deprecatedPragma cbType (callableDeprecated cb)
 
-  genHaskellCallbackPrototype (lcFirst sn') cb cbType WithoutClosures (sigDoc s)
+  genHaskellCallbackPrototype (lcFirst sn') cb cbType WithoutClosures True (sigDoc s)
 
   _ <- genCCallbackPrototype (lcFirst sn') cb cbType (Just on')
 
-  genCallbackWrapperFactory (lcFirst sn') cbType
+  genCallbackWrapperFactory (lcFirst sn') cbType True
 
   if callableThrows cb
     then do
       line $ "-- No Haskell->C wrapper generated since the function throws."
       blank
     else do
-      genClosure (lcFirst sn') cb cbType signalConnectorName True
       genCallbackWrapper (lcFirst sn') cb cbType (Just on')
 
   -- Wrapper for connecting functions to the signal
@@ -481,7 +480,7 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
     addLanguagePragma "RankNTypes"
 
     let signatureConstraints = "(" <> klass <> " a, MonadIO m) =>"
-        implicitSelfCBType = "((?self :: " <> on' <> ") => " <> cbType <> ")"
+        implicitSelfCBType = "((?self :: a) => " <> cbType <> ")"
         signatureArgs = if sigDetailed s
           then "a -> P.Maybe T.Text -> " <> implicitSelfCBType <> " -> m SignalHandlerId"
           else "a -> " <> implicitSelfCBType <> " -> m SignalHandlerId"
@@ -495,10 +494,14 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
       if sigDetailed s
         then do
         line $ onName <> " obj detail cb = liftIO $ do"
-        indent $ genSignalConnector s cbType "SignalConnectBefore" "detail" "cb"
+        indent $ do
+          line $ "let wrapped self = let ?self = self in cb"
+          genSignalConnector s cbType "SignalConnectBefore" "detail" "wrapped"
         else do
         line $ onName <> " obj cb = liftIO $ do"
-        indent $ genSignalConnector s cbType "SignalConnectBefore" "Nothing" "cb"
+        indent $ do
+          line $ "let wrapped self = let ?self = self in cb"
+          genSignalConnector s cbType "SignalConnectBefore" "Nothing" "wrapped"
       export docSection onName
 
     group $ do
@@ -507,10 +510,14 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
       if sigDetailed s
         then do
         line $ afterName <> " obj detail cb = liftIO $ do"
-        indent $ genSignalConnector s cbType "SignalConnectAfter" "detail" "cb"
+        indent $ do
+          line $ "let wrapped self = let ?self = self in cb"
+          genSignalConnector s cbType "SignalConnectAfter" "detail" "wrapped"
         else do
         line $ afterName <> " obj cb = liftIO $ do"
-        indent $ genSignalConnector s cbType "SignalConnectAfter" "Nothing" "cb"
+        indent $ do
+          line $ "let wrapped self = let ?self = self in cb"
+          genSignalConnector s cbType "SignalConnectAfter" "Nothing" "wrapped"
       export docSection afterName
 
   cppIf CPPOverloading (genSignalInfoInstance on s)
@@ -542,7 +549,9 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
         <> hsn <> " callback"
       , "@"
       , ""
-      , detailedDoc ]
+      , detailedDoc
+      , ""
+      , selfDoc]
 
     detailedDoc :: Text
     detailedDoc = if not (sigDetailed s)
@@ -553,6 +562,12 @@ genSignal s@(Signal { sigName = sn, sigCallable = cb }) on =
         <> "::detail@” instead."
       ]
 
+    selfDoc :: Text
+    selfDoc = T.unlines [
+      "By default the object invoking the signal is not passed to the callback."
+      , "If you need to access it, you can use the implit @?self@ parameter."
+      , "Note that this requires activating the @ImplicitParams@ GHC extension."
+      ]
 
 -- | Generate the code for connecting the given signal. This assumes
 -- that it lives inside a @do@ block.

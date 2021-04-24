@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings, OverloadedLabels, ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings, OverloadedLabels, ScopedTypeVariables,
+    TypeApplications #-}
 
 {- action-namespace.c example in GTK repository. Please refer to README for more. -}
 
@@ -60,7 +61,7 @@ menuUIStr = "<interface>\
 
 actionActivated :: Gio.ActionEntryActivateFieldCallback_WithClosures
 actionActivated action _ userData = do
-  withTransient Gtk.Window (castPtr userData) $ \parent -> do
+  withTransient @Gtk.Window (castPtr userData) $ \parent -> do
     actionName <- get action #name >>= return . fromJust
     dialog <- new Gtk.MessageDialog [ #transientFor := parent
                                     , #destroyWithParent := True

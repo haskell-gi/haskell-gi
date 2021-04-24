@@ -137,7 +137,7 @@ instance (info ~ Gtk.ResolveApplicationWindowMethod t HdyDemoWindow,
 -- | Things to do when registering the 'HdyDemoWindow' type.
 hdyDemoWindowClassInit :: GObjectClass -> IO ()
 hdyDemoWindowClassInit klass =
-  withTransient Gtk.WidgetClass (coerce klass) $ \widgetClass -> do
+  withTransient @Gtk.WidgetClass (coerce klass) $ \widgetClass -> do
     #setTemplateFromResource widgetClass "/haskell-gi/examples/handy-demo/hdy-demo-window.ui"
     let bindChild childName =
           #bindTemplateChildFull widgetClass childName False 0

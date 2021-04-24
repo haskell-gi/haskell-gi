@@ -263,13 +263,13 @@ instance (info ~ ResolveCustomContainerMethod t CustomContainer,
 customContainerClassInit :: GObjectClass -> IO ()
 customContainerClassInit klass = do
   -- Override some methods in the widget class...
-  withTransient Gtk.WidgetClass (coerce klass) $ \widgetClass -> do
+  withTransient @Gtk.WidgetClass (coerce klass) $ \widgetClass -> do
     set widgetClass [ #getPreferredWidth  :&= customContainerGetPreferredWidth
                     , #getPreferredHeight :&= customContainerGetPreferredHeight
                     , #sizeAllocate       :&= customContainerSizeAllocate ]
 
   -- ... and in the container class.
-  withTransient Gtk.ContainerClass (coerce klass) $ \containerClass -> do
+  withTransient @Gtk.ContainerClass (coerce klass) $ \containerClass -> do
     set containerClass [ #childType :&= customContainerChildType
                        , #add       :&= customContainerAdd
                        , #remove    :&= customContainerRemove

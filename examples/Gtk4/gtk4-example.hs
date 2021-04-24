@@ -18,8 +18,8 @@ pressedCB nPress x y = do
     putStrLn $ "Button pressed: " <> show nPress <> " "
       <> show x <> " " <> show y <> " button: " <> show button
 
-onActivate :: Gtk.Application -> IO ()
-onActivate app = do
+activate :: Gtk.Application -> IO ()
+activate app = do
   box <- new Gtk.Box [#orientation := Gtk.OrientationVertical]
 
   adjustment <- new Gtk.Adjustment [#value := 50, #lower := 0, #upper := 100,
@@ -39,8 +39,8 @@ onActivate app = do
 
 main :: IO ()
 main = do
-  app <- new Gtk.Application [#applicationId := "haskell-gi.Gtk4.test"]
-  on app #activate (onActivate app)
+  app <- new Gtk.Application [#applicationId := "haskell-gi.Gtk4.test",
+                              On #activate (activate ?self)]
 
   -- If the application does not need to parse command line arguments
   -- just pass Nothing.

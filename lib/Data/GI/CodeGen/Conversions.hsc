@@ -649,19 +649,17 @@ transientToH t@(TInterface _) TransferNothing = do
   a <- findAPI t
   case a of
     Just (APIStruct s) -> if structIsBoxed s
-                          then wrapTransient t
+                          then wrapTransient
                           else fToH t TransferNothing
     Just (APIUnion u) -> if unionIsBoxed u
-                         then wrapTransient t
+                         then wrapTransient
                          else fToH t TransferNothing
     _ -> fToH t TransferNothing
 transientToH t transfer = fToH t transfer
 
 -- | Wrap the given transient.
-wrapTransient :: Type -> CodeGen e Converter
-wrapTransient t = do
-  hCon <- typeConName <$> haskellType t
-  return $ lambdaConvert $ "B.ManagedPtr.withTransient " <> hCon
+wrapTransient :: CodeGen e Converter
+wrapTransient = return $ lambdaConvert $ "B.ManagedPtr.withTransient "
 
 unpackCArray :: Text -> Type -> Transfer -> ExcCodeGen Converter
 unpackCArray length (TCArray False _ _ t) transfer =

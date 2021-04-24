@@ -154,7 +154,7 @@ wrapGetSet getter setter gvalueSetter = PropGetSetter {
       value <- objectFromPtr objPtr >>= getter
       gvalueSetter destPtr value
   , propSetter = \objPtr newGValuePtr ->
-      withTransient GValue newGValuePtr $ \newGValue -> do
+      withTransient newGValuePtr $ \newGValue -> do
         obj <- objectFromPtr objPtr
         value <- GV.fromGValue newGValue
         setter obj value
@@ -215,7 +215,7 @@ gParamSpecValue (PropertyInfo {..}) =
       take_stablePtr destPtr stablePtr
 
     setter' :: Ptr o -> (Ptr GValue) -> IO ()
-    setter' objPtr gvPtr = withTransient GValue gvPtr $ \gv -> do
+    setter' objPtr gvPtr = withTransient gvPtr $ \gv -> do
       obj <- objectFromPtr objPtr
       val <- GV.fromGValue gv >>= deRefStablePtr
       setter obj val

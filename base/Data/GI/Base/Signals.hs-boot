@@ -18,10 +18,9 @@ data SignalConnectMode = SignalConnectBefore
 
 class SignalInfo info where
   type HaskellCallbackType info
-  type HaskellSignalOwner info
   connectSignal :: GObject o =>
                      o ->
-                     (HaskellSignalOwner info -> HaskellCallbackType info) ->
+                     (o -> HaskellCallbackType info) ->
                      SignalConnectMode ->
                      Maybe Text ->
                      IO SignalHandlerId
@@ -34,9 +33,9 @@ type SignalHandlerId = CULong
 on :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
        object -> SignalProxy object info
-             -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info) -> m SignalHandlerId
+             -> ((?self :: object) => HaskellCallbackType info) -> m SignalHandlerId
 
 after :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
        object -> SignalProxy object info
-             -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info) -> m SignalHandlerId
+             -> ((?self :: object) => HaskellCallbackType info) -> m SignalHandlerId

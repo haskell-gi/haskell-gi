@@ -168,9 +168,9 @@ withManagedPtrList managedList action = do
 -- managed pointer will be valid while calling the action, but will be
 -- disowned as soon as the action finished.
 withTransient :: (HasCallStack, ManagedPtrNewtype a)
-              => (ManagedPtr a -> a) -> Ptr a -> (a -> IO b) -> IO b
-withTransient constructor ptr action = do
-  managed <- constructor <$> newManagedPtr_ ptr
+              => Ptr a -> (a -> IO b) -> IO b
+withTransient ptr action = do
+  managed <- coerce <$> newManagedPtr_ ptr
   r <- action managed
   _ <- disownManagedPtr managed
   return r

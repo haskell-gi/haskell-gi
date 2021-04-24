@@ -444,12 +444,12 @@ data AttrOp obj (tag :: AttrOpTag) where
     -- | Connect the given signal to a signal handler.
     On    :: (GObject obj, SignalInfo info) =>
              SignalProxy obj info
-          -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info)
+          -> ((?self :: obj) => HaskellCallbackType info)
           -> AttrOp obj tag
     -- | Like 'On', but connect after the default signal.
     After :: (GObject obj, SignalInfo info) =>
              SignalProxy obj info
-          -> ((?self :: HaskellSignalOwner info) => HaskellCallbackType info)
+          -> ((?self :: obj) => HaskellCallbackType info)
           -> AttrOp obj tag
 
 -- | Set a number of properties for some object.
