@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, OverloadedStrings, OverloadedLabels, LambdaCase #-}
 {-# LANGUAGE CPP, TypeApplications, DataKinds #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Prelude hiding (error, (++), putStrLn, show)
 import qualified Prelude as P
@@ -552,14 +553,14 @@ main = do
         on button #clicked $ do
                 set label [ #label := "This is <a href=\"http://www.gnome.org\">a test</a>",
                             #useMarkup := True ]
-                -- set button [widgetSensitive := False, ...] would be
+                -- set ?self [widgetSensitive := False, ...] would be
                 -- more natural, but this serves as a test of
                 -- attribute updating functions.
-                set button [widgetSensitive :~ not,
-                            #relief := ReliefStyleNone,
-                            #label := "Thanks for clicking!"]
-                sensitive <- get button #sensitive
-                newLabel <- get button #label
+                set ?self [widgetSensitive :~ not,
+                           #relief := ReliefStyleNone,
+                           #label := "Thanks for clicking!"]
+                sensitive <- get ?self #sensitive
+                newLabel <- get ?self #label
                 putStrLn $ "New button text is "
                              ++ show newLabel
                              ++ " and sensitive is " ++ show sensitive
