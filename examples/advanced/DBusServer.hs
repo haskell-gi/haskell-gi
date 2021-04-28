@@ -11,6 +11,7 @@ import qualified GI.GLib as GLib
 import qualified GI.Gio as Gio
 
 import Data.GI.Base
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Word (Word32)
 
@@ -39,7 +40,7 @@ onBusAcquired :: Gio.DBusConnection -> Text -> IO ()
 onBusAcquired connection _ = do
   putStrLn "Bus acquired!"
   info <- Gio.dBusNodeInfoNewForXml introspection_xml
-  interface <- #lookupInterface info "test.haskellGI"
+  interface <- fromMaybe (error "Interface not found") <$> #lookupInterface info "test.haskellGI"
   putStrLn "Introspection data parsed succesfully!"
   methodCallPtr <- Gio.genClosure_DBusInterfaceMethodCallFunc methodCall
   r <- #registerObject connection "/test/haskellGI" interface

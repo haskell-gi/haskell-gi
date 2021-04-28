@@ -39,7 +39,6 @@
 -}
 
 import Data.GI.Base.GValue
-import Data.GI.Base.ManagedPtr
 import Data.GI.Base
 import GI.GObject.Functions
 import qualified GI.Gtk

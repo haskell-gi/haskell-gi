@@ -66,7 +66,7 @@ onBusAcquired :: DBusServerInfo -> ServerMethodCall -> ServerBusAcquired ->
 onBusAcquired info methodCall acquired connection _ = do
   putStrLn "Bus acquired!"
   nodeInfo <- Gio.dBusNodeInfoNewForXml (serverXMLInfo info)
-  interface <- #lookupInterface nodeInfo (serverInterfaceName info)
+  Just interface <- #lookupInterface nodeInfo (serverInterfaceName info)
   putStrLn "Introspection data parsed succesfully!"
   methodCallPtr <- Gio.genClosure_DBusInterfaceMethodCallFunc
                    (dispatchMethod methodCall)
