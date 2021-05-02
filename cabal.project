@@ -49,3 +49,4 @@ packages: base/haskell-gi-base.cabal
           bindings/Vips/gi-vips.cabal
           bindings/Cogl/gi-cogl.cabal
           bindings/CoglPango/gi-coglpango.cabal
+          bindings/Json/gi-json.cabal
