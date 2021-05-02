@@ -1,0 +1,21 @@
+cabal-version:  2.2
+name:           clutter-example
+version:        0.1
+synopsis:       An example of Clutter usage.
+description:    Please see the README on Github at <https://github.com/githubuser/exercises#readme>
+author:         Iñaki García Etxebarria
+maintainer:     Iñaki García Etxebarria
+copyright:      2021 Iñaki García Etxebarria
+license:        LGPL-2.1-or-later
+build-type:     Simple
+
+executable clutter-example
+  main-is: clutter-example.hs
+  ghc-options: -Wall -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
+  build-depends: base >=4.7 && <5
+ 	             , gi-clutter
+               , gi-cogl
+               , gi-coglpango
+               , gi-gobject
+               , haskell-gi-base
+  default-language: Haskell2010
