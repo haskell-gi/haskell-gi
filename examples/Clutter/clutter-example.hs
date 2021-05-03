@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedLabels, OverloadedStrings, ImplicitParams #-}
 module Main where
 
-import GI.GObject (get, AttrOp((:=), On), new)
+import Data.GI.Base (get, AttrOp((:=), On), new)
 
 import qualified GI.Clutter                         as Clutter
 import qualified GI.Cogl                            as Cogl
