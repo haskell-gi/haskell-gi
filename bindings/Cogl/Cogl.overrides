@@ -1,0 +1,6 @@
+namespace Cogl
+
+# cogl_texture_get_gtype returns GType which seems to get inferred as CoglObject?
+delete-attr Cogl/Texture glib:get-type
+
+set-attr Cogl/clear name clear'
