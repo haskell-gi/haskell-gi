@@ -3,7 +3,7 @@ name:           clutter-example
 version:        0.1
 synopsis:       An example of Clutter usage.
 description:    Please see the README on Github at <https://github.com/githubuser/exercises#readme>
-author:         Iñaki García Etxebarria
+author:         Ashley Towns
 maintainer:     Iñaki García Etxebarria
 copyright:      2021 Iñaki García Etxebarria
 license:        LGPL-2.1-or-later
