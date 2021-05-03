@@ -4,32 +4,3 @@ namespace Cogl
 delete-attr Cogl/Texture glib:get-type
 
 set-attr Cogl/clear name clear'
-
-# Generated from cogl 1.22.8 with xsltproc Nullable.xslt Cogl-1.0.gir
-set-attr Cogl/Color/equal/@parameters/v1 nullable 1
-set-attr Cogl/Color/equal/@parameters/v2 nullable 1
-set-attr Cogl/Matrix/equal/@parameters/v1 nullable 1
-set-attr Cogl/Matrix/equal/@parameters/v2 nullable 1
-set-attr Cogl/Offscreen/ref/@return-value nullable 1
-set-attr Cogl/Offscreen/ref/@parameters/offscreen nullable 1
-set-attr Cogl/Offscreen/unref/@parameters/offscreen nullable 1
-set-attr Cogl/Texture/ref/@return-value nullable 1
-set-attr Cogl/Texture/ref/@parameters/texture nullable 1
-set-attr Cogl/Texture/unref/@parameters/texture nullable 1
-set-attr Cogl/XlibFilterFunc/@parameters/data nullable 1
-set-attr Cogl/color_equal/@parameters/v1 nullable 1
-set-attr Cogl/color_equal/@parameters/v2 nullable 1
-set-attr Cogl/get_source/@return-value nullable 1
-set-attr Cogl/is_bitmap/@parameters/object nullable 1
-set-attr Cogl/is_offscreen/@parameters/object nullable 1
-set-attr Cogl/is_texture/@parameters/object nullable 1
-set-attr Cogl/matrix_equal/@parameters/v1 nullable 1
-set-attr Cogl/matrix_equal/@parameters/v2 nullable 1
-set-attr Cogl/push_source/@parameters/material nullable 1
-set-attr Cogl/set_source/@parameters/material nullable 1
-set-attr Cogl/texture_ref/@return-value nullable 1
-set-attr Cogl/texture_ref/@parameters/texture nullable 1
-set-attr Cogl/texture_unref/@parameters/texture nullable 1
-set-attr Cogl/vertex_buffer_add/@parameters/pointer nullable 1
-set-attr Cogl/xlib_renderer_add_filter/@parameters/data nullable 1
-set-attr Cogl/xlib_renderer_remove_filter/@parameters/data nullable 1
