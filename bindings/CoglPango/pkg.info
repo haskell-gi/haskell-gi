@@ -13,7 +13,7 @@
             "cogl-devel"
         ],
         "ubuntu": [
-            "cogl-dev"
+            "libcogl-pango-dev"
         ]
     },
     "pkgconfigDepends": "cogl-pango-1.0 == 1.22.*",

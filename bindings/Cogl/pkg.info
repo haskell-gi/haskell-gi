@@ -13,7 +13,7 @@
             "cogl-devel"
         ],
         "ubuntu": [
-            "cogl-dev"
+            "libcogl-dev"
         ]
     },
     "pkgconfigDepends": "cogl-1.0 == 1.22.*",
