@@ -1,3 +1,25 @@
+### 0.26.0
+
++ Support for 'HasField' methods, which allows the syntax 'widget.show' or 'widget.add child' for invoking methods using the new [RecordDotSyntax](https://github.com/ghc-proposals/ghc-proposals/blob/master/proposals/0282-record-dot-syntax.rst) in ghc 9.2.
+
++ And an implicit '?self' parameter for callbacks, for accessing the calling object. See [issue 346](https://github.com/haskell-gi/haskell-gi/issues/346) where this is necessary in practice in gtk4 to use event controllers.
+
++ Add an 'After' attribute to connect to signals after the default handler on constructors/setters using attribute syntax, similar to [On](https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-Attributes.html#t:AttrOp).
+
+### 0.25.0
+
++ Support non-GObject object attributes.
+
++ Support for ghc 9.0.1.
+
++ Improvements in the generated Haddocks.
+
++ Remove the command line version of the bindings generator.
+
++ Remove support for non-IsLabel overloading.
+
++ Add [resolveMethod](https://hackage.haskell.org/package/haskell-gi-base-0.25.0/docs/Data-GI-Base-Overloading.html#v:resolveMethod) for showing what an overloaded method resolves to: `resolveMethod #show widget` will output `GI.Gtk.Objects.Widget.widgetShow`.
+
 ### 0.24.5
 
 + Fix an accidental double free for GValues, see [issue 320](https://github.com/haskell-gi/haskell-gi/issues/320).
