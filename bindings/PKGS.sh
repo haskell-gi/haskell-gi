@@ -19,13 +19,17 @@ ACTION="${1:-list}"
 TARGET="${2:-$DEFAULT_TARGET}"
 
 case "$TARGET" in
-    fedora|ubuntu)
+    ubuntu)
         PKG_DEPS=".distributionPackages.$TARGET"
         PKG_COND="$PKG_DEPS != null"
         ;;
     ubuntu-ci)
         PKG_DEPS='.distributionPackages.ubuntu, .distributionPackages."ubuntu-ci"'
         PKG_COND='.distributionPackages.ubuntu != null or .distributionPackages."ubuntu-ci" != null'
+        ;;
+    fedora)
+        PKG_DEPS="[\"pkgconfig(\" + (.pkgconfigDepends | split(\" \") | .[0]) + \")\"]"
+        PKG_COND="$PKG_DEPS != null"
         ;;
     *)
         echo "Unknown target" >&2
