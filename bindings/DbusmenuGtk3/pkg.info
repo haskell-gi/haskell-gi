@@ -13,7 +13,7 @@
             "libdbusmenu-gtk3-dev"
         ]
     },
-    "pkgconfigDepends": "dbusmenu-gtk3-0.4, gtk+-3.0",
+    "pkgconfigDepends": "dbusmenu-gtk3-0.4",
     "giDepends": [
         "gi-glib == 2.0.*",
         "gi-gobject == 2.0.*",
