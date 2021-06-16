@@ -30,9 +30,12 @@ main = do
       Rsvg.handleNewFromFile (T.pack $ dataDir </> "drawing.svg")
   (_, drawW, _, drawH, _, _) <- Rsvg.handleGetIntrinsicDimensions drawing
     -- We know this SVG has width and height because it ships with the package. Normally
-    -- you would check. We also know these are mm,
-  drawW1 <- Rsvg.get drawW #length
-  drawH1 <- Rsvg.get drawH #length
+    -- you would check. We also know these are mm so we don't query the length units.
+
+  let dotsPerMm = 3.54   -- Approx 90 DPI.
+  drawW1 <- (dotsPerMm *) <$> Rsvg.get drawW #length
+  drawH1 <- (dotsPerMm *) <$> Rsvg.get drawH #length
+
 
   -- Create a window we can draw on with Cairo.
   window <- Gtk.windowNew Gtk.WindowTypeToplevel
@@ -40,13 +43,15 @@ main = do
 
   Gtk.widgetSetAppPaintable window True
 
-  Gtk.windowSetDefaultSize window (ceiling drawH1) (ceiling drawW1)
-
+  Gtk.windowSetDefaultSize window (ceiling drawW1) (ceiling drawH1)
+  let aspect = drawW1 / drawH1
   geometry <- Gdk.newZeroGeometry
   Gdk.setGeometryMaxWidth  geometry $ ceiling drawW1
   Gdk.setGeometryMaxHeight geometry $ ceiling drawH1
   Gdk.setGeometryMinWidth  geometry 32
   Gdk.setGeometryMinHeight geometry 32
+  Gdk.setGeometryMinAspect geometry aspect
+  Gdk.setGeometryMaxAspect geometry aspect
 
   Gtk.windowSetGeometryHints window (Just window) (Just geometry) []
 
@@ -58,7 +63,6 @@ main = do
                      return True
       _        -> return False
 
-
   canvas <- Gtk.drawingAreaNew
   Gtk.containerAdd window canvas
 
@@ -67,6 +71,7 @@ main = do
   Gtk.setWindowTitle window "Cairo SVG Rendering Example"
 
   Gtk.onWidgetDraw canvas $ Cairo.renderWithContext $ drawCanvasHandler drawing canvas
+  Gtk.onWidgetDestroy window Gtk.mainQuit
 
   Gtk.widgetShowAll window
   Gtk.main
@@ -75,13 +80,13 @@ main = do
 -- | Paint the drawing referred to by the Handle on to the DrawingArea using the Context.
 -- The drawing is resized to fit the DrawingArea.
 drawCanvasHandler :: Rsvg.Handle -> Gtk.DrawingArea -> Cairo.Render Bool
-drawCanvasHandler drawing canvas ctx = do
+drawCanvasHandler drawing canvas = do
    width  <- Gtk.widgetGetAllocatedWidth  canvas
    height <- Gtk.widgetGetAllocatedHeight canvas
    rect <- Gtk.new Rsvg.Rectangle
          [#height := fromIntegral height, #width := fromIntegral width, #x := 0, #y := 0]
    Cairo.setSourceRGB 1 1 1  -- White
    Cairo.paint  -- Blank white background.
-   ctx <- getContext
+   ctx <- Cairo.getContext
    Rsvg.handleRenderDocument drawing ctx rect
    return True
