@@ -1,5 +1,7 @@
 # Bindings
 
+## Generating the bindings
+
 The `.cabal` files for the bindings in this directory can be generated
 by running
 
@@ -18,3 +20,28 @@ When adding new bindings, it may be necessary to augment the search
 paths used for `.gir` and `.typelib` files. This can be done by
 setting the environment variables `HASKELL_GI_GIR_SEARCH_PATH` and
 `HASKELL_GI_TYPELIB_SEARCH_PATH` respectively.
+
+## Version numbers
+
+The `girName` and `girVersion` fields in the `pkg.info` file refer to the name and version in the
+`namespace` element of the `.gir` file.
+
+Binding version numbers are `x.y.z` where `x.y` is the version of the GIR file you are creating
+the binding for, and `z` is the revision of the binding. So the 25th revision of the bindings for
+gtk3 are `3.0.25`, for example.
+
+## Overrides
+
+Most bindings need to override the default types. These go in files with the suffix `.overrides`.
+You can generate most of the overrides with:
+
+```
+$ xsltproc Nullable.xslt <path-to-gir-file>
+```
+
+The `.gir` files are usually found in `/usr/share/gir-1.0`. Paste the output into the
+`.overrides` file underneath a comment saying how it was generated.
+
+Once you have a first draft, review the generated Haddock documents. Look for references to
+`Nothing` where the relevant type is not a `Maybe`. These need extra overrides to flag them as
+`nullable`.
