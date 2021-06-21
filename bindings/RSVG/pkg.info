@@ -8,12 +8,10 @@
    "girOverrides": "RSVG.overrides",
    "baseVersion": "base >= 4.7 && < 5",
    "distributionPackages": {
-      "fedora": [
-         "librsvg2-devel"
-      ],
-      "ubuntu": []
+      "fedora": ["librsvg2-devel"],
+      "ubuntu": ["librsvg2-dev"]
    },
-   "pkgconfigDepends": "librsvg-2.0 >= 2.50 && < 3",
+   "pkgconfigDepends": "librsvg-2.0 >= 2.48 && < 3",
    "giDepends" : [
       "gi-gobject == 2.0.*",
       "gi-glib == 2.0.*",
