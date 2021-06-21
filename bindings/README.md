@@ -32,16 +32,30 @@ gtk3 are `3.0.25`, for example.
 
 ## Overrides
 
-Most bindings need to override the default types. These go in files with the suffix `.overrides`.
-You can generate most of the overrides with:
+The Haskell function prototype is generated out of the introspection data held in the `.gir` files,
+which are usually found in `/usr/share/gir-1.0`. It is a common problem that some `nullable`
+annotations are missing here. This flag indicates that the value can be `NULL`, and so the
+corresponding Haskell type should be a `Maybe`. Also, developers using your binding may build it on
+older versions of the library where the  reflection data contains more errors.
+
+Therefore each binding can have an overrides file which specifies extra `nullable` flags for the
+library. There are two steps to generating this file.
+
+1. Run the `Nullable.xslt` script.
+
+2. Review the generated Haddock documents for inconsistencies.
+
+For step 1, you can generate the overrides to match the version on your own computer with the
+following command:
 
 ```
 $ xsltproc Nullable.xslt <path-to-gir-file>
 ```
 
-The `.gir` files are usually found in `/usr/share/gir-1.0`. Paste the output into the
-`.overrides` file underneath a comment saying how it was generated.
+Paste the output into the `.overrides` file underneath a comment saying how it was generated.in your
+system.
 
-Once you have a first draft, review the generated Haddock documents. Look for references to
-`Nothing` where the relevant type is not a `Maybe`. These need extra overrides to flag them as
-`nullable`.
+For step 2, look through your Haddock documentation for things like like "returns `Nothing` if the
+item is not found". If the corresponding type is not a `Maybe` then you need to add an extra
+override to flag the type as `nullable`. You should also report this as a bug to the authors of the
+library you are binding.
