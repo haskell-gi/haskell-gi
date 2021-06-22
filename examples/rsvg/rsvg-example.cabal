@@ -20,7 +20,7 @@ executable rsvg-example
   main-is:             Main.hs
   other-modules:       Paths_rsvg
   other-extensions:    OverloadedStrings, OverloadedLabels
-  build-depends:       base >=4.13.0.0, text >=1.2.4.0, haskell-gi-base >=0.24.0,
+  build-depends:       base >=4.11, text >=1.2.4.0, haskell-gi-base >=0.24.0,
                        gi-gio -any, gi-gtk >= 3.0 && < 4, gi-rsvg >= 2.0 && < 3,
                        filepath -any, gi-cairo -any, gi-gdk >= 3.0 && < 4,
                        gi-cairo-render >= 0.1, gi-cairo-connector >= 0.1
