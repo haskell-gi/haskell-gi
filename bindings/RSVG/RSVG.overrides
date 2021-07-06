@@ -1,0 +1,23 @@
+namespace RSVG
+
+# The handleNewFrom functions are nullable, even though they are not marked as such.
+set-attr Rsvg/Handle/new_from_data/@return-value nullable 1
+set-attr Rsvg/Handle/new_from_file/@return-value nullable 1
+set-attr Rsvg/Handle/new_from_gfile_sync/@return-value nullable 1
+set-attr Rsvg/Handle/new_from_stream_sync/@return-value nullable 1
+
+# Generated from libsvg-2.0 2.50.6 with xsltproc Nullable.xslt Rsvg-2.0.gir
+set-attr Rsvg/Handle/new_from_gfile_sync/@parameters/cancellable nullable 1
+set-attr Rsvg/Handle/new_from_stream_sync/@parameters/base_file nullable 1
+set-attr Rsvg/Handle/new_from_stream_sync/@parameters/cancellable nullable 1
+set-attr Rsvg/Handle/get_dimensions_sub/@parameters/id nullable 1
+set-attr Rsvg/Handle/get_geometry_for_element/@parameters/id nullable 1
+set-attr Rsvg/Handle/get_geometry_for_layer/@parameters/id nullable 1
+set-attr Rsvg/Handle/get_pixbuf/@return-value nullable 1
+set-attr Rsvg/Handle/get_pixbuf_sub/@return-value nullable 1
+set-attr Rsvg/Handle/get_pixbuf_sub/@parameters/id nullable 1
+set-attr Rsvg/Handle/get_position_sub/@parameters/id nullable 1
+set-attr Rsvg/Handle/read_stream_sync/@parameters/cancellable nullable 1
+set-attr Rsvg/Handle/render_cairo_sub/@parameters/id nullable 1
+set-attr Rsvg/Handle/render_element/@parameters/id nullable 1
+set-attr Rsvg/Handle/render_layer/@parameters/id nullable 1
