@@ -1,0 +1,96 @@
+# Disabled cache in hope of improving reliability of AppVeyor builds
+#cache:
+#- "c:\\sr" # stack root, short paths == fewer problems
+
+platform: x64
+
+environment:
+  global:
+    STACK_ROOT: "c:\\sr" 
+
+clone_folder: "c:\\stack"
+
+before_build:
+# http://help.appveyor.com/discussions/problems/6312-curl-command-not-found
+- SET MINGW64_PATH=c:\msys64\mingw64
+- SET PATH=%MINGW64_PATH%\bin;C:\msys64\usr\bin;%PATH%
+- SET PKG_CONFIG_PATH=%MINGW64_PATH%\lib\pkgconfig
+- SET XDG_DATA_DIRS=%MINGW64_PATH%\share
+- curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
+- curl -O http://repo.msys2.org/msys/x86_64/msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig
+- pacman-key --verify msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz.sig
+- pacman -U msys2-keyring-r21.b39fb11-1-any.pkg.tar.xz
+- pacman --noconfirm -Syu
+- appveyor-retry pacman -S --needed --noconfirm base-devel mingw64/mingw-w64-x86_64-toolchain autoconf automake libtool make mingw64/mingw-w64-x86_64-libtool
+- appveyor-retry pacman -S --noconfirm mingw64/mingw-w64-x86_64-gtk3 mingw64/mingw-w64-x86_64-pkg-config mingw64/mingw-w64-x86_64-gobject-introspection mingw64/mingw-w64-x86_64-cairo mingw64/mingw-w64-x86_64-pango
+- curl -sS -ostack.zip -L --insecure http://www.stackage.org/stack/windows-x86_64
+- 7z x stack.zip stack.exe
+- for /f %%i in ('stack path --programs') do set STACK_PROGRAMS_PATH=%%i
+- for /f %%i in ('stack path --local-bin') do set STACK_BIN_PATH=%%i
+- for /f %%i in ('stack exec ghc -- --version ^| grep -oP "version\s+\K([\w.])*"') do set GHC_VERSION=%%i
+- copy %MINGW64_PATH%\bin\zlib1.dll %STACK_PROGRAMS_PATH%\ghc-%GHC_VERSION%\bin
+
+build_script:
+- stack setup > nul
+# The ugly echo "" hack is to avoid complaints about 0 being an invalid file
+# descriptor
+- echo "" | stack --no-terminal build --jobs 1
+
+after_build:
+- stack install
+- mkdir BuildResult
+- mkdir BuildResult\bin
+- mkdir BuildResult\share
+- cp -uH %STACK_BIN_PATH%/hlabyrinth.exe BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libatk-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libatk-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libcairo-gobject-2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libcairo-2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgdk_pixbuf-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgdk-3-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgio-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libglib-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgobject-2.0-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgthread-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgtk-3-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpango-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpangocairo-1.0-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libintl-8.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgcc_s_seh-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libfontconfig-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libfreetype-6.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpng16-16.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/zlib1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libepoxy-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgmodule-2.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libwinpthread-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpcre-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libffi-6.dll BuildResult/bin  
+- cp -uH %MINGW64_PATH%/bin/libpangoft2-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpangowin32-1.0-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll  BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libiconv-2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libexpat-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libbz2-1.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libharfbuzz-0.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libgraphite2.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libstdc++-6.dll BuildResult/bin
+- cp -uH %MINGW64_PATH%/bin/libpixman-1-0.dll BuildResult/bin
+- cp -ruH %MINGW64_PATH%/share/themes BuildResult/share
+- cp -ruH %MINGW64_PATH%/share/icons BuildResult/share
+- cp -ruH %MINGW64_PATH%/share/glib-2.0 BuildResult/share
+- 7z a hlabyrinth.zip BuildResult\*
+
+test_script:
+- echo "" | stack --no-terminal test --jobs 1
+
+branches:
+  only:
+    - master
+
+artifacts:
+  - path: hlabyrinth.zip
+    name: hlabyrinth
+
