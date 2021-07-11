@@ -1,0 +1,78 @@
+Name:           gi-cairo-render
+Version:        0.1.0
+License:        BSD3
+License-file:   LICENSE
+Copyright:      (c) 2018 Kilian Kilger, (c) 2001-2010 The Gtk2Hs Team, (c) Paolo Martini 2005, (c) Abraham Egnor 2003, 2004, (c) Aetion Technologies LLC 2004
+Author:         Axel Simon, Duncan Coutts
+Maintainer:     Kilian Kilger (kkilger@gmail.com)
+Build-Type:     Simple
+Cabal-Version:  2.0
+Stability:      experimental
+homepage:       https://github.com/cohomology/gi-cairo-render
+bug-reports:    https://github.com/cohomology/gi-cairo-render/issues
+Synopsis:       GI friendly Binding to the Cairo library.
+Description:    Cairo is a library to render high quality vector graphics. There
+                exist various backends that allows rendering to Gtk windows, PDF,
+                PS, PNG and SVG documents, amongst others.
+Category:       Graphics
+Tested-With:    GHC == 8.10.2, GHC == 8.6.4
+extra-source-files: include/gi-cairo-render.h,
+                    ChangeLog.md
+
+Source-Repository head
+  type:         git
+  location:     https://github.com/cohomology/gi-cairo-render
+  subdir:       gi-cairo-render
+
+Flag cairo_pdf
+  Description: Build the PDF backend of Cairo.
+
+Flag cairo_ps
+  Description: Build the PostScript backend of Cairo.
+
+Flag cairo_svg
+  Description: Build the Scalable Vector Graphics (SVG) backend of Cairo.
+
+Library
+        build-depends:    base >= 4 && < 5,
+                          utf8-string >= 0.2 && < 1.1,
+                          text >= 1.0.0.0 && < 1.3,
+                          haskell-gi-base >= 0.24 && <0.25,
+                          bytestring >= 0.10 && < 0.11, 
+                          mtl >= 2.2 && <2.3, 
+                          array >= 0.5 && <0.6
+        build-tool-depends: c2hs:c2hs >= 0.28 && <0.30
+        exposed-modules:  GI.Cairo.Render
+                          GI.Cairo.Render.Matrix
+                          GI.Cairo.Render.Types
+                          -- this module is only meant to be used by other
+                          -- modules implementing a Cairo interface
+                          GI.Cairo.Render.Internal
+        other-modules:
+                          GI.Cairo.Render.Internal.Drawing.Cairo
+                          GI.Cairo.Render.Internal.Drawing.Paths
+                          GI.Cairo.Render.Internal.Drawing.Patterns
+                          GI.Cairo.Render.Internal.Drawing.Text
+                          GI.Cairo.Render.Internal.Drawing.Transformations
+                          GI.Cairo.Render.Internal.Fonts.FontOptions
+                          GI.Cairo.Render.Internal.Surfaces.Image
+                          GI.Cairo.Render.Internal.Surfaces.PNG
+                          GI.Cairo.Render.Internal.Surfaces.Surface
+                          GI.Cairo.Render.Internal.Utilities
+                          GI.Cairo.Render.Internal.Surfaces.PDF
+                          GI.Cairo.Render.Internal.Surfaces.PS
+                          GI.Cairo.Render.Internal.Surfaces.SVG
+                          GI.Cairo.Render.Internal.Region
+        default-language:   Haskell2010
+        default-extensions: ForeignFunctionInterface
+        Include-dirs: include
+        pkgconfig-depends: cairo >= 1.2.0,
+                           cairo-gobject >= 1.13
+        if flag(cairo_pdf)
+          pkgconfig-depends: cairo-pdf
+        if flag(cairo_ps)
+          pkgconfig-depends: cairo-ps
+        if flag(cairo_svg)
+          pkgconfig-depends: cairo-svg
+        if os(darwin) || os(freebsd)
+          cpp-options: -D__attribute__(A)= -D_Nullable= -D_Nonnull=

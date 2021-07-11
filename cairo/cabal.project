@@ -1,0 +1,5 @@
+packages: gi-cairo-render/gi-cairo-render.cabal,
+          gi-cairo-connector/gi-cairo-connector.cabal
+          examples/sdl/gi-cairo-render-sdl.cabal
+          examples/clock/gi-cairo-render-clock.cabal
+          examples/hlabyrinth/hlabyrinth.cabal
