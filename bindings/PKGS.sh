@@ -29,7 +29,7 @@ case "$TARGET" in
         ;;
     fedora)
         PKG_DEPS="[\"pkgconfig(\" + (.pkgconfigDepends | split(\" \") | .[0]) + \")\"]"
-        PKG_COND="$PKG_DEPS != null"
+        PKG_COND="$PKG_DEPS != null and .distributionPackages.\"nonLinux\" == null"
         ;;
     *)
         echo "Unknown target" >&2

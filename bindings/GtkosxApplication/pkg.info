@@ -12,5 +12,8 @@
         "gi-gdkpixbuf == 2.0.*",
         "gi-gobject == 2.0.*"
     ],
+    "distributionPackages": {
+      "nonLinux": true
+    },
     "pkgconfigDepends": "gtk-mac-integration-gtk3 >= 2.0 && < 3"
 }
