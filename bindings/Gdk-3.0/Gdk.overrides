@@ -7,6 +7,7 @@ set-attr Gdk/~KEY_.*@constant/@type name guint
 # Generated from gdk 3.20.3 with xsltproc Nullable.xslt Gdk-3.0.gir
 set-attr Gdk/AppLaunchContext/set_icon/@parameters/icon nullable 1
 set-attr Gdk/AppLaunchContext/set_icon_name/@parameters/icon_name nullable 1
+set-attr Gdk/Cursor/new_for_display/@return-value nullable 1
 set-attr Gdk/Cursor/new_from_name/@return-value nullable 1
 set-attr Gdk/Cursor/get_image/@return-value nullable 1
 set-attr Gdk/Cursor/get_surface/@return-value nullable 1
@@ -25,13 +26,19 @@ set-attr Gdk/Display/open/@return-value nullable 1
 set-attr Gdk/Display/open_default_libgtk_only/@return-value nullable 1
 set-attr Gdk/Display/get_device_manager/@return-value nullable 1
 set-attr Gdk/Display/get_event/@return-value nullable 1
+set-attr Gdk/Display/get_monitor/@return-value nullable 1
+set-attr Gdk/Display/get_primary_monitor/@return-value nullable 1
 set-attr Gdk/Display/get_window_at_pointer/@return-value nullable 1
 set-attr Gdk/Display/peek_event/@return-value nullable 1
+set-attr Gdk/Display/store_clipboard/@parameters/targets nullable 1
 set-attr Gdk/DisplayManager/get_default_display/@return-value nullable 1
 set-attr Gdk/DisplayManager/open_display/@return-value nullable 1
+set-attr Gdk/DragContext/get_drag_window/@return-value nullable 1
+set-attr Gdk/DrawingContext/get_clip/@return-value nullable 1
 set-attr Gdk/Event/get_device/@return-value nullable 1
 set-attr Gdk/Event/get_source_device/@return-value nullable 1
 set-attr Gdk/Event/get_state/@parameters/event nullable 1
+set-attr Gdk/Event/set_device_tool/@parameters/tool nullable 1
 set-attr Gdk/Event/get/@return-value nullable 1
 set-attr Gdk/Event/handler_set/@parameters/data nullable 1
 set-attr Gdk/Event/peek/@return-value nullable 1
@@ -39,8 +46,14 @@ set-attr Gdk/EventFunc/@parameters/data nullable 1
 set-attr Gdk/FilterFunc/@parameters/data nullable 1
 set-attr Gdk/FrameClock/get_current_timings/@return-value nullable 1
 set-attr Gdk/FrameClock/get_timings/@return-value nullable 1
+set-attr Gdk/GLContext/get_current/@return-value nullable 1
+set-attr Gdk/GLContext/get_display/@return-value nullable 1
 set-attr Gdk/GLContext/get_required_version/@parameters/major nullable 1
 set-attr Gdk/GLContext/get_required_version/@parameters/minor nullable 1
+set-attr Gdk/GLContext/get_shared_context/@return-value nullable 1
+set-attr Gdk/GLContext/get_window/@return-value nullable 1
+set-attr Gdk/Monitor/get_manufacturer/@return-value nullable 1
+set-attr Gdk/Monitor/get_model/@return-value nullable 1
 set-attr Gdk/Screen/get_default/@return-value nullable 1
 set-attr Gdk/Screen/get_active_window/@return-value nullable 1
 set-attr Gdk/Screen/get_font_options/@return-value nullable 1
@@ -80,8 +93,11 @@ set-attr Gdk/Window/set_icon_name/@parameters/name nullable 1
 set-attr Gdk/Window/set_opaque_region/@parameters/region nullable 1
 set-attr Gdk/Window/set_user_data/@parameters/user_data nullable 1
 set-attr Gdk/Window/shape_combine_region/@parameters/shape_region nullable 1
+set-attr Gdk/Window/moved-to-rect/@parameters/flipped_rect nullable 1
+set-attr Gdk/Window/moved-to-rect/@parameters/final_rect nullable 1
 set-attr Gdk/Window/pick-embedded-child/@return-value nullable 1
 set-attr Gdk/WindowChildFunc/@parameters/user_data nullable 1
+set-attr Gdk/cairo_get_drawing_context/@return-value nullable 1
 set-attr Gdk/cairo_surface_create_from_pixbuf/@parameters/for_window nullable 1
 set-attr Gdk/event_get/@return-value nullable 1
 set-attr Gdk/event_handler_set/@parameters/data nullable 1
