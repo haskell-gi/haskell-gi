@@ -98,7 +98,7 @@ setCursor window cursorType = do maybeWindow <- GTK.widgetGetParentWindow window
                                  case maybeWindow of 
                                      Just gdkWindow -> do display <- GDK.windowGetDisplay gdkWindow
                                                           cursor <- GDK.cursorNewForDisplay display cursorType 
-                                                          GDK.windowSetCursor gdkWindow (Just cursor)
+                                                          GDK.windowSetCursor gdkWindow cursor
                                      Nothing     -> return ()
 
 keyPressHandler :: LabyrinthState -> GDK.EventKey -> IO Bool

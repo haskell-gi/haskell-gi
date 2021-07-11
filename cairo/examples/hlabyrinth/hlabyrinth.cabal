@@ -68,7 +68,7 @@ executable hlabyrinth
     , gi-gtk >=3.0.36 && <4
     , gi-pango >=1.0.23 && <1.1
     , gi-pangocairo >=1.0.24 && <1.1
-    , haskell-gi-base >=0.24.0 && <0.25
+    , haskell-gi-base >=0.24.0 && <0.26
     , hxt-unicode >=9.0 && <9.1
     , mmorph >=1.0.9 && <1.2
     , mtl >=2.2.1 && <2.3
