@@ -7,6 +7,7 @@ packages: base/haskell-gi-base.cabal
           examples/WebKit/webkit-example.cabal
           examples/GtkSourceView/gtksourceview-example.cabal
           examples/Clutter/clutter-example.cabal
+          examples/rsvg/rsvg-example.cabal
           gi-gtk-hs/gi-gtk-hs.cabal
           cairo/gi-cairo-render/gi-cairo-render.cabal
           cairo/gi-cairo-connector/gi-cairo-connector.cabal
@@ -57,3 +58,4 @@ packages: base/haskell-gi-base.cabal
           bindings/CoglPango/gi-coglpango.cabal
           bindings/Json/gi-json.cabal
           bindings/Clutter/gi-clutter.cabal
+          bindings/RSVG/gi-rsvg.cabal
