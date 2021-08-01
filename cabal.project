@@ -58,4 +58,4 @@ packages: base/haskell-gi-base.cabal
           bindings/CoglPango/gi-coglpango.cabal
           bindings/Json/gi-json.cabal
           bindings/Clutter/gi-clutter.cabal
-          bindings/RSVG/gi-rsvg.cabal
+          bindings/Rsvg/gi-rsvg.cabal

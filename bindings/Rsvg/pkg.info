@@ -5,7 +5,7 @@
    "synopsis": "librsvg bindings",
    "girName": "Rsvg",
    "girVersion": "2.0",
-   "girOverrides": "RSVG.overrides",
+   "girOverrides": "Rsvg.overrides",
    "baseVersion": "base >= 4.7 && < 5",
    "distributionPackages": {
       "fedora": ["librsvg2-devel"],
