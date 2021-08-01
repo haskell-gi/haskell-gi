@@ -7,7 +7,7 @@ module Main where
 import Data.Maybe
 import qualified Data.Text as T
 import System.FilePath
-import Paths_rsvg
+import Paths_rsvg_example
 
 import qualified GI.Gio as Gio
 import qualified GI.Gtk as Gtk

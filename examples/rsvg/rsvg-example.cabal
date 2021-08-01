@@ -18,7 +18,9 @@ extra-source-files:  CHANGELOG.md
 
 executable rsvg-example
   main-is:             Main.hs
-  other-modules:       Paths_rsvg
+  autogen-modules:     Paths_rsvg_example
+  other-modules:       Paths_rsvg_example
+
   other-extensions:    OverloadedStrings, OverloadedLabels
   build-depends:       base >=4.11, text >=1.2.4.0, haskell-gi-base >=0.24.0,
                        gi-gio -any, gi-gtk >= 3.0 && < 4, gi-rsvg >= 2.0 && < 3,
