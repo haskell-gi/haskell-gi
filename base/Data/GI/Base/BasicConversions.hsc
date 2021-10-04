@@ -169,7 +169,7 @@ unpackGArray array = do
   dataPtr <- peek (castPtr array :: Ptr (Ptr a))
   nitems <- peek (array `plusPtr` sizeOf dataPtr)
   go dataPtr nitems
-    where go :: Ptr a -> Int -> IO [a]
+    where go :: Ptr a -> CUInt -> IO [a]
           go _ 0 = return []
           go ptr n = do
             x <- peek ptr
