@@ -3,7 +3,7 @@ name: Linux CI
 on: [push, pull_request]
 
 env:
-  gtksheet_version: 4.3.2
+  gtksheet_version: 4.3.5
 
 jobs:
   build:
@@ -74,8 +74,6 @@ jobs:
         # That means the lib cache doesn't get rebuilt, only links, and the
         # lib cache rebuild appears to be necessary
         sudo ldconfig
-        # Fix https://github.com/fpaquet/gtksheet/issues/23 - rename the typelib file
-        sudo mv "/usr/local/lib/girepository-1.0/GtkSheet-4.0.typelib" "$(pkg-config gobject-introspection-1.0 --variable=typelibdir)/GtkSheet-${{ env.gtksheet_version }}.typelib"
         popd
 
     - name: Generate bindings
