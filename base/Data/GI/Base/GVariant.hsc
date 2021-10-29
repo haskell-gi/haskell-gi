@@ -854,14 +854,14 @@ gvariantToTwoTuple :: forall a b. (IsGVariant a, IsGVariant b) =>
 gvariantToTwoTuple variant = do
   let expectedType = toGVariantFormatString (undefined :: (a,b))
   maybeChildren <- withExplicitType expectedType gvariant_get_children variant
-  if isJust maybeChildren
-  then do
-    let (Just [a1,a2]) = maybeChildren
-    (ma1, ma2) <- (,) <$> fromGVariant a1 <*> fromGVariant a2
-    return $ if isJust ma1 && isJust ma2
-             then Just (fromJust ma1, fromJust ma2)
-             else Nothing
-  else return Nothing
+  case maybeChildren of
+    Just [a1,a2] -> do
+      (ma1, ma2) <- (,) <$> fromGVariant a1 <*> fromGVariant a2
+      return $ if isJust ma1 && isJust ma2
+               then Just (fromJust ma1, fromJust ma2)
+               else Nothing
+    Just _ -> error "gvariantToTwoTuple :: the impossible happened, this is a bug."
+    Nothing -> return Nothing
 
 instance (IsGVariant a, IsGVariant b, IsGVariant c) => IsGVariant (a,b,c) where
     toGVariant = gvariantFromThreeTuple
@@ -886,16 +886,16 @@ gvariantToThreeTuple :: forall a b c. (IsGVariant a, IsGVariant b,
 gvariantToThreeTuple variant = do
   let expectedType = toGVariantFormatString (undefined :: (a,b,c))
   maybeChildren <- withExplicitType expectedType gvariant_get_children variant
-  if isJust maybeChildren
-  then do
-    let (Just [a1,a2,a3]) = maybeChildren
-    (ma1, ma2, ma3) <- (,,) <$> fromGVariant a1
-                            <*> fromGVariant a2
-                            <*> fromGVariant a3
-    return $ if isJust ma1 && isJust ma2 && isJust ma3
-             then Just (fromJust ma1, fromJust ma2, fromJust ma3)
-             else Nothing
-  else return Nothing
+  case maybeChildren of
+    Just [a1,a2,a3] -> do
+      (ma1, ma2, ma3) <- (,,) <$> fromGVariant a1
+                         <*> fromGVariant a2
+                         <*> fromGVariant a3
+      return $ if isJust ma1 && isJust ma2 && isJust ma3
+               then Just (fromJust ma1, fromJust ma2, fromJust ma3)
+               else Nothing
+    Just _ -> error "gvariantToThreeTuple :: the impossible happened, this is a bug."
+    Nothing -> return Nothing
 
 instance (IsGVariant a, IsGVariant b, IsGVariant c, IsGVariant d) =>
     IsGVariant (a,b,c,d) where
@@ -923,17 +923,17 @@ gvariantToFourTuple :: forall a b c d. (IsGVariant a, IsGVariant b,
 gvariantToFourTuple variant = do
   let expectedType = toGVariantFormatString (undefined :: (a,b,c,d))
   maybeChildren <- withExplicitType expectedType gvariant_get_children variant
-  if isJust maybeChildren
-  then do
-    let (Just [a1,a2,a3,a4]) = maybeChildren
-    (ma1, ma2, ma3,ma4) <- (,,,) <$> fromGVariant a1
-                                 <*> fromGVariant a2
-                                 <*> fromGVariant a3
-                                 <*> fromGVariant a4
-    return $ if isJust ma1 && isJust ma2 && isJust ma3 && isJust ma4
-             then Just (fromJust ma1, fromJust ma2, fromJust ma3, fromJust ma4)
-             else Nothing
-  else return Nothing
+  case maybeChildren of
+    Just [a1,a2,a3,a4] -> do
+      (ma1, ma2, ma3,ma4) <- (,,,) <$> fromGVariant a1
+                             <*> fromGVariant a2
+                             <*> fromGVariant a3
+                             <*> fromGVariant a4
+      return $ if isJust ma1 && isJust ma2 && isJust ma3 && isJust ma4
+               then Just (fromJust ma1, fromJust ma2, fromJust ma3, fromJust ma4)
+               else Nothing
+    Just _ -> error "gvariantToFourTuple :: the impossible happened, this is a bug."
+    Nothing -> return Nothing
 
 instance (IsGVariant a, IsGVariant b, IsGVariant c, IsGVariant d, IsGVariant e)
     => IsGVariant (a,b,c,d,e) where
@@ -965,17 +965,17 @@ gvariantToFiveTuple :: forall a b c d e.
 gvariantToFiveTuple variant = do
   let expectedType = toGVariantFormatString (undefined :: (a,b,c,d,e))
   maybeChildren <- withExplicitType expectedType gvariant_get_children variant
-  if isJust maybeChildren
-  then do
-    let (Just [a1,a2,a3,a4,a5]) = maybeChildren
-    (ma1, ma2, ma3, ma4, ma5) <- (,,,,) <$> fromGVariant a1
-                                        <*> fromGVariant a2
-                                        <*> fromGVariant a3
-                                        <*> fromGVariant a4
-                                        <*> fromGVariant a5
-    return $ if isJust ma1 && isJust ma2 && isJust ma3 &&
-                              isJust ma4 && isJust ma5
-             then Just (fromJust ma1, fromJust ma2, fromJust ma3,
-                        fromJust ma4, fromJust ma5)
-             else Nothing
-  else return Nothing
+  case maybeChildren of
+    Just [a1,a2,a3,a4,a5] -> do
+      (ma1, ma2, ma3, ma4, ma5) <- (,,,,) <$> fromGVariant a1
+                                   <*> fromGVariant a2
+                                   <*> fromGVariant a3
+                                   <*> fromGVariant a4
+                                   <*> fromGVariant a5
+      return $ if isJust ma1 && isJust ma2 && isJust ma3 &&
+                  isJust ma4 && isJust ma5
+               then Just (fromJust ma1, fromJust ma2, fromJust ma3,
+                          fromJust ma4, fromJust ma5)
+               else Nothing
+    Just _ -> error "gvariantToFiveTuple :: the impossible happened, this is a bug."
+    Nothing -> return Nothing
