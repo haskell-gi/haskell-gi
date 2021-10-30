@@ -89,4 +89,6 @@ jobs:
       run: cabal build all
 
     - name: Run tests
-      run: cabal test
+      run: |
+        echo 'tests: True' > cabal.project.local
+        cabal test
