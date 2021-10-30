@@ -268,9 +268,11 @@ signalInfoName n signal = do
 
 -- | Return the name for the signal in Haskell CamelCase conventions.
 signalHaskellName :: Text -> Text
-signalHaskellName sn = let (w:ws) = T.split (== '-') sn
-                       in w <> T.concat (map ucFirst ws)
-
+signalHaskellName sn = case T.split (== '-') sn of
+                         [] -> ""  -- Won't happen due to the
+                                   -- definition of T.split, but GHC
+                                   -- does not know this.
+                         w:ws -> w <> T.concat (map ucFirst ws)
 
 -- | Return a link to the hackage package for the given name. Note
 -- that the generated link will only be valid if the name belongs to

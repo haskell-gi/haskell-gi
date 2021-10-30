@@ -138,9 +138,9 @@ genMethodInfo n m =
         bline $ "data " <> infoName
         -- This should not happen, since ordinary methods always
         -- have the instance as first argument.
-        when (null (signatureArgTypes sig)) $
-          error $ "Internal error: too few parameters! " ++ show m
-        let (obj:otherTypes) = map snd (signatureArgTypes sig)
+        let (obj,otherTypes) = case map snd (signatureArgTypes sig) of
+              [] -> error $ "Internal error: too few parameters! " ++ show m
+              (obj':otherTypes') -> (obj', otherTypes')
             sigConstraint = "signature ~ (" <> T.intercalate " -> "
               (otherTypes ++ [signatureReturnType sig]) <> ")"
 
