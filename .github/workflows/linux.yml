@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.4', '8.6', '8.8', '8.10']
+        ghc: ['8.4', '8.6', '8.8', '8.10', '9.0']
 
     steps:
     - uses: actions/checkout@v1
@@ -21,7 +21,7 @@ jobs:
     # hide it so that 'cabal update' does not fail.
     - name: Hide cabal project
       run: mv cabal.project _cabal.project
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v1
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: 'latest'
