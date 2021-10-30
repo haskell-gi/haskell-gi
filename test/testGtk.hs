@@ -2,6 +2,9 @@
 {-# LANGUAGE CPP, TypeApplications, DataKinds #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE ImplicitParams #-}
+#if MIN_VERSION_base(4,16,0)
+{-# LANGUAGE OverloadedRecordDot #-}
+#endif
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Prelude hiding (error, (++), putStrLn, show)
 import qualified Prelude as P
@@ -27,10 +30,6 @@ import Data.Text.IO (putStrLn)
 import Data.Word
 import Data.Int
 import qualified Data.Map as M
-
-#if MIN_VERSION_base(4,13,0)
-import qualified GHC.Records as R
-#endif
 
 import System.Environment (getProgName)
 import System.Random (randomRIO)
@@ -483,10 +482,10 @@ testTypedClosures win = do
 
 testOverloadedRecords :: Button -> IO ()
 testOverloadedRecords button = do
-#if MIN_VERSION_base(4,13,0)
+#if MIN_VERSION_base(4,16,0)
   performGC
   putStrLn "*** Overloaded records test"
-  label <- (R.getField @"getLabel") button
+  label <- button.getLabel
   putStrLn (show label)
   performGC
   putStrLn "+++ Overloaded records test done"
@@ -516,7 +515,9 @@ main = do
              error "gtk_init did not process --g-fatal-warnings"
 
         -- We periodically perform a GC, in order to test that the
-        -- finalizers are not pointing to invalid regions.
+        -- finalizers are not pointing to invalid regions. This is
+        -- just for testing, there is no need to do this in real
+        -- programs.
         _ <- GLib.timeoutAdd 0 5000 $ do
                putStrLn "** (T) Going into GC"
                performGC
