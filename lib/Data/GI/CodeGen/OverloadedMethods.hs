@@ -136,9 +136,9 @@ genMethodInfo n m =
         let callable = fixupCallerAllocates (methodCallable m)
         sig <- callableSignature callable (KnownForeignSymbol undefined) WithoutClosures
         bline $ "data " <> infoName
-        -- This should not happen, since ordinary methods always
-        -- have the instance as first argument.
-        let (obj,otherTypes) = case map snd (signatureArgTypes sig) of
+        let (obj, otherTypes) = case map snd (signatureArgTypes sig) of
+              -- This should not happen, since ordinary methods always
+              -- have the instance as first argument.
               [] -> error $ "Internal error: too few parameters! " ++ show m
               (obj':otherTypes') -> (obj', otherTypes')
             sigConstraint = "signature ~ (" <> T.intercalate " -> "
