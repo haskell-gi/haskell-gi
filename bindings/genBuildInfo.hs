@@ -63,7 +63,7 @@ writeCabal fname info exposed =
          T.intercalate ",\n                     "
            ([ "base >= 4.9 && < 5"
             , "Cabal >= 1.24"
-            , "haskell-gi >= 0.25 && < 0.26"]
+            , "haskell-gi >= 0.26 && < 0.27"]
             <> giDepends info)
        , ""
        , "library"
@@ -76,11 +76,11 @@ writeCabal fname info exposed =
        , "      build-depends: " <>
          T.intercalate ",\n                     "
               ([ baseVersion info
-               , "haskell-gi-base >= 0.25 && < 0.26"
+               , "haskell-gi-base >= 0.26 && < 0.27"
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi >= 0.25 && < 0.26"
+               , "haskell-gi >= 0.26 && < 0.27"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]

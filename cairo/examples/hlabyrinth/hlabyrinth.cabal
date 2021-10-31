@@ -55,7 +55,7 @@ executable hlabyrinth
   build-depends:
       array >=0.5.1 && <0.6
     , base >=4 && <5
-    , bytestring >=0.10 && <0.11
+    , bytestring >=0.10 && <1
     , cereal >=0.5.5.0 && <0.6
     , directory >=1.3 && <1.4
     , errors >=2.3 && <2.4
@@ -68,7 +68,7 @@ executable hlabyrinth
     , gi-gtk >=3.0.36 && <4
     , gi-pango >=1.0.23 && <1.1
     , gi-pangocairo >=1.0.24 && <1.1
-    , haskell-gi-base >=0.24.0 && <0.26
+    , haskell-gi-base >=0.24.0 && <0.27
     , hxt-unicode >=9.0 && <9.1
     , mmorph >=1.0.9 && <1.2
     , mtl >=2.2.1 && <2.3

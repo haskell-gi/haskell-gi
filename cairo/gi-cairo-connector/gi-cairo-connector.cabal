@@ -24,7 +24,7 @@ Source-Repository head
 
 Library
         build-depends:    base >= 4 && < 5, mtl >= 2.2 && <2.3,
-                          haskell-gi-base >=0.24.0 && <0.26,
+                          haskell-gi-base >=0.24.0 && <0.27,
                           gi-cairo >= 1.0 && <2,
                           gi-cairo-render == 0.1.*
         exposed-modules:  GI.Cairo.Render.Connector
