@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Generate the cabal info for the given subdirectories, assuming
+-- Generate the cabal info for the given subdirectories, assuming
 -- the existence of appropriate "pkg.info" files.
 
 import System.Environment (getArgs,getExecutablePath)
