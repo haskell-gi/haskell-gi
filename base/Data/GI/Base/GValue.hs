@@ -45,6 +45,8 @@ module Data.GI.Base.GValue
 
     ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
+
 import Data.Coerce (coerce)
 import Data.Word
 import Data.Int
@@ -152,8 +154,8 @@ class IsGValue a where
                                      -- the `GValue`.
 
 -- | Create a `GValue` from the given Haskell value.
-toGValue :: forall a. IsGValue a => a -> IO GValue
-toGValue val = do
+toGValue :: forall a m. (IsGValue a, MonadIO m) => a -> m GValue
+toGValue val = liftIO $ do
   gvptr <- callocBytes cgvalueSize
   GType gtype <- gvalueGType_ @a
   _ <- g_value_init gvptr gtype
@@ -162,8 +164,8 @@ toGValue val = do
   return $! gv
 
 -- | Create a Haskell object out of the given `GValue`.
-fromGValue :: IsGValue a => GValue -> IO a
-fromGValue gv = withManagedPtr gv gvalueGet_
+fromGValue :: (IsGValue a, MonadIO m) => GValue -> m a
+fromGValue gv = liftIO $ withManagedPtr gv gvalueGet_
 
 instance IsGValue (Maybe String) where
   gvalueGType_ = return gtypeString
