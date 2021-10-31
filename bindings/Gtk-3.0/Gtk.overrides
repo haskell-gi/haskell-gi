@@ -6,8 +6,10 @@ C-docs-url Gtk https://developer.gnome.org/gtk3/stable
 # fairly weird semantics.
 ignore TreeModelFilter.set_modify_func
 
-# Signal with an (out) (caller-allocates) parameter, which we do not support.
-ignore Overlay.get-child-position
+# Signal with an (out) (caller-allocates) parameter, which we support
+# without needing annotations.
+delete-attr Gtk/Overlay/get-child-position/@parameters/allocation direction
+delete-attr Gtk/Overlay/get-child-position/@parameters/allocation caller-allocates
 
 # gtk_widget_path_iter_add_qclass isn't exported despite being present in Gtk-3.0.typelib
 # upstream issue: https://bugzilla.gnome.org/show_bug.cgi?id=761339
