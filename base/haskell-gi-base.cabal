@@ -47,7 +47,7 @@ library
                        Data.GI.Base.Internal.CTypes
 
   pkgconfig-depends:   gobject-2.0 >= 2.42, glib-2.0
-  build-depends:       base >= 4.9 && < 5,
+  build-depends:       base >= 4.11 && < 5,
                        bytestring,
                        containers,
                        text >= 1.0
