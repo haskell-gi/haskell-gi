@@ -3,7 +3,9 @@ name: Linux CI
 on: [push, pull_request]
 
 env:
-  gtksheet_version: 4.3.2
+  gtksheet_version: 4.3.5
+  # Allows for rebuilding the cache without bumping the version
+  gtksheet_cache_version: 1
 
 jobs:
   build:
@@ -47,7 +49,7 @@ jobs:
       id: gtksheet-cache
       with:
         path: gtksheet
-        key: ${{ env.gtksheet_version }}
+        key: ${{ env.gtksheet_version }}-${{ env.gtksheet_cache_version }}
 
     - uses: actions/checkout@v2
       if: steps.gtksheet-cache.outputs.cache-hit != 'true'
@@ -62,7 +64,11 @@ jobs:
         pushd gtksheet
         # Configure and install
         autoreconf -i
-        ./configure --enable-introspection
+        # `libdir` is necessary because the system-configured location for GIR
+        # files is not respected by the Makefile, and it will instead try
+        # to install to `/usr/local/lib/`, which is wrong.
+        # See https://github.com/haskell-gi/haskell-gi/pull/365
+        ./configure --enable-introspection --libdir=/usr/lib/x86_64-linux-gnu/
         make
         popd
 
@@ -74,8 +80,6 @@ jobs:
         # That means the lib cache doesn't get rebuilt, only links, and the
         # lib cache rebuild appears to be necessary
         sudo ldconfig
-        # Fix https://github.com/fpaquet/gtksheet/issues/23 - rename the typelib file
-        sudo mv "/usr/local/lib/girepository-1.0/GtkSheet-4.0.typelib" "$(pkg-config gobject-introspection-1.0 --variable=typelibdir)/GtkSheet-${{ env.gtksheet_version }}.typelib"
         popd
 
     - name: Generate bindings
