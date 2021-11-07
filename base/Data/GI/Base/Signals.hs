@@ -51,8 +51,10 @@ module Data.GI.Base.Signals
     , disconnectSignalHandler
     , SignalHandlerId
     , SignalInfo(..)
+    , DbgSignalInfo(..)
     , GObjectNotifySignalInfo
     , SignalCodeGenError
+    , resolveSignal
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -109,20 +111,44 @@ instance (info ~ ResolveSignal slot object) =>
 
 -- | Information about an overloaded signal.
 class SignalInfo (info :: Type) where
-    -- | The type for the signal handler.
-    type HaskellCallbackType info :: Type
-    -- | Connect a Haskell function to a signal of the given
-    -- `GObject`, specifying whether the handler will be called before
-    -- or after the default handler. Note that the callback being
-    -- passed here admits an extra initial parameter with respect to
-    -- the usual Haskell callback type. This will be passed as an
-    -- /implicit/ @?self@ argument to the Haskell callback.
-    connectSignal :: GObject o =>
-                     o ->
-                     (o -> HaskellCallbackType info) ->
-                     SignalConnectMode ->
-                     Maybe Text ->
-                     IO SignalHandlerId
+  -- | The type for the signal handler.
+  type HaskellCallbackType info :: Type
+  -- | Connect a Haskell function to a signal of the given `GObject`,
+  -- specifying whether the handler will be called before or after the
+  -- default handler. Note that the callback being passed here admits
+  -- an extra initial parameter with respect to the usual Haskell
+  -- callback type. This will be passed as an /implicit/ @?self@
+  -- argument to the Haskell callback.
+  connectSignal :: GObject o =>
+                   o ->
+                   (o -> HaskellCallbackType info) ->
+                   SignalConnectMode ->
+                   Maybe Text ->
+                   IO SignalHandlerId
+  -- | Optional extra debug information, for `resolveSignal` below.
+  dbgSignalInfo :: Maybe DbgSignalInfo
+  dbgSignalInfo = Nothing
+
+-- | Extra information about an overloaded signal, for debugging
+-- purposes.
+data DbgSignalInfo = DbgSignalInfo {
+  -- | The full name of the signal for debugging purposes, see `resolveSignal`.
+  overloadedSignalName :: Maybe Text
+  -- | URL containing documentation for the signal for debugging
+  -- purposes, see `resolveSignal`.
+  , overloadedSignalURL :: Maybe Text
+  }
+
+instance Show DbgSignalInfo where
+  show info = T.unpack $ case overloadedSignalURL info of
+                Nothing -> case overloadedSignalName info of
+                             Nothing -> "(unknown signal)"
+                             Just n -> n
+                Just url -> let n = case overloadedSignalName info of
+                                      Just name -> name
+                                      Nothing -> url
+                            in "\ESC]8;;" <> url <> "\ESC\\" <> n
+                               <> "\ESC]8;;\ESC\\"
 
 -- | Whether to connect a handler to a signal with `connectSignal` so
 -- that it runs before/after the default handler for the given signal.
@@ -236,3 +262,13 @@ type family SignalCodeGenError (signalName :: Symbol) :: Type where
      ':<>: 'Text signalName
      ':<>: 'Text "’ is not supported, because haskell-gi failed to generate appropriate bindings."
     ':$$: 'Text "Please file an issue at https://github.com/haskell-gi/haskell-gi/issues.")
+
+-- | Return the fully qualified signal name that a given overloaded
+-- signal resolves to (mostly useful for debugging).
+--
+-- > resolveSignal #childNotify button
+resolveSignal :: forall object info. (GObject object, SignalInfo info) =>
+                 object -> SignalProxy object info -> DbgSignalInfo
+resolveSignal _o _p = case dbgSignalInfo @info of
+                        Nothing -> DbgSignalInfo Nothing Nothing
+                        Just dbg -> dbg

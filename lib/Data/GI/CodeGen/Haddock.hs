@@ -34,7 +34,8 @@ import Data.GI.CodeGen.CtoHaskellMap (Hyperlink(..))
 import Data.GI.CodeGen.GtkDoc (GtkDoc(..), Token(..), CRef(..), Language(..),
                                Link(..), ListItem(..), parseGtkDoc)
 import Data.GI.CodeGen.Overrides (onlineDocsMap)
-import Data.GI.CodeGen.SymbolNaming (lowerSymbol, signalHaskellName)
+import Data.GI.CodeGen.SymbolNaming (lowerSymbol, signalHaskellName,
+                                     haddockSignalAnchor)
 
 -- | Where is the documentation located with respect to the relevant
 -- symbol, useful for determining whether we want to start with @|@ or @^@.
@@ -81,7 +82,7 @@ formatUnknownCRef _ (FunctionRef f) = formatCRef $ f <> "()"
 formatUnknownCRef _ (ParamRef p) = "/@" <> lowerSymbol p <> "@/"
 formatUnknownCRef _ (LocalSignalRef s) =
   let sn = signalHaskellName s
-  in "[" <> sn <> "](#g:signal:" <> sn <> ")"
+  in "[" <> sn <> "](#" <> haddockSignalAnchor <> sn <> ")"
 formatUnknownCRef c2h (SignalRef owner signal) =
   case M.lookup (TypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "::" <> signal

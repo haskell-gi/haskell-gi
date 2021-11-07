@@ -31,6 +31,7 @@ module Data.GI.CodeGen.SymbolNaming
     , normalizedAPIName
 
     , hackageModuleLink
+    , haddockSignalAnchor
     ) where
 
 #if !MIN_VERSION_base(4,11,0)
@@ -286,3 +287,6 @@ hackageModuleLink n = do
   return $ "https://hackage.haskell.org/package/" <> pkg <> "/docs/"
            <> location <> ".html"
 
+-- | Prefix in Haddock for the signal anchor.
+haddockSignalAnchor :: Text
+haddockSignalAnchor = "g:signal:"

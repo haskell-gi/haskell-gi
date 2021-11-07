@@ -6,6 +6,8 @@
 
 + Add an 'After' attribute to connect to signals after the default handler on constructors/setters using attribute syntax, similar to [On](https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-Attributes.html#t:AttrOp).
 
++ Add [resolveSignal](https://hackage.haskell.org/package/haskell-gi-base-0.26.0/docs/Data-GI-Base-Signals.html#v:resolveSignal) for showing what an overloaded signal resolves to: `resolveSignal button #notify` will output [GI.GObject.Objects.Object.Object::notify](https://hackage.haskell.org/package/gi-gobject-2.0.27/docs/GI-GObject-Objects-Object.html#g:signal:notify).
+
 ### 0.25.0
 
 + Support non-GObject object attributes.

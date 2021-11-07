@@ -16,6 +16,8 @@ import Data.Text (Text)
 data SignalConnectMode = SignalConnectBefore
         | SignalConnectAfter
 
+data DbgSignalInfo
+
 class SignalInfo info where
   type HaskellCallbackType info
   connectSignal :: GObject o =>
@@ -24,6 +26,8 @@ class SignalInfo info where
                      SignalConnectMode ->
                      Maybe Text ->
                      IO SignalHandlerId
+  dbgSignalInfo :: Maybe DbgSignalInfo
+  dbgSignalInfo = Nothing
 
 type role SignalProxy nominal nominal
 data SignalProxy object info where

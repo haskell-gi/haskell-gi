@@ -27,6 +27,7 @@ import Data.GI.CodeGen.Haddock (deprecatedPragma,
                                 RelativeDocPosition(..), writeHaddock,
                                 writeDocumentation,
                                 writeArgDocumentation, writeReturnDocumentation)
+import Data.GI.CodeGen.ModulePath (dotModulePath)
 import Data.GI.CodeGen.SymbolNaming
 import Data.GI.CodeGen.Transfer (freeContainerType)
 import Data.GI.CodeGen.Type
@@ -401,8 +402,13 @@ genCallback n callback@(Callback {cbCallable = cb, cbDocumentation = cbDoc }) = 
 -- | Generate the given signal instance for the given API object.
 genSignalInfoInstance :: Name -> Signal -> CodeGen e ()
 genSignalInfoInstance owner signal = group $ do
+  api <- findAPIByName owner
   let name = upperName owner
-  let sn = (ucFirst . signalHaskellName . sigName) signal
+      sn = (ucFirst . signalHaskellName . sigName) signal
+      lcSignal = lcFirst sn
+      qualifiedSignalName = dotModulePath (moduleLocation owner api) <> "." <>
+                            name <> "::" <> sigName signal
+  hackageLink <- hackageModuleLink owner
   si <- signalInfoName owner signal
   bline $ "data " <> si
   line $ "instance SignalInfo " <> si <> " where"
@@ -413,7 +419,12 @@ genSignalInfoInstance owner signal = group $ do
       line $ "connectSignal obj cb connectMode detail = do"
       indent $ do
         genSignalConnector signal cbHaskellType "connectMode" "detail" "cb"
-  export (NamedSubsection SignalSection $ lcFirst sn) si
+      line $ "dbgSignalInfo = P.Just (B.Signals.DbgSignalInfo {"
+      indent $ do
+        line $ "B.Signals.overloadedSignalName = P.Just \"" <> qualifiedSignalName <> "\""
+        line $ ", B.Signals.overloadedSignalURL = P.Just \"" <> hackageLink <> "#"
+          <> haddockSignalAnchor <> lcSignal <> "\"})"
+  export (NamedSubsection SignalSection $ lcSignal) si
 
 -- | Write some simple debug message when signal generation fails, and
 -- generate a placeholder SignalInfo instance.
