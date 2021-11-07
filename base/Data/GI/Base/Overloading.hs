@@ -215,7 +215,7 @@ data MethodProxy (info :: Type) (obj :: Type) = MethodProxy
 -- | Return the fully qualified method name that a given overloaded
 -- method call resolves to (mostly useful for debugging).
 --
--- > resolveMethod #show widget
+-- > resolveMethod widget #show
 resolveMethod :: forall info obj. (OverloadedMethodInfo info obj) =>
-                 MethodProxy info obj -> obj -> MethodInfo
-resolveMethod _p _o = overloadedMethodInfo @info @obj
+                 obj -> MethodProxy info obj -> MethodInfo
+resolveMethod _o _p = overloadedMethodInfo @info @obj
