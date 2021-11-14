@@ -50,9 +50,7 @@ Library
                        text >= 1.0
 
   default-extensions: CPP, ForeignFunctionInterface, DoAndIfThenElse, LambdaCase, RankNTypes, OverloadedStrings
-  ghc-options:         -Wall -fwarn-incomplete-patterns -fno-warn-name-shadowing
-
-  ghc-options: -Wcompat
+  ghc-options:         -Wall -fwarn-incomplete-patterns -fno-warn-name-shadowing -Wcompat
 
   c-sources:           lib/c/enumStorage.c
   build-tool-depends:  hsc2hs:hsc2hs

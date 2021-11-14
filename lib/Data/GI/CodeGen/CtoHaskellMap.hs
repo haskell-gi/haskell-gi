@@ -21,7 +21,7 @@ import Data.GI.CodeGen.API (API(..), Name(..), Callback(..),
                             Signal(..))
 import Data.GI.CodeGen.ModulePath (dotModulePath)
 import Data.GI.CodeGen.SymbolNaming (moduleLocation, lowerName, upperName,
-                                     signalHaskellName)
+                                     signalHaskellName, haddockSignalAnchor)
 import Data.GI.CodeGen.Util (ucFirst)
 
 -- | Link to an identifier, module, etc.
@@ -120,7 +120,7 @@ signalRefs n api maybeCName signals = map signalRef signals
                 Nothing -> let Name ns owner = n
                            in ucFirst ns <> owner
           in (SignalRef ownerCName sn,
-              ModuleLinkWithAnchor (Just sn') mod ("g:signal:" <> sn'))
+              ModuleLinkWithAnchor (Just sn') mod (haddockSignalAnchor <> sn'))
 
 -- | Given an optional C type and the API constructor construct the
 -- list of associated refs.

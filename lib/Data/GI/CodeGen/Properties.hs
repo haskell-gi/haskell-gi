@@ -25,11 +25,14 @@ import Data.GI.CodeGen.GObject
 import Data.GI.CodeGen.Haddock (addSectionDocumentation, writeHaddock,
                                 RelativeDocPosition(DocBeforeSymbol))
 import Data.GI.CodeGen.Inheritance (fullObjectPropertyList, fullInterfacePropertyList)
+import Data.GI.CodeGen.ModulePath (dotModulePath)
 import Data.GI.CodeGen.SymbolNaming (lowerName, upperName, classConstraint,
                                      hyphensToCamelCase, qualifiedSymbol,
                                      typeConstraint, callbackDynamicWrapper,
                                      callbackHaskellToForeign,
-                                     callbackWrapperAllocator, safeCast)
+                                     callbackWrapperAllocator, safeCast,
+                                     hackageModuleLink, moduleLocation,
+                                     haddockAttrAnchor)
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
 
@@ -376,7 +379,8 @@ genOneProperty :: Name -> Property -> ExcCodeGen ()
 genOneProperty owner prop = do
   let name = upperName owner
       cName = (hyphensToCamelCase . propName) prop
-      docSection = NamedSubsection PropertySection (lcFirst cName)
+      lcAttr = lcFirst cName
+      docSection = NamedSubsection PropertySection lcAttr
       pName = name <> cName
       flags = propFlags prop
       writable = PropertyWritable `elem` flags &&
@@ -458,6 +462,11 @@ genOneProperty owner prop = do
                          else [])
     it <- infoType owner prop
     export docSection it
+    api <- findAPIByName owner
+    hackageLink <- hackageModuleLink owner
+    let qualifiedAttrName = dotModulePath (moduleLocation owner api)
+                            <> "." <> lcAttr
+        attrInfoURL = hackageLink <> "#" <> haddockAttrAnchor <> lcAttr
     bline $ "data " <> it
     line $ "instance AttrInfo " <> it <> " where"
     indent $ do
@@ -480,6 +489,11 @@ genOneProperty owner prop = do
               else line $ "attrTransfer _ = undefined"
             line $ "attrConstruct = " <> constructor
             line $ "attrClear = " <> clear
+            line $ "dbgAttrInfo = P.Just (O.ResolvedSymbolInfo {"
+            indent $ do
+              line $ "O.resolvedSymbolName = \"" <> qualifiedAttrName <> "\""
+              line $ ", O.resolvedSymbolURL = \"" <> attrInfoURL <> "\""
+              line $ "})"
 
 -- | Generate a placeholder property for those cases in which code
 -- generation failed.

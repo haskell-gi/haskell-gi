@@ -144,7 +144,9 @@ module Data.GI.Base.Attributes (
   set,
   clear,
 
-  AttrLabelProxy(..)
+  AttrLabelProxy(..),
+
+  resolveAttr
   ) where
 
 import Control.Monad (void)
@@ -152,7 +154,8 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.GI.Base.BasicTypes (GObject)
 import Data.GI.Base.GValue (GValueConstruct)
-import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute)
+import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute,
+                                 ResolvedSymbolInfo)
 
 import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..), SignalProxy,
                                             on, after)
@@ -270,6 +273,12 @@ class AttrInfo (info :: Type) where
                              b ~ AttrTransferType info) =>
                             Proxy o -> b -> IO (AttrTransferType info)
     attrTransfer _ = return
+
+    -- | Return some information about the overloaded attribute,
+    -- useful for debugging. See `resolveAttr` for how to access this
+    -- conveniently.
+    dbgAttrInfo :: Maybe ResolvedSymbolInfo
+    dbgAttrInfo = Nothing
 
 -- | Pretty print a type, indicating the parent type that introduced
 -- the attribute, if different.
@@ -505,3 +514,13 @@ clear :: forall info attr obj m.
          (AttrClearC info obj attr, MonadIO m) =>
          obj -> AttrLabelProxy (attr :: Symbol) -> m ()
 clear o _ = liftIO $ attrClear @info o
+
+-- | Return the fully qualified attribute name that a given overloaded
+-- attribute resolves to (mostly useful for debugging).
+--
+-- > resolveAttr #sensitive button
+resolveAttr :: forall info attr obj.
+               (HasAttributeList obj, info ~ ResolveAttribute attr obj,
+                 AttrInfo info) =>
+               obj -> AttrLabelProxy (attr :: Symbol) -> Maybe ResolvedSymbolInfo
+resolveAttr _o _p = dbgAttrInfo @info

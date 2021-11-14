@@ -160,12 +160,12 @@ genMethodInfo n m =
           line $ "instance O.OverloadedMethodInfo " <> infoName <> " " <> obj
             <> " where"
           indent $ do
-            line $ "overloadedMethodInfo = O.MethodInfo {"
+            line $ "overloadedMethodInfo = P.Just (O.ResolvedSymbolInfo {"
             indent $ do
-              line $ "O.overloadedMethodName = \"" <> dbgInfo <> "\","
-              line $ "O.overloadedMethodURL = \"" <>
+              line $ "O.resolvedSymbolName = \"" <> dbgInfo <> "\","
+              line $ "O.resolvedSymbolURL = \"" <>
                 hackageLink <> "#v:" <> mangled <> "\""
-              line $ "}"
+              line $ "})"
 
         export (NamedSubsection MethodSection $ lowerName mn) infoName
 

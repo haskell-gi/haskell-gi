@@ -8,6 +8,7 @@
 
 module Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on, after) where
 
+import Data.GI.Base.Overloading (ResolvedSymbolInfo)
 import Data.GI.Base.BasicTypes (GObject)
 import Control.Monad.IO.Class (MonadIO)
 import Foreign.C (CULong)
@@ -15,8 +16,6 @@ import Data.Text (Text)
 
 data SignalConnectMode = SignalConnectBefore
         | SignalConnectAfter
-
-data DbgSignalInfo
 
 class SignalInfo info where
   type HaskellCallbackType info
@@ -26,7 +25,7 @@ class SignalInfo info where
                      SignalConnectMode ->
                      Maybe Text ->
                      IO SignalHandlerId
-  dbgSignalInfo :: Maybe DbgSignalInfo
+  dbgSignalInfo :: Maybe ResolvedSymbolInfo
   dbgSignalInfo = Nothing
 
 type role SignalProxy nominal nominal

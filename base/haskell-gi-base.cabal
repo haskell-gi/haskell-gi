@@ -52,7 +52,7 @@ library
                        containers,
                        text >= 1.0
 
-  ghc-options: -Wall -Wno-redundant-constraints -fwarn-incomplete-patterns
+  ghc-options: -Wall -Wno-redundant-constraints -fwarn-incomplete-patterns -Wcompat
 
   build-tool-depends:  hsc2hs:hsc2hs
   cc-options:          -fPIC

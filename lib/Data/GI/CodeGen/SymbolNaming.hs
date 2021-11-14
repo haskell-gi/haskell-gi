@@ -32,6 +32,7 @@ module Data.GI.CodeGen.SymbolNaming
 
     , hackageModuleLink
     , haddockSignalAnchor
+    , haddockAttrAnchor
     ) where
 
 #if !MIN_VERSION_base(4,11,0)
@@ -290,3 +291,7 @@ hackageModuleLink n = do
 -- | Prefix in Haddock for the signal anchor.
 haddockSignalAnchor :: Text
 haddockSignalAnchor = "g:signal:"
+
+-- | Prefix in Haddock for the attribute anchor.
+haddockAttrAnchor :: Text
+haddockAttrAnchor = "g:attr:"

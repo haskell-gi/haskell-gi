@@ -51,7 +51,6 @@ module Data.GI.Base.Signals
     , disconnectSignalHandler
     , SignalHandlerId
     , SignalInfo(..)
-    , DbgSignalInfo(..)
     , GObjectNotifySignalInfo
     , SignalCodeGenError
     , resolveSignal
@@ -80,7 +79,8 @@ import Data.GI.Base.BasicConversions (withTextCString)
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.GParamSpec (newGParamSpecFromPtr)
 import Data.GI.Base.ManagedPtr (withManagedPtr, withTransient)
-import Data.GI.Base.Overloading (ResolveSignal, ResolveAttribute)
+import Data.GI.Base.Overloading (ResolveSignal, ResolveAttribute,
+                                 ResolvedSymbolInfo)
 
 import GHC.OverloadedLabels (IsLabel(..))
 
@@ -125,30 +125,10 @@ class SignalInfo (info :: Type) where
                    SignalConnectMode ->
                    Maybe Text ->
                    IO SignalHandlerId
+
   -- | Optional extra debug information, for `resolveSignal` below.
-  dbgSignalInfo :: Maybe DbgSignalInfo
+  dbgSignalInfo :: Maybe ResolvedSymbolInfo
   dbgSignalInfo = Nothing
-
--- | Extra information about an overloaded signal, for debugging
--- purposes.
-data DbgSignalInfo = DbgSignalInfo {
-  -- | The full name of the signal for debugging purposes, see `resolveSignal`.
-  overloadedSignalName :: Maybe Text
-  -- | URL containing documentation for the signal for debugging
-  -- purposes, see `resolveSignal`.
-  , overloadedSignalURL :: Maybe Text
-  }
-
-instance Show DbgSignalInfo where
-  show info = T.unpack $ case overloadedSignalURL info of
-                Nothing -> case overloadedSignalName info of
-                             Nothing -> "(unknown signal)"
-                             Just n -> n
-                Just url -> let n = case overloadedSignalName info of
-                                      Just name -> name
-                                      Nothing -> url
-                            in "\ESC]8;;" <> url <> "\ESC\\" <> n
-                               <> "\ESC]8;;\ESC\\"
 
 -- | Whether to connect a handler to a signal with `connectSignal` so
 -- that it runs before/after the default handler for the given signal.
@@ -268,7 +248,5 @@ type family SignalCodeGenError (signalName :: Symbol) :: Type where
 --
 -- > resolveSignal #childNotify button
 resolveSignal :: forall object info. (GObject object, SignalInfo info) =>
-                 object -> SignalProxy object info -> DbgSignalInfo
-resolveSignal _o _p = case dbgSignalInfo @info of
-                        Nothing -> DbgSignalInfo Nothing Nothing
-                        Just dbg -> dbg
+                 object -> SignalProxy object info -> Maybe ResolvedSymbolInfo
+resolveSignal _o _p = dbgSignalInfo @info

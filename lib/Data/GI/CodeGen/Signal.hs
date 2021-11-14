@@ -406,8 +406,8 @@ genSignalInfoInstance owner signal = group $ do
   let name = upperName owner
       sn = (ucFirst . signalHaskellName . sigName) signal
       lcSignal = lcFirst sn
-      qualifiedSignalName = dotModulePath (moduleLocation owner api) <> "." <>
-                            name <> "::" <> sigName signal
+      qualifiedSignalName = dotModulePath (moduleLocation owner api)
+                            <> "::" <> sigName signal
   hackageLink <- hackageModuleLink owner
   si <- signalInfoName owner signal
   bline $ "data " <> si
@@ -419,10 +419,10 @@ genSignalInfoInstance owner signal = group $ do
       line $ "connectSignal obj cb connectMode detail = do"
       indent $ do
         genSignalConnector signal cbHaskellType "connectMode" "detail" "cb"
-      line $ "dbgSignalInfo = P.Just (B.Signals.DbgSignalInfo {"
+      line $ "dbgSignalInfo = P.Just (O.ResolvedSymbolInfo {"
       indent $ do
-        line $ "B.Signals.overloadedSignalName = P.Just \"" <> qualifiedSignalName <> "\""
-        line $ ", B.Signals.overloadedSignalURL = P.Just \"" <> hackageLink <> "#"
+        line $ "O.resolvedSymbolName = \"" <> qualifiedSignalName <> "\""
+        line $ ", O.resolvedSymbolURL = \"" <> hackageLink <> "#"
           <> haddockSignalAnchor <> lcSignal <> "\"})"
   export (NamedSubsection SignalSection $ lcSignal) si
 

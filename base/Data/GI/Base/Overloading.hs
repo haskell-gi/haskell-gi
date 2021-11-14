@@ -33,7 +33,8 @@ module Data.GI.Base.Overloading
     , OverloadedMethodInfo(..)
     , OverloadedMethod(..)
     , MethodProxy(..)
-    , MethodInfo(..)
+
+    , ResolvedSymbolInfo(..)
     , resolveMethod
     ) where
 
@@ -191,22 +192,23 @@ type family MethodResolutionFailed (method :: Symbol) (o :: Type) where
 class OverloadedMethod i o s where
   overloadedMethod :: o -> s -- ^ The actual method being invoked.
 
--- | Information about the method that will be invoked, for debugging
+-- | Information about a fully resolved symbol, for debugging
 -- purposes.
-data MethodInfo = MethodInfo { overloadedMethodName    :: Text
-                             , overloadedMethodURL     :: Text
-                             }
+data ResolvedSymbolInfo = ResolvedSymbolInfo {
+  resolvedSymbolName      :: Text
+  , resolvedSymbolURL     :: Text
+  }
 
-instance Show MethodInfo where
+instance Show ResolvedSymbolInfo where
   -- Format as a hyperlink on modern terminals (older
   -- terminals should ignore the hyperlink part).
-  show info = T.unpack ("\ESC]8;;" <> overloadedMethodURL info
-                         <> "\ESC\\" <> overloadedMethodName info
+  show info = T.unpack ("\ESC]8;;" <> resolvedSymbolURL info
+                         <> "\ESC\\" <> resolvedSymbolName info
                          <> "\ESC]8;;\ESC\\")
 
 -- | This is for debugging purposes, see `resolveMethod` below.
 class OverloadedMethodInfo i o where
-  overloadedMethodInfo :: MethodInfo
+  overloadedMethodInfo :: Maybe ResolvedSymbolInfo
 
 -- | A proxy for carrying the types `MethodInfoName` needs (this is used
 -- for `resolveMethod`, see below).
@@ -217,5 +219,5 @@ data MethodProxy (info :: Type) (obj :: Type) = MethodProxy
 --
 -- > resolveMethod widget #show
 resolveMethod :: forall info obj. (OverloadedMethodInfo info obj) =>
-                 obj -> MethodProxy info obj -> MethodInfo
+                 obj -> MethodProxy info obj -> Maybe ResolvedSymbolInfo
 resolveMethod _o _p = overloadedMethodInfo @info @obj

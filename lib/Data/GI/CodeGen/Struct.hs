@@ -26,11 +26,14 @@ import Data.GI.CodeGen.Conversions
 import Data.GI.CodeGen.Code
 import Data.GI.CodeGen.Haddock (addSectionDocumentation, writeHaddock,
                                 RelativeDocPosition(DocBeforeSymbol))
+import Data.GI.CodeGen.ModulePath (dotModulePath)
 import Data.GI.CodeGen.SymbolNaming (upperName, lowerName,
                                      underscoresToCamelCase,
                                      qualifiedSymbol,
                                      callbackHaskellToForeign,
-                                     callbackWrapperAllocator)
+                                     callbackWrapperAllocator,
+                                     haddockAttrAnchor, moduleLocation,
+                                     hackageModuleLink)
 
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
@@ -334,6 +337,12 @@ genAttrInfo owner field = do
   transferType <- fieldTransferType (fieldType field)
   transferConstraint <- fieldTransferTypeConstraint (fieldType field)
 
+  api <- findAPIByName owner
+  hackageLink <- hackageModuleLink owner
+  let qualifiedAttrName = dotModulePath (moduleLocation owner api)
+                          <> "." <> labelName field
+      attrInfoURL = hackageLink <> "#" <> haddockAttrAnchor <> labelName field
+
   line $ "data " <> it
   line $ "instance AttrInfo " <> it <> " where"
   indent $ do
@@ -366,6 +375,11 @@ genAttrInfo owner field = do
           line $ "attrTransfer _ v = do"
           indent $ genFieldTransfer "v" (fieldType field)
       else line $ "attrTransfer = undefined"
+    line $ "dbgAttrInfo = P.Just (O.ResolvedSymbolInfo {"
+    indent $ do
+      line $ "O.resolvedSymbolName = \"" <> qualifiedAttrName <> "\""
+      line $ ", O.resolvedSymbolURL = \"" <> attrInfoURL <> "\""
+      line $ "})"
 
   blank
 
