@@ -9,7 +9,7 @@
     "girOverrides": null,
     "baseVersion": "base >= 4.9 && <5",
     "distributionPackages": {
-        "ubuntu": ["libadwaita-1-dev"]
+        "ubuntu-ci": null
     },
     "giDepends": [
         "gi-gobject == 2.0.*",
