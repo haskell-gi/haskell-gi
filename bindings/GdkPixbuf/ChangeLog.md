@@ -1,3 +1,7 @@
+### 2.0.28
+
++ Refresh list of nullables
+
 ### 2.0.27
 
 + Update to haskell-gi(-base)-0.26
