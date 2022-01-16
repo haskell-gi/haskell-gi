@@ -59,4 +59,4 @@ library
   default-language:    Haskell2010
   default-extensions:  CPP, ForeignFunctionInterface, DoAndIfThenElse, MonoLocalBinds
   other-extensions:    TypeApplications, ScopedTypeVariables
-  c-sources:           c/hsgclosure.c
+  c-sources:           csrc/hsgclosure.c
