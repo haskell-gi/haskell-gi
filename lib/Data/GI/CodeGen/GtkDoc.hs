@@ -20,8 +20,10 @@ import Data.Monoid ((<>))
 #endif
 import Control.Applicative ((<|>))
 
+import Data.GI.GIR.BasicTypes (Name(Name))
+
 import Data.Attoparsec.Text
-import Data.Char (isAsciiUpper, isAsciiLower, isDigit)
+import Data.Char (isAlphaNum, isAlpha, isAscii)
 import qualified Data.Text as T
 import Data.Text (Text)
 
@@ -53,15 +55,21 @@ newtype Language = Language Text
   deriving (Show, Eq)
 
 -- | A reference to some symbol in the API.
-data CRef = FunctionRef Text
+data CRef = FunctionRef Name
+          | OldFunctionRef Text
+          | MethodRef Name Text
           | ParamRef Text
           | ConstantRef Text
-          | SignalRef Text Text
+          | SignalRef Name Text
+          | OldSignalRef Text Text
           | LocalSignalRef Text
-          | PropertyRef Text Text
+          | PropertyRef Name Text
+          | OldPropertyRef Text Text
           | VMethodRef Text Text
+          | VFuncRef Name Text
           | StructFieldRef Text Text
-          | TypeRef Text
+          | CTypeRef Text
+          | TypeRef Name
   deriving (Show, Eq, Ord)
 
 -- | A parsed representation of gtk-doc formatted documentation.
@@ -75,7 +83,7 @@ newtype GtkDoc = GtkDoc [Token]
 -- GtkDoc []
 --
 -- >>> parseGtkDoc "func()"
--- GtkDoc [SymbolRef (FunctionRef "func")]
+-- GtkDoc [SymbolRef (OldFunctionRef "func")]
 --
 -- >>> parseGtkDoc "literal"
 -- GtkDoc [Literal "literal"]
@@ -84,13 +92,13 @@ newtype GtkDoc = GtkDoc [Token]
 -- GtkDoc [Literal "This is a long literal"]
 --
 -- >>> parseGtkDoc "Call foo() for free cookies"
--- GtkDoc [Literal "Call ",SymbolRef (FunctionRef "foo"),Literal " for free cookies"]
+-- GtkDoc [Literal "Call ",SymbolRef (OldFunctionRef "foo"),Literal " for free cookies"]
 --
 -- >>> parseGtkDoc "The signal ::activate is related to gtk_button_activate()."
--- GtkDoc [Literal "The signal ",SymbolRef (LocalSignalRef "activate"),Literal " is related to ",SymbolRef (FunctionRef "gtk_button_activate"),Literal "."]
+-- GtkDoc [Literal "The signal ",SymbolRef (LocalSignalRef "activate"),Literal " is related to ",SymbolRef (OldFunctionRef "gtk_button_activate"),Literal "."]
 --
 -- >>> parseGtkDoc "The signal ##%#GtkButton::activate is related to gtk_button_activate()."
--- GtkDoc [Literal "The signal ##%",SymbolRef (SignalRef "GtkButton" "activate"),Literal " is related to ",SymbolRef (FunctionRef "gtk_button_activate"),Literal "."]
+-- GtkDoc [Literal "The signal ##%",SymbolRef (OldSignalRef "GtkButton" "activate"),Literal " is related to ",SymbolRef (OldFunctionRef "gtk_button_activate"),Literal "."]
 --
 -- >>> parseGtkDoc "# A section\n\n## and a subsection ##\n"
 -- GtkDoc [SectionHeader 1 (GtkDoc [Literal "A section"]),Literal "\n",SectionHeader 2 (GtkDoc [Literal "and a subsection "])]
@@ -162,7 +170,7 @@ parseTokens = headerAndTokens <|> justTokens
 --
 -- === __Examples__
 -- >>> parseOnly (parseToken <* endOfInput) "func()"
--- Right (SymbolRef (FunctionRef "func"))
+-- Right (SymbolRef (OldFunctionRef "func"))
 parseToken :: Parser Token
 parseToken = -- Note that the parsers overlap, so this is not as
              -- efficient as it could be (if we had combined parsers
@@ -173,17 +181,20 @@ parseToken = -- Note that the parsers overlap, so this is not as
              -- parser much, and it is the main source of
              -- backtracking.
                  parseFunctionRef
+             <|> parseMethod
              <|> parseSignal
+             <|> parseId
              <|> parseLocalSignal
              <|> parseProperty
              <|> parseVMethod
              <|> parseStructField
-             <|> parseType
+             <|> parseClass
+             <|> parseCType
              <|> parseConstant
              <|> parseParam
              <|> parseEscaped
-             <|> parseVerbatim
              <|> parseCodeBlock
+             <|> parseVerbatim
              <|> parseUrl
              <|> parseImage
              <|> parseSectionHeader
@@ -191,19 +202,134 @@ parseToken = -- Note that the parsers overlap, so this is not as
              <|> parseComment
              <|> parseBoringLiteral
 
--- | Parse a signal name, of the form
+-- | Whether the given character is valid in a C identifier.
+isCIdent :: Char -> Bool
+isCIdent '_' = True
+isCIdent c   = isAscii c && isAlphaNum c
+
+-- | Something that could be a valid C identifier (loosely speaking,
+-- we do not need to be too strict here).
+parseCIdent :: Parser Text
+parseCIdent = takeWhile1 isCIdent
+
+-- | Parse a function ref
+parseFunctionRef :: Parser Token
+parseFunctionRef = parseOldFunctionRef <|> parseNewFunctionRef
+
+-- | Parse an unresolved reference to a C symbol in new gtk-doc notation.
+parseId :: Parser Token
+parseId = do
+  _ <- string "[id@"
+  ident <- parseCIdent
+  _ <- char ']'
+  return (SymbolRef (OldFunctionRef ident))
+
+-- | Parse a function ref, given by a valid C identifier followed by
+-- '()', for instance 'gtk_widget_show()'. If the identifier is not
+-- followed by "()", return it as a literal instead.
+--
+-- === __Examples__
+-- >>> parseOnly (parseFunctionRef <* endOfInput) "test_func()"
+-- Right (SymbolRef (OldFunctionRef "test_func"))
+--
+-- >>> parseOnly (parseFunctionRef <* endOfInput) "not_a_func"
+-- Right (Literal "not_a_func")
+parseOldFunctionRef :: Parser Token
+parseOldFunctionRef = do
+  ident <- parseCIdent
+  option (Literal ident) (string "()" >>
+                          return (SymbolRef (OldFunctionRef ident)))
+
+-- | Parse a function name in new style, of the form
+-- > [func@Namespace.c_func_name]
+--
+-- === __Examples__
+-- >>> parseOnly (parseFunctionRef <* endOfInput) "[func@Gtk.init]"
+-- Right (SymbolRef (FunctionRef (Name {namespace = "Gtk", name = "init"})))
+parseNewFunctionRef :: Parser Token
+parseNewFunctionRef = do
+  _ <- string "[func@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- takeWhile1 isCIdent
+  _ <- char ']'
+  return $ SymbolRef $ FunctionRef (Name ns n)
+
+-- | Parse a method name, of the form
+-- > [method@Namespace.Object.c_func_name]
+--
+-- === __Examples__
+-- >>> parseOnly (parseMethod <* endOfInput) "[method@Gtk.Button.set_child]"
+-- Right (SymbolRef (MethodRef (Name {namespace = "Gtk", name = "Button"}) "set_child"))
+parseMethod :: Parser Token
+parseMethod = do
+  _ <- string "[method@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- takeWhile1 isCIdent
+  _ <- char '.'
+  method <- takeWhile1 isCIdent
+  _ <- char ']'
+  return $ SymbolRef $ MethodRef (Name ns n) method
+
+-- | Parse a reference to a type, of the form
+-- > [class@Namespace.Name]
+-- an interface of the form
+-- > [iface@Namespace.Name]
+-- or an enum type:
+-- > [enum@Namespace.Name]
+--
+-- === __Examples__
+-- >>> parseOnly (parseClass <* endOfInput) "[class@Gtk.Dialog]"
+-- Right (SymbolRef (TypeRef (Name {namespace = "Gtk", name = "Dialog"})))
+--
+-- >>> parseOnly (parseClass <* endOfInput) "[iface@Gtk.Editable]"
+-- Right (SymbolRef (TypeRef (Name {namespace = "Gtk", name = "Editable"})))
+--
+-- >>> parseOnly (parseClass <* endOfInput) "[enum@Gtk.SizeRequestMode]"
+-- Right (SymbolRef (TypeRef (Name {namespace = "Gtk", name = "SizeRequestMode"})))
+parseClass :: Parser Token
+parseClass = do
+  _ <- string "[class@" <|> string "[iface@" <|> string "[enum@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- takeWhile1 isCIdent
+  _ <- char ']'
+  return $ SymbolRef $ TypeRef (Name ns n)
+
+parseSignal :: Parser Token
+parseSignal = parseOldSignal <|> parseNewSignal
+
+-- | Parse an old style signal name, of the form
 -- > #Object::signal
 --
 -- === __Examples__
--- >>> parseOnly (parseSignal <* endOfInput) "#GtkButton::activate"
--- Right (SymbolRef (SignalRef "GtkButton" "activate"))
-parseSignal :: Parser Token
-parseSignal = do
+-- >>> parseOnly (parseOldSignal <* endOfInput) "#GtkButton::activate"
+-- Right (SymbolRef (OldSignalRef "GtkButton" "activate"))
+parseOldSignal :: Parser Token
+parseOldSignal = do
   _ <- char '#'
   obj <- parseCIdent
   _ <- string "::"
   signal <- signalOrPropName
-  return (SymbolRef (SignalRef obj signal))
+  return (SymbolRef (OldSignalRef obj signal))
+
+-- | Parse a new style signal ref, of the form
+-- > [signal@Namespace.Object::signal-name]
+--
+-- === __Examples__
+-- >>> parseOnly (parseNewSignal <* endOfInput) "[signal@Gtk.AboutDialog::activate-link]"
+-- Right (SymbolRef (SignalRef (Name {namespace = "Gtk", name = "AboutDialog"}) "activate-link"))
+parseNewSignal :: Parser Token
+parseNewSignal = do
+  _ <- string "[signal@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- parseCIdent
+  _ <- string "::"
+  signal <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
+  _ <- char ']'
+  return (SymbolRef (SignalRef (Name ns n) signal))
 
 -- | Parse a reference to a signal defined in the current module, of the form
 -- > ::signal
@@ -217,19 +343,40 @@ parseLocalSignal = do
   signal <- signalOrPropName
   return (SymbolRef (LocalSignalRef signal))
 
--- | Parse a property name, of the form
+-- | Parse a property name in the old style, of the form
 -- > #Object:property
 --
 -- === __Examples__
--- >>> parseOnly (parseProperty <* endOfInput) "#GtkButton:always-show-image"
--- Right (SymbolRef (PropertyRef "GtkButton" "always-show-image"))
-parseProperty :: Parser Token
-parseProperty = do
+-- >>> parseOnly (parseOldProperty <* endOfInput) "#GtkButton:always-show-image"
+-- Right (SymbolRef (OldPropertyRef "GtkButton" "always-show-image"))
+parseOldProperty :: Parser Token
+parseOldProperty = do
   _ <- char '#'
   obj <- parseCIdent
   _ <- char ':'
   property <- signalOrPropName
-  return (SymbolRef (PropertyRef obj property))
+  return (SymbolRef (OldPropertyRef obj property))
+
+-- | Parse a property name in the new style:
+-- > [property@Namespace.Object:property-name]
+--
+-- === __Examples__
+-- >>> parseOnly (parseNewProperty <* endOfInput) "[property@Gtk.ProgressBar:show-text]"
+-- Right (SymbolRef (PropertyRef (Name {namespace = "Gtk", name = "ProgressBar"}) "show-text"))
+parseNewProperty :: Parser Token
+parseNewProperty = do
+  _ <- string "[property@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- parseCIdent
+  _ <- char ':'
+  property <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
+  _ <- char ']'
+  return (SymbolRef (PropertyRef (Name ns n) property))
+
+-- | Parse a property
+parseProperty :: Parser Token
+parseProperty = parseOldProperty <|> parseNewProperty
 
 -- | Parse an xml comment, of the form
 -- > <!-- comment -->
@@ -243,20 +390,40 @@ parseComment = do
   comment <- string "<!--" *> manyTill anyChar (string "-->")
   return (Comment $ T.pack comment)
 
--- | Parse a reference to a virtual method, of the form
+-- | Parse an old style reference to a virtual method, of the form
 -- > #Struct.method()
 --
 -- === __Examples__
--- >>> parseOnly (parseVMethod <* endOfInput) "#Foo.bar()"
+-- >>> parseOnly (parseOldVMethod <* endOfInput) "#Foo.bar()"
 -- Right (SymbolRef (VMethodRef "Foo" "bar"))
-parseVMethod :: Parser Token
-parseVMethod = do
+parseOldVMethod :: Parser Token
+parseOldVMethod = do
   _ <- char '#'
   obj <- parseCIdent
   _ <- char '.'
   method <- parseCIdent
   _ <- string "()"
   return (SymbolRef (VMethodRef obj method))
+
+-- | Parse a new style reference to a virtual function, of the form
+-- > [vfunc@Namespace.Object.vfunc_name]
+--
+-- >>> parseOnly (parseVFunc <* endOfInput) "[vfunc@Gtk.Widget.get_request_mode]"
+-- Right (SymbolRef (VFuncRef (Name {namespace = "Gtk", name = "Widget"}) "get_request_mode"))
+parseVFunc :: Parser Token
+parseVFunc = do
+  _ <- string "[vfunc@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- parseCIdent
+  _ <- char '.'
+  vfunc <- parseCIdent
+  _ <- char ']'
+  return (SymbolRef (VFuncRef (Name ns n) vfunc))
+
+-- | Parse a reference to a virtual method
+parseVMethod :: Parser Token
+parseVMethod = parseOldVMethod <|> parseVFunc
 
 -- | Parse a reference to a struct field, of the form
 -- > #Struct.field
@@ -276,13 +443,13 @@ parseStructField = do
 -- > #Type
 --
 -- === __Examples__
--- >>> parseOnly (parseType <* endOfInput) "#Foo"
--- Right (SymbolRef (TypeRef "Foo"))
-parseType :: Parser Token
-parseType = do
+-- >>> parseOnly (parseCType <* endOfInput) "#Foo"
+-- Right (SymbolRef (CTypeRef "Foo"))
+parseCType :: Parser Token
+parseCType = do
   _ <- char '#'
   obj <- parseCIdent
-  return (SymbolRef (TypeRef obj))
+  return (SymbolRef (CTypeRef obj))
 
 -- | Parse a constant, of the form
 -- > %CONSTANT_NAME
@@ -308,11 +475,6 @@ parseParam = do
   param <- parseCIdent
   return (SymbolRef (ParamRef param))
 
--- | Whether the given character is valid in a C identifier.
-isCIdent :: Char -> Bool
-isCIdent '_' = True
-isCIdent c   = isDigit c || isAsciiUpper c || isAsciiLower c
-
 -- | Name of a signal or property name. Similar to a C identifier, but
 -- hyphens are allowed too.
 signalOrPropName :: Parser Text
@@ -320,27 +482,6 @@ signalOrPropName = takeWhile1 isSignalOrPropIdent
   where isSignalOrPropIdent :: Char -> Bool
         isSignalOrPropIdent '-' = True
         isSignalOrPropIdent c = isCIdent c
-
--- | Something that could be a valid C identifier (loosely speaking,
--- we do not need to be too strict here).
-parseCIdent :: Parser Text
-parseCIdent = takeWhile1 isCIdent
-
--- | Parse a function ref, given by a valid C identifier followed by
--- '()', for instance 'gtk_widget_show()'. If the identifier is not
--- followed by "()", return it as a literal instead.
---
--- === __Examples__
--- >>> parseOnly (parseFunctionRef <* endOfInput) "test_func()"
--- Right (SymbolRef (FunctionRef "test_func"))
---
--- >>> parseOnly (parseFunctionRef <* endOfInput) "not_a_func"
--- Right (Literal "not_a_func")
-parseFunctionRef :: Parser Token
-parseFunctionRef = do
-  ident <- parseCIdent
-  option (Literal ident) (string "()" >>
-                          return (SymbolRef (FunctionRef ident)))
 
 -- | Parse a escaped special character, i.e. one preceded by '\'.
 parseEscaped :: Parser Token
@@ -419,7 +560,37 @@ parseImage = do
 
 -- | Parse a code block embedded in the documentation.
 parseCodeBlock :: Parser Token
-parseCodeBlock = do
+parseCodeBlock = parseOldStyleCodeBlock <|> parseNewStyleCodeBlock
+
+-- | Parse a new style code block, of the form
+-- > ```c
+-- > some c code
+-- > ```
+--
+-- === __Examples__
+-- >>> parseOnly (parseNewStyleCodeBlock <* endOfInput) "```c\nThis is C code\n```"
+-- Right (CodeBlock (Just (Language "c")) "This is C code")
+parseNewStyleCodeBlock :: Parser Token
+parseNewStyleCodeBlock = do
+  _ <- string "```"
+  lang <- T.strip <$> takeWhile (/= '\n')
+  _ <- char '\n'
+  let maybeLang = if T.null lang then Nothing
+                  else Just lang
+  code <- T.pack <$> manyTill anyChar (string "\n```")
+  return $ CodeBlock (Language <$> maybeLang) code
+
+-- | Parse an old style code block, of the form
+-- > |[<!-- language="C" --> code ]|
+--
+-- === __Examples__
+-- >>> parseOnly (parseOldStyleCodeBlock <* endOfInput) "|[this is code]|"
+-- Right (CodeBlock Nothing "this is code")
+--
+-- >>> parseOnly (parseOldStyleCodeBlock <* endOfInput) "|[<!-- language=\"C\"-->this is C code]|"
+-- Right (CodeBlock (Just (Language "C")) "this is C code")
+parseOldStyleCodeBlock :: Parser Token
+parseOldStyleCodeBlock = do
   _ <- string "|["
   lang <- (Just <$> parseLanguage) <|> return Nothing
   code <- T.pack <$> manyTill anyChar (string "]|")

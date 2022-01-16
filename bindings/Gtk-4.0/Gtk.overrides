@@ -1,4 +1,4 @@
-C-docs-url Gtk https://developer.gnome.org/gtk4/stable
+C-docs-url Gtk https://docs.gtk.org/gtk4
 
 # The introspection annotation marks the parameters as
 # (out caller-allocates), but it is just a pointer to a GValue.

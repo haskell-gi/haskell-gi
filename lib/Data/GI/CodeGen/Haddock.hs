@@ -23,6 +23,7 @@ import qualified Data.Text as T
 import Data.Text (Text)
 
 import Data.GI.GIR.Arg (Arg(..))
+import Data.GI.GIR.BasicTypes (Name(Name))
 import Data.GI.GIR.Callable (Callable(..))
 import Data.GI.GIR.Deprecation (DeprecationInfo(..))
 import Data.GI.GIR.Documentation (Documentation(..))
@@ -51,8 +52,8 @@ data RelativeDocPosition = DocBeforeSymbol
 -- >>> formatHaddock M.empty "" (GtkDoc [Literal "Hello ", Literal "World!"])
 -- "Hello World!"
 --
--- >>> let c2h = M.fromList [(FunctionRef "foo", ValueIdentifier "foo")]
--- >>> formatHaddock c2h "" (GtkDoc [SymbolRef (FunctionRef "foo")])
+-- >>> let c2h = M.fromList [(OldFunctionRef "foo", ValueIdentifier "foo")]
+-- >>> formatHaddock c2h "" (GtkDoc [SymbolRef (OldFunctionRef "foo")])
 -- "'foo'"
 --
 -- >>> let onlineDocs = "http://wiki.haskell.org"
@@ -78,28 +79,46 @@ formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
 
 -- | Format a `CRef` whose Haskell representation is not known.
 formatUnknownCRef :: M.Map CRef Hyperlink -> CRef -> Text
-formatUnknownCRef _ (FunctionRef f) = formatCRef $ f <> "()"
+formatUnknownCRef _ (OldFunctionRef f) = formatCRef $ f <> "()"
+formatUnknownCRef _ (FunctionRef (Name ns n)) = formatCRef $ ns <> "." <> n
 formatUnknownCRef _ (ParamRef p) = "/@" <> lowerSymbol p <> "@/"
 formatUnknownCRef _ (LocalSignalRef s) =
   let sn = signalHaskellName s
   in "[" <> sn <> "](#" <> haddockSignalAnchor <> sn <> ")"
-formatUnknownCRef c2h (SignalRef owner signal) =
+formatUnknownCRef c2h (SignalRef owner@(Name ns n) signal) =
   case M.lookup (TypeRef owner) c2h of
+    Nothing -> formatCRef $ ns <> "." <> n <> "::" <> signal
+    Just r -> formatHyperlink r <> "::" <> formatCRef signal
+formatUnknownCRef c2h (OldSignalRef owner signal) =
+  case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "::" <> signal
     Just r -> formatHyperlink r <> "::" <> formatCRef signal
-formatUnknownCRef c2h (PropertyRef owner prop) =
-  case M.lookup (TypeRef owner) c2h of
+formatUnknownCRef c2h (OldPropertyRef owner prop) =
+  case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> ":" <> prop
     Just r -> formatHyperlink r <> ":" <> formatCRef prop
-formatUnknownCRef c2h (VMethodRef owner vmethod) =
+formatUnknownCRef c2h (PropertyRef owner@(Name ns n) prop) =
   case M.lookup (TypeRef owner) c2h of
+    Nothing -> formatCRef $ ns <> "." <> n <> ":" <> prop
+    Just r -> formatHyperlink r <> ":" <> formatCRef prop
+formatUnknownCRef c2h (VMethodRef owner vmethod) =
+  case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "." <> vmethod <> "()"
     Just r -> formatHyperlink r <> "." <> formatCRef vmethod <> "()"
-formatUnknownCRef c2h (StructFieldRef owner field) =
+formatUnknownCRef c2h (VFuncRef owner@(Name ns n) vmethod) =
   case M.lookup (TypeRef owner) c2h of
+    Nothing -> formatCRef $ ns <> "." <> n <> "." <> vmethod <> "()"
+    Just r -> formatHyperlink r <> "." <> formatCRef vmethod <> "()"
+formatUnknownCRef c2h (MethodRef owner@(Name ns n) method) =
+  case M.lookup (TypeRef owner) c2h of
+    Nothing -> formatCRef $ ns <> "." <> n <> "." <> method <> "()"
+    Just r -> formatHyperlink r <> "." <> formatCRef method <> "()"
+formatUnknownCRef c2h (StructFieldRef owner field) =
+  case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "." <> field
     Just r -> formatHyperlink r <> "." <> formatCRef field
-formatUnknownCRef _ (TypeRef t) = formatCRef t
+formatUnknownCRef _ (CTypeRef t) = formatCRef t
+formatUnknownCRef _ (TypeRef (Name ns n)) = formatCRef $ ns <> "." <> n
 formatUnknownCRef _ (ConstantRef t) = formatCRef t
 
 -- | Formatting for an unknown C reference.
