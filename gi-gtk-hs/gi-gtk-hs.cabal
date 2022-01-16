@@ -1,5 +1,5 @@
 name:                gi-gtk-hs
-version:             0.3.10
+version:             0.3.12
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 homepage:            https://github.com/haskell-gi/haskell-gi
@@ -29,7 +29,7 @@ library
                        Data.GI.Gtk.ComboBox
 
   build-depends:       base >= 4.9 && <5,
-                       base-compat >=0.9.0 && <0.12,
+                       base-compat >=0.9.0 && <0.13,
                        mtl >= 2.1 && <2.3,
                        transformers >=0.3.0.0 && <0.6,
                        containers >=0.5.5.1 && <0.7,
