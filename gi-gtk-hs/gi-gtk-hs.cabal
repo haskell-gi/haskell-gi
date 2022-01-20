@@ -19,14 +19,15 @@ extra-source-files:  cbits/Gtk2HsStore.h
 library
   exposed-modules:     Data.GI.Gtk,
                        Data.GI.Gtk.BuildFn
-                       Data.GI.Gtk.Threading
-                       Data.GI.Gtk.ModelView.Types
+                       Data.GI.Gtk.ComboBox
                        Data.GI.Gtk.ModelView.CellLayout
                        Data.GI.Gtk.ModelView.CustomStore
-                       Data.GI.Gtk.ModelView.SeqStore
                        Data.GI.Gtk.ModelView.ForestStore
+                       Data.GI.Gtk.ModelView.SeqStore
                        Data.GI.Gtk.ModelView.TreeModel
-                       Data.GI.Gtk.ComboBox
+                       Data.GI.Gtk.ModelView.Types
+                       Data.GI.Gtk.Threading
+                       Data.GI.Gtk.Widget
 
   build-depends:       base >= 4.9 && <5,
                        base-compat >=0.9.0 && <0.13,
