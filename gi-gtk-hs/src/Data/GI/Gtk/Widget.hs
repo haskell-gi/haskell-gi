@@ -1,5 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- This is needed because of using the IsWidget constraint synonym in
+-- printWidgetTree.  See
+-- https://github.com/haskell-gi/haskell-gi/pull/376#discussion_r786423429
+-- for a little discussion of this.
+{-# OPTIONS_GHC -fno-warn-simplifiable-class-constraints #-}
+
 -- |
 -- Stability   : provisional
 -- Portability : portable (depends on GHC)
