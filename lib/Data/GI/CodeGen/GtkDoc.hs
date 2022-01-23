@@ -182,6 +182,7 @@ parseToken = -- Note that the parsers overlap, so this is not as
              -- backtracking.
                  parseFunctionRef
              <|> parseMethod
+             <|> parseConstructor
              <|> parseSignal
              <|> parseId
              <|> parseLocalSignal
@@ -264,6 +265,23 @@ parseNewFunctionRef = do
 parseMethod :: Parser Token
 parseMethod = do
   _ <- string "[method@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- takeWhile1 isCIdent
+  _ <- char '.'
+  method <- takeWhile1 isCIdent
+  _ <- char ']'
+  return $ SymbolRef $ MethodRef (Name ns n) method
+
+-- | Parse a reference to a constructor, of the form
+-- > [ctor@Namespace.Object.c_func_name]
+--
+-- === __Examples__
+-- >>> parseOnly (parseConstructor <* endOfInput) "[ctor@Gtk.Builder.new_from_file]"
+-- Right (SymbolRef (MethodRef (Name {namespace = "Gtk", name = "Builder"}) "new_from_file"))
+parseConstructor :: Parser Token
+parseConstructor = do
+  _ <- string "[ctor@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
   _ <- char '.'
   n <- takeWhile1 isCIdent
