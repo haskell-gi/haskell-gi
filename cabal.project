@@ -36,6 +36,7 @@ packages: base/haskell-gi-base.cabal
           bindings/GstVideo/gi-gstvideo.cabal
           bindings/GstTag/gi-gsttag.cabal
           bindings/GstPbutils/gi-gstpbutils.cabal
+          bindings/GES/gi-ges.cabal
           bindings/Gtk-3.0/gi-gtk.cabal
           bindings/GtkLayerShell/gi-gtk-layer-shell.cabal
           bindings/GtkSource/gi-gtksource.cabal
