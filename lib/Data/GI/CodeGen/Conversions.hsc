@@ -354,11 +354,14 @@ hashTableKeyMappings t =
 -- (destroy,packer,unpacker) for the given type.
 hashTablePtrPackers :: Type -> ExcCodeGen (Text, Text, Text)
 hashTablePtrPackers (TBasicType TPtr) =
-    return ("Nothing", "ptrPackPtr", "ptrUnpackPtr")
+  return ("Nothing", "B.GHT.ptrPackPtr", "B.GHT.ptrUnpackPtr")
 hashTablePtrPackers (TBasicType TUTF8) =
-    return ("(Just ptr_to_g_free)", "cstringPackPtr", "cstringUnpackPtr")
+  return ("(Just ptr_to_g_free)", "B.GHT.cstringPackPtr", "B.GHT.cstringUnpackPtr")
+hashTablePtrPackers TGValue =
+  return ("(Just B.GValue.ptr_to_gvalue_free)", "B.GHT.gvaluePackPtr",
+           "B.GHT.gvalueUnpackPtr")
 hashTablePtrPackers t =
-    notImplementedError $ "GHashTable element of type " <> tshow t <> " unsupported."
+  notImplementedError $ "GHashTable element of type " <> tshow t <> " unsupported."
 
 hToF_PackGHashTable :: Type -> Type -> ExcCodeGen Converter
 hToF_PackGHashTable keys elems = do

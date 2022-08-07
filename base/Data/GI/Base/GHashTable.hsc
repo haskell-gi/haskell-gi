@@ -21,23 +21,17 @@ module Data.GI.Base.GHashTable
     , gStrEqual
     , cstringPackPtr
     , cstringUnpackPtr
+    , gvaluePackPtr
+    , gvalueUnpackPtr
     ) where
 
-import Data.Int
-import Data.Word
-
 import Foreign.C
-import Foreign.Ptr (Ptr, castPtr, FunPtr)
+import Foreign.Ptr (Ptr, castPtr)
 
-import Data.GI.Base.BasicTypes (PtrWrapped(..))
+import Data.GI.Base.BasicTypes (PtrWrapped(..), GHashFunc, GEqualFunc)
+import Data.GI.Base.GValue (GValue)
 
 #include <glib-object.h>
-
--- | A pointer to a hashing function on the C side.
-type GHashFunc a = FunPtr (PtrWrapped a -> IO #{type guint})
-
--- | A pointer to an equality checking function on the C side.
-type GEqualFunc a = FunPtr (PtrWrapped a -> PtrWrapped a -> IO #{type gboolean})
 
 -- | Compute the hash for a `Ptr`.
 foreign import ccall "&g_direct_hash" gDirectHash :: GHashFunc (Ptr a)
@@ -66,3 +60,12 @@ cstringPackPtr = ptrPackPtr
 -- | Extract a `CString` wrapped into a `Ptr` coming from a `GHashTable`.
 cstringUnpackPtr :: PtrWrapped CString -> CString
 cstringUnpackPtr = ptrUnpackPtr
+
+-- | Pack a `Ptr` to `GValue` into a `Ptr` than can go into a `GHashTable`.
+gvaluePackPtr :: Ptr GValue -> PtrWrapped (Ptr GValue)
+gvaluePackPtr = ptrPackPtr
+
+-- | Extract a `Ptr` to `GValue` wrapped into a `Ptr` coming from a
+-- `GHashTable`.
+gvalueUnpackPtr :: PtrWrapped (Ptr GValue) -> Ptr GValue
+gvalueUnpackPtr = ptrUnpackPtr

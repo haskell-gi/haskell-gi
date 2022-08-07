@@ -945,6 +945,7 @@ moduleImports = T.unlines [
                 , "import qualified Data.GI.Base.GArray as B.GArray"
                 , "import qualified Data.GI.Base.GClosure as B.GClosure"
                 , "import qualified Data.GI.Base.GError as B.GError"
+                , "import qualified Data.GI.Base.GHashTable as B.GHT"
                 , "import qualified Data.GI.Base.GVariant as B.GVariant"
                 , "import qualified Data.GI.Base.GValue as B.GValue"
                 , "import qualified Data.GI.Base.GParamSpec as B.GParamSpec"

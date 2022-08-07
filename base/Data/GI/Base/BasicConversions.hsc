@@ -89,7 +89,6 @@ import Data.Bits (Bits, (.|.), (.&.), shift)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.CallStack (HasCallStack)
-import Data.GI.Base.GHashTable (GEqualFunc, GHashFunc)
 import Data.GI.Base.ManagedPtr (copyBoxedPtr)
 import Data.GI.Base.Utils (allocBytes, callocBytes, memcpy, freeMem,
                            checkUnexpectedReturnNULL)

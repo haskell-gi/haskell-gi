@@ -58,6 +58,22 @@ type family FindElement (m :: Symbol) (ms :: [(Symbol, Type)])
     FindElement m ('(m, o) ': ms) typeError = o
     FindElement m ('(m', o) ': ms) typeError = FindElement m ms typeError
 
+-- | All the types that are ascendants of this type, including
+-- interfaces that the type implements.
+type family ParentTypes a :: [Type]
+
+-- | A constraint on a type, to be fulfilled whenever it has a type
+-- instance for `ParentTypes`. This leads to nicer errors, thanks to
+-- the overlappable instance below.
+class HasParentTypes (o :: Type)
+
+-- | Default instance, which will give rise to an error for types
+-- without an associated `ParentTypes` instance.
+instance {-# OVERLAPPABLE #-}
+    TypeError ('Text "Type ‘" ':<>: 'ShowType a ':<>:
+               'Text "’ does not have any known parent types.")
+    => HasParentTypes a
+
 -- | Check whether a type appears in a list. We specialize the
 -- names/types a bit so the error messages are more informative.
 type family CheckForAncestorType t (a :: Type) (as :: [Type]) :: Constraint where
@@ -74,22 +90,6 @@ type family IsDescendantOf (parent :: Type) (descendant :: Type) :: Constraint w
     -- Every object is defined to be a descendant of itself.
     IsDescendantOf d d = ()
     IsDescendantOf p d = CheckForAncestorType d p (ParentTypes d)
-
--- | All the types that are ascendants of this type, including
--- interfaces that the type implements.
-type family ParentTypes a :: [Type]
-
--- | A constraint on a type, to be fulfilled whenever it has a type
--- instance for `ParentTypes`. This leads to nicer errors, thanks to
--- the overlappable instance below.
-class HasParentTypes (o :: Type)
-
--- | Default instance, which will give rise to an error for types
--- without an associated `ParentTypes` instance.
-instance {-# OVERLAPPABLE #-}
-    TypeError ('Text "Type ‘" ':<>: 'ShowType a ':<>:
-               'Text "’ does not have any known parent types.")
-    => HasParentTypes a
 
 -- | Safe coercions to a parent class. For instance:
 --

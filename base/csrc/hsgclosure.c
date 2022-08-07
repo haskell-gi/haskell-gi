@@ -202,6 +202,18 @@ void dbg_g_object_unref (GObject *obj)
   g_idle_add(g_object_unref_in_main_loop, obj);
 }
 
+static gboolean gvalue_unref_in_main_loop(void *gv)
+{
+  g_boxed_free(G_TYPE_VALUE, gv);
+
+  return FALSE; /* Do not invoke again */
+}
+
+void haskell_gi_gvalue_free(GValue *gv)
+{
+  g_idle_add(gvalue_unref_in_main_loop, gv);
+}
+
 /**
  * dbg_g_object_new:
  * @gtype: #GType for the object to construct.

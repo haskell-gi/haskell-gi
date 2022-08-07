@@ -39,6 +39,9 @@ module Data.GI.Base.BasicTypes
 
     , PtrWrapped(..)
     , GDestroyNotify
+
+    , GHashFunc
+    , GEqualFunc
     ) where
 
 import Control.Exception (Exception)
@@ -47,14 +50,15 @@ import Data.Coerce (coerce, Coercible)
 import Data.IORef (IORef)
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
+import Data.Int
 import Data.Word
 
 import Foreign.C (CString, peekCString)
 import Foreign.Ptr (Ptr, FunPtr)
 import Foreign.ForeignPtr (ForeignPtr)
 
-import Data.GI.Base.CallStack (CallStack)
 import {-# SOURCE #-} Data.GI.Base.Overloading (HasParentTypes)
+import Data.GI.Base.CallStack (CallStack)
 
 #include <glib-object.h>
 
@@ -201,8 +205,8 @@ data GSList a = GSList (Ptr (GSList a))
 -- wrapped into a pointer. We encode such a type as follows.
 newtype PtrWrapped a = PtrWrapped {unwrapPtr :: Ptr a}
 
--- | Destroy the memory associated with a given pointer.
-type GDestroyNotify a = FunPtr (Ptr a -> IO ())
+-- | Destroy the memory pointed to by a given pointer type.
+type GDestroyNotify ptr = FunPtr (ptr -> IO ())
 
 -- | Free the given 'GList'.
 foreign import ccall "g_list_free" g_list_free ::
@@ -211,3 +215,9 @@ foreign import ccall "g_list_free" g_list_free ::
 -- | Free the given 'GSList'.
 foreign import ccall "g_slist_free" g_slist_free ::
     Ptr (GSList a) -> IO ()
+
+-- | A pointer to a hashing function on the C side.
+type GHashFunc a = FunPtr (PtrWrapped a -> IO #{type guint})
+
+-- | A pointer to an equality checking function on the C side.
+type GEqualFunc a = FunPtr (PtrWrapped a -> PtrWrapped a -> IO #{type gboolean})

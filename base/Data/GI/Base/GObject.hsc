@@ -333,10 +333,10 @@ gobjectGetUserData obj key = do
     else return Nothing
 
 foreign import ccall "&hs_free_stable_ptr" ptr_to_hs_free_stable_ptr ::
-        FunPtr (GDestroyNotify a)
+        GDestroyNotify (Ptr ())
 
 foreign import ccall g_object_set_qdata_full ::
-        Ptr a -> GQuark b -> Ptr () -> FunPtr (GDestroyNotify ()) -> IO ()
+        Ptr a -> GQuark b -> Ptr () -> GDestroyNotify (Ptr ()) -> IO ()
 
 -- | Set the value of the user data for the given `GObject` to a
 -- `StablePtr` to the given Haskell object. The `StablePtr` will be

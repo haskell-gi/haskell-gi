@@ -13,6 +13,7 @@ module Data.GI.Base.GValue
     , toGValue
     , fromGValue
     , GValueConstruct(..)
+    , ptr_to_gvalue_free
 
     , newGValue
     , buildGValue
@@ -55,31 +56,31 @@ import Data.Text (Text, pack, unpack)
 import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..),
                         CLong(..), CULong(..))
 import Foreign.C.String (CString)
-import Foreign.Ptr (Ptr, nullPtr, plusPtr)
+import Foreign.Ptr (Ptr, nullPtr, plusPtr, FunPtr)
 import Foreign.StablePtr (StablePtr, castStablePtrToPtr, castPtrToStablePtr)
 
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions (cstringToText, textToCString)
 import Data.GI.Base.GType
 import Data.GI.Base.ManagedPtr
-import Data.GI.Base.Overloading (HasParentTypes, ParentTypes)
 import Data.GI.Base.Utils (callocBytes, freeMem)
 import Data.GI.Base.Internal.CTypes (cgvalueSize)
+import Data.GI.Base.Overloading (ParentTypes, HasParentTypes)
 
 -- | Haskell-side representation of a @GValue@.
 newtype GValue = GValue (ManagedPtr GValue)
 
--- | A convenience alias for @`Nothing` :: `Maybe` `GValue`@.
-noGValue :: Maybe GValue
-noGValue = Nothing
-
-foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::
-    IO GType
+-- | A pointer to a function freeing GValues.
+foreign import ccall "&haskell_gi_gvalue_free" ptr_to_gvalue_free ::
+    FunPtr (Ptr GValue -> IO ())
 
 -- | There are no types in the bindings that a `GValue` can be safely
 -- cast to.
 type instance ParentTypes GValue = '[]
 instance HasParentTypes GValue
+
+foreign import ccall unsafe "g_value_get_type" c_g_value_get_type ::
+    IO GType
 
 -- | Find the associated `GType` for `GValue`.
 instance TypedObject GValue where
@@ -139,6 +140,10 @@ foreign import ccall "g_value_unset" g_value_unset :: Ptr GValue -> IO ()
 -- | Unset the `GValue`, freeing all resources associated to it.
 unsetGValue :: Ptr GValue -> IO ()
 unsetGValue = g_value_unset
+
+-- | A convenient alias for @Nothing :: Maybe GValue@.
+noGValue :: Maybe GValue
+noGValue = Nothing
 
 -- | Class for types that can be marshaled back and forth between
 -- Haskell values and `GValue`s. These are low-level methods, you
