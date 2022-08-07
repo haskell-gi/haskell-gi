@@ -10,12 +10,12 @@ env:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.4', '8.6', '8.8', '8.10', '9.0']
+        ghc: ['8.4', '8.6', '8.8', '8.10', '9.0', '9.2']
 
     steps:
     - uses: actions/checkout@v1
