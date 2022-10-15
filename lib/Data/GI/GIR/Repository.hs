@@ -49,8 +49,13 @@ splitOn x xs = go xs []
                             then reverse acc : go ys []
                             else go ys (y : acc)
 
+-- | Return the paths where to look for gir files.
 girDataDirs :: IO [FilePath]
-girDataDirs = getSystemDataDirs "gir-1.0"
+girDataDirs = do
+  sys <- getSystemDataDirs "gir-1.0"
+  -- See https://github.com/haskell-gi/haskell-gi/issues/390
+  let macOS = ["/opt/homebrew/share/gir-1.0"]
+  return (sys ++ macOS)
 
 -- | Construct the GIR search path, possibly looking into the
 -- @HASKELL_GI_GIR_SEARCH_PATH@ environment variable if no explicit
