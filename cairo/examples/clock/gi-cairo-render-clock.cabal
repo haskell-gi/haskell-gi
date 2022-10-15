@@ -23,7 +23,7 @@ Source-Repository head
 Executable cairo-clock-demo
         build-depends:    base >= 4 && < 5,
                           time >= 1.8 && <2,
-                          text >= 1.2 && <1.3,
+                          text >= 1.2 && <3,
                           gi-cairo >=1.0.24 && <1.1,
                           gi-gdk >=3.0.23 && <4,
                           gi-glib >=2.0.24 && <2.1,

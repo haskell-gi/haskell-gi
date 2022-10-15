@@ -32,6 +32,7 @@ executable action-namespace
     , gi-gdk
     , gi-gdkpixbuf
     , gi-gio
+    , gi-gobject
     , gi-gtk
     , haskell-gi-base
     , text
@@ -89,6 +90,7 @@ executable builder
     , gi-gdk
     , gi-gdkpixbuf
     , gi-gio
+    , gi-gobject
     , gi-gtk
     , haskell-gi-base
     , text
@@ -169,6 +171,7 @@ executable resource-bundle
     , gi-gdk
     , gi-gdkpixbuf
     , gi-gio
+    , gi-gobject
     , gi-gtk
     , haskell-gi-base
     , text

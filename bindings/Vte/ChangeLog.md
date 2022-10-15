@@ -1,3 +1,7 @@
+### 2.91.30
+
++ Relax constraint on text
+
 ### 2.91.29
 
 + Update to haskell-gi(-base)-0.26

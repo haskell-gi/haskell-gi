@@ -1,3 +1,7 @@
+### 2.0.29
+
++ Relax constraint on text
+
 ### 2.0.28
 
 + Refresh list of nullables

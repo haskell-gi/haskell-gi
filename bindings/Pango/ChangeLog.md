@@ -1,3 +1,7 @@
+### 1.0.27
+
++ Relax constraint on text
+
 ### 1.0.26
 
 + Add a dependency on gi-gio, see https://github.com/haskell-gi/haskell-gi/issues/386 for context.

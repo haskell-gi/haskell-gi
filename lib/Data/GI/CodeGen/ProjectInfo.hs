@@ -39,7 +39,8 @@ defaultExtensions = ["NoImplicitPrelude", "ScopedTypeVariables", "CPP",
                      "OverloadedStrings", "NegativeLiterals", "ConstraintKinds",
                      "TypeFamilies", "MultiParamTypeClasses", "KindSignatures",
                      "FlexibleInstances", "UndecidableInstances", "DataKinds",
-                     "FlexibleContexts", "UndecidableSuperClasses"]
+                     "FlexibleContexts", "UndecidableSuperClasses",
+                     "TypeOperators"]
 
 -- | Extensions that will be used in some modules, but we do not wish
 -- to turn on by default.
@@ -62,7 +63,7 @@ defaultLanguage = "Haskell2010"
 standardDeps :: [Text]
 standardDeps = ["bytestring >= 0.10 && < 1",
                 "containers >= 0.5 && < 1",
-                "text >= 1.0 && < 2",
+                "text >= 1.0 && < 3",
                 "transformers >= 0.4 && < 1"]
 
 -- | Under which category in hackage should the generated bindings be listed.
