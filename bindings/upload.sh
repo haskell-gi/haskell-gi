@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
-for sdist in sdists/*; do
+cd ../dist-newstyle/sdist
+
+rm -f gi-cairo-render-clock*
+rm -f gi-cairo-render-sdl*
+
+for sdist in gi-* haskell-gi-0*.tar.gz haskell-gi-base*; do
     echo "Uploading $sdist"
     result=$(cabal upload --publish $sdist)
     echo $result | grep -q "Package successfully published."
