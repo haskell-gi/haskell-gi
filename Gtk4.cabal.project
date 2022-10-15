@@ -9,6 +9,7 @@ packages: base/haskell-gi-base.cabal
           bindings/Atk/gi-atk.cabal
           bindings/Gio/gi-gio.cabal
           bindings/cairo/gi-cairo.cabal
+          bindings/freetype2/gi-freetype2.cabal
           bindings/HarfBuzz/gi-harfbuzz.cabal
           bindings/Pango/gi-pango.cabal
           bindings/PangoCairo/gi-pangocairo.cabal
