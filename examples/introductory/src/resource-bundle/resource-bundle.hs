@@ -9,6 +9,10 @@ import           Data.Text (Text)
 -- import           System.Environment 
 -- import           System.FilePath 
 
+-- We import GI.GObject so GHC can see that GObject.GObject (returned
+-- from builderGetObject) is a ManagedPtr.
+import qualified GI.GObject as GObject
+
 import           Data.GI.Base
 import qualified GI.Gtk as Gtk
 

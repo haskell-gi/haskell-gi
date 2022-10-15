@@ -9,6 +9,10 @@ import System.Environment (getArgs)
 import qualified GI.Gtk as Gtk
 import Data.GI.Base
 
+-- We import GI.GObject so GHC can see that GObject.GObject (returned
+-- from builderGetObject) is a ManagedPtr.
+import qualified GI.GObject as GObject
+
 printHello :: Text -> IO ()
 printHello t = T.putStrLn $ "Hello from " <> t <> "."
 
@@ -19,7 +23,7 @@ printQuit t = do
   return ()
 
 getBuilderObj :: forall o'
-               . GObject o' 
+               . GObject o'
                => Gtk.Builder 
                -> Text 
                -> (ManagedPtr o' -> o') 

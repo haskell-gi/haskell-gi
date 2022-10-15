@@ -14,6 +14,10 @@ import           Data.GI.Base
 import qualified GI.Gio as Gio
 import qualified GI.Gtk as Gtk
 
+-- We import GI.GObject so GHC can see that GObject.GObject (returned
+-- from builderGetObject) is a ManagedPtr.
+import qualified GI.GObject as GObject
+
 type ActionEntryInfo = (Text, Gio.ActionEntryActivateFieldCallback_WithClosures)
 
 docEntryInfos :: [ActionEntryInfo]

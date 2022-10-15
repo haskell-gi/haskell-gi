@@ -7,6 +7,10 @@ import qualified GI.Clutter                         as Clutter
 import qualified GI.Cogl                            as Cogl
 import qualified GI.CoglPango                       as CoglPango
 
+-- We import GI.Pango so GHC can see that Pango.Layout (returned
+-- from #getLayout) is a ManagedPtr.
+import qualified GI.Pango as Pango
+
 import Control.Monad (void)
 
 textPaintCallback :: (?self :: Clutter.Text) => IO ()

@@ -6,6 +6,10 @@ import           System.Exit  (die)
 import qualified GI.Gtk       as Gtk
 import           Data.GI.Base (new, on, AttrOp((:=)), unsafeCastTo)
 
+-- We import GI.GObject so GHC can see that GObject.GObject (returned
+-- from builderGetObject) is a ManagedPtr.
+import qualified GI.GObject as GObject
+
 #if !MIN_VERSION_base(4,10,0)
 import Data.Monoid ((<>))
 #endif
