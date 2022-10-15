@@ -1,5 +1,5 @@
 {-# LANGUAGE DataKinds, FlexibleInstances, MultiParamTypeClasses,
-  UndecidableInstances, KindSignatures, TypeFamilies #-}
+  UndecidableInstances, KindSignatures, TypeFamilies, TypeOperators #-}
 #if !MIN_VERSION_base(4,8,0)
 {-# LANGUAGE OverlappingInstances #-}
 #endif
