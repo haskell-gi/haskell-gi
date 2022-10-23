@@ -1,3 +1,7 @@
+### 1.0.28
+
++ Add dependency on gi-gio
+
 ### 1.0.27
 
 + Relax constraint on text
