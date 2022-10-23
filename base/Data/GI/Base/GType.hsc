@@ -21,6 +21,7 @@ module Data.GI.Base.GType
     , gtypeVariant
     , gtypeByteArray
     , gtypeInvalid
+    , gtypeParam
 
     , gtypeStablePtr
     ) where
@@ -109,6 +110,10 @@ gtypeVariant = GType #const G_TYPE_VARIANT
 -- | The `GType` corresponding to 'Data.GI.Base.GError.GError'.
 gtypeError :: GType
 gtypeError = GType #const G_TYPE_ERROR
+
+-- | The `GType` corresponding to 'Data.GI.Base.BasicTypes.GParamSpec'.
+gtypeParam :: GType
+gtypeParam = GType #const G_TYPE_PARAM
 
 {- Run-time types -}
 

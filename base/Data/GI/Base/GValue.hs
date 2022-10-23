@@ -43,7 +43,8 @@ module Data.GI.Base.GValue
     , set_stablePtr
     , get_stablePtr
     , take_stablePtr
-
+    , set_param
+    , get_param
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -252,6 +253,11 @@ instance IsGValue (StablePtr a) where
   gvalueSet_ = set_stablePtr
   gvalueGet_ = get_stablePtr
 
+instance IsGValue (Maybe GParamSpec) where
+  gvalueGType_ = return gtypeParam
+  gvalueSet_ = set_param
+  gvalueGet_ = get_param
+
 foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
 foreign import ccall "g_value_get_string" _get_string ::
@@ -451,3 +457,28 @@ mapGValueArrayWithLength nvalues f arrayPtr
         go n ptr = do
           _ <- f ptr
           go (n-1) (ptr `plusPtr` cgvalueSize)
+
+foreign import ccall unsafe "g_value_set_param" _set_param ::
+    Ptr GValue -> Ptr GParamSpec -> IO ()
+foreign import ccall unsafe "g_value_get_param" _get_param ::
+    Ptr GValue -> IO (Ptr GParamSpec)
+
+-- | Set the value of `GValue` containing a `GParamSpec`
+set_param :: Ptr GValue -> Maybe GParamSpec -> IO ()
+set_param gv (Just ps) = withManagedPtr ps (_set_param gv)
+set_param gv Nothing = _set_param gv nullPtr
+
+foreign import ccall "g_param_spec_ref" g_param_spec_ref ::
+    Ptr GParamSpec -> IO (Ptr GParamSpec)
+foreign import ccall "&g_param_spec_unref" ptr_to_g_param_spec_unref ::
+    FunPtr (Ptr GParamSpec -> IO ())
+
+-- | Get the value of a `GValue` containing a `GParamSpec`
+get_param :: Ptr GValue -> IO (Maybe GParamSpec)
+get_param gv = do
+  ptr <- _get_param gv
+  if ptr == nullPtr
+    then return Nothing
+    else do
+    fPtr <- g_param_spec_ref ptr >>= newManagedPtr' ptr_to_g_param_spec_unref
+    return . Just $! GParamSpec fPtr

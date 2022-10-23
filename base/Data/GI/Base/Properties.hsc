@@ -29,6 +29,7 @@ module Data.GI.Base.Properties
     , setObjectPropertyCallback
     , setObjectPropertyGError
     , setObjectPropertyGValue
+    , setObjectPropertyParamSpec
 
     , getObjectPropertyIsGValueInstance
     , getObjectPropertyString
@@ -58,6 +59,7 @@ module Data.GI.Base.Properties
     , getObjectPropertyCallback
     , getObjectPropertyGError
     , getObjectPropertyGValue
+    , getObjectPropertyParamSpec
 
     , constructObjectPropertyIsGValueInstance
     , constructObjectPropertyString
@@ -87,6 +89,7 @@ module Data.GI.Base.Properties
     , constructObjectPropertyCallback
     , constructObjectPropertyGError
     , constructObjectPropertyGValue
+    , constructObjectPropertyParamSpec
     ) where
 
 #if !MIN_VERSION_base(4,8,0)
@@ -589,3 +592,17 @@ getObjectPropertyGValue :: forall a. GObject a =>
                            a -> String -> IO (Maybe GValue)
 getObjectPropertyGValue obj propName =
   getObjectPropertyBoxed obj propName GValue
+
+-- | Construct a property of type `GParamSpec`.
+constructObjectPropertyParamSpec :: String -> Maybe GParamSpec ->
+                                    IO (GValueConstruct o)
+constructObjectPropertyParamSpec = constructObjectPropertyIsGValueInstance
+
+-- | Get a property of type `GParamSpec`.
+getObjectPropertyParamSpec :: GObject a => a -> String -> IO (Maybe GParamSpec)
+getObjectPropertyParamSpec = getObjectPropertyIsGValueInstance
+
+-- | Set a property of type `GParamSpec`.
+setObjectPropertyParamSpec :: GObject a =>
+                          a -> String -> Maybe GParamSpec -> IO ()
+setObjectPropertyParamSpec = setObjectPropertyIsGValueInstance
