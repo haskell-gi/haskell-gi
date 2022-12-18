@@ -233,7 +233,7 @@ createBoxText state boxState (x, y, width, height)
     createBoxTextDo boxText =
       do fontMap <- PangoCairo.fontMapGetDefault
          context <- liftIO Pango.contextNew
-         Pango.contextSetFontMap context fontMap
+         Pango.contextSetFontMap context (Just fontMap)
          layout <- liftIO $ Pango.layoutNew context
          fontSize <- liftIO $ pixelToPoint width fontMap
          let markup = getMarkUp boxText fontSize 
