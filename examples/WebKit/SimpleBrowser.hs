@@ -1,18 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ImplicitParams #-}
 
 import qualified GI.Gtk as Gtk
 import qualified GI.GLib as GLib
 import qualified GI.Gio as Gio
 import qualified GI.WebKit2 as WK
+import qualified GI.Adw as Adw
 
 import Data.GI.Base
 
 import System.Mem (performGC)
 
+import Control.Monad (void)
 import qualified Data.Text as T
 import Data.Text (Text)
 import Data.Int (Int64)
@@ -36,17 +40,8 @@ methodCall highlight methodName _params =
       return Nothing
     _ -> return Nothing
 
--- | Create the interface of the browser.
-createGUI :: Gio.DBusConnection -> Gtk.Button -> IO ()
-createGUI sessionBus highlight = do
-  win <- new Gtk.Window [#type := Gtk.WindowTypeToplevel,
-                         #iconName := "applications-haskell",
-                         #defaultWidth := 1024,
-                         #defaultHeight := 768,
-                         On #destroy Gtk.mainQuit]
-
-  context <- new WK.WebContext []
-  on context #initializeWebExtensions $ do
+initializeExtensions :: WK.WebContext -> IO ()
+initializeExtensions context = do
     -- [Note (installing the extension)]
     --
     -- This loads any extensions in the current directory. These are
@@ -73,58 +68,8 @@ createGUI sessionBus highlight = do
     userData <- toGVariant ("Hi, extension!" :: T.Text, 57 :: Int64)
     #setWebExtensionsInitializationUserData context userData
 
-  contentManager <- new WK.UserContentManager
-    [On (#scriptMessageReceived ::: "haskell_gi_handler") $ \result -> do
-      resultAsString <- #getJsValue result >>= #toString
-      putStrLn $ "Got a message: " <> show resultAsString
-    ]
-  #registerScriptMessageHandler contentManager "haskell_gi_handler"
-
-  view <- new WK.WebView [ #webContext := context
-                         , #userContentManager := contentManager
-                         , On #close (#destroy win)
-                         , On #loadChanged $ \event -> do
-                             putStrLn $ "Load: " <> show event
-                         , On #loadFailed $ \_ uri error -> do
-                             errMsg <- gerrorMessage error
-                             putStrLn . T.unpack $ "Error when reading \""
-                               <> uri <> "\": " <> errMsg
-                             -- Keep processing, so WebKit shows the error page
-                             return False
-                         ]
-
-  #loadUri view "http://www.haskell.org"
-
-  #add win view
-
-  uriEntry <- new Gtk.Entry [#placeholderText := "Type the address to load here",
-                             #widthChars := 50]
-  on uriEntry #activate $ do
-    uri <- uriEntry `get` #text
-    #loadUri view uri
-
-  header <- new Gtk.HeaderBar [#showCloseButton := True,
-                               #customTitle := uriEntry,
-                               #title := "A simple WebKit browser"]
-  #packStart header highlight
-  on highlight #clicked (execDBusMethod sessionBus extensionServerInfo
-                         "highlightLinks" Nothing (Just showLinkCount))
-
-  #setTitlebar win (Just header)
-
-  on view (PropertyNotify #estimatedLoadProgress) $ \_ -> do
-    status <- view `get` #estimatedLoadProgress
-    uriEntry `set` [#progressFraction := if status /= 1.0
-                                         then status
-                                         else 0]
-
-  #showAll win
-
-main :: IO ()
-main = do
-  progName <- T.pack <$> getProgName
-  args <- map T.pack <$> getArgs
-
+activate :: Adw.Application -> IO ()
+activate app = do
   -- We periodically perform a GC, in order to test that the
   -- finalizers are not pointing to invalid regions. This is only for
   -- testing, and not needed in production code.
@@ -134,19 +79,75 @@ main = do
          putStrLn "** GC done"
          return True
 
-  _ <- Gtk.init $ Just (progName : args)
-
   highlight <- new Gtk.Button [ #label := "Highlight links"
                               , #sensitive := False
                               , #tooltipMarkup := "DBus server for the extension could not be found,\nsee <b>[Note (installing the extension)]</b> in <i>SimpleBrowser.hs</i> for details."]
 
-  -- We create the interface of the browser (and in particular, the
-  -- WebView, which will trigger the loading of the extension) only
-  -- once we have registered ourselves into the session bus, to avoid
-  -- a race condition with the extension, which will attempt to call
-  -- our 'extensionActivated' method as soon as it is ready.
-  sessionBus <- Gio.busGetSync Gio.BusTypeSession (Nothing @Gio.Cancellable)
-  registerDBusServer browserServerInfo (methodCall highlight)
-                     (createGUI sessionBus highlight)
+  content <- new Gtk.Box [#orientation := Gtk.OrientationVertical]
 
-  Gtk.main
+  uriEntry <- new Gtk.Entry [#placeholderText := "Type the address to load here",
+                             #widthChars := 50]
+
+  header <- new Adw.HeaderBar [#titleWidget := uriEntry]
+  header.packStart highlight
+
+  content.append header
+
+  sessionBus <- Gio.busGetSync Gio.BusTypeSession (Nothing @Gio.Cancellable)
+
+  context <- new WK.WebContext [On #initializeWebExtensions
+                                 (initializeExtensions ?self)]
+
+  contentManager <- new WK.UserContentManager
+    [On (#scriptMessageReceived ::: "haskell_gi_handler") $ \result -> do
+      resultAsString <- result.getJsValue >>= #toString
+      putStrLn $ "Got a message: " <> show resultAsString
+    ]
+  #registerScriptMessageHandler contentManager "haskell_gi_handler"
+
+  view <- new WK.WebView [ #webContext := context
+                         , #userContentManager := contentManager
+                         , On #loadChanged $ \event -> do
+                             putStrLn $ "Load: " <> show event
+                         , On #loadFailed $ \_ uri error -> do
+                             errMsg <- gerrorMessage error
+                             putStrLn . T.unpack $ "Error when reading \""
+                               <> uri <> "\": " <> errMsg
+                             -- Keep processing, so WebKit shows the error page
+                             return False
+                         , #vexpand := True
+                         ]
+
+  view.loadUri "http://www.haskell.org"
+
+  content.append view
+
+  on uriEntry #activate $ do
+    uri <- uriEntry `get` #text
+    view.loadUri uri
+
+  on highlight #clicked (execDBusMethod sessionBus extensionServerInfo
+                         "highlightLinks" Nothing (Just showLinkCount))
+
+  on view (PropertyNotify #estimatedLoadProgress) $ \_ -> do
+    status <- view `get` #estimatedLoadProgress
+    uriEntry `set` [#progressFraction := if status /= 1.0
+                                         then status
+                                         else 0]
+
+  registerDBusServer browserServerInfo (methodCall highlight) (return ())
+
+  win <- new Adw.ApplicationWindow [#application := app,
+                                    #content := content,
+                                    #defaultWidth := 1024,
+                                    #defaultHeight := 768]
+  win.present
+
+main :: IO ()
+main = do
+  app <- new Adw.Application [#applicationId := "haskell-gi.Gtk4.test",
+                              On #activate (activate ?self)]
+
+  args <- getArgs
+  progName <- getProgName
+  void (app.run $ Just $ progName : args)

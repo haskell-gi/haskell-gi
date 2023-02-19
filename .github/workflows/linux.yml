@@ -36,51 +36,13 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
     - name: Update cabal.project
       run: |
-        sed -i.bak -e '/examples\/Handy\//d' cabal.project
         ./update-cabal-project.sh ubuntu-ci
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libsdl2-dev
+        sudo apt-get install -y libsdl2-dev libgirepository1.0-dev libunwind-dev
         ./bindings/PKGS.sh deps ubuntu-ci | sudo xargs apt-get install -y
-
-    - uses: actions/cache@v1
-      id: gtksheet-cache
-      with:
-        path: gtksheet
-        key: ${{ env.gtksheet_version }}-${{ env.gtksheet_cache_version }}
-
-    - uses: actions/checkout@v2
-      if: steps.gtksheet-cache.outputs.cache-hit != 'true'
-      with:
-        repository: fpaquet/gtksheet
-        ref: V${{ env.gtksheet_version}}
-        path: gtksheet
-
-    - name: Build GtkSheet from source
-      if: steps.gtksheet-cache.outputs.cache-hit != 'true'
-      run: |
-        pushd gtksheet
-        # Configure and install
-        autoreconf -i
-        # `libdir` is necessary because the system-configured location for GIR
-        # files is not respected by the Makefile, and it will instead try
-        # to install to `/usr/local/lib/`, which is wrong.
-        # See https://github.com/haskell-gi/haskell-gi/pull/365
-        ./configure --enable-introspection --libdir=/usr/lib/x86_64-linux-gnu/
-        make
-        popd
-
-    - name: Install GtkSheet
-      run: |
-        pushd gtksheet
-        sudo make install
-        # The make install does this, but with -n
-        # That means the lib cache doesn't get rebuilt, only links, and the
-        # lib cache rebuild appears to be necessary
-        sudo ldconfig
-        popd
 
     - name: Generate bindings
       run: |

@@ -18,7 +18,7 @@
     ],
     "pkgconfigDepends": "gtksheet-4.0",
     "distributionPackages": {
-        "ubuntu-ci": [],
+        "ubuntu-ci": "skip",
         "nonLinux": []
     }
 }

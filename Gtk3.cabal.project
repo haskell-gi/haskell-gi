@@ -4,7 +4,6 @@ packages: base/haskell-gi-base.cabal
           examples/introductory/introductory-examples.cabal
           examples/advanced/haskell-gi-examples.cabal
           examples/internationalization/haskell-gi-i18n.cabal
-          examples/WebKit/webkit-example.cabal
           examples/GtkSourceView/gtksourceview-example.cabal
           examples/Clutter/clutter-example.cabal
           examples/rsvg/rsvg-example.cabal
@@ -43,9 +42,9 @@ packages: base/haskell-gi-base.cabal
           bindings/Handy/gi-handy.cabal
           bindings/IBus/gi-ibus.cabal
           bindings/JavaScriptCore-4.0/gi-javascriptcore.cabal
-          bindings/Soup/gi-soup.cabal
-          bindings/WebKit2/gi-webkit2.cabal
-          bindings/WebKit2WebExtension/gi-webkit2webextension.cabal
+          bindings/Soup-2.4/gi-soup.cabal
+          bindings/WebKit2-4.0/gi-webkit2.cabal
+          bindings/WebKit2WebExtension-4.0/gi-webkit2webextension.cabal
           bindings/Vte/gi-vte.cabal
           bindings/Secret/gi-secret.cabal
           bindings/Poppler/gi-poppler.cabal

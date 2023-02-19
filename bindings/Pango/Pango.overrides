@@ -38,6 +38,8 @@ set-attr Pango/attr_underline_new introspectable 1
 set-attr Pango/attr_variant_new introspectable 1
 set-attr Pango/attr_weight_new introspectable 1
 
+set-attr Pango/Context/set_font_map/@parameters/font_map nullable 1
+
 # Generated from pango 1.40.1 with xsltproc Nullable.xslt Pango-1.0.gir
 set-attr Pango/AttrDataCopyFunc/@return-value nullable 1
 set-attr Pango/AttrDataCopyFunc/@parameters/user_data nullable 1

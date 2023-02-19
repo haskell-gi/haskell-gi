@@ -25,7 +25,7 @@ case "$TARGET" in
         ;;
     ubuntu-ci)
         PKG_DEPS='.distributionPackages.ubuntu, .distributionPackages."ubuntu-ci"'
-        PKG_COND='.distributionPackages.ubuntu != null or .distributionPackages."ubuntu-ci" != null'
+        PKG_COND='(.distributionPackages.ubuntu != null or .distributionPackages."ubuntu-ci" != null) and .distributionPackages."ubuntu-ci" != "skip"'
         ;;
     fedora)
         PKG_DEPS="[\"pkgconfig(\" + (.pkgconfigDepends | split(\" \") | .[0]) + \")\"]"
@@ -48,7 +48,7 @@ case "$ACTION" in
         ;;
     deps)
         cd "$BINDINGS_DIR"
-        jq -sr "[ .[] | ( $PKG_DEPS ) // [] ] | add | .[]" */pkg.info | sort | uniq
+        jq -r "select( $PKG_COND ) | $PKG_DEPS" */pkg.info | grep -v null | grep -v '\[' | grep -v '\]' | sort | uniq
         ;;
     *)
         echo "Unknown action" >&2
