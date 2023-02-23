@@ -11,6 +11,7 @@ import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
 
+import Control.Monad (foldM)
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer (WriterT, execWriterT, tell)
