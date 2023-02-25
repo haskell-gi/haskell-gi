@@ -33,7 +33,8 @@ import Data.GI.CodeGen.SymbolNaming (upperName, lowerName,
                                      callbackHaskellToForeign,
                                      callbackWrapperAllocator,
                                      haddockAttrAnchor, moduleLocation,
-                                     hackageModuleLink)
+                                     hackageModuleLink,
+                                     normalizedAPIName)
 
 import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.Util
@@ -257,24 +258,27 @@ buildFieldClear n field nullPtr = group $ do
          <> ") ("  <> nullPtr <> " :: " <> fType <> ")"
 
 -- | Return whether the given type corresponds to a callback that does
--- not throw exceptions. See [Note: Callables that throw] for the
--- reason why we do not try to wrap callbacks that throw exceptions.
-isRegularCallback :: Type -> CodeGen e Bool
+-- not throw exceptions. If it is, return the callback itself. See
+-- [Note: Callables that throw] for the reason why we do not try to
+-- wrap callbacks that throw exceptions.
+isRegularCallback :: Type -> CodeGen e (Maybe Callback)
 isRegularCallback t@(TInterface _) = do
   api <- getAPI t
   case api of
-    APICallback (Callback {cbCallable = callable}) ->
-      return (not $ callableThrows callable)
-    _ -> return False
-isRegularCallback _ = return False
+    APICallback callback@(Callback {cbCallable = callable}) ->
+      if callableThrows callable
+      then return Nothing
+      else return (Just callback)
+    _ -> return Nothing
+isRegularCallback _ = return Nothing
 
 -- | The types accepted by the allocating set function
 -- 'Data.GI.Base.Attributes.(:&=)'.
 fieldTransferTypeConstraint :: Type -> CodeGen e Text
 fieldTransferTypeConstraint t = do
   isPtr <- typeIsPtr t
-  isRegularCallback <- isRegularCallback t
-  inType <- if isPtr && not isRegularCallback
+  maybeRegularCallback <- isRegularCallback t
+  inType <- if isPtr && not (isJust maybeRegularCallback)
             then typeShow <$> foreignType t
             else typeShow <$> isoHaskellType t
   return $ "(~)" <> if T.any (== ' ') inType
@@ -297,15 +301,16 @@ fieldTransferType t = do
 -- | Generate the field transfer function, which marshals Haskell
 -- values to types that we can set, even if we need to allocate memory.
 genFieldTransfer :: Text -> Type -> CodeGen e ()
-genFieldTransfer var t@(TInterface tn@(Name _ n)) = do
-  isRegularCallback <- isRegularCallback t
-  if isRegularCallback
-    then do
-      wrapper <- qualifiedSymbol (callbackHaskellToForeign n) tn
-      maker <- qualifiedSymbol (callbackWrapperAllocator n) tn
+genFieldTransfer var t@(TInterface tn) = do
+  maybeRegularCallback <- isRegularCallback t
+  case maybeRegularCallback of
+    Just callback -> do
+      let Name _ name' = normalizedAPIName (APICallback callback) tn
+      wrapper <- qualifiedSymbol (callbackHaskellToForeign name') tn
+      maker <- qualifiedSymbol (callbackWrapperAllocator name') tn
       line $ maker <> " " <>
         parenthesize (wrapper <> " Nothing " <> var)
-    else line $ "return " <> var
+    Nothing -> line $ "return " <> var
 genFieldTransfer var _ = line $ "return " <> var
 
 -- | Haskell name for the field

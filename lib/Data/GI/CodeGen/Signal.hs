@@ -99,7 +99,8 @@ genCCallbackPrototype subsec cb name' maybeOwner = group $ do
         maybeOwner
       forM_ (args cb) $ \arg -> do
         ht <- foreignType $ argType arg
-        let ht' = if direction arg /= DirectionIn
+        let ht' = if direction arg /= DirectionIn &&
+                     not (argCallerAllocates arg)
                   then ptr ht
                   else ht
         line $ typeShow ht' <> " ->"
@@ -276,7 +277,7 @@ genDropClosures subsec cb name' = group $ do
 -- callback for ScopeTypeCall, or a destroy notifier for
 -- ScopeTypeNotified).
 genCallbackWrapper :: Text -> Callable -> Text ->
-                      Maybe Text -> ExcCodeGen ()
+                      Maybe Text -> CodeGen e ()
 genCallbackWrapper subsec cb name' maybeOwner = group $ do
   let wrapperName = callbackHaskellToForeign name'
       (hInArgs, _) = callableHInArgs cb WithClosures
@@ -308,7 +309,12 @@ genCallbackWrapper subsec cb name' maybeOwner = group $ do
                   then T.unwords $ ["gi'cb", "gi'selfPtr"] <> cArgNames <> ["_"]
                   else T.unwords $ ["gi'funptrptr", "gi'cb"] <> cArgNames
     line $ wrapperName <> " " <> allArgs <> " = do"
-    indent $ do
+    handleCGExc (\e -> indent $ do
+                   line $ "-- XXX Could not generate callback wrapper for "
+                          <> name'
+                   printCGError e
+                   line $ "error \"The bindings for " <> wrapperName <> " could not be generated, function unsupported.\""
+                ) $ indent $ do
       hInNames <- forM hInArgs (prepareArgForCall cb)
 
       let maybeReturn = case returnType cb of
