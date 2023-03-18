@@ -299,7 +299,7 @@ hToF' t a hType fType transfer
     | TCArray False _ _ (TBasicType TUInt8) <- t =
         return $ M "packByteString"
     | TCArray False _ _ (TBasicType TBoolean) <- t =
-        return $ M "(packMapStorableArray (fromIntegral . fromEnum))"
+        return $ M "(packMapStorableArray (P.fromIntegral . P.fromEnum))"
     | TCArray False _ _ (TBasicType TGType) <- t =
         return $ M "(packMapStorableArray gtypeToCGType)"
     | TCArray False _ _ (TBasicType TFloat) <- t =
@@ -307,7 +307,7 @@ hToF' t a hType fType transfer
     | TCArray False _ _ (TBasicType TDouble) <- t =
         return $ M "(packMapStorableArray realToFrac)"
     | TCArray False _ _ (TBasicType TUniChar) <- t =
-        return $ M "(packMapStorableArray ((fromIntegral . ord)))"
+        return $ M "(packMapStorableArray (P.fromIntegral . SP.ord))"
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
     | TCArray False _ _ TGValue <- t =
@@ -317,8 +317,8 @@ hToF' t a hType fType transfer
     | otherwise = case (typeShow hType, typeShow fType) of
                ("T.Text", "CString") -> return $ M "textToCString"
                ("[Char]", "CString") -> return $ M "stringToCString"
-               ("Char", "CInt")      -> return "(fromIntegral . ord)"
-               ("Bool", "CInt")      -> return "(fromIntegral . fromEnum)"
+               ("Char", "CInt")      -> return "(P.fromIntegral . SP.ord)"
+               ("Bool", "CInt")      -> return "(P.fromIntegral . P.fromEnum)"
                ("Float", "CFloat")   -> return "realToFrac"
                ("Double", "CDouble") -> return "realToFrac"
                ("GType", "CGType")   -> return "gtypeToCGType"
@@ -669,25 +669,27 @@ unpackCArray :: Text -> Type -> Transfer -> ExcCodeGen Converter
 unpackCArray length (TCArray False _ _ t) transfer =
   case t of
     TBasicType TUTF8 -> return $ apply $ M $ parenthesize $
-                        "unpackUTF8CArrayWithLength " <> length
+      "unpackUTF8CArrayWithLength " <> length
     TBasicType TFileName -> return $ apply $ M $ parenthesize $
-                            "unpackFileNameArrayWithLength " <> length
+      "unpackFileNameArrayWithLength " <> length
     TBasicType TUInt8 -> return $ apply $ M $ parenthesize $
-                         "unpackByteStringWithLength " <> length
+      "unpackByteStringWithLength " <> length
     TBasicType TPtr -> return $ apply $ M $ parenthesize $
-                         "unpackPtrArrayWithLength " <> length
+      "unpackPtrArrayWithLength " <> length
     TBasicType TBoolean -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength (/= 0) " <> length
+      "unpackMapStorableArrayWithLength (/= 0) " <> length
     TBasicType TGType -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength GType " <> length
+      "unpackMapStorableArrayWithLength GType " <> length
     TBasicType TFloat -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength realToFrac " <> length
+      "unpackMapStorableArrayWithLength realToFrac " <> length
     TBasicType TDouble -> return $ apply $ M $ parenthesize $
-                         "unpackMapStorableArrayWithLength realToFrac " <> length
+      "unpackMapStorableArrayWithLength realToFrac " <> length
+    TBasicType TUniChar -> return $ apply $ M $ parenthesize $
+      "unpackMapStorableArrayWithLength (SP.chr . P.fromIntegral) " <> length
     TBasicType _ -> return $ apply $ M $ parenthesize $
-                         "unpackStorableArrayWithLength " <> length
+      "unpackStorableArrayWithLength " <> length
     TGValue -> return $ apply $ M $ parenthesize $
-               "B.GValue.unpackGValueArrayWithLength " <> length
+      "B.GValue.unpackGValueArrayWithLength " <> length
     TInterface _ -> do
            a <- findAPI t
            isScalar <- typeIsEnumOrFlag t

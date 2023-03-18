@@ -313,7 +313,7 @@ genCallbackWrapper subsec cb name' maybeOwner = group $ do
                    line $ "-- XXX Could not generate callback wrapper for "
                           <> name'
                    printCGError e
-                   line $ "error \"The bindings for " <> wrapperName <> " could not be generated, function unsupported.\""
+                   line $ "P.error \"The bindings for " <> wrapperName <> " could not be generated, function unsupported.\""
                 ) $ indent $ do
       hInNames <- forM hInArgs (prepareArgForCall cb)
 
