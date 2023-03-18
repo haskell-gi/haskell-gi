@@ -9,7 +9,7 @@
 import qualified GI.Gtk as Gtk
 import qualified GI.GLib as GLib
 import qualified GI.Gio as Gio
-import qualified GI.WebKit2 as WK
+import qualified GI.WebKit as WK
 import qualified GI.Adw as Adw
 
 import Data.GI.Base
@@ -58,7 +58,7 @@ initializeExtensions context = do
     -- for new-style cabal, and WebKit will pick it up. Alternatively,
     -- one can set this to the directory where the extensions are
     -- built into.
-    #setWebExtensionsDirectory context "."
+    #setWebProcessExtensionsDirectory context "."
 
     -- We can pass arbitrary data to the WebExtension (which runs into
     -- a different process), as long as it fits into a
@@ -66,7 +66,7 @@ initializeExtensions context = do
     -- works for any type which is an instance of `IsGVariant`:
     -- https://hackage.haskell.org/package/haskell-gi-base/docs/Data-GI-Base-GVariant.html#t:IsGVariant
     userData <- toGVariant ("Hi, extension!" :: T.Text, 57 :: Int64)
-    #setWebExtensionsInitializationUserData context userData
+    #setWebProcessExtensionsInitializationUserData context userData
 
 activate :: Adw.Application -> IO ()
 activate app = do
@@ -95,15 +95,15 @@ activate app = do
 
   sessionBus <- Gio.busGetSync Gio.BusTypeSession (Nothing @Gio.Cancellable)
 
-  context <- new WK.WebContext [On #initializeWebExtensions
+  context <- new WK.WebContext [On #initializeWebProcessExtensions
                                  (initializeExtensions ?self)]
 
   contentManager <- new WK.UserContentManager
     [On (#scriptMessageReceived ::: "haskell_gi_handler") $ \result -> do
-      resultAsString <- result.getJsValue >>= #toString
+      resultAsString <- result.toString
       putStrLn $ "Got a message: " <> show resultAsString
     ]
-  #registerScriptMessageHandler contentManager "haskell_gi_handler"
+  contentManager.registerScriptMessageHandler "haskell_gi_handler" Nothing
 
   view <- new WK.WebView [ #webContext := context
                          , #userContentManager := contentManager

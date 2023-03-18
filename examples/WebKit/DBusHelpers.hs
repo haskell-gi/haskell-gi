@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 -- | Helper functions for registering D-Bus servers fomr Haskell.  See
 -- the [D-Bus
@@ -100,13 +101,13 @@ execDBusMethod :: Gio.DBusConnection -- ^ Connection to the bus
                                         -- received, or 'Nothing'.
                -> IO ()
 execDBusMethod connection info methodName params resultCallback =
-  #call connection (Just $ serverBusName info) (serverObjectPath info)
+  connection.call (Just $ serverBusName info) (serverObjectPath info)
         (serverInterfaceName info)
         methodName params Nothing []
         (-1) (Nothing @Gio.Cancellable)
         (wrapResultCB <$> resultCallback)
 
   where wrapResultCB :: DBusResultReady -> Gio.AsyncReadyCallback
-        wrapResultCB cb _maybeObj asyncResult = do
-          result <- #callFinish connection asyncResult
+        wrapResultCB cb _maybeObj asyncResult _data = do
+          result <- connection.callFinish asyncResult
           cb result

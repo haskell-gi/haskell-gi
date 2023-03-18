@@ -22,7 +22,7 @@ foreign-library simple-webextension
   if os(Windows)
     options: standalone
 
-  pkgconfig-depends: webkit2gtk-web-extension-5.0
+  pkgconfig-depends: webkitgtk-web-process-extension-6.0
 
   ghc-options:         -Wall -fno-warn-unused-do-bind -fwarn-incomplete-patterns -fno-warn-name-shadowing -threaded
 
@@ -32,7 +32,7 @@ foreign-library simple-webextension
 
   build-depends:       base >=4.7 && <5,
                        haskell-gi-base ^>= 0.26.0,
-                       gi-webkit2webextension == 5.0.*,
+                       gi-webkitwebprocessextension == 6.0.*,
                        gi-gio == 2.0.*,
                        text >= 1.0
   c-sources:           SimpleExtensionInit.c
@@ -49,7 +49,7 @@ executable SimpleBrowser
                        gi-glib == 2.0.*,
                        gi-gio == 2.0.*,
                        gi-gtk == 4.0.*,
-                       gi-webkit2 == 5.0.*,
+                       gi-webkit == 6.0.*,
                        gi-adwaita == 1.0.*,
                        text >= 1.0
   default-language:    Haskell2010

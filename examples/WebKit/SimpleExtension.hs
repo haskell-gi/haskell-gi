@@ -17,7 +17,7 @@ import Data.GI.Base (newObject, on, get, GVariant, unsafeCastTo)
 import Data.GI.Base.GVariant (newGVariantFromPtr, fromGVariant, toGVariant,
                               GVariantSinglet(..))
 import qualified GI.Gio as Gio
-import qualified GI.WebKit2WebExtension as WE
+import qualified GI.WebKitWebProcessExtension as WE
 
 import DBusHelpers (registerDBusServer, execDBusMethod)
 import DBusServersInfo (extensionServerInfo, browserServerInfo)
@@ -26,6 +26,8 @@ import DBusServersInfo (extensionServerInfo, browserServerInfo)
 highlightLinks :: WE.WebPage -> IO Word32
 highlightLinks page = do
   postToJSHandler page "Running highlight links..."
+  return 42
+{-
   maybeDom <- #getDomDocument page
   links <- case maybeDom of
     Just dom -> do
@@ -50,6 +52,7 @@ highlightLinks page = do
           Nothing -> return Nothing
     Nothing -> return []
   return $ fromIntegral $ length $ catMaybes links
+-}
 
 -- | Post the given message to the registered handler in the webview
 -- component, using the JS message handler mechanism instead of DBus.
@@ -80,16 +83,16 @@ extensionActivated = do
 
 -- Make sure that the entry point of the extension is visible by the
 -- glue code.
-foreign export ccall initialize_simple_web_extension_with_user_data ::
-  Ptr WE.WebExtension -> Ptr GVariant -> IO ()
+foreign export ccall initialize_simple_web_process_extension_with_user_data ::
+  Ptr WE.WebProcessExtension -> Ptr GVariant -> IO ()
 
 -- | This is the entry point of our extension, called by
 -- @webkit_web_extension_initialize@ in SimpleExtensionInit.c
-initialize_simple_web_extension_with_user_data ::
-  Ptr WE.WebExtension -> Ptr GVariant -> IO ()
-initialize_simple_web_extension_with_user_data extensionPtr dataPtr = do
+initialize_simple_web_process_extension_with_user_data ::
+  Ptr WE.WebProcessExtension -> Ptr GVariant -> IO ()
+initialize_simple_web_process_extension_with_user_data extensionPtr dataPtr = do
   -- Make a managed Haskell object out of the raw C pointer.
-  extension <- newObject WE.WebExtension extensionPtr
+  extension <- newObject WE.WebProcessExtension extensionPtr
   userData <- newGVariantFromPtr dataPtr
   fromGVariant @(Text, Int64) userData >>= \case
     Just (str, count) ->

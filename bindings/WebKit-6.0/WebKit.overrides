@@ -1,0 +1,5 @@
+# PkgConfig names are slightly different to the GI namespaces
+pkg-config-name JavaScriptCore javascriptcoregtk
+
+# nullable, but not marked as such
+set-attr WebKit/UserContentManager/register_script_message_handler/@parameters/world_name nullable 1
