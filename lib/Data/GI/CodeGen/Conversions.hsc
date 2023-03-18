@@ -306,6 +306,8 @@ hToF' t a hType fType transfer
         return $ M "(packMapStorableArray realToFrac)"
     | TCArray False _ _ (TBasicType TDouble) <- t =
         return $ M "(packMapStorableArray realToFrac)"
+    | TCArray False _ _ (TBasicType TUniChar) <- t =
+        return $ M "(packMapStorableArray ((fromIntegral . ord)))"
     | TCArray False _ _ (TBasicType _) <- t =
         return $ M "packStorableArray"
     | TCArray False _ _ TGValue <- t =
