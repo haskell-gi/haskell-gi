@@ -71,7 +71,9 @@ module Data.GI.CodeGen.Code
 import Control.Applicative ((<$>))
 import Data.Monoid (Monoid(..))
 #endif
+#if MIN_VERSION_base(4,18,0)
 import Control.Monad (forM, unless, when)
+#endif
 import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Control.Monad.Except

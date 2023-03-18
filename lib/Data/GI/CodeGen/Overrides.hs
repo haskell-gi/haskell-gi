@@ -11,7 +11,9 @@ import Control.Applicative ((<$>))
 import Data.Traversable (traverse)
 #endif
 
+#if MIN_VERSION_base(4,18,0)
 import Control.Monad (foldM)
+#endif
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad.Writer (WriterT, execWriterT, tell)
