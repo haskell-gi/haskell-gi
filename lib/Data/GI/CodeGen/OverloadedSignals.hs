@@ -36,7 +36,7 @@ genObjectSignals n o = do
          let signalListType = name <> "SignalList"
          line $ "type instance O.SignalList " <> name <> " = " <> signalListType
          line $ "type " <> signalListType <> " = ('[ "
-                  <> T.intercalate ", " infos <> "] :: [(Symbol, *)])"
+                  <> T.intercalate ", " infos <> "] :: [(Symbol, DK.Type)])"
 
 -- | Signal instances for interfaces.
 genInterfaceSignals :: Name -> Interface -> CodeGen e ()
@@ -51,4 +51,4 @@ genInterfaceSignals n iface = do
     let signalListType = name <> "SignalList"
     line $ "type instance O.SignalList " <> name <> " = " <> signalListType
     line $ "type " <> signalListType <> " = ('[ "
-             <> T.intercalate ", " infos <> "] :: [(Symbol, *)])"
+             <> T.intercalate ", " infos <> "] :: [(Symbol, DK.Type)])"

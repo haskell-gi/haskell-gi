@@ -81,7 +81,7 @@ genMethodList n methods = do
   group $ do
     let resolver = "Resolve" <> name <> "Method"
     export (Section MethodSection) resolver
-    line $ "type family " <> resolver <> " (t :: Symbol) (o :: *) :: * where"
+    line $ "type family " <> resolver <> " (t :: Symbol) (o :: DK.Type) :: DK.Type where"
     indent $ forM_ infos $ \(label, info) -> do
         line $ resolver <> " \"" <> label <> "\" o = " <> info
     indent $ line $ resolver <> " l o = O.MethodResolutionFailed l o"

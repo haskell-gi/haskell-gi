@@ -458,7 +458,7 @@ genStructOrUnionFields n fields = do
     line $ "instance O.HasAttributeList " <> name'
     line $ "type instance O.AttributeList " <> name' <> " = " <> attrListName
     line $ "type " <> attrListName <> " = ('[ " <>
-         T.intercalate ", " (catMaybes attrs) <> "] :: [(Symbol, *)])"
+         T.intercalate ", " (catMaybes attrs) <> "] :: [(Symbol, DK.Type)])"
 
 -- | Generate a constructor for a zero-filled struct/union of the given
 -- type, using the boxed (or GLib, for unboxed types) allocator.

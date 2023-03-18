@@ -958,6 +958,7 @@ moduleImports = T.unlines [
                 , "import qualified Control.Monad.IO.Class as MIO"
                 , "import qualified Data.Coerce as Coerce"
                 , "import qualified Data.Text as T"
+                , "import qualified Data.Kind as DK"
                 , "import qualified Data.ByteString.Char8 as B"
                 , "import qualified Data.Map as Map"
                 , "import qualified Foreign.Ptr as FP"

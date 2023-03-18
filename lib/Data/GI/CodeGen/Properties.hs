@@ -539,7 +539,7 @@ genProperties n ownedProps allProps = do
     line $ "instance O.HasAttributeList " <> name
     line $ "type instance O.AttributeList " <> name <> " = " <> propListType
     line $ "type " <> propListType <> " = ('[ "
-             <> T.intercalate ", " allProps <> "] :: [(Symbol, *)])"
+             <> T.intercalate ", " allProps <> "] :: [(Symbol, DK.Type)])"
 
 -- | Generate gtk2hs compatible attribute labels (to ease
 -- porting). These are namespaced labels, for examples
