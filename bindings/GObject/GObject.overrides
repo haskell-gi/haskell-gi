@@ -28,6 +28,7 @@ set-attr GObject/signal_handlers_unblock_matched/@parameters/data closure -1
 set-attr GObject/signal_handlers_block_matched/@parameters/data closure -1
 set-attr GObject/signal_handlers_disconnect_matched/@parameters/data closure -1
 set-attr GObject/signal_handler_find/@parameters/data closure -1
+set-attr GObject/signal_add_emission_hook/@parameters/hook_data closure -1
 
 # Generated from gobject 2.48.0 with xsltproc Nullable.xslt GObject-2.0.gir
 set-attr GObject/BindingTransformFunc/@parameters/user_data nullable 1
