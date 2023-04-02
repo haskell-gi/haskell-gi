@@ -61,8 +61,8 @@ writeCabal fname info exposed =
        , "custom-setup"
        , "      setup-depends: " <>
          T.intercalate ",\n                     "
-           ([ "base >= 4.9 && < 5"
-            , "Cabal >= 1.24"
+           ([ "base >= 4.11 && < 5"
+            , "Cabal >= 1.24 && < 4"
             , "haskell-gi >= 0.26 && < 0.27"]
             <> giDepends info)
        , ""

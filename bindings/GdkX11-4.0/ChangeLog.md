@@ -1,3 +1,11 @@
+### 4.0.7
+
++ Bump base lower bound
+
+### 4.0.6
+
++ Bump base lower bound
+
 ### 4.0.5
 
 + Relax constraint on text

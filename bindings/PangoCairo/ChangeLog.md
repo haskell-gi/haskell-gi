@@ -1,3 +1,11 @@
+### 1.0.30
+
++ Bump base lower bound
+
+### 1.0.29
+
++ Bump base lower bound
+
 ### 1.0.28
 
 + Add dependency on gi-gio

@@ -1,3 +1,7 @@
+### 2.0.13
+
++ Bump base lower bound
+
 ### 2.0.12
 
 + Relax constraint on text
