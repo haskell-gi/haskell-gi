@@ -35,6 +35,9 @@ set-attr Gtk/RadioMenuItem/set_group/@parameters/group transfer-ownership contai
 set-attr Gtk/RadioToolButton/new/@parameters/group transfer-ownership container
 set-attr Gtk/RadioMenuItem/new_from_stock/@parameters/group transfer-ownership container
 
+#
+set-attr Gtk/GestureZoom/new/@return-value transfer-ownership none
+
 # It is useful to expose these class structs when deriving new types
 set-attr Gtk/WidgetClass haskell-gi-force-visible 1
 set-attr Gtk/ContainerClass haskell-gi-force-visible 1
