@@ -329,7 +329,7 @@ genCallbackWrapper subsec cb name' maybeOwner = group $ do
 
       if isSignal
       then line $ returnBind
-                  <> "B.ManagedPtr.withTransient"
+                  <> "B.ManagedPtr.withNewObject"
                   <> " gi'selfPtr $ \\gi'self -> "
                   <> "gi'cb (Coerce.coerce gi'self) "
                   <> T.concat (map (" " <>) hInNames)

@@ -32,6 +32,7 @@ module Data.GI.Base.ManagedPtr
 
     -- * Wrappers
     , newObject
+    , withNewObject
     , wrapObject
     , releaseObject
     , unrefObject
@@ -166,7 +167,7 @@ withManagedPtrList managedList action = do
 
 -- | Perform the IO action with a transient managed pointer. The
 -- managed pointer will be valid while calling the action, but will be
--- disowned as soon as the action finished.
+-- disowned as soon as the action finishes.
 withTransient :: (HasCallStack, ManagedPtrNewtype a)
               => Ptr a -> (a -> IO b) -> IO b
 withTransient ptr action = do
@@ -286,6 +287,16 @@ newObject constructor ptr = do
   void $ g_object_ref_sink ptr
   fPtr <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
   return $! constructor fPtr
+
+-- | Perform the given IO action with a wrapped copy of the given ptr
+-- to a GObject. Note that this increases the reference count of the
+-- wrapped GObject, similarly to 'newObject'.
+withNewObject :: (HasCallStack, GObject o)
+                  => Ptr o -> (o -> IO b) -> IO b
+withNewObject ptr action = do
+  void $ g_object_ref_sink ptr
+  managed <- newManagedPtr' ptr_to_g_object_unref $ castPtr ptr
+  action (coerce managed)
 
 -- | Same as 'newObject', but we steal ownership of the object.
 wrapObject :: forall a b. (HasCallStack, GObject a, GObject b) =>

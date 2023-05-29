@@ -120,14 +120,14 @@ constructGObject constructor attrs = liftIO $ do
 
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.
-new' :: (MonadIO m, GObject o) =>
+new' :: (HasCallStack, MonadIO m, GObject o) =>
         (ManagedPtr o -> o) -> [m (GValueConstruct o)] -> m o
 new' constructor actions = do
   props <- sequence actions
   doConstructGObject constructor props
 
 -- | Construct the `GObject` given the list of `GValueConstruct`s.
-doConstructGObject :: forall o m. (GObject o, MonadIO m)
+doConstructGObject :: forall o m. (HasCallStack, GObject o, MonadIO m)
                       => (ManagedPtr o -> o) -> [GValueConstruct o] -> m o
 doConstructGObject constructor props = liftIO $ do
   let nprops = length props

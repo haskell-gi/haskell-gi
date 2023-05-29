@@ -600,3 +600,5 @@ main = do
         #showAll win
 
         Gtk.main
+
+        performGC

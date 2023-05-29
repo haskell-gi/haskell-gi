@@ -47,3 +47,4 @@ main = do
   args <- getArgs
   progName <- getProgName
   void $ #run app (Just $ progName : args)
+
