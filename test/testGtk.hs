@@ -540,31 +540,45 @@ main = do
         grid <- new Grid [ #orientation := OrientationVertical]
         set win [ #child := grid]
 
-        label <- new Label [ #label := "Test",
-                             On #activateLink $ \uri -> do
-                               testPolymorphicLenses win
-                                 ("Link " ++ uri ++ " clicked, thanks!")
-                               return True -- Link processed, do not
-                                           -- open with the browser
-                           ]
-        #add grid label
+        label <- new Label [ #label := "Test" ]
 
         button <- new Button [ #label := "_Click me!",
-                               #useUnderline := True]
-        on button #clicked $ do
-                set label [ #label := "This is <a href=\"http://www.gnome.org\">a test</a>",
-                            #useMarkup := True ]
-                -- set ?self [widgetSensitive := False, ...] would be
-                -- more natural, but this serves as a test of
-                -- attribute updating functions.
-                set ?self [widgetSensitive :~ not,
-                           #relief := ReliefStyleNone,
-                           #label := "Thanks for clicking!"]
-                sensitive <- get ?self #sensitive
-                newLabel <- get ?self #label
-                putStrLn $ "New button text is "
-                             ++ show newLabel
-                             ++ " and sensitive is " ++ show sensitive
+                               #useUnderline := True,
+                               On #clicked $ do
+                                 -- set ?self [widgetSensitive := False, ...] would be
+                                 -- more natural, but this serves as a test of
+                                 -- attribute updating functions.
+                                 set ?self [widgetSensitive :~ not,
+                                            #relief := ReliefStyleNone,
+                                            #label := "Thanks for clicking!"]
+                                 sensitive <- get ?self #sensitive
+                                 newLabel <- get ?self #label
+                                 putStrLn $ "New button text is "
+                                   ++ show newLabel
+                                   ++ " and sensitive is " ++ show sensitive
+
+                                 set label [
+                                   #label := "This is <a href=\"http://www.gnome.org\">a test</a>",
+                                   #useMarkup := True,
+                                   -- The following somewhat involved
+                                   -- code is to test that passing
+                                   -- ?self into functions connected
+                                   -- from signal handlers works.
+                                   let b = ?self in
+                                     On #activateLink $ \uri -> do
+                                       testPolymorphicLenses win
+                                         ("Link " ++ uri ++ " clicked, thanks!")
+                                       set b [#sensitive := True,
+                                              #relief := ReliefStyleNormal,
+                                              #label := "_Click me!"]
+                                       set ?self [#label := "Test"]
+                                       putStrLn "Link activated!"
+                                       -- Link processed, do not open with the
+                                       -- browser
+                                       return True ]
+                             ]
+
+        #add grid label
         #add grid button
 
         popupButton <- new Button [ #label := "_Pop-up menu",
