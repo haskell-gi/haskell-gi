@@ -1,3 +1,7 @@
+### 0.26.5
+
++ Add a reference to ?self argument in signals. See [issue 408](https://github.com/haskell-gi/haskell-gi/issues/408) for the motivation.
+
 ### 0.26.0
 
 + Support for 'HasField' methods, which allows the syntax 'widget.show' or 'widget.add child' for invoking methods using the new [RecordDotSyntax](https://github.com/ghc-proposals/ghc-proposals/blob/master/proposals/0282-record-dot-syntax.rst) in ghc 9.2.
