@@ -35,6 +35,7 @@ module Data.GI.Base.GObject
     , gobjectInstallProperty
     , gobjectInstallCIntProperty
     , gobjectInstallCStringProperty
+    , gobjectInstallCBoolProperty
     ) where
 
 import Data.Maybe (catMaybes)
@@ -69,7 +70,8 @@ import Data.GI.Base.CallStack (HasCallStack, prettyCallStack)
 import Data.GI.Base.GParamSpec (PropertyInfo(..),
                                 gParamSpecValue,
                                 CIntPropertyInfo(..), CStringPropertyInfo(..),
-                                gParamSpecCInt, gParamSpecCString,
+                                CBoolPropertyInfo(..),
+                                gParamSpecCInt, gParamSpecCString, gParamSpecCBool,
                                 getGParamSpecGetterSetter,
                                 PropGetSetter(..))
 import Data.GI.Base.GQuark (GQuark(..), gQuarkFromString)
@@ -409,5 +411,13 @@ gobjectInstallCStringProperty :: DerivedGObject o =>
                               GObjectClass -> CStringPropertyInfo o -> IO ()
 gobjectInstallCStringProperty klass propInfo = do
   pspec <- gParamSpecCString propInfo
+  withManagedPtr pspec $ \pspecPtr ->
+    g_object_class_install_property klass 1 pspecPtr
+
+-- | Add a `Foreign.C.CBool`-valued property to the given object class.
+gobjectInstallCBoolProperty :: DerivedGObject o =>
+                            GObjectClass -> CBoolPropertyInfo o -> IO ()
+gobjectInstallCBoolProperty klass propInfo = do
+  pspec <- gParamSpecCBool propInfo
   withManagedPtr pspec $ \pspecPtr ->
     g_object_class_install_property klass 1 pspecPtr
