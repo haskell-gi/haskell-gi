@@ -170,10 +170,10 @@ instance Show UnexpectedNullPointerReturn where
 
 instance Exception UnexpectedNullPointerReturn
 
--- | A <https://developer.gnome.org/glib/stable/glib-GVariant.html GVariant>. See "Data.GI.Base.GVariant" for further methods.
+-- | A <https://docs.gtk.org/glib/struct.Variant.html GVariant>. See "Data.GI.Base.GVariant" for further methods.
 newtype GVariant = GVariant (ManagedPtr GVariant)
 
--- | A <https://developer.gnome.org/gobject/stable/gobject-GParamSpec.html GParamSpec>. See "Data.GI.Base.GParamSpec" for further methods.
+-- | A <https://docs.gtk.org/gobject/class.ParamSpec.html GParamSpec>. See "Data.GI.Base.GParamSpec" for further methods.
 newtype GParamSpec = GParamSpec (ManagedPtr GParamSpec)
 
 -- | A convenient synonym for @Nothing :: Maybe GParamSpec@.
@@ -183,22 +183,22 @@ noGParamSpec = Nothing
 -- | An enum usable as a flag for a function.
 class Enum a => IsGFlag a
 
--- | A <https://developer.gnome.org/glib/stable/glib-Arrays.html GArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is mapped to a list on the Haskell side.
+-- | A <https://docs.gtk.org/glib/struct.Array.html GArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is mapped to a list on the Haskell side.
 data GArray a = GArray (Ptr (GArray a))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Pointer-Arrays.html GPtrArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is mapped to a list on the Haskell side.
+-- | A <https://docs.gtk.org/glib/struct.PtrArray.html GPtrArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is mapped to a list on the Haskell side.
 data GPtrArray a = GPtrArray (Ptr (GPtrArray a))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Byte-Arrays.html GByteArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is packed to a 'Data.ByteString.ByteString' on the Haskell side.
+-- | A <https://docs.gtk.org/glib/struct.ByteArray.html GByteArray>. Marshalling for this type is done in "Data.GI.Base.BasicConversions", it is packed to a 'Data.ByteString.ByteString' on the Haskell side.
 data GByteArray = GByteArray (Ptr GByteArray)
 
--- | A <https://developer.gnome.org/glib/stable/glib-Hash-Tables.html GHashTable>. It is mapped to a 'Data.Map.Map' on the Haskell side.
+-- | A <https://docs.gtk.org/glib/struct.HashTable.html GHashTable>. It is mapped to a 'Data.Map.Map' on the Haskell side.
 data GHashTable a b = GHashTable (Ptr (GHashTable a b))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Doubly-Linked-Lists.html GList>, mapped to a list on the Haskell side. Marshalling is done in "Data.GI.Base.BasicConversions".
+-- | A <https://docs.gtk.org/glib/struct.List.html GList>, mapped to a list on the Haskell side. Marshalling is done in "Data.GI.Base.BasicConversions".
 data GList a = GList (Ptr (GList a))
 
--- | A <https://developer.gnome.org/glib/stable/glib-Singly-Linked-Lists.html GSList>, mapped to a list on the Haskell side. Marshalling is done in "Data.GI.Base.BasicConversions".
+-- | A <https://docs.gtk.org/glib/struct.SList.html GSList>, mapped to a list on the Haskell side. Marshalling is done in "Data.GI.Base.BasicConversions".
 data GSList a = GSList (Ptr (GSList a))
 
 -- | Some APIs, such as `GHashTable`, pass around scalar types
