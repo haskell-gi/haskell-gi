@@ -35,6 +35,7 @@ module Data.GI.Base.GObject
     , gobjectInstallProperty
     , gobjectInstallCIntProperty
     , gobjectInstallCStringProperty
+    , gobjectInstallGBooleanProperty
     ) where
 
 import Data.Maybe (catMaybes)
@@ -69,7 +70,8 @@ import Data.GI.Base.CallStack (HasCallStack, prettyCallStack)
 import Data.GI.Base.GParamSpec (PropertyInfo(..),
                                 gParamSpecValue,
                                 CIntPropertyInfo(..), CStringPropertyInfo(..),
-                                gParamSpecCInt, gParamSpecCString,
+                                GBooleanPropertyInfo(..),
+                                gParamSpecCInt, gParamSpecCString, gParamSpecGBoolean,
                                 getGParamSpecGetterSetter,
                                 PropGetSetter(..))
 import Data.GI.Base.GQuark (GQuark(..), gQuarkFromString)
@@ -409,5 +411,13 @@ gobjectInstallCStringProperty :: DerivedGObject o =>
                               GObjectClass -> CStringPropertyInfo o -> IO ()
 gobjectInstallCStringProperty klass propInfo = do
   pspec <- gParamSpecCString propInfo
+  withManagedPtr pspec $ \pspecPtr ->
+    g_object_class_install_property klass 1 pspecPtr
+
+-- | Add a `${type gboolean}`-valued property to the given object class.
+gobjectInstallGBooleanProperty :: DerivedGObject o =>
+                               GObjectClass -> GBooleanPropertyInfo o -> IO ()
+gobjectInstallGBooleanProperty klass propInfo = do
+  pspec <- gParamSpecGBoolean propInfo
   withManagedPtr pspec $ \pspecPtr ->
     g_object_class_install_property klass 1 pspecPtr
