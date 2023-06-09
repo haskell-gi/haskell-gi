@@ -20,8 +20,8 @@ module Data.GI.Base.GParamSpec
   , gParamSpecCString
   , CIntPropertyInfo(..)
   , gParamSpecCInt
-  , CBoolPropertyInfo(..)
-  , gParamSpecCBool
+  , GBooleanPropertyInfo(..)
+  , gParamSpecGBoolean
   , GParamFlag(..)
 
   -- * Get\/Set
@@ -29,13 +29,13 @@ module Data.GI.Base.GParamSpec
   , getGParamSpecGetterSetter
   ) where
 
-import Foreign.C (CInt(..), CString, CBool(..))
+import Foreign.C (CInt(..), CString)
 import Foreign.Ptr (Ptr, FunPtr, castPtr, nullPtr)
 import Foreign.StablePtr (newStablePtr, deRefStablePtr,
                           castStablePtrToPtr, castPtrToStablePtr)
-import Foreign.Marshal.Utils (fromBool)
 import Control.Monad (void)
 import Data.Coerce (coerce)
+import Data.Int
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 
@@ -323,7 +323,7 @@ gParamSpecCString (CStringPropertyInfo {..}) =
         gParamSpecSetQData pspecPtr quark (wrapGetSet getter setter gvalueSet_)
         wrapGParamSpecPtr pspecPtr
 
--- | Information on a property of type `CBool` to be registered. A
+-- | Information on a property of type `type gboolean` to be registered. A
 -- property name consists of segments consisting of ASCII letters and
 -- digits, separated by either the \'-\' or \'_\' character. The first
 -- character of a property name must be a letter. Names which violate
@@ -339,7 +339,7 @@ gParamSpecCString (CStringPropertyInfo {..}) =
 -- as a label for the property in a property editor, and the @blurb@,
 -- which should be a somewhat longer description, suitable for e.g. a
 -- tooltip. The @nick@ and @blurb@ should ideally be localized.
-data CBoolPropertyInfo o = CBoolPropertyInfo
+data GBooleanPropertyInfo o = GBooleanPropertyInfo
   { name   :: Text
   , nick   :: Text
   , blurb  :: Text
@@ -350,16 +350,16 @@ data CBoolPropertyInfo o = CBoolPropertyInfo
   }
 
 foreign import ccall g_param_spec_boolean ::
-  CString -> CString -> CString -> CBool -> CInt -> IO (Ptr GParamSpec)
+  CString -> CString -> CString -> #{type gboolean} -> CInt -> IO (Ptr GParamSpec)
 
 -- | Create a `GParamSpec` for a bool param.
-gParamSpecCBool :: GObject o => CBoolPropertyInfo o -> IO GParamSpec
-gParamSpecCBool (CBoolPropertyInfo {..}) =
+gParamSpecGBoolean :: GObject o => GBooleanPropertyInfo o -> IO GParamSpec
+gParamSpecGBoolean (GBooleanPropertyInfo {..}) =
   withTextCString name $ \cname ->
     withTextCString nick $ \cnick ->
       withTextCString blurb $ \cblurb -> do
         pspecPtr <- g_param_spec_boolean cname cnick cblurb
-                        (CBool (fromBool defaultValue))
+                        ((fromIntegral . fromEnum) defaultValue)
                         (maybe defaultFlags gflagsToWord flags)
         quark <- pspecQuark
         gParamSpecSetQData pspecPtr quark (wrapGetSet getter setter gvalueSet_)

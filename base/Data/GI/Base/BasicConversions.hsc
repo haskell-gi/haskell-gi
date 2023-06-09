@@ -81,7 +81,7 @@ import qualified Data.Text.Foreign as TF
 import Foreign.Ptr (Ptr, plusPtr, nullPtr, nullFunPtr, castPtr)
 import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Storable (Storable, peek, poke, sizeOf)
-import Foreign.C.Types (CInt(..), CUInt(..), CSize(..), CChar(..), CBool(..))
+import Foreign.C.Types (CInt(..), CUInt(..), CSize(..), CChar(..))
 import Foreign.C.String (CString, withCString, peekCString)
 import Data.Word
 import Data.Int (Int32)
