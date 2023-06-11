@@ -18,7 +18,7 @@
 
 -- | Routines for connecting `GObject`s to signals. There are two
 -- basic variants, 'on' and 'after', which correspond to
--- <https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-connect g_signal_connect> and <https://developer.gnome.org/gobject/stable/gobject-Signals.html#g-signal-connect-after g_signal_connect_after>, respectively.
+-- <https://docs.gtk.org/gobject/func.signal_connect.html g_signal_connect> and <https://docs.gtk.org/gobject/func.signal_connect_after.html g_signal_connect_after>, respectively.
 --
 -- Basic usage is
 --

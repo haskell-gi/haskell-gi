@@ -238,7 +238,7 @@ foreign import ccall "g_variant_get_type_string" g_variant_get_type_string
 
 -- | Get the expected type of a 'GVariant', in 'GVariant'
 -- notation. See
--- <https://developer.gnome.org/glib/stable/glib-GVariantType.html>
+-- <https://docs.gtk.org/glib/struct.VariantType.html>
 -- for the meaning of the resulting format string.
 gvariantGetTypeString :: GVariant -> IO Text
 gvariantGetTypeString variant =
