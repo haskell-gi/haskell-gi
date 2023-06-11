@@ -1,3 +1,7 @@
+### 1.0.6
+
++ Add GLib as a dependency
+
 ### 1.0.5
 
 + Bump base lower bound
