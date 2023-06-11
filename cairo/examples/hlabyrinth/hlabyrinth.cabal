@@ -70,15 +70,15 @@ executable hlabyrinth
     , gi-pangocairo >=1.0.24 && <1.1
     , haskell-gi-base >=0.24.0 && <0.27
     , hxt-unicode >=9.0 && <9.1
-    , mmorph >=1.0.9 && <1.2
-    , mtl >=2.2.1 && <2.3
+    , mmorph >=1.0.9 && <1.3
+    , mtl >=2.2.1 && <2.4
     , optparse-applicative >=0.15.0 && <0.17
     , pureMD5 >=2.1 && <2.2
     , safecopy >=0.9.4.1 && <1
     , search-algorithms >=0.3 && <0.4
     , stm >=2.5.0.0 && <2.6.0.0
     , text >=1.2.2.1 && <3
-    , transformers >=0.5.2 && <0.6
+    , transformers >=0.5.2 && <0.7
   if flag(llvm)
     ghc-options: -fllvm
   if flag(threaded)
