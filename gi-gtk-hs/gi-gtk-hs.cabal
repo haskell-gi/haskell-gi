@@ -1,5 +1,5 @@
 name:                gi-gtk-hs
-version:             0.3.14
+version:             0.3.15
 synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
 homepage:            https://github.com/haskell-gi/haskell-gi
@@ -31,8 +31,8 @@ library
 
   build-depends:       base >= 4.9 && <5,
                        base-compat >=0.9.0 && <0.13,
-                       mtl >= 2.1 && <2.3,
-                       transformers >=0.3.0.0 && <0.6,
+                       mtl >= 2.1 && <2.4,
+                       transformers >=0.3.0.0 && <0.7,
                        containers >=0.5.5.1 && <0.7,
                        text >=1.2 && <3,
                        haskell-gi-base >=0.25.0 && <0.27,
