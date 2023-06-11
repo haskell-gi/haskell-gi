@@ -584,8 +584,11 @@ freeCallCallbacks callable nameMap =
                   Nothing -> badIntroError $ "Could not find " <> name
                                 <> " in " <> T.pack (ppShow callable) <> "\n"
                                 <> T.pack (ppShow nameMap)
-       when (argScope arg == ScopeTypeCall) $
-            line $ "safeFreeFunPtr $ castFunPtrToPtr " <> name'
+       when (argScope arg == ScopeTypeCall) $ do
+         isCallback <- typeIsCallback (argType arg)
+         if isCallback
+           then line $ "safeFreeFunPtr $ castFunPtrToPtr " <> name'
+           else comment $ "XXX: Ignoring scope annotation on a non-callback argument: " <> name
 
 -- | Format the signature of the Haskell binding for the `Callable`.
 formatHSignature :: Callable -> ForeignSymbol -> ExposeClosures -> ExcCodeGen ()

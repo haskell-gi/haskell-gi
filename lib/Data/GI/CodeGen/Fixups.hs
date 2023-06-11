@@ -5,17 +5,20 @@ module Data.GI.CodeGen.Fixups
     , detectGObject
     , dropDuplicatedFields
     , checkClosureDestructors
+    , fixClosures
     , fixSymbolNaming
     ) where
 
 import Data.Char (generalCategory, GeneralCategory(UppercaseLetter))
 import Data.Maybe (isNothing, isJust)
+import qualified Data.Map as M
 #if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
 #endif
 import qualified Data.Set as S
 import qualified Data.Text as T
 
+import Data.GI.CodeGen.Type
 import Data.GI.CodeGen.API
 
 -- | Remove functions and methods annotated with "moved-to".
@@ -178,7 +181,7 @@ checkMethodDestructors = map checkMethod
         checkMethod m = m {methodCallable =
                              checkCallableDestructors (methodCallable m)}
 
--- | If any argument for the callable has a associated destroyer for
+-- | If any argument for the callable has an associated destroyer for
 -- the user_data, but no associated user_data, drop the destroyer
 -- annotation.
 checkCallableDestructors :: Callable -> Callable
@@ -187,6 +190,62 @@ checkCallableDestructors c = c {args = map checkArg (args c)}
         checkArg arg = if argDestroy arg >= 0 && argClosure arg == -1
                        then arg {argDestroy = -1}
                        else arg
+
+-- | Sometimes it is the callback that is annotated with the (closure
+-- user_data) annotation, and sometimes the user_data parameter
+-- itself, with (closure callback) pointing to the callback. The
+-- following code makes sure that the annotation is on the callable
+-- only. Note that this goes against the official gobject
+-- introspection spec, but there is more code using this convention
+-- than otherwise, and the gir generator seems to add closure
+-- annotations in both directions when using the new convention
+-- anyway.
+fixCallableClosures :: Callable -> Callable
+fixCallableClosures c = c {args = map fixupArg (zip [0..] (args c))}
+  where fixupArg :: (Int, Arg) -> Arg
+        fixupArg (n, arg) = if isUserData arg
+                            then arg {argClosure = -1}
+                            else
+                              case M.lookup n reverseMap of
+                                Just user_data -> arg {argClosure = user_data}
+                                Nothing -> arg
+
+        -- Map from callbacks to their corresponding user_data
+        -- arguments, obtained by looking to the argClosure value for
+        -- the user_data argument.
+        reverseMap :: M.Map Int Int
+        reverseMap = M.fromList
+          . map (\(n, arg) -> (argClosure arg, n))
+          . filter (isUserData . snd)
+          . filter ((/= -1) . argClosure . snd)
+          $ zip [0..] (args c)
+
+        isUserData :: Arg -> Bool
+        isUserData arg = argScope arg == ScopeTypeInvalid ||
+                         argType arg == TBasicType TPtr
+
+-- | Closures are often incorrectly assigned, with the closure
+-- annotation on the callback, instead of in the closure (user_data)
+-- parameter itself. The following makes sure that things are as they
+-- should.
+fixClosures :: (Name, API) -> (Name, API)
+fixClosures (n, APIObject o) =
+  (n, APIObject (o {objMethods = fixMethodClosures (objMethods o)}))
+fixClosures (n, APIInterface i) =
+  (n, APIInterface (i {ifMethods = fixMethodClosures (ifMethods i)}))
+fixClosures (n, APIStruct s) =
+  (n, APIStruct (s {structMethods = fixMethodClosures (structMethods s)}))
+fixClosures (n, APIUnion u) =
+  (n, APIUnion (u {unionMethods = fixMethodClosures (unionMethods u)}))
+fixClosures (n, APIFunction f) =
+  (n, APIFunction (f {fnCallable = fixCallableClosures (fnCallable f)}))
+fixClosures (n, api) = (n, api)
+
+fixMethodClosures :: [Method] -> [Method]
+fixMethodClosures = map fixMethod
+  where fixMethod :: Method -> Method
+        fixMethod m = m {methodCallable =
+                            fixCallableClosures (methodCallable m)}
 
 -- | Some symbols have names that are not valid Haskell identifiers,
 -- fix that here.

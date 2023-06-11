@@ -1,3 +1,7 @@
+### 0.26.6
+
++ Work around changing conventions about what the `closure n` annotation means: many annotations appear on the callback, pointing to the user_data argument, but sometimes it also appears on the user_data argument, pointing to the callback. See [issue 407](https://github.com/haskell-gi/haskell-gi/issues/407) for a place where this becomes a problem.
+
 ### 0.26.5
 
 + Add a reference to ?self argument in signals. See [issue 408](https://github.com/haskell-gi/haskell-gi/issues/408) for the motivation.
