@@ -108,6 +108,6 @@ execDBusMethod connection info methodName params resultCallback =
         (wrapResultCB <$> resultCallback)
 
   where wrapResultCB :: DBusResultReady -> Gio.AsyncReadyCallback
-        wrapResultCB cb _maybeObj asyncResult _data = do
+        wrapResultCB cb _maybeObj asyncResult = do
           result <- connection.callFinish asyncResult
           cb result

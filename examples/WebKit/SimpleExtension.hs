@@ -6,14 +6,13 @@
 
 module SimpleExtension where
 
-import Control.Monad (void, forM)
+import Control.Monad (void)
 import Data.Int (Int64)
-import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Word (Word32)
 import Foreign.Ptr (Ptr)
 
-import Data.GI.Base (newObject, on, get, GVariant, unsafeCastTo)
+import Data.GI.Base (newObject, on, GVariant)
 import Data.GI.Base.GVariant (newGVariantFromPtr, fromGVariant, toGVariant,
                               GVariantSinglet(..))
 import qualified GI.Gio as Gio

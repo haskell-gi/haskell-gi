@@ -652,8 +652,9 @@ callableHInArgs callable expose =
                  -- arguments to Haskell code.
         closures = map (args callable!!) . filter (/= -1) . map argClosure $ inArgs
         destroyers = map (args callable!!) . filter (/= -1) . map argDestroy $ inArgs
+        callbackUserData = filter argCallbackUserData (args callable)
         omitted = case expose of
-                    WithoutClosures -> arrayLengths callable <> closures <> destroyers
+                    WithoutClosures -> arrayLengths callable <> closures <> destroyers <> callbackUserData
                     WithClosures -> arrayLengths callable
     in (filter (`notElem` omitted) inArgs, omitted)
 
@@ -963,7 +964,8 @@ genCCallableWrapper n cSymbol callable
 forgetClosures :: Callable -> Callable
 forgetClosures c = c {args = map forgetClosure (args c)}
     where forgetClosure :: Arg -> Arg
-          forgetClosure arg = arg {argClosure = -1}
+          forgetClosure arg = arg {argClosure = -1,
+                                   argCallbackUserData = False}
 
 -- | Generate a wrapper for a dynamic C symbol (i.e. a Haskell
 -- function that will invoke its first argument, which should be a

@@ -852,7 +852,9 @@ haskellType t@(TInterface n) = do
 -- | Whether the callable has closure arguments (i.e. "user_data"
 -- style arguments).
 callableHasClosures :: Callable -> Bool
-callableHasClosures = any (/= -1) . map argClosure . args
+callableHasClosures c = or . concatMap checkArg $ args c
+  where checkArg :: Arg -> [Bool]
+        checkArg arg = [argClosure arg /= -1, argCallbackUserData arg]
 
 -- | Check whether the given type corresponds to a callback.
 typeIsCallback :: Type -> CodeGen e Bool

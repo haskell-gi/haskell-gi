@@ -38,6 +38,8 @@ data Arg = Arg {
         argClosure :: Int,
         argDestroy :: Int,
         argCallerAllocates :: Bool,
+        argCallbackUserData :: Bool,
+        -- ^ Whether the argument is an "user-data" argument for a callback.
         transfer :: Transfer
     } deriving (Show, Eq, Ord)
 
@@ -76,6 +78,10 @@ parseArg = do
                   then nullable || allowNone
                   else nullable
   callerAllocates <- optionalAttr "caller-allocates" False parseBool
+  -- There is no annotation for this one yet, see
+  -- https://gitlab.gnome.org/GNOME/gobject-introspection/-/issues/450
+  -- We will use some heuristics later for setting this field.
+  let callbackUserData = False
   t <- parseType
   doc <- parseDocumentation
   return $ Arg { argCName = name
@@ -87,5 +93,6 @@ parseArg = do
                , argClosure = closure
                , argDestroy = destroy
                , argCallerAllocates = callerAllocates
+               , argCallbackUserData = callbackUserData
                , transfer = ownership
                }

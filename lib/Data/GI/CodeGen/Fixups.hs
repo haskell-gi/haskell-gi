@@ -6,6 +6,7 @@ module Data.GI.CodeGen.Fixups
     , dropDuplicatedFields
     , checkClosureDestructors
     , fixClosures
+    , fixCallbackUserData
     , fixSymbolNaming
     ) where
 
@@ -246,6 +247,36 @@ fixMethodClosures = map fixMethod
   where fixMethod :: Method -> Method
         fixMethod m = m {methodCallable =
                             fixCallableClosures (methodCallable m)}
+
+-- | The last argument of callbacks is often a @user_data@ argument,
+-- but currently gobject-introspection does not have an annotation
+-- representing this. This is generally OK, since the gir generator
+-- will mark these arguments as @(closure)@ if they are named
+-- @user_data@, and we do the right things in this case, but recently
+-- there has been a push to "fix" these annotations by removing them
+-- without providing any replacement, which breaks the bindings. See
+-- https://gitlab.gnome.org/GNOME/gobject-introspection/-/issues/450
+-- Here we try to guess which arguments in callbacks are user_data
+-- arguments.
+fixCallbackUserData :: (Name, API) -> (Name, API)
+fixCallbackUserData (n, APICallback cb) =
+  (n, APICallback (cb {cbCallable = fixCallableUserData (cbCallable cb)}))
+fixCallbackUserData (n, api) = (n, api)
+
+-- | If the last argument of a callable is a @gpointer@, and it is not
+-- marked as a closure pointing to a different argument, mark it as a
+-- callback @user_data@ argument.
+fixCallableUserData :: Callable -> Callable
+fixCallableUserData c = c {args = fixLast 0 (args c)}
+  where
+    fixLast :: Int -> [Arg] -> [Arg]
+    fixLast _ [] = []
+    fixLast n (arg:[])
+      | argType arg == TBasicType TPtr &&
+        argClosure arg `elem` [-1, n] =
+          [arg {argClosure = -1, argCallbackUserData = True}]
+      | otherwise = [arg]
+    fixLast n (arg:rest) = arg : fixLast (n+1) rest
 
 -- | Some symbols have names that are not valid Haskell identifiers,
 -- fix that here.
