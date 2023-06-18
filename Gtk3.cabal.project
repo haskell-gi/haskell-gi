@@ -38,7 +38,7 @@ packages: base/haskell-gi-base.cabal
           bindings/GES/gi-ges.cabal
           bindings/Gtk-3.0/gi-gtk.cabal
           bindings/GtkLayerShell/gi-gtk-layer-shell.cabal
-          bindings/GtkSource/gi-gtksource.cabal
+          bindings/GtkSource-3.0/gi-gtksource.cabal
           bindings/Handy/gi-handy.cabal
           bindings/IBus/gi-ibus.cabal
           bindings/JavaScriptCore-4.0/gi-javascriptcore.cabal
