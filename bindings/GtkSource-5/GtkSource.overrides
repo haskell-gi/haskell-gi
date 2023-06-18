@@ -1,0 +1,16 @@
+namespace GtkSource
+set-attr GtkSource/Buffer/iter_backward_to_context_class_toggle/@parameters/iter transfer-ownership none
+set-attr GtkSource/Buffer/iter_backward_to_context_class_toggle/@parameters/iter direction inout
+set-attr GtkSource/Buffer/iter_backward_to_context_class_toggle/@parameters/iter caller-allocates 1
+
+set-attr GtkSource/Buffer/iter_forward_to_context_class_toggle/@parameters/iter transfer-ownership none
+set-attr GtkSource/Buffer/iter_forward_to_context_class_toggle/@parameters/iter direction inout
+set-attr GtkSource/Buffer/iter_forward_to_context_class_toggle/@parameters/iter caller-allocates 1
+
+set-attr GtkSource/Buffer/backward_iter_to_source_mark/@parameters/iter transfer-ownership none
+set-attr GtkSource/Buffer/backward_iter_to_source_mark/@parameters/iter caller-allocates 1
+set-attr GtkSource/Buffer/forward_iter_to_source_mark/@parameters/iter transfer-ownership none
+set-attr GtkSource/Buffer/forward_iter_to_source_mark/@parameters/iter caller-allocates 1
+
+set-attr GtkSource/Indenter/indent/@parameters/iter transfer-ownership none
+set-attr GtkSource/Indenter/indent/@parameters/iter caller-allocates 1
