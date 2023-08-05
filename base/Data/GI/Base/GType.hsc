@@ -107,10 +107,6 @@ gtypeInvalid = GType #const G_TYPE_INVALID
 gtypeVariant :: GType
 gtypeVariant = GType #const G_TYPE_VARIANT
 
--- | The `GType` corresponding to 'Data.GI.Base.GError.GError'.
-gtypeError :: GType
-gtypeError = GType #const G_TYPE_ERROR
-
 -- | The `GType` corresponding to 'Data.GI.Base.BasicTypes.GParamSpec'.
 gtypeParam :: GType
 gtypeParam = GType #const G_TYPE_PARAM
@@ -140,3 +136,9 @@ foreign import ccall haskell_gi_StablePtr_get_type :: CGType
 -- | The `GType` for boxed `StablePtr`s.
 gtypeStablePtr :: GType
 gtypeStablePtr = GType haskell_gi_StablePtr_get_type
+
+foreign import ccall "g_error_get_type" g_error_get_type :: CGType
+
+-- | The `GType` corresponding to 'Data.GI.Base.GError.GError'.
+gtypeError :: GType
+gtypeError = GType g_error_get_type
