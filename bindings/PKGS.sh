@@ -25,7 +25,7 @@ case "$TARGET" in
         ;;
     ubuntu-ci)
         PKG_DEPS='.distributionPackages.ubuntu, .distributionPackages."ubuntu-ci"'
-        PKG_COND='(.distributionPackages.ubuntu != null or .distributionPackages."ubuntu-ci" != null) and .distributionPackages."ubuntu-ci" != "skip"'
+        PKG_COND='(.distributionPackages.ubuntu != null or .distributionPackages."ubuntu-ci" != null) and .distributionPackages."ubuntu-ci" != ["skip"]'
         ;;
     fedora)
         PKG_DEPS="[\"pkgconfig(\" + (.pkgconfigDepends | split(\" \") | .[0]) + \")\"]"
