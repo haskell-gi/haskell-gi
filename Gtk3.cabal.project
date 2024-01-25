@@ -61,3 +61,4 @@ packages: base/haskell-gi-base.cabal
           bindings/Json/gi-json.cabal
           bindings/Clutter/gi-clutter.cabal
           bindings/Rsvg/gi-rsvg.cabal
+          bindings/GstApp/gi-gstapp.cabal
