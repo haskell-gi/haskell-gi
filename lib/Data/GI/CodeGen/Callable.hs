@@ -573,6 +573,7 @@ prepareClosures callable nameMap = do
                     n -> let destroyName = escapedArgName $ (args callable)!!n
                          in line $ "let " <> destroyName <> " = FP.nullFunPtr"
                 ScopeTypeCall -> line $ "let " <> closureName <> " = nullPtr"
+                ScopeTypeForever -> line $ "let " <> closureName <> " = nullPtr"
             _ -> badIntroError $ "Closure \"" <> n <> "\" is not a callback."
 
 freeCallCallbacks :: Callable -> Map.Map Text Text -> ExcCodeGen ()
