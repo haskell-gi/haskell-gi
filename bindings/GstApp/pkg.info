@@ -6,7 +6,7 @@
     "author": null,
     "girName": "GstApp",
     "girVersion": "1.0",
-    "girOverrides": "GstApp.overrides",
+    "girOverrides": null,
     "baseVersion": "base >= 4.8 && <5",
     "distributionPackages": {
         "fedora": [],
