@@ -1,4 +1,0 @@
-namespace Soup
-
-# The "len" parameter is not marked as (out)
-ignore Address.get_sockaddr
