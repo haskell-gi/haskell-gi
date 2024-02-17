@@ -24,6 +24,7 @@ data Scope = ScopeTypeInvalid
            | ScopeTypeCall
            | ScopeTypeAsync
            | ScopeTypeNotified
+           | ScopeTypeForever
              deriving (Show, Eq, Ord)
 
 data Arg = Arg {
@@ -54,6 +55,7 @@ parseScope :: Text -> Parser Scope
 parseScope "call" = return ScopeTypeCall
 parseScope "async" = return ScopeTypeAsync
 parseScope "notified" = return ScopeTypeNotified
+parseScope "forever" = return ScopeTypeForever
 parseScope s = parseError $ "Unknown scope type \"" <> s <> "\""
 
 parseDirection :: Text -> Parser Direction
