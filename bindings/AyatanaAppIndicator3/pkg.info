@@ -6,7 +6,7 @@
     "author": null,
     "girName": "AyatanaAppIndicator3",
     "girVersion": "0.1",
-    "girOverrides": null,
+    "girOverrides": "AyatanaAppIndicator3.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "distributionPackages": {
         "fedora": [],

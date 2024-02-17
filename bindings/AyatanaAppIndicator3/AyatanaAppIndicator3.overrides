@@ -1,0 +1,22 @@
+
+# Generated with xsltproc Nullable.xslt AyatanaAppIndicator3-0.1.gir
+set-attr AyatanaAppIndicator3/Indicator/connection_changed/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/Indicator/new_attention_icon/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/Indicator/new_icon/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/Indicator/new_icon_theme_path/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/Indicator/new_label/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/Indicator/new_status/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/Indicator/scroll_event/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/Indicator/set_attention_icon_full/@parameters/icon_desc nullable 1
+set-attr AyatanaAppIndicator3/Indicator/set_icon_full/@parameters/icon_desc nullable 1
+set-attr AyatanaAppIndicator3/Indicator/set_menu/@parameters/menu nullable 1
+set-attr AyatanaAppIndicator3/Indicator/set_secondary_activate_target/@parameters/menuitem nullable 1
+set-attr AyatanaAppIndicator3/Indicator/set_title/@parameters/title nullable 1
+set-attr AyatanaAppIndicator3/IndicatorClass/new_icon/new_icon/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/IndicatorClass/new_attention_icon/new_attention_icon/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/IndicatorClass/new_status/new_status/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/IndicatorClass/new_icon_theme_path/new_icon_theme_path/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/IndicatorClass/new_label/new_label/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/IndicatorClass/connection_changed/connection_changed/@parameters/user_data nullable 1
+set-attr AyatanaAppIndicator3/IndicatorClass/scroll_event/scroll_event/@parameters/user_data nullable 1
+

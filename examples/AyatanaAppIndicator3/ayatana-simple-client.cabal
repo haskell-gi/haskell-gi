@@ -1,5 +1,5 @@
 cabal-version:  2.2
-name:           simple-client
+name:           ayatana-simple-client
 version:        0.1
 synopsis:       An example of AyatanaAppIndicator3 usage.
 description:    This is a port of the example shipped with the upstream library
@@ -10,8 +10,8 @@ copyright:      2023 Iñaki García Etxebarria
 license:        LGPL-2.1-or-later
 build-type:     Simple
 
-executable simple-client
-  main-is: simple-client.hs
+executable ayatana-simple-client
+  main-is: ayatana-simple-client.hs
   ghc-options: -Wall -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
   build-depends: base >=4.7 && <5
                , gi-ayatana-appindicator3

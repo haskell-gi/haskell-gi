@@ -34,7 +34,7 @@ main = do
   AI.indicatorSetAttentionIconFull
     indicator
     "indicator-messages-new"
-    "System Messages Icon Highlighted"
+    (Just "System Messages Icon Highlighted")
   AI.indicatorSetLabel indicator "1%" "100%"
   AI.indicatorSetTitle indicator $ Just "Test Indicator"
 
@@ -135,9 +135,9 @@ localIconToggle indicator item = do
   active <- Gtk.get item #active
   if active
     then
-      AI.indicatorSetIconFull indicator "./simple-client-test-icon.png" "Local Icon"
+      AI.indicatorSetIconFull indicator "./simple-client-test-icon.png" (Just "Local Icon")
     else
-      AI.indicatorSetIconFull indicator "indicator-messages" "System Icon"
+      AI.indicatorSetIconFull indicator "indicator-messages" (Just "System Icon")
 
 itemClickedCallback :: T.Text -> IO ()
 itemClickedCallback label = T.putStrLn $ label <> " clicked!"
