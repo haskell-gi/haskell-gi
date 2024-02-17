@@ -1,0 +1,22 @@
+cabal-version:  2.2
+name:           simple-client
+version:        0.1
+synopsis:       An example of AyatanaAppIndicator3 usage.
+description:    This is a port of the example shipped with the upstream library
+                https://github.com/AyatanaIndicators/libayatana-appindicator/tree/238c8b02718fa5b4af95ede72beeed762094f4cc/example
+author:         Jean-Charles Quillet
+maintainer:     Iñaki García Etxebarria
+copyright:      2023 Iñaki García Etxebarria
+license:        LGPL-2.1-or-later
+build-type:     Simple
+
+executable simple-client
+  main-is: simple-client.hs
+  ghc-options: -Wall -fno-warn-unused-do-bind -threaded -with-rtsopts=-N
+  build-depends: base >=4.7 && <5
+               , gi-ayatana-appindicator3
+               , gi-glib
+               , gi-gtk
+               , haskell-gi-base
+               , text
+  default-language: Haskell2010

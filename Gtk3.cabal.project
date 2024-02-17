@@ -7,6 +7,7 @@ packages: base/haskell-gi-base.cabal
           examples/GtkSourceView/gtksourceview-example.cabal
           examples/Clutter/clutter-example.cabal
           examples/rsvg/rsvg-example.cabal
+          examples/AyatanaAppIndicator3/simple-client.cabal
           gi-gtk-hs/gi-gtk-hs.cabal
           cairo/gi-cairo-render/gi-cairo-render.cabal
           cairo/gi-cairo-connector/gi-cairo-connector.cabal
@@ -62,3 +63,4 @@ packages: base/haskell-gi-base.cabal
           bindings/Clutter/gi-clutter.cabal
           bindings/Rsvg/gi-rsvg.cabal
           bindings/GstApp/gi-gstapp.cabal
+          bindings/AyatanaAppIndicator3/gi-ayatana-appindicator3.cabal
