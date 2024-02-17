@@ -1,3 +1,7 @@
+### 0.26.8
+
++ Add support for scope type "forever": see [this issue](https://github.com/haskell-gi/haskell-gi/issues/425).
+
 ### 0.26.7
 
 + Work around changing conventions on how to annotate user_data arguments in callbacks, see [this gobject introspection issue](https://gitlab.gnome.org/GNOME/gobject-introspection/-/issues/450) for background.
