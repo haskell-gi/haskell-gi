@@ -1,3 +1,7 @@
+### 1.0.29
+
++ Ignore more *_take functions, that do not make sense in Haskell. See [issue 412](https://github.com/haskell-gi/haskell-gi/issues/412) for issues that these functions create.
+
 ### 1.0.28
 
 + Bump base lower bound

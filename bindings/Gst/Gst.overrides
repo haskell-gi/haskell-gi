@@ -2,6 +2,8 @@ namespace Gst
 
 # Not needed for the bindings
 ignore MiniObject.take
+ignore Message.take
+ignore TagList.take
 
 # Wrong introspection data, reported as https://bugzilla.gnome.org/show_bug.cgi?id=775944
 set-attr Gst/Event/new_select_streams/@parameters/streams/@type/@type name utf8
