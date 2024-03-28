@@ -15,8 +15,8 @@ import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Foreign.Storable (sizeOf)
-import Foreign.C (CShort, CUShort, CSize)
-import System.Posix.Types (CSsize)
+import Foreign.C (CShort, CUShort, CSize, CTime)
+import System.Posix.Types (CSsize, COff, CDev, CGid, CPid, CSocklen, CUid)
 
 import Data.GI.GIR.BasicTypes (Type(..), BasicType(..))
 import Data.GI.GIR.Parser
@@ -47,25 +47,40 @@ nameToBasicType "utf8"     = Just TUTF8
 nameToBasicType "filename" = Just TFileName
 nameToBasicType "gintptr"  = Just TIntPtr
 nameToBasicType "guintptr" = Just TUIntPtr
-nameToBasicType "gshort"   = case sizeOf (0 :: CShort) of
-                               2 -> Just TInt16
-                               4 -> Just TInt32
-                               8 -> Just TInt64
-                               n -> error $ "Unexpected short size: " ++ show n
-nameToBasicType "gushort"  = case sizeOf (0 :: CUShort) of
-                               2 -> Just TUInt16
-                               4 -> Just TUInt32
-                               8 -> Just TUInt64
-                               n -> error $ "Unexpected ushort size: " ++ show n
-nameToBasicType "gssize"   = case sizeOf (0 :: CSsize) of
-                               4 -> Just TInt32
-                               8 -> Just TInt64
-                               n -> error $ "Unexpected ssize length: " ++ show n
-nameToBasicType "gsize"    = case sizeOf (0 :: CSize) of
-                               4 -> Just TUInt32
-                               8 -> Just TUInt64
-                               n -> error $ "Unexpected size length: " ++ show n
+nameToBasicType "gshort"   =
+  Just $ intToBasicType "short" (sizeOf (0 :: CShort)) True
+nameToBasicType "gushort"  =
+  Just $ intToBasicType "ushort" (sizeOf (0 :: CUShort)) False
+nameToBasicType "gssize"   =
+  Just $ intToBasicType "ssize" (sizeOf (0 :: CSsize)) True
+nameToBasicType "gsize"    =
+  Just $ intToBasicType "size" (sizeOf (0 :: CSize)) False
+nameToBasicType n@"time_t" =
+  Just $ intToBasicType n (sizeOf (0 :: CTime)) ((-1 :: CTime) < 0)
+nameToBasicType n@"off_t"  =
+  Just $ intToBasicType n (sizeOf (0 :: COff)) ((-1 :: COff) < 0)
+nameToBasicType n@"dev_t"  =
+  Just $ intToBasicType n (sizeOf (0 :: CDev)) ((-1 :: CDev) < 0)
+nameToBasicType n@"gid_t"  =
+  Just $ intToBasicType n (sizeOf (0 :: CGid)) ((-1 :: CGid) < 0)
+nameToBasicType n@"pid_t"  =
+  Just $ intToBasicType n (sizeOf (0 :: CPid)) ((-1 :: CPid) < 0)
+nameToBasicType n@"socklen_t"  =
+  Just $ intToBasicType n (sizeOf (0 :: CSocklen)) ((-1 :: CSocklen) < 0)
+nameToBasicType n@"uid_t"  =
+  Just $ intToBasicType n (sizeOf (0 :: CUid)) ((-1 :: CUid) < 0)
 nameToBasicType _          = Nothing
+
+-- | Given the size and signedness of a C integer type, return a `BasicType`.
+intToBasicType :: Text -> Int -> Bool -> BasicType
+intToBasicType _ 2 True    = TInt16
+intToBasicType _ 4 True    = TInt32
+intToBasicType _ 8 True    = TInt64
+intToBasicType _ 2 False   = TUInt16
+intToBasicType _ 4 False   = TUInt32
+intToBasicType _ 8 False   = TUInt64
+intToBasicType name size _ =
+  error $ "Unexpected " ++ show name ++ " length: " ++ show size
 
 -- | The different array types.
 parseArrayInfo :: Parser Type
