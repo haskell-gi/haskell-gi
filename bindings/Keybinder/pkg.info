@@ -13,7 +13,7 @@
             "libkeybinder-dev"
         ],
         "ubuntu": [
-            "libkeybinder-dev"
+            "libkeybinder-3.0-dev"
         ],
         "nixos": [
             "keybinder3"
