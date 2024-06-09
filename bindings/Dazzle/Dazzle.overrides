@@ -1,1 +1,5 @@
 namespace Dazzle
+
+set-attr Dazzle/SuggestionPositionFunc/@parameters/area transfer-ownership none
+delete-attr Dazzle/SuggestionPositionFunc/@parameters/area direction
+delete-attr Dazzle/SuggestionPositionFunc/@parameters/area caller-allocates
