@@ -17,7 +17,6 @@ import Data.Monoid ((<>))
 #endif
 import Data.Text (Text)
 import qualified Data.Text as T
-import Foreign.Storable (sizeOf)
 
 import Data.GI.GIR.BasicTypes (Type(..), BasicType(..))
 import Data.GI.GIR.Parser
