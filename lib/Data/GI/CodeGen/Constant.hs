@@ -106,5 +106,16 @@ showBasicType TUniChar c       = return $ "'" <> c <> "'"
 showBasicType TGType   gtype   = return $ "GType " <> gtype
 showBasicType TIntPtr  ptr     = return ptr
 showBasicType TUIntPtr ptr     = return ptr
+showBasicType TShort   s       = return s
+showBasicType TUShort  u       = return u
+showBasicType TSSize   s       = return s
+showBasicType TSize    s       = return s
+showBasicType Ttime_t  t       = return t
+showBasicType Toff_t   o       = return o
+showBasicType Tdev_t   d       = return d
+showBasicType Tgid_t   g       = return g
+showBasicType Tpid_t   p       = return p
+showBasicType Tsocklen_t l     = return l
+showBasicType Tuid_t   u       = return u
 -- We take care of this one separately above
 showBasicType TPtr    _        = notImplementedError $ "Cannot directly show a pointer"

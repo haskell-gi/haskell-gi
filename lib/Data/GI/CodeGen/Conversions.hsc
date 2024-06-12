@@ -777,8 +777,8 @@ haskellBasicType TUInt     = case sizeOf (0 :: CUInt) of
                                4 -> con0 "Word32"
                                n -> error ("Unsupported `guint' length: " ++
                                            show n)
-haskellBasicType TLong     = con0 "CLong"
-haskellBasicType TULong    = con0 "CULong"
+haskellBasicType TLong     = con0 "FCT.CLong"
+haskellBasicType TULong    = con0 "FCT.CULong"
 haskellBasicType TInt8     = con0 "Int8"
 haskellBasicType TUInt8    = con0 "Word8"
 haskellBasicType TInt16    = con0 "Int16"
@@ -795,6 +795,66 @@ haskellBasicType TUniChar  = con0 "Char"
 haskellBasicType TFileName = con0 "[Char]"
 haskellBasicType TIntPtr   = con0 "CIntPtr"
 haskellBasicType TUIntPtr  = con0 "CUIntPtr"
+haskellBasicType TShort    = con0 "FCT.CShort"
+haskellBasicType TUShort   = con0 "FCT.CUShort"
+haskellBasicType TSSize    =
+#if defined(HTYPE_SSIZE_T)
+    con0 "SPT.CSsize"
+#else
+    int #{size gsize}
+#endif
+haskellBasicType TSize = con0 "FCT.CSize"
+haskellBasicType Ttime_t = con0 "FCT.CTime"
+haskellBasicType Toff_t =
+#if defined(HTYPE_OFF_T)
+  con0 "SPT.COff"
+#else
+  -- If the type is not defined there's not much we can do, other than
+  -- guessing. The values below are correct on Linux amd64. In
+  -- practice it will hopefully not be much of an issue with newer
+  -- versions of GHC, since platforms lacking the definition will
+  -- (hopefully) also not have the relevant types in the available
+  -- APIs. The same remark applies to the types below.
+  int 8
+#endif
+haskellBasicType Tdev_t =
+#if defined(HTYPE_DEV_T)
+  con0 "SPT.CDev"
+#else
+  uint 8
+#endif
+haskellBasicType Tgid_t =
+#if defined(HTYPE_GID_T)
+  con0 "SPT.CGid"
+#else
+  uint 4
+#endif
+haskellBasicType Tpid_t =
+#if defined(HTYPE_PID_T)
+  con0 "SPT.CPid"
+#else
+  int 4
+#endif
+haskellBasicType Tsocklen_t =
+#if defined(HTYPE_SOCKLEN_T)
+  con0 "SPT.CSocklen"
+#else
+  uint 4
+#endif
+haskellBasicType Tuid_t =
+#if defined(HTYPE_UID_T)
+  con0 "SPT.CUid"
+#else
+  uint 4
+#endif
+
+-- | Return the unsigned int type with the given amount of bytes.
+uint :: Int -> TypeRep
+uint n = con0 ("DW.Word" <> tshow (n*8))
+
+-- | Return the (signed) int type with the given amount of bytes.
+int :: Int -> TypeRep
+int n = con0 ("DI.Int" <> tshow (n*8))
 
 -- | This translates GI types to the types used for generated Haskell code.
 haskellType :: Type -> CodeGen e TypeRep

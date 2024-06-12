@@ -46,6 +46,17 @@ data BasicType = TBoolean         -- ^ gboolean
                | TPtr             -- ^ gpointer
                | TIntPtr          -- ^ gintptr
                | TUIntPtr         -- ^ guintptr
+               | TShort           -- ^ gshort
+               | TUShort          -- ^ gushort
+               | TSize            -- ^ gsize
+               | TSSize           -- ^ gssize
+               | Ttime_t          -- ^ time_t
+               | Toff_t           -- ^ off_t
+               | Tdev_t           -- ^ dev_t
+               | Tgid_t           -- ^ gid_t
+               | Tpid_t           -- ^ pid_t
+               | Tsocklen_t       -- ^ socklen_t
+               | Tuid_t           -- ^ uid_t
                  deriving (Eq, Show, Ord)
 
 -- | This type represents the types found in GObject Introspection
