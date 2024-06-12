@@ -78,7 +78,7 @@ import Control.Monad.Reader
 import Control.Monad.State.Strict
 import Control.Monad.Except
 import qualified Data.Foldable as F
-import Data.Maybe (fromMaybe, catMaybes)
+import Data.Maybe (fromMaybe, catMaybes, mapMaybe)
 #if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>), mempty)
 #endif
@@ -922,7 +922,6 @@ modulePrelude docs name exports reexportedModules =
 -- this prefix will be imported as {-# SOURCE #-}, and otherwise will
 -- be imported normally.
 importDeps :: ModulePath -> [ModulePath] -> Text
-importDeps _ [] = ""
 importDeps (ModulePath prefix) deps = T.unlines . map toImport $ deps
     where toImport :: ModulePath -> Text
           toImport dep = let impSt = if importSource dep
@@ -976,8 +975,9 @@ dotWithPrefix mp = dotModulePath ("GI" <> mp)
 -- | Write to disk the code for a module, under the given base
 -- directory. Does not write submodules recursively, for that use
 -- `writeModuleTree`.
-writeModuleInfo :: Bool -> Maybe FilePath -> ModuleInfo -> IO ()
-writeModuleInfo verbose dirPrefix minfo = do
+writeModuleInfo :: Bool -> Maybe FilePath -> ModuleInfo ->
+                   M.Map ModulePath ModuleInfo -> IO ()
+writeModuleInfo verbose dirPrefix minfo treeMap = do
   let submodulePaths = map (modulePath) (M.elems (submodules minfo))
       -- We reexport any submodules.
       submoduleExports = map dotWithPrefix submodulePaths
@@ -994,7 +994,18 @@ writeModuleInfo verbose dirPrefix minfo = do
                 then ""
                 else moduleImports
       pkgRoot = ModulePath (take 1 (modulePathToList $ modulePath minfo))
-      deps = importDeps pkgRoot (Set.toList $ qualifiedImports minfo)
+      allImports = transitiveImports minfo treeMap
+      minimalImports = qualifiedImports minfo
+      allDeps = importDeps pkgRoot (Set.toList allImports)
+      minimalDeps = importDeps pkgRoot (Set.toList minimalImports)
+      deps = T.unlines [
+        "-- Workaround for https://gitlab.haskell.org/ghc/ghc/-/issues/23392",
+        "#if MIN_VERSION_base(4,18,0)",
+        allDeps,
+        "#else",
+        minimalDeps,
+        "#endif"
+        ]
       haddock = moduleHaddock (M.lookup ToplevelSection (sectionDocs minfo))
 
   when verbose $ putStrLn ((T.unpack . dotWithPrefix . modulePath) minfo
@@ -1005,6 +1016,33 @@ writeModuleInfo verbose dirPrefix minfo = do
   when (not . isCodeEmpty $ bootCode minfo) $ do
     let bootFName = modulePathToFilePath dirPrefix (modulePath minfo) ".hs-boot"
     utf8WriteFile bootFName (genHsBoot minfo)
+
+-- | Collect the transitive set of imports for this module. In
+-- principle just importing the set of strictly necessary imports (via
+-- qualifiedImports) should be sufficient; the following is a
+-- workaround for a GHC bug:
+-- https://gitlab.haskell.org/ghc/ghc/-/issues/23392
+transitiveImports :: ModuleInfo -> M.Map ModulePath ModuleInfo
+                  -> Set.Set ModulePath
+transitiveImports root treeMap = collectImports root Set.empty
+  where
+    collectImports :: ModuleInfo -> Set.Set ModulePath -> Set.Set ModulePath
+    collectImports minfo deps = let
+      isCallbacks (ModulePath [_, "Callbacks"]) = True
+      isCallbacks _ = False
+
+      -- Deps that we haven't analysed yet.
+      unseenDeps = Set.filter (\e -> Set.notMember e deps) (qualifiedImports minfo)
+      -- Make sure we don't try to import ourselves
+      unrooted = Set.filter (\mp -> mp /= modulePath root) unseenDeps
+      unseenModules = mapMaybe (\d -> M.lookup d treeMap) (Set.toList unrooted)
+      -- We don't collect implicit deps from the callbacks module,
+      -- which is always imported normally (not just the hs-boot)
+      notCallbacks = filter (not . isCallbacks . modulePath) unseenModules
+
+      -- Imports in unseenDeps
+      depImports = map (\m -> collectImports m (Set.union deps unseenDeps)) notCallbacks
+      in Set.unions (unrooted : depImports)
 
 -- | Generate the .hs-boot file for the given module.
 genHsBoot :: ModuleInfo -> Text
@@ -1022,11 +1060,19 @@ modulePathToFilePath dirPrefix (ModulePath mp) ext =
 -- | Write down the code for a module and its submodules to disk under
 -- the given base directory. It returns the list of written modules.
 writeModuleTree :: Bool -> Maybe FilePath -> ModuleInfo -> IO [Text]
-writeModuleTree verbose dirPrefix minfo = do
-  submodulePaths <- concat <$> forM (M.elems (submodules minfo))
-                                    (writeModuleTree verbose dirPrefix)
-  writeModuleInfo verbose dirPrefix minfo
-  return $ (dotWithPrefix (modulePath minfo) : submodulePaths)
+writeModuleTree verbose dirPrefix root = doWriteModuleTree root
+
+  where
+    doWriteModuleTree :: ModuleInfo -> IO [Text]
+    doWriteModuleTree minfo = do
+      submodulePaths <- concat <$> forM (M.elems (submodules minfo)) doWriteModuleTree
+      writeModuleInfo verbose dirPrefix minfo treeMap
+      return $ (dotWithPrefix (modulePath minfo) : submodulePaths)
+
+    treeMap = M.fromList (gatherSubmodules root)
+    gatherSubmodules :: ModuleInfo -> [(ModulePath, ModuleInfo)]
+    gatherSubmodules minfo = (modulePath minfo, minfo) :
+      concatMap gatherSubmodules (M.elems $ submodules minfo)
 
 -- | Return the list of modules `writeModuleTree` would write, without
 -- actually writing anything to disk.
