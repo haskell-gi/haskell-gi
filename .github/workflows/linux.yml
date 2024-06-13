@@ -57,4 +57,4 @@ jobs:
     - name: Run tests
       run: |
         echo 'tests: True' > cabal.project.local
-        cabal test
+        cabal test --allow-newer=sdl2:bytestring
