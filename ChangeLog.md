@@ -1,3 +1,9 @@
+### 0.26.9
+
++ Add a workaround for a [GHC issue](https://gitlab.haskell.org/ghc/ghc/-/issues/23392) stopping parallel compilation in GHC >= 9.6.
++ Fix compilation issues regarding `time_t` and similar types in
+  introspection data.
+
 ### 0.26.8
 
 + Add support for scope type "forever": see [this issue](https://github.com/haskell-gi/haskell-gi/issues/425).
