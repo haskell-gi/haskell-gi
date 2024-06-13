@@ -23,7 +23,7 @@ jobs:
     # hide it so that 'cabal update' does not fail.
     - name: Hide cabal project
       run: mv cabal.project _cabal.project
-    - uses: haskell/actions/setup@v1
+    - uses: haskell-actions/setup@v2
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: 'latest'
