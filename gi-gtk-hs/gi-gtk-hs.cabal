@@ -33,7 +33,7 @@ library
                        base-compat >=0.9.0 && <0.14,
                        mtl >= 2.1 && <2.4,
                        transformers >=0.3.0.0 && <0.7,
-                       containers >=0.5.5.1 && <0.7,
+                       containers >=0.5.5.1 && <0.8,
                        text >=1.2 && <3,
                        haskell-gi-base >=0.25.0 && <0.27,
                        gi-glib >=2.0.6 && <2.1,
