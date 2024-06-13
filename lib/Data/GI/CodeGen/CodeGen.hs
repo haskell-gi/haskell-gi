@@ -154,7 +154,9 @@ fixMethodArgs c = c {  args = args'' , returnType = returnType' }
     where
       returnType' = maybe Nothing (Just . fixCArrayLength) (returnType c)
       args' = map (fixDestroyers . fixClosures . fixLengthArg) (args c)
-      args'' = fixInstance (head args') : tail args'
+      args'' = case args' of
+        inst:rest -> fixInstance inst : rest
+        [] -> []
 
       fixLengthArg :: Arg -> Arg
       fixLengthArg arg = arg { argType = fixCArrayLength (argType arg)}

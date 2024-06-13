@@ -643,6 +643,12 @@ gvariant_get_children vptr = do
              [0..(n_children-1)]
         else return []
 
+-- No type checking is done here, it is assumed that the caller knows
+-- that the passed variant is indeed of a container type with at least
+-- one child.
+gvariant_get_child :: (Ptr GVariant) -> IO GVariant
+gvariant_get_child vptr = g_variant_get_child_value vptr 0 >>= wrapGVariantPtr
+
 instance IsGVariant a => IsGVariant (Maybe a) where
     toGVariant   = gvariantFromMaybe
     fromGVariant = gvariantToMaybe
@@ -829,9 +835,7 @@ gvariantFromSinglet s = do
 
 gvariantToSinglet :: forall a. IsGVariant a => GVariant -> IO (Maybe a)
 gvariantToSinglet = withExplicitType fmt
-                    (gvariant_get_children
-                     >=> return . head
-                     >=> unsafeFromGVariant)
+                    (gvariant_get_child >=> unsafeFromGVariant)
     where fmt = toGVariantFormatString (undefined :: GVariantSinglet a)
 
 instance (IsGVariant a, IsGVariant b) => IsGVariant (a,b) where
