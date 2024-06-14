@@ -51,7 +51,7 @@ parseField = do
   -- Sometimes fields marked as not introspectable contain invalid
   -- introspection info. We are lenient in these cases with parsing
   -- errors, and simply ignore the fields.
-  flip catchError (\e -> if (not introspectable) && private
+  flip catchError (\e -> if not introspectable
                          then return Nothing
                          else throwError e) $ do
     (t, isPtr, callback) <-
