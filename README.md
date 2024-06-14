@@ -26,7 +26,7 @@ sudo pacman -S gobject-introspection gobject-introspection-runtime gtksourceview
 Install [Homebrew](https://brew.sh/) and install GTK+ and GObject Introspection:
 
 ```
-brew install gobject-introspection gtk+ gtk+3
+brew install gobject-introspection gtk+4
 ```
 Ensure the path to libffi (probably `/usr/local/opt/libffi/lib/pkgconfig`) is in the PKG_CONFIG_PATH environment variable.
 
@@ -47,36 +47,36 @@ compiled using version 2.4.1.0 of the Cabal library
 
 Here is an example "Hello World" program:
 ```haskell
-{-# LANGUAGE OverloadedStrings, OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings, OverloadedLabels, OverloadedRecordDot, ImplicitParams #-}
 {- cabal:
-build-depends: base, haskell-gi-base, gi-gtk == 3.0.*
+build-depends: base >= 4.16, haskell-gi-base, gi-gtk == 4.0.*
 -}
+import Control.Monad (void)
 
 import qualified GI.Gtk as Gtk
 import Data.GI.Base
 
+activate :: Gtk.Application -> IO ()
+activate app = do
+  button <- new Gtk.Button [#label := "Click me",
+                            On #clicked (?self `set` [#sensitive := False,
+                                                      #label := "Thanks for clicking me"])]
+
+  window <- new Gtk.ApplicationWindow [#application := app,
+                                       #title := "Hi there",
+                                       #child := button]
+  window.show
+
 main :: IO ()
 main = do
-  Gtk.init Nothing
+  app <- new Gtk.Application [#applicationId := "haskell-gi.example",
+                              On #activate (activate ?self)]
 
-  win <- new Gtk.Window [ #title := "Hi there" ]
-
-  on win #destroy Gtk.mainQuit
-
-  button <- new Gtk.Button [ #label := "Click me" ]
-
-  on button #clicked (set button [ #sensitive := False,
-                                   #label := "Thanks for clicking me" ])
-
-  #add win button
-
-  #showAll win
-
-  Gtk.main
+  void $ app.run Nothing
 ```
-This program uses the new `OverloadedLabels` extension in GHC 8.0, so make sure you have a recent enough version of GHC installed. To run this program, copy it to a file (`hello.hs`, say), and then
+This program uses the new `OverloadedRecordDot` extension in GHC 9.2, so make sure you have a recent enough version of GHC installed. To run this program, copy it to a file (`hello.hs`, say), and then
 ```sh
-$ cabal v2-run hello.hs
+$ cabal run hello.hs
 ```
 For a more involved example, see for instance [this WebKit example](https://github.com/haskell-gi/haskell-gi/tree/master/examples). Further documentation can be found in [the Wiki](https://github.com/haskell-gi/haskell-gi/wiki).
 
