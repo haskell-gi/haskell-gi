@@ -155,7 +155,7 @@ fixMethodArgs c = c {  args = args'' , returnType = returnType' }
       returnType' = maybe Nothing (Just . fixCArrayLength) (returnType c)
       args' = map (fixDestroyers . fixClosures . fixLengthArg) (args c)
       args'' = case args' of
-        inst:rest -> fixInstance inst : rest
+        inst:rest -> fixInstanceDirection inst : rest
         [] -> []
 
       fixLengthArg :: Arg -> Arg
@@ -181,12 +181,12 @@ fixMethodArgs c = c {  args = args'' , returnType = returnType' }
                         then arg {argClosure = closure + 1}
                         else arg
 
-      -- We always treat the instance argument of a method as non-null
-      -- and "in", even if sometimes the introspection data may say
-      -- otherwise.
-      fixInstance :: Arg -> Arg
-      fixInstance arg = arg { mayBeNull = False
-                            , direction = DirectionIn}
+      -- We always treat the instance argument of a method as "in",
+      -- even if the introspection data says otherwise (this is
+      -- generally an erroneous annotation, meaning that the structure
+      -- is modified).
+      fixInstanceDirection :: Arg -> Arg
+      fixInstanceDirection arg = arg { direction = DirectionIn}
 
 -- For constructors we want to return the actual type of the object,
 -- rather than a generic superclass (so Gtk.labelNew returns a
@@ -222,7 +222,7 @@ genMethod cn m@(Method {
     export (NamedSubsection MethodSection $ lowerName mn) (lowerName mn')
 
     cppIf CPPOverloading $
-         genMethodInfo cn (m {methodCallable = c''})
+      genMethodInfo cn (m {methodCallable = c''})
 
 -- | Generate an import for the gvalue getter for the given type. It
 -- returns the name of the function on the Haskell side.

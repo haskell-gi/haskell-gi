@@ -126,6 +126,15 @@ methodListDocumentation ordinary getters setters = do
               <> "#g:method:" <> mn <> "\")"
           return $ T.intercalate ", " qualifiedMethods <> ".\n"
 
+-- | Treat the instance argument of a method as non-null, even if the
+-- introspection data may say otherwise. Returns the modified
+-- callable, together with a boolean value indicating where the
+-- nullability annotation has been erased.
+nonNullableInstanceArg :: Callable -> (Callable, Bool)
+nonNullableInstanceArg c = case args c of
+  inst:rest -> (c {args = inst {mayBeNull = False} : rest}, mayBeNull inst)
+  [] -> (c, False)
+
 -- | Generate the `MethodInfo` type and instance for the given method.
 genMethodInfo :: Name -> Method -> ExcCodeGen ()
 genMethodInfo n m =
@@ -133,7 +142,8 @@ genMethodInfo n m =
       group $ do
         api <- findAPIByName n
         infoName <- methodInfoName n m
-        let callable = fixupCallerAllocates (methodCallable m)
+        let (callable, nullableInstance) =
+              nonNullableInstanceArg . fixupCallerAllocates $ methodCallable m
         sig <- callableSignature callable (KnownForeignSymbol undefined) WithoutClosures
         bline $ "data " <> infoName
         let (obj, otherTypes) = case map snd (signatureArgTypes sig) of
@@ -154,7 +164,9 @@ genMethodInfo n m =
             <> T.intercalate ", " (sigConstraint : signatureConstraints sig)
             <> ") => O.OverloadedMethod " <> infoName <> " " <> obj
             <> " signature where"
-          indent $ line $ "overloadedMethod = " <> mangled
+          if nullableInstance
+            then indent $ line $ "overloadedMethod i = " <> mangled <> " (Just i)"
+            else indent $ line $ "overloadedMethod = " <> mangled
 
         group $ do
           line $ "instance O.OverloadedMethodInfo " <> infoName <> " " <> obj
