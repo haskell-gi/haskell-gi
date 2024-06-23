@@ -1,3 +1,7 @@
+### 1.0.30
+
++ Depend on haskell-gi >= 0.26.9 (see [issue 439](https://github.com/haskell-gi/haskell-gi/issues/439))
+
 ### 1.0.29
 
 + Ignore more *_take functions, that do not make sense in Haskell. See [issue 412](https://github.com/haskell-gi/haskell-gi/issues/412) for issues that these functions create.

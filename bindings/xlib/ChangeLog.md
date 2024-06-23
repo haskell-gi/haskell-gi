@@ -1,3 +1,7 @@
+### 2.0.14
+
++ Depend on haskell-gi >= 0.26.9 (see [issue 439](https://github.com/haskell-gi/haskell-gi/issues/439))
+
 ### 2.0.13
 
 + Bump base lower bound
