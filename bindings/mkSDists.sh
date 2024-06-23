@@ -2,17 +2,11 @@
 
 set -e
 
-build()
-{
-    for mod in $@; do
-        pushd $mod > /dev/null
-        cabal sdist
-        cp dist/*.tar.gz ../sdists
-        popd > /dev/null
-    done
-}
+cd ..
 
-mkdir -p sdists
-rm -f sdists/*
-
-build $(./AllPKGS.sh)
+mv cabal.project .cabal.project.bak
+ln -s Gtk3.cabal.project cabal.project
+cabal sdist all
+ln -sf Gtk4.cabal.project cabal.project
+cabal sdist all
+mv -f .cabal.project.bak cabal.project
