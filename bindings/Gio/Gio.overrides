@@ -28,6 +28,10 @@ set-attr Gio/InetAddress/new_from_string/@return-value nullable 1
 # versions.
 set-attr Gio/DBusNodeInfo/lookup_interface/@return-value nullable 1
 
+# These are useful to expose
+set-attr Gio/SeekableIface haskell-gi-force-visible 1
+set-attr Gio/InputStreamClass haskell-gi-force-visible 1
+
 # These are included by mistake in the introspection data of
 # glib-2.60.0, but they are linux-specific.
 # See https://github.com/haskell-gi/haskell-gi/issues/218

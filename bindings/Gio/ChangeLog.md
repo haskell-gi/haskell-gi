@@ -1,3 +1,11 @@
+### 2.0.34
+
++ Expose `InputStreamClass` and `SeekableIface`, see [issue 441](https://github.com/haskell-gi/haskell-gi/issues/441).
+
+### 2.0.33
+
++ Depend on haskell-gi >= 0.26.9 (see [issue 439](https://github.com/haskell-gi/haskell-gi/issues/439))
+
 ### 2.0.32
 
 + Bump base lower bound
