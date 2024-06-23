@@ -298,9 +298,12 @@ prepareInArg arg = do
             (convert name $ hToF (argType arg) (transfer arg))
             (do
               let maybeName = "maybe" <> ucFirst name
+              nullPtr <- nullPtrForType (argType arg) >>= \case
+                Nothing -> terror $ "Unexpected non-pointer type " <> tshow (argType arg)
+                Just null -> pure null
               line $ maybeName <> " <- case " <> name <> " of"
               indent $ do
-                line $ "Nothing -> return nullPtr"
+                line $ "Nothing -> return " <> nullPtr
                 let jName = "j" <> ucFirst name
                 line $ "Just " <> jName <> " -> do"
                 indent $ do
@@ -360,7 +363,7 @@ prepareInCallback arg callback@(Callback {cbCallable = cb}) expose = do
               let maybeName = "maybe" <> ucFirst name
               line $ maybeName <> " <- case " <> name <> " of"
               indent $ do
-                line $ "Nothing -> return (castPtrToFunPtr nullPtr)"
+                line $ "Nothing -> return FP.nullFunPtr"
                 let jName = "j" <> ucFirst name
                     jName' = prime jName
                 line $ "Just " <> jName <> " -> do"

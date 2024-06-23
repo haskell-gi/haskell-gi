@@ -167,13 +167,16 @@ genClosure subsec cb callback name = group $ do
     closureDoc :: Text
     closureDoc = "Wrap the callback into a `GClosure`."
 
--- Wrap a conversion of a nullable object into "Maybe" object, by
+-- | Wrap a conversion of a nullable object into "Maybe" object, by
 -- checking whether the pointer is NULL.
-convertNullable :: Text -> CodeGen e Text -> CodeGen e Text
-convertNullable aname c = do
+convertNullable :: Text -> CodeGen e Text -> Type -> CodeGen e Text
+convertNullable aname c t = do
+  nullPtr <- nullPtrForType t >>= \case
+    Nothing -> terror $ "Unexpected non-pointer type " <> tshow t
+    Just null -> pure null
   line $ "maybe" <> ucFirst aname <> " <-"
   indent $ do
-    line $ "if " <> aname <> " == nullPtr"
+    line $ "if " <> aname <> " == " <> nullPtr
     line   "then return Nothing"
     line   "else do"
     indent $ do
@@ -187,7 +190,7 @@ convertCallbackInCArray :: Callable -> Arg -> Type -> Text -> ExcCodeGen Text
 convertCallbackInCArray callable arg t@(TCArray False (-1) length _) aname =
   if length > -1
   then wrapMaybe arg >>= bool convertAndFree
-                         (convertNullable aname convertAndFree)
+                         (convertNullable aname convertAndFree t)
   else
     -- Not much we can do, we just pass the pointer along, and let
     -- the callback deal with it.
@@ -220,7 +223,7 @@ prepareInArg cb arg = do
     t@(TCArray False _ _ _) -> convertCallbackInCArray cb arg t name
     _ -> do
       let c = convert name $ transientToH (argType arg) (transfer arg)
-      wrapMaybe arg >>= bool c (convertNullable name c)
+      wrapMaybe arg >>= bool c (convertNullable name c (argType arg))
 
 prepareInoutArg :: Arg -> ExcCodeGen Text
 prepareInoutArg arg = do
