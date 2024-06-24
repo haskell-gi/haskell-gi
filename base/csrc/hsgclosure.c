@@ -309,11 +309,17 @@ GType haskell_gi_gtype_from_instance (gpointer instance)
 
 static pthread_mutex_t gtypes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+typedef struct {
+  GType gtype;
+  GInterfaceInfo *info;
+} CombinedInterfaceInfo;
+
 /* Register a new type into the GObject class hierarchy, if it has not
    been registered already */
 GType haskell_gi_register_gtype (GType parent, const char *name,
                                  GClassInitFunc class_init,
-                                 GInstanceInitFunc instance_init)
+                                 GInstanceInitFunc instance_init,
+                                 GSList* interfaces)
 {
   GType result;
 
@@ -331,11 +337,24 @@ GType haskell_gi_register_gtype (GType parent, const char *name,
                                             query.class_size, class_init,
                                             query.instance_size, instance_init,
                                             0);
+    while (interfaces != NULL) {
+      CombinedInterfaceInfo *info = (CombinedInterfaceInfo*) interfaces->data;
+      g_type_add_interface_static (result, info->gtype, info->info);
+      interfaces = interfaces -> next;
+    }
   } else {
     /* Free the memory associated with the HsFunPtrs that we are
        given, to avoid a (small) memory leak. */
     hs_free_fun_ptr ((HsFunPtr)class_init);
     hs_free_fun_ptr ((HsFunPtr)instance_init);
+
+    while (interfaces != NULL) {
+      CombinedInterfaceInfo *info = (CombinedInterfaceInfo*) interfaces->data;
+      hs_free_fun_ptr ((HsFunPtr) info -> info -> interface_init);
+      if (info -> info -> interface_finalize)
+        hs_free_fun_ptr ((HsFunPtr) info -> info -> interface_finalize);
+      interfaces = interfaces -> next;
+    }
   }
   pthread_mutex_unlock(&gtypes_mutex);
 

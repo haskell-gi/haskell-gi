@@ -46,7 +46,7 @@ import Data.Proxy (Proxy(..))
 import Data.Coerce (coerce)
 
 import Foreign.C (CUInt(..), CString, newCString)
-import Foreign.Ptr (Ptr, FunPtr, nullPtr, castPtr, plusPtr)
+import Foreign.Ptr (Ptr, FunPtr, nullPtr, castPtr, plusPtr, nullFunPtr)
 import Foreign.StablePtr (newStablePtr, deRefStablePtr,
                           castStablePtrToPtr, castPtrToStablePtr)
 import Foreign.Storable (Storable(peek, poke, pokeByteOff, sizeOf))
@@ -61,11 +61,12 @@ import qualified Data.Text as T
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
                                 attrConstruct, attrTransfer,
                                 AttrInfo(..))
-import Data.GI.Base.BasicTypes (CGType, GType(..), GObject,
+import Data.GI.Base.BasicTypes (CGType, GType(..), GObject, GSList,
                                 GDestroyNotify, ManagedPtr(..), GParamSpec(..),
                                 TypedObject(glibType),
-                                gtypeName)
-import Data.GI.Base.BasicConversions (withTextCString, cstringToText)
+                                gtypeName, g_slist_free)
+import Data.GI.Base.BasicConversions (withTextCString, cstringToText,
+                                      packGSList, mapGSList)
 import Data.GI.Base.CallStack (HasCallStack, prettyCallStack)
 import Data.GI.Base.GParamSpec (PropertyInfo(..),
                                 gParamSpecValue,
@@ -80,7 +81,7 @@ import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
                                 newObject)
 import Data.GI.Base.Overloading (ResolveAttribute)
 import Data.GI.Base.Signals (on, after)
-import Data.GI.Base.Utils (dbgLog)
+import Data.GI.Base.Utils (dbgLog, callocBytes, freeMem)
 
 #include <glib-object.h>
 
@@ -189,14 +190,25 @@ class GObject a => DerivedGObject a where
 
   -- | Name of the type, it should be unique.
   objectTypeName     :: Text
+
   -- | Code to run when the class is inited. This is a good place to
   -- register signals and properties for the type.
   objectClassInit    :: GObjectClass -> IO ()
+
   -- | Code to run when each instance of the type is
   -- constructed. Returns the private data to be associated with the
   -- new instance (use `gobjectGetPrivateData` and
   -- `gobjectSetPrivateData` to manipulate this further).
   objectInstanceInit :: GObjectClass -> a -> IO (GObjectPrivateData a)
+
+  -- | List of interfaces implemented by the type. Each element is a
+  -- triplet (@gtype@, @interfaceInit@, @interfaceFinalize@), where
+  -- @gtype :: IO GType@ is a constructor for the type of the
+  -- interface, @interfaceInit :: Ptr () -> IO ()@ is a function that
+  -- registers the callbacks in the interface, and @interfaceFinalize
+  -- :: Maybe (Ptr () -> IO ())@ is the (optional) finalizer.
+  objectInterfaces :: [(IO GType, Ptr () -> IO (), Maybe (Ptr () -> IO ()))]
+  objectInterfaces = []
 
 type CGTypeClassInit = GObjectClass -> IO ()
 foreign import ccall "wrapper"
@@ -206,11 +218,19 @@ type CGTypeInstanceInit o = Ptr o -> GObjectClass -> IO ()
 foreign import ccall "wrapper"
         mkInstanceInit :: CGTypeInstanceInit o -> IO (FunPtr (CGTypeInstanceInit o))
 
+type CGTypeInterfaceInit = Ptr () -> Ptr () -> IO ()
+foreign import ccall "wrapper"
+        mkInterfaceInit :: CGTypeInterfaceInit -> IO (FunPtr CGTypeInterfaceInit)
+
+type CGTypeInterfaceFinalize = Ptr () -> Ptr () -> IO ()
+foreign import ccall "wrapper"
+        mkInterfaceFinalize :: CGTypeInterfaceFinalize -> IO (FunPtr CGTypeInterfaceFinalize)
+
 foreign import ccall g_type_from_name :: CString -> IO CGType
 
 foreign import ccall "haskell_gi_register_gtype" register_gtype ::
         CGType -> CString -> FunPtr CGTypeClassInit ->
-        FunPtr (CGTypeInstanceInit o) -> IO CGType
+        FunPtr (CGTypeInstanceInit o) -> Ptr (GSList a) -> IO CGType
 
 foreign import ccall "haskell_gi_gtype_from_class" gtype_from_class ::
         GObjectClass -> IO CGType
@@ -259,7 +279,11 @@ registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
       classInit <- mkClassInit (unwrapClassInit $ objectClassInit @o)
       instanceInit <- mkInstanceInit (unwrapInstanceInit $ objectInstanceInit @o)
       (GType parentCGType) <- glibType @(GObjectParentType o)
-      GType <$> register_gtype parentCGType cTypeName classInit instanceInit
+      interfaces <- mapM packInterface (objectInterfaces @o) >>= packGSList
+      gtype <- GType <$> register_gtype parentCGType cTypeName classInit instanceInit interfaces
+      mapGSList freeInterfaceInfo interfaces
+      g_slist_free interfaces
+      return gtype
 
    where
      unwrapInstanceInit :: (GObjectClass -> o -> IO (GObjectPrivateData o)) ->
@@ -299,6 +323,35 @@ registerGType construct = withTextCString (objectTypeName @o) $ \cTypeName -> do
            dbgLog $ "WARNING: Attempting to get unknown property \""
                     <> pspecName <> "\" of type \"" <> T.pack typeName <> "\"."
          Just pgs -> (propGetter pgs) objPtr destGValuePtr
+
+     packInterface :: (IO GType, Ptr () -> IO (), Maybe (Ptr () -> IO ()))
+                   -> IO (Ptr CGType)
+     packInterface (ifaceGTypeConstruct, initHs, maybeFinalize) = do
+       gtype <- ifaceGTypeConstruct
+       info <- callocBytes #{size GInterfaceInfo}
+       initFn <- mkInterfaceInit (unwrapInit initHs)
+       finalizeFn <- case maybeFinalize of
+                     Just finalizeHs -> mkInterfaceFinalize (unwrapFinalize finalizeHs)
+                     Nothing -> pure nullFunPtr
+       #{poke GInterfaceInfo, interface_init} info initFn
+       #{poke GInterfaceInfo, interface_finalize} info finalizeFn
+
+       combined <- callocBytes (#{size GType} + #{size gpointer})
+       poke combined (gtypeToCGType gtype)
+       poke (combined `plusPtr` #{size GType}) info
+       return combined
+
+     unwrapInit :: (Ptr () -> IO ()) -> CGTypeInterfaceInit
+     unwrapInit f ptr _data = f ptr
+
+     unwrapFinalize :: (Ptr () -> IO ()) -> CGTypeInterfaceFinalize
+     unwrapFinalize = unwrapInit
+
+     freeInterfaceInfo :: Ptr CGType -> IO ()
+     freeInterfaceInfo combinedPtr = do
+       info <- peek (combinedPtr `plusPtr` #{size GType})
+       freeMem info
+       freeMem combinedPtr
 
 -- | Quark with the key to the private data for this object type.
 privateKey :: forall o. DerivedGObject o => IO (GQuark (GObjectPrivateData o))
