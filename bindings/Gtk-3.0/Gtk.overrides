@@ -38,6 +38,7 @@ set-attr Gtk/RadioMenuItem/new_from_stock/@parameters/group transfer-ownership c
 # It is useful to expose these class structs when deriving new types
 set-attr Gtk/WidgetClass haskell-gi-force-visible 1
 set-attr Gtk/ContainerClass haskell-gi-force-visible 1
+set-attr Gtk/ActionableInterface haskell-gi-force-visible 1
 
 # Not properly annotated in older versions of gtk
 set-attr Gtk/CellLayoutDataFunc/@parameters/data closure 4
