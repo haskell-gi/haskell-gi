@@ -39,9 +39,10 @@ import Control.Monad (when, forM, forM_, filterM, foldM_)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Coerce (coerce)
 import Data.Int (Int32)
+import Data.Text (Text)
 import qualified Data.Vector as V
 import Data.Vector ((//), (!))
-import Foreign.Ptr (Ptr)
+import Foreign.Ptr (Ptr, castPtr)
 import Foreign.C (CInt(..))
 
 import GHC.OverloadedLabels as OL
@@ -75,6 +76,8 @@ data CustomContainerPrivate =
                          , ccNColumns  :: Maybe Int
                            -- ^ Number of columns to use when laying
                            -- out children.
+                         , ccActionName :: Maybe Text
+                           -- ^ Used for the actionable implementation.
                          }
 
 -- Information for the type system. This will be picked up by
@@ -103,6 +106,17 @@ instance DerivedGObject CustomContainer where
   -- this type being created). The main goal of this function is to
   -- prepare the private data for each object.
   objectInstanceInit = customContainerInstanceInit
+
+  -- List of interfaces we implement. There are tuples of the form
+  -- (gtype, initilizer, maybeFinalizer). Both initializer and
+  -- finalizer have signature Ptr () -> IO (), where the passed Ptr ()
+  -- is to the interface struct.
+  --
+  -- In this example we implement Gtk.Actionable. This is just to show
+  -- how to implement interfaces, the implementation of this
+  -- particular interface is incomplete and does not do anything
+  -- useful.
+  objectInterfaces = [(glibType @Gtk.Actionable, actionableInit, Nothing)]
 
 -- Our type descends from a parent type, and implements various
 -- interfaces (by virtue of descending from its parent type), make
@@ -291,7 +305,27 @@ customContainerInstanceInit _klass custom = do
   -- We have no children yet, and the we will set the number of
   -- columns dynamically..
   return $ CustomContainerPrivate { ccChildren = []
-                                  , ccNColumns = Nothing }
+                                  , ccNColumns = Nothing
+                                  , ccActionName = Nothing }
+
+-- Register the class as providing the orientable interface
+actionableInit :: Ptr () -> IO ()
+actionableInit _ptr = do
+  withTransient @Gtk.ActionableInterface (castPtr _ptr) $ \iface -> do
+    -- In an actual implementation we should also get/set the target value.
+    set iface [ #getActionName :&= ccGetActionName
+              , #setActionName :&= ccSetActionName ]
+
+-- The actual implementation of the actionable interface.
+ccGetActionName :: Gtk.Actionable -> IO (Maybe Text)
+ccGetActionName actionable =
+  ccActionName <$> gobjectGetPrivateData (coerce actionable :: CustomContainer)
+
+ccSetActionName :: Gtk.Actionable -> Maybe Text -> IO ()
+ccSetActionName actionable maybeText = do
+  putStrLn $ "set action name: " <> show maybeText
+  gobjectModifyPrivateData (coerce actionable :: CustomContainer) $ \priv ->
+    priv { ccActionName = maybeText }
 
 -- Get the children of the container.
 getChildren :: CustomContainer -> IO [Gtk.Widget]

@@ -66,9 +66,9 @@ executable CustomGObject
   main-is:            CustomGObject.hs
   other-modules:      CustomContainer
   build-depends:        base >= 4.9 && < 5
-                      , haskell-gi ^>= 0.26.0
-                      , haskell-gi-base ^>= 0.26.0
-                      , gi-gtk == 3.0.*
+                      , haskell-gi >= 0.26.10
+                      , haskell-gi-base >= 0.26.6
+                      , gi-gtk >= 3.0.43
                       , gi-gdk == 3.0.*
                       , vector
                       , text
