@@ -263,9 +263,8 @@ fixCallbackUserData (n, APICallback cb) =
   (n, APICallback (cb {cbCallable = fixCallableUserData (cbCallable cb)}))
 fixCallbackUserData (n, api) = (n, api)
 
--- | If the last argument of a callable is a @gpointer@, and it is not
--- marked as a closure pointing to a different argument, mark it as a
--- callback @user_data@ argument.
+-- | Any argument with a closure index pointing to itself is a
+-- "user_data" type argument.
 fixCallableUserData :: Callable -> Callable
 fixCallableUserData c = c {args = fixLast 0 (args c)}
   where
@@ -273,7 +272,7 @@ fixCallableUserData c = c {args = fixLast 0 (args c)}
     fixLast _ [] = []
     fixLast n (arg:[])
       | argType arg == TBasicType TPtr &&
-        argClosure arg `elem` [-1, n] =
+        argClosure arg == n =
           [arg {argClosure = -1, argCallbackUserData = True}]
       | otherwise = [arg]
     fixLast n (arg:rest) = arg : fixLast (n+1) rest
