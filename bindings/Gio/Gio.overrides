@@ -10,6 +10,9 @@ ignore IOModule
 ignore io_modules_load_all_in_directory
 ignore io_modules_load_all_in_directory_with_scope
 
+# This is a user_data type argument, but it is not marked as such.
+set-attr Gio/AsyncReadyCallback/@parameters/data closure 2
+
 # Properly marked as filename in recent Gio versions.
 set-attr Gio/AppInfo/get_executable/@return-value/@type name filename
 

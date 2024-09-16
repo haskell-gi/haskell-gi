@@ -1,3 +1,8 @@
+### 2.0.35
+
++ Make sure that the `data` argument of `AsyncReadyCallback` is marked
+  as a `user_data` type argument. See [issue 405](https://github.com/haskell-gi/haskell-gi/issues/405).
+
 ### 2.0.34
 
 + Expose `InputStreamClass` and `SeekableIface`, see [issue 441](https://github.com/haskell-gi/haskell-gi/issues/441).
