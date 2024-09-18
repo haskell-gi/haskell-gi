@@ -9,6 +9,8 @@
 import Prelude hiding (error, (++), putStrLn, show)
 import qualified Prelude as P
 
+import qualified Data.GI.Base.GValue as GV
+
 import Data.GI.Base.Signals (disconnectSignalHandler)
 
 import GI.Gtk hiding (main)
@@ -492,6 +494,21 @@ testOverloadedRecords button = do
 #endif
   return ()
 
+testGValue :: IO ()
+testGValue = do
+  performGC
+  putStrLn "*** GValue test"
+
+  forM_ [1..100 :: Integer] $ \i -> do
+    let original = GV.HValue i
+    gv <- toGValue original
+    result <- fromGValue gv :: IO (GV.HValue Integer)
+    when (result /= original) $
+      error $ "Got " ++ show result ++ " but expected " ++ show original ++ "."
+
+  performGC
+  putStrLn "+++ GValue test done"
+
 main :: IO ()
 main = do
         -- Generally one should do the following to init Gtk:
@@ -610,6 +627,7 @@ main = do
         testSignalsDisconnect button
         testTypedClosures win
         testOverloadedRecords button
+        testGValue
 
         #showAll win
 
