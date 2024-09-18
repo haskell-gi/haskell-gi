@@ -383,6 +383,42 @@ GType haskell_gi_StablePtr_get_type (void)
   return g_define_type_id;
 }
 
+/* This is identical to haskell_gi_StablePtr_get_type, other than the
+   type name. The reason for this is that we want two different types,
+   to distinguish between GValues wrapping generic StablePtrs, and
+   those wrapping specifically wrapping StablePtrs to Dynamic
+   values. */
+GType haskell_gi_HaskellValue_get_type (void)
+{
+  static gsize g_define_type_id = 0;
+
+  if (g_once_init_enter (&g_define_type_id))
+    {
+      GType type_id =
+        g_boxed_type_register_static (g_intern_static_string ("HaskellGIHaskellValue"),
+                                      duplicateStablePtr,
+                                      hs_free_stable_ptr);
+
+      g_once_init_leave (&g_define_type_id, type_id);
+    }
+
+  return g_define_type_id;
+}
+
+/* A safer version of get_boxed, that checks that the GValue contains
+   the right boxed type. */
+gpointer haskell_gi_safe_get_boxed_haskell_value(const GValue *gv)
+{
+  if (G_VALUE_TYPE(gv) != haskell_gi_HaskellValue_get_type()) {
+    fprintf(stderr, "Unexpected type inside the GValue: ‘%s’\n.",
+            G_VALUE_TYPE_NAME(gv));
+
+    return NULL;
+  }
+
+  return g_value_get_boxed(gv);
+}
+
 /* Release the FunPtr allocated for a Haskell signal handler */
 void
 haskell_gi_release_signal_closure (gpointer unused,

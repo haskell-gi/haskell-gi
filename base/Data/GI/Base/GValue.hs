@@ -29,6 +29,9 @@ module Data.GI.Base.GValue
     , unpackGValueArrayWithLength
     , mapGValueArrayWithLength
 
+    -- * Packing Haskell values into GValues
+    , HValue(..)
+
     -- * Setters and getters
     , set_object
     , get_object
@@ -45,6 +48,8 @@ module Data.GI.Base.GValue
     , take_stablePtr
     , set_param
     , get_param
+    , set_hvalue
+    , get_hvalue
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -58,8 +63,12 @@ import Foreign.C.Types (CInt(..), CUInt(..), CFloat(..), CDouble(..),
                         CLong(..), CULong(..))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr, nullPtr, plusPtr, FunPtr)
-import Foreign.StablePtr (StablePtr, castStablePtrToPtr, castPtrToStablePtr)
+import Foreign.StablePtr (StablePtr, castStablePtrToPtr, castPtrToStablePtr,
+                          newStablePtr, deRefStablePtr)
+import Type.Reflection (typeRep, TypeRep)
+import System.IO (hPutStrLn, stderr)
 
+import Data.Dynamic (toDyn, fromDynamic, Typeable)
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.BasicConversions (cstringToText, textToCString)
 import Data.GI.Base.GType
@@ -258,6 +267,11 @@ instance IsGValue (Maybe GParamSpec) where
   gvalueSet_ = set_param
   gvalueGet_ = get_param
 
+instance Typeable a => IsGValue (HValue a) where
+  gvalueGType_ = return gtypeHValue
+  gvalueSet_ = set_hvalue
+  gvalueGet_ = get_hvalue
+
 foreign import ccall "g_value_set_string" _set_string ::
     Ptr GValue -> CString -> IO ()
 foreign import ccall "g_value_get_string" _get_string ::
@@ -384,6 +398,8 @@ foreign import ccall "g_value_set_boxed" set_boxed ::
     Ptr GValue -> Ptr a -> IO ()
 foreign import ccall "g_value_get_boxed" get_boxed ::
     Ptr GValue -> IO (Ptr b)
+foreign import ccall "g_value_dup_boxed" dup_boxed ::
+    Ptr GValue -> IO (Ptr b)
 
 foreign import ccall "g_value_set_variant" set_variant ::
     Ptr GValue -> Ptr GVariant -> IO ()
@@ -404,15 +420,17 @@ foreign import ccall unsafe "g_value_get_flags" get_flags ::
 set_stablePtr :: Ptr GValue -> StablePtr a -> IO ()
 set_stablePtr gv ptr = set_boxed gv (castStablePtrToPtr ptr)
 
-foreign import ccall g_value_take_boxed :: Ptr GValue -> StablePtr a -> IO ()
+foreign import ccall g_value_take_boxed :: Ptr GValue -> Ptr a -> IO ()
 
 -- | Like `set_stablePtr`, but the `GValue` takes ownership of the `StablePtr`
 take_stablePtr :: Ptr GValue -> StablePtr a -> IO ()
-take_stablePtr = g_value_take_boxed
+take_stablePtr gvPtr stablePtr =
+  g_value_take_boxed gvPtr (castStablePtrToPtr stablePtr)
 
--- | Get the value of a `GValue` containing a `StablePtr`
+-- | Get (a freshly allocated copy of) the value of a `GValue`
+-- containing a `StablePtr`
 get_stablePtr :: Ptr GValue -> IO (StablePtr a)
-get_stablePtr gv = castPtrToStablePtr <$> get_boxed gv
+get_stablePtr gv = castPtrToStablePtr <$> dup_boxed gv
 
 foreign import ccall g_value_copy :: Ptr GValue -> Ptr GValue -> IO ()
 
@@ -482,3 +500,42 @@ get_param gv = do
     else do
     fPtr <- g_param_spec_ref ptr >>= newManagedPtr' ptr_to_g_param_spec_unref
     return . Just $! GParamSpec fPtr
+
+-- | A type isomorphic to `Maybe a`, used to indicate to
+-- `fromGValue`/`toGValue` that we are packing a native Haskell value,
+-- without attempting to marshall it to the corresponding C type.
+data HValue a = HValue a -- ^ A packed value of type `a`
+              | NoHValue -- ^ An empty `HValue`
+  deriving (Show, Eq)
+
+-- | Set the `GValue` to the given Haskell value.
+set_hvalue :: Typeable a => Ptr GValue -> HValue a -> IO ()
+set_hvalue gvPtr NoHValue = set_boxed gvPtr nullPtr
+set_hvalue gvPtr (HValue v) = do
+  sPtr <- newStablePtr (toDyn v)
+  g_value_take_boxed gvPtr (castStablePtrToPtr sPtr)
+
+-- | Get the value in the GValue, checking that the type is
+-- `gtypeHValue`. Will return NULL and print a warning if the GValue
+-- is of the wrong type.
+foreign import ccall "haskell_gi_safe_get_boxed_haskell_value" safe_get_boxed_hvalue ::
+    Ptr GValue -> IO (Ptr b)
+
+-- | Read the Haskell value of the given type from the `GValue`. If
+-- the `GValue` contains no value of the expected type, `NoHValue`
+-- will be returned instead, and an error will be printed to stderr.
+get_hvalue :: forall a. Typeable a => Ptr GValue -> IO (HValue a)
+get_hvalue gvPtr = do
+  hvaluePtr <- safe_get_boxed_hvalue gvPtr
+  if hvaluePtr == nullPtr
+    then return NoHValue
+    else do
+      dyn <- deRefStablePtr (castPtrToStablePtr hvaluePtr)
+      case fromDynamic dyn of
+        Nothing -> do
+          hPutStrLn stderr ("HASKELL-GI: Unexpected type ‘" <> show dyn
+                             <> "’ inside the GValue at ‘" <> show gvPtr
+                             <> "’.\n\tExpected ‘" <> show (typeRep :: TypeRep a)
+                             <> "’.")
+          return NoHValue
+        Just val -> return (HValue val)

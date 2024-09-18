@@ -24,6 +24,7 @@ module Data.GI.Base.GType
     , gtypeParam
 
     , gtypeStablePtr
+    , gtypeHValue
     ) where
 
 import Data.GI.Base.BasicTypes (GType(..), CGType)
@@ -136,6 +137,12 @@ foreign import ccall haskell_gi_StablePtr_get_type :: CGType
 -- | The `GType` for boxed `StablePtr`s.
 gtypeStablePtr :: GType
 gtypeStablePtr = GType haskell_gi_StablePtr_get_type
+
+foreign import ccall haskell_gi_HaskellValue_get_type :: CGType
+
+-- | The `GType` for a generic Haskell value.
+gtypeHValue :: GType
+gtypeHValue = GType haskell_gi_HaskellValue_get_type
 
 foreign import ccall "g_error_get_type" g_error_get_type :: CGType
 
