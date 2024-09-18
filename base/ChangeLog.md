@@ -1,3 +1,11 @@
+### 0.24.8
+
++ Make the StablePtr IsGValue instance make a copy in fromGValue.
+
+### 0.24.7
+
++ Add a mechanism for marshalling generic Haskell values into `GValue`s.
+
 ### 0.24.4
 
 + Add a workaround for old hsc2hs versions, so drop the constraint on hsc2hs.
