@@ -1,3 +1,7 @@
+### 0.26.11
+
++ Don't try to guess which callback arguments are `user_data` arguments, as this can lead to problems, as in [issue 447](https://github.com/haskell-gi/haskell-gi/issues/447).
+
 ### 0.26.9
 
 + Add a workaround for a [GHC issue](https://gitlab.haskell.org/ghc/ghc/-/issues/23392) stopping parallel compilation in GHC >= 9.6.
