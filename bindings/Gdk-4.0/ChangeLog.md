@@ -1,3 +1,10 @@
+### 4.0.9
+
++ Mark the `value` argument of
+  [Gdk.contentProviderGetValue](https://hackage.haskell.org/package/gi-gdk-4.0.8/docs/GI-Gdk-Objects-ContentProvider.html#v:contentProviderGetValue)
+  as `(in)`, instead of `(out caller-allocates)`, since the pointer
+  itself does not change, only the memory pointed to. See [issue 447](https://github.com/haskell-gi/haskell-gi/issues/447) for more justification.
+
 ### 4.0.8
 
 + Depend on haskell-gi >= 0.26.9 (see [issue 439](https://github.com/haskell-gi/haskell-gi/issues/439))

@@ -1,3 +1,8 @@
 # In most APIs these are used as guint, but they are declared as gint.
 # See https://github.com/haskell-gi/haskell-gi/issues/58
 set-attr Gdk/~KEY_.*@constant/@type name guint
+
+# The introspection annotation marks the parameter as
+# (out caller-allocates), but it is just a pointer to a GValue.
+set-attr Gdk/ContentProvider/get_value/@parameters/value direction in
+set-attr Gdk/ContentProvider/get_value/@parameters/value caller-allocates 0
