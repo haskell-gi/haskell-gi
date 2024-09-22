@@ -2,3 +2,6 @@
 	path = examples/hlabyrinth
 	url = https://github.com/cohomology/hlabyrinth
 	branch = use-haskell-gi
+[submodule "examples/gtk-layers"]
+	path = examples/gtk-layers
+	url = https://github.com/sheaf/gtk-layers
