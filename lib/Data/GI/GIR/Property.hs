@@ -9,8 +9,8 @@ import Data.Text (Text)
 import Data.Monoid ((<>))
 #endif
 
-import Data.GI.GIR.Arg (parseTransfer)
-import Data.GI.GIR.BasicTypes (Transfer, Type)
+import Data.GI.GIR.Arg (parseTransferString)
+import Data.GI.GIR.BasicTypes (Transfer(..), Type)
 import Data.GI.GIR.Parser
 import Data.GI.GIR.Type (parseType)
 
@@ -35,7 +35,7 @@ parseProperty :: Parser Property
 parseProperty = do
   name <- getAttr "name"
   t <- parseType
-  transfer <- parseTransfer
+  transfer <- optionalAttr "transfer-ownership" TransferNothing parseTransferString
   deprecated <- parseDeprecation
   readable <- optionalAttr "readable" True parseBool
   writable <- optionalAttr "writable" False parseBool

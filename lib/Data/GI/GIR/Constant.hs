@@ -7,7 +7,7 @@ module Data.GI.GIR.Constant
 import Data.Text (Text)
 
 import Data.GI.GIR.BasicTypes (Type)
-import Data.GI.GIR.Type (parseType, parseCType)
+import Data.GI.GIR.Type (parseType)
 import Data.GI.GIR.Parser
 
 -- | Info about a constant.
@@ -26,7 +26,12 @@ parseConstant = do
   deprecated <- parseDeprecation
   value <- getAttr "value"
   t <- parseType
-  ctype <- parseCType
+  -- This contains the C name for the constant. The C gir generator
+  -- call this "c:type", while the vala gir generator calls it
+  -- "c:identifier", so try both.
+  ctype <- queryAttrWithNamespace CGIRNS "type" >>= \case
+    Just i -> return i
+    Nothing -> getAttrWithNamespace CGIRNS "identifier"
   doc <- parseDocumentation
   return (name, Constant { constantType = t
                          , constantValue = value

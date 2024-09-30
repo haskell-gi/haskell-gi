@@ -4,6 +4,7 @@ module Data.GI.GIR.Arg
     , Scope(..)
     , parseArg
     , parseTransfer
+    , parseTransferString
     ) where
 
 #if !MIN_VERSION_base(4,11,0)
@@ -44,12 +45,15 @@ data Arg = Arg {
         transfer :: Transfer
     } deriving (Show, Eq, Ord)
 
-parseTransfer :: Parser Transfer
-parseTransfer = getAttr "transfer-ownership" >>= \case
+parseTransferString :: Text -> Parser Transfer
+parseTransferString transfer = case transfer of
                 "none" -> return TransferNothing
                 "container" -> return TransferContainer
                 "full" -> return TransferEverything
                 t -> parseError $ "Unknown transfer type \"" <> t <> "\""
+
+parseTransfer :: Parser Transfer
+parseTransfer = getAttr "transfer-ownership" >>= parseTransferString
 
 parseScope :: Text -> Parser Scope
 parseScope "call" = return ScopeTypeCall
