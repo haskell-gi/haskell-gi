@@ -11,7 +11,7 @@
     "distributionPackages": {
         "fedora": [],
         "ubuntu": [
-            "libwebkit2gtk-4.0-dev"
+            "gir1.2-webkit2-4.0"
         ]
     },
     "giDepends": [
