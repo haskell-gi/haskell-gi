@@ -1,3 +1,7 @@
+### 4.0.10
+
++ Drop dependency on gi-gtk, see [issue 459](https://github.com/haskell-gi/haskell-gi/issues/459).
+
 ### 4.0.9
 
 + Depend on haskell-gi >= 0.26.9 (see [issue 439](https://github.com/haskell-gi/haskell-gi/issues/439))
