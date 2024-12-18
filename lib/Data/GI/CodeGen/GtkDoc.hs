@@ -8,6 +8,9 @@ module Data.GI.CodeGen.GtkDoc
   , Link(..)
   , ListItem(..)
   , CRef(..)
+  , DocSymbolName(..)
+  , docName
+  , resolveDocSymbol
   ) where
 
 import Prelude hiding (takeWhile)
@@ -46,7 +49,8 @@ data Link = Link { linkName :: Text
 
 -- | An item in a list, given by a list of lines (not including ending
 -- newlines). The list is always non-empty, so we represent it by the
--- first line and then a possibly empty list with the rest of the lines.
+-- first line and then a possibly empty list with the rest of the
+-- lines.
 data ListItem = ListItem GtkDoc [GtkDoc]
   deriving (Show, Eq)
 
@@ -55,24 +59,33 @@ newtype Language = Language Text
   deriving (Show, Eq)
 
 -- | A reference to some symbol in the API.
-data CRef = FunctionRef Name
+data CRef = FunctionRef DocSymbolName
           | OldFunctionRef Text
-          | MethodRef Name Text
+          | MethodRef DocSymbolName Text
           | ParamRef Text
           | ConstantRef Text
-          | SignalRef Name Text
+          | SignalRef DocSymbolName Text
           | OldSignalRef Text Text
           | LocalSignalRef Text
-          | PropertyRef Name Text
+          | PropertyRef DocSymbolName Text
           | OldPropertyRef Text Text
           | VMethodRef Text Text
-          | VFuncRef Name Text
+          | VFuncRef DocSymbolName Text
           | StructFieldRef Text Text
           | CTypeRef Text
-          | TypeRef Name
+          | TypeRef DocSymbolName
+          deriving (Show, Eq, Ord)
+
+-- | Reference to a name (of a class, for instance) in the
+-- documentation. It can be either relative to the module where the
+-- documentation is, of in some other namespace.
+data DocSymbolName = RelativeName Text
+                     -- ^ The symbol without a namespace specified
+                   | AbsoluteName Text Text
+                     -- ^ Namespace and symbol
   deriving (Show, Eq, Ord)
 
--- | A parsed representation of gtk-doc formatted documentation.
+-- | A parsed gtk-doc with fully resolved references.
 newtype GtkDoc = GtkDoc [Token]
   deriving (Show, Eq)
 
@@ -246,7 +259,7 @@ parseOldFunctionRef = do
 --
 -- === __Examples__
 -- >>> parseOnly (parseFunctionRef <* endOfInput) "[func@Gtk.init]"
--- Right (SymbolRef (FunctionRef (Name {namespace = "Gtk", name = "init"})))
+-- Right (SymbolRef (FunctionRef (AbsoluteName "Gtk" "init")))
 parseNewFunctionRef :: Parser Token
 parseNewFunctionRef = do
   _ <- string "[func@"
@@ -254,14 +267,14 @@ parseNewFunctionRef = do
   _ <- char '.'
   n <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ FunctionRef (Name ns n)
+  return $ SymbolRef $ FunctionRef (AbsoluteName ns n)
 
 -- | Parse a method name, of the form
 -- > [method@Namespace.Object.c_func_name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseMethod <* endOfInput) "[method@Gtk.Button.set_child]"
--- Right (SymbolRef (MethodRef (Name {namespace = "Gtk", name = "Button"}) "set_child"))
+-- Right (SymbolRef (MethodRef (AbsoluteName "Gtk" "Button") "set_child"))
 parseMethod :: Parser Token
 parseMethod = do
   _ <- string "[method@"
@@ -271,14 +284,14 @@ parseMethod = do
   _ <- char '.'
   method <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ MethodRef (Name ns n) method
+  return $ SymbolRef $ MethodRef (AbsoluteName ns n) method
 
 -- | Parse a reference to a constructor, of the form
 -- > [ctor@Namespace.Object.c_func_name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseConstructor <* endOfInput) "[ctor@Gtk.Builder.new_from_file]"
--- Right (SymbolRef (MethodRef (Name {namespace = "Gtk", name = "Builder"}) "new_from_file"))
+-- Right (SymbolRef (MethodRef (AbsoluteName "Gtk" "Builder") "new_from_file"))
 parseConstructor :: Parser Token
 parseConstructor = do
   _ <- string "[ctor@"
@@ -288,7 +301,7 @@ parseConstructor = do
   _ <- char '.'
   method <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ MethodRef (Name ns n) method
+  return $ SymbolRef $ MethodRef (AbsoluteName ns n) method
 
 -- | Parse a reference to a type, of the form
 -- > [class@Namespace.Name]
@@ -299,13 +312,13 @@ parseConstructor = do
 --
 -- === __Examples__
 -- >>> parseOnly (parseClass <* endOfInput) "[class@Gtk.Dialog]"
--- Right (SymbolRef (TypeRef (Name {namespace = "Gtk", name = "Dialog"})))
+-- Right (SymbolRef (TypeRef (AbsoluteName "Gtk" "Dialog")))
 --
 -- >>> parseOnly (parseClass <* endOfInput) "[iface@Gtk.Editable]"
--- Right (SymbolRef (TypeRef (Name {namespace = "Gtk", name = "Editable"})))
+-- Right (SymbolRef (TypeRef (AbsoluteName "Gtk" "Editable")))
 --
 -- >>> parseOnly (parseClass <* endOfInput) "[enum@Gtk.SizeRequestMode]"
--- Right (SymbolRef (TypeRef (Name {namespace = "Gtk", name = "SizeRequestMode"})))
+-- Right (SymbolRef (TypeRef (AbsoluteName "Gtk" "SizeRequestMode")))
 parseClass :: Parser Token
 parseClass = do
   _ <- string "[class@" <|> string "[iface@" <|> string "[enum@"
@@ -313,7 +326,7 @@ parseClass = do
   _ <- char '.'
   n <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ TypeRef (Name ns n)
+  return $ SymbolRef $ TypeRef (AbsoluteName ns n)
 
 parseSignal :: Parser Token
 parseSignal = parseOldSignal <|> parseNewSignal
@@ -337,7 +350,7 @@ parseOldSignal = do
 --
 -- === __Examples__
 -- >>> parseOnly (parseNewSignal <* endOfInput) "[signal@Gtk.AboutDialog::activate-link]"
--- Right (SymbolRef (SignalRef (Name {namespace = "Gtk", name = "AboutDialog"}) "activate-link"))
+-- Right (SymbolRef (SignalRef (AbsoluteName "Gtk" "AboutDialog") "activate-link"))
 parseNewSignal :: Parser Token
 parseNewSignal = do
   _ <- string "[signal@"
@@ -347,7 +360,7 @@ parseNewSignal = do
   _ <- string "::"
   signal <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
   _ <- char ']'
-  return (SymbolRef (SignalRef (Name ns n) signal))
+  return (SymbolRef (SignalRef (AbsoluteName ns n) signal))
 
 -- | Parse a reference to a signal defined in the current module, of the form
 -- > ::signal
@@ -380,7 +393,9 @@ parseOldProperty = do
 --
 -- === __Examples__
 -- >>> parseOnly (parseNewProperty <* endOfInput) "[property@Gtk.ProgressBar:show-text]"
--- Right (SymbolRef (PropertyRef (Name {namespace = "Gtk", name = "ProgressBar"}) "show-text"))
+-- Right (SymbolRef (PropertyRef (AbsoluteName "Gtk" "ProgressBar") "show-text"))
+-- >>> parseOnly (parseNewProperty <* endOfInput) "[property@Gtk.Editable:width-chars]"
+-- Right (SymbolRef (PropertyRef (AbsoluteName "Gtk" "Editable") "width-chars"))
 parseNewProperty :: Parser Token
 parseNewProperty = do
   _ <- string "[property@"
@@ -390,7 +405,7 @@ parseNewProperty = do
   _ <- char ':'
   property <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
   _ <- char ']'
-  return (SymbolRef (PropertyRef (Name ns n) property))
+  return (SymbolRef (PropertyRef (AbsoluteName ns n) property))
 
 -- | Parse a property
 parseProperty :: Parser Token
@@ -427,7 +442,7 @@ parseOldVMethod = do
 -- > [vfunc@Namespace.Object.vfunc_name]
 --
 -- >>> parseOnly (parseVFunc <* endOfInput) "[vfunc@Gtk.Widget.get_request_mode]"
--- Right (SymbolRef (VFuncRef (Name {namespace = "Gtk", name = "Widget"}) "get_request_mode"))
+-- Right (SymbolRef (VFuncRef (AbsoluteName "Gtk" "Widget") "get_request_mode"))
 parseVFunc :: Parser Token
 parseVFunc = do
   _ <- string "[vfunc@"
@@ -437,7 +452,7 @@ parseVFunc = do
   _ <- char '.'
   vfunc <- parseCIdent
   _ <- char ']'
-  return (SymbolRef (VFuncRef (Name ns n) vfunc))
+  return (SymbolRef (VFuncRef (AbsoluteName ns n) vfunc))
 
 -- | Parse a reference to a virtual method
 parseVMethod :: Parser Token
@@ -674,3 +689,13 @@ parseList = do
 
         parseLine :: Parser Text
         parseLine = string "\n  " >> takeWhile1 (/= '\n')
+
+-- | Turn an ordinary `Name` into a `DocSymbolName`
+docName :: Name -> DocSymbolName
+docName (Name ns n) = AbsoluteName ns n
+
+-- | Return a `Name` from a potentially relative `DocSymbolName`,
+-- using the provided default namespace if the name is relative.
+resolveDocSymbol :: DocSymbolName -> Text -> Name
+resolveDocSymbol (AbsoluteName ns n) _ = Name ns n
+resolveDocSymbol (RelativeName n) defaultNS = Name defaultNS n

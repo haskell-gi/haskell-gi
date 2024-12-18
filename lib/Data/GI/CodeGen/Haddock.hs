@@ -33,7 +33,8 @@ import Data.GI.CodeGen.Code (CodeGen, config, line, HaddockSection,
 import Data.GI.CodeGen.Config (modName, overrides)
 import Data.GI.CodeGen.CtoHaskellMap (Hyperlink(..))
 import Data.GI.CodeGen.GtkDoc (GtkDoc(..), Token(..), CRef(..), Language(..),
-                               Link(..), ListItem(..), parseGtkDoc)
+                               Link(..), ListItem(..), parseGtkDoc,
+                               DocSymbolName(..), resolveDocSymbol, docName)
 import Data.GI.CodeGen.Overrides (onlineDocsMap)
 import Data.GI.CodeGen.SymbolNaming (lowerSymbol, signalHaskellName,
                                      haddockSignalAnchor)
@@ -49,21 +50,21 @@ data RelativeDocPosition = DocBeforeSymbol
 -- delimiters are not included in the output.
 --
 -- === __Examples__
--- >>> formatHaddock M.empty "" (GtkDoc [Literal "Hello ", Literal "World!"])
+-- >>> formatHaddock M.empty "" "Test" (GtkDoc [Literal "Hello ", Literal "World!"])
 -- "Hello World!"
 --
 -- >>> let c2h = M.fromList [(OldFunctionRef "foo", ValueIdentifier "foo")]
--- >>> formatHaddock c2h "" (GtkDoc [SymbolRef (OldFunctionRef "foo")])
+-- >>> formatHaddock c2h "" "Test" (GtkDoc [SymbolRef (OldFunctionRef "foo")])
 -- "'foo'"
 --
 -- >>> let onlineDocs = "http://wiki.haskell.org"
--- >>> formatHaddock M.empty onlineDocs (GtkDoc [ExternalLink (Link "GI" "GObjectIntrospection")])
+-- >>> formatHaddock M.empty onlineDocs "Test" (GtkDoc [ExternalLink (Link "GI" "GObjectIntrospection")])
 -- "<http://wiki.haskell.org/GObjectIntrospection GI>"
 --
--- >>> formatHaddock M.empty "a" (GtkDoc [List [ListItem (GtkDoc [Image (Link "test" "test.png")]) []]])
+-- >>> formatHaddock M.empty "a" "Test" (GtkDoc [List [ListItem (GtkDoc [Image (Link "test" "test.png")]) []]])
 -- "\n* <<a/test.png test>>\n"
-formatHaddock :: M.Map CRef Hyperlink -> Text -> GtkDoc -> Text
-formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
+formatHaddock :: M.Map CRef Hyperlink -> Text -> Text -> GtkDoc -> Text
+formatHaddock c2h docBase defaultNS (GtkDoc tokens) = T.concat $ map formatToken tokens
   where formatToken :: Token -> Text
         formatToken (Literal l) = escape l
         formatToken (Comment _) = ""
@@ -71,55 +72,69 @@ formatHaddock c2h docBase (GtkDoc doc) = T.concat $ map formatToken doc
         formatToken (CodeBlock l c) = formatCodeBlock l c
         formatToken (ExternalLink l) = formatLink l docBase
         formatToken (Image l) = formatImage l docBase
-        formatToken (SectionHeader l h) = formatSectionHeader c2h docBase l h
-        formatToken (List l) = formatList c2h docBase l
+        formatToken (SectionHeader l h) =
+          formatSectionHeader c2h docBase defaultNS l h
+        formatToken (List l) = formatList c2h docBase defaultNS l
         formatToken (SymbolRef cr) = case M.lookup cr c2h of
           Just hr -> formatHyperlink hr
-          Nothing -> formatUnknownCRef c2h cr
+          Nothing -> formatUnknownCRef c2h defaultNS cr
 
--- | Format a `CRef` whose Haskell representation is not known.
-formatUnknownCRef :: M.Map CRef Hyperlink -> CRef -> Text
-formatUnknownCRef _ (OldFunctionRef f) = formatCRef $ f <> "()"
-formatUnknownCRef _ (FunctionRef (Name ns n)) = formatCRef $ ns <> "." <> n
-formatUnknownCRef _ (ParamRef p) = "/@" <> lowerSymbol p <> "@/"
-formatUnknownCRef _ (LocalSignalRef s) =
+-- | Format a `CRef` whose Haskell representation is not known, using
+-- a provided default namespace for relative symbols.
+formatUnknownCRef :: M.Map CRef Hyperlink -> Text -> CRef -> Text
+formatUnknownCRef _ _ (OldFunctionRef f) = formatCRef $ f <> "()"
+formatUnknownCRef _ defaultNS (FunctionRef n) =
+  formatCRef $ formatDocSymbol n defaultNS
+formatUnknownCRef _ _ (ParamRef p) = "/@" <> lowerSymbol p <> "@/"
+formatUnknownCRef _ _ (LocalSignalRef s) =
   let sn = signalHaskellName s
   in "[" <> sn <> "](#" <> haddockSignalAnchor <> sn <> ")"
-formatUnknownCRef c2h (SignalRef owner@(Name ns n) signal) =
-  case M.lookup (TypeRef owner) c2h of
+formatUnknownCRef c2h defaultNS (SignalRef docSymbol signal) =
+  let owner@(Name ns n) = resolveDocSymbol docSymbol defaultNS
+  in case M.lookup (TypeRef (docName owner)) c2h of
     Nothing -> formatCRef $ ns <> "." <> n <> "::" <> signal
     Just r -> formatHyperlink r <> "::" <> formatCRef signal
-formatUnknownCRef c2h (OldSignalRef owner signal) =
+formatUnknownCRef c2h _ (OldSignalRef owner signal) =
   case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "::" <> signal
     Just r -> formatHyperlink r <> "::" <> formatCRef signal
-formatUnknownCRef c2h (OldPropertyRef owner prop) =
+formatUnknownCRef c2h _ (OldPropertyRef owner prop) =
   case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> ":" <> prop
     Just r -> formatHyperlink r <> ":" <> formatCRef prop
-formatUnknownCRef c2h (PropertyRef owner@(Name ns n) prop) =
-  case M.lookup (TypeRef owner) c2h of
+formatUnknownCRef c2h defaultNS (PropertyRef docSymbol prop) =
+  let owner@(Name ns n) = resolveDocSymbol docSymbol defaultNS
+  in case M.lookup (TypeRef (docName owner)) c2h of
     Nothing -> formatCRef $ ns <> "." <> n <> ":" <> prop
     Just r -> formatHyperlink r <> ":" <> formatCRef prop
-formatUnknownCRef c2h (VMethodRef owner vmethod) =
+formatUnknownCRef c2h _ (VMethodRef owner vmethod) =
   case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "." <> vmethod <> "()"
     Just r -> formatHyperlink r <> "." <> formatCRef vmethod <> "()"
-formatUnknownCRef c2h (VFuncRef owner@(Name ns n) vmethod) =
-  case M.lookup (TypeRef owner) c2h of
+formatUnknownCRef c2h defaultNS (VFuncRef docSymbol vmethod) =
+  let owner@(Name ns n) = resolveDocSymbol docSymbol defaultNS
+  in case M.lookup (TypeRef (docName owner)) c2h of
     Nothing -> formatCRef $ ns <> "." <> n <> "." <> vmethod <> "()"
     Just r -> formatHyperlink r <> "." <> formatCRef vmethod <> "()"
-formatUnknownCRef c2h (MethodRef owner@(Name ns n) method) =
-  case M.lookup (TypeRef owner) c2h of
+formatUnknownCRef c2h defaultNS(MethodRef docSymbol method) =
+  let owner@(Name ns n) = resolveDocSymbol docSymbol defaultNS
+  in case M.lookup (TypeRef (docName owner)) c2h of
     Nothing -> formatCRef $ ns <> "." <> n <> "." <> method <> "()"
     Just r -> formatHyperlink r <> "." <> formatCRef method <> "()"
-formatUnknownCRef c2h (StructFieldRef owner field) =
+formatUnknownCRef c2h _ (StructFieldRef owner field) =
   case M.lookup (CTypeRef owner) c2h of
     Nothing -> formatCRef $ owner <> "." <> field
     Just r -> formatHyperlink r <> "." <> formatCRef field
-formatUnknownCRef _ (CTypeRef t) = formatCRef t
-formatUnknownCRef _ (TypeRef (Name ns n)) = formatCRef $ ns <> "." <> n
-formatUnknownCRef _ (ConstantRef t) = formatCRef t
+formatUnknownCRef _ _ (CTypeRef t) = formatCRef t
+formatUnknownCRef _ defaultNS (TypeRef n) =
+  formatCRef $ formatDocSymbol n defaultNS
+formatUnknownCRef _ _ (ConstantRef t) = formatCRef t
+
+-- | Format the given symbol name in a fully qualified way, using the
+-- default namespace if needed.
+formatDocSymbol :: DocSymbolName -> Text -> Text
+formatDocSymbol (RelativeName n) defaultNS = defaultNS <> "." <> n
+formatDocSymbol (AbsoluteName ns n) _ = ns <> "." <> n
 
 -- | Formatting for an unknown C reference.
 formatCRef :: Text -> Text
@@ -173,20 +188,20 @@ formatImage (Link {linkName = name, linkAddress = address}) docBase =
 -- | Format a section header of the given level and with the given
 -- text. Note that the level will be truncated to 2, if it is larger
 -- than that.
-formatSectionHeader :: M.Map CRef Hyperlink -> Text -> Int -> GtkDoc -> Text
-formatSectionHeader c2h docBase level header =
-  T.replicate level "=" <> " " <> formatHaddock c2h docBase header <> "\n"
+formatSectionHeader :: M.Map CRef Hyperlink -> Text -> Text -> Int -> GtkDoc -> Text
+formatSectionHeader c2h docBase defaultNS level header =
+  T.replicate level "=" <> " " <> formatHaddock c2h docBase defaultNS header <> "\n"
 
 -- | Format a list of items.
-formatList :: M.Map CRef Hyperlink -> Text -> [ListItem] -> Text
-formatList c2h docBase items = "\n" <> T.concat (map formatListItem items)
+formatList :: M.Map CRef Hyperlink -> Text -> Text -> [ListItem] -> Text
+formatList c2h docBase defaultNS items = "\n" <> T.concat (map formatListItem items)
   where formatListItem :: ListItem -> Text
         formatListItem (ListItem first rest) =
           "* " <> format first <> "\n"
           <> T.concat (map ((<> "\n") . format) rest)
 
         format :: GtkDoc -> Text
-        format = formatHaddock c2h docBase
+        format doc = formatHaddock c2h docBase defaultNS doc
 
 -- | Escape the reserved Haddock characters in a given `Text`.
 --
@@ -225,12 +240,14 @@ deprecatedPragma _  Nothing = return ()
 deprecatedPragma name (Just info) = do
   c2h <- getC2HMap
   docBase <- getDocBase
+  defaultNS <- modName <$> config
   line $ "{-# DEPRECATED " <> name <> " " <>
-    (T.pack . show) (note <> reason c2h docBase) <> " #-}"
-        where reason c2h docBase =
+    (T.pack . show) (note <> reason c2h docBase defaultNS) <> " #-}"
+        where reason c2h docBase defaultNS =
                 case deprecationMessage info of
                   Nothing -> []
-                  Just msg -> map (formatHaddock c2h docBase . parseGtkDoc)
+                  Just msg -> map (formatHaddock c2h docBase defaultNS
+                                   . parseGtkDoc)
                                   (T.lines msg)
               note = case deprecatedSinceVersion info of
                        Nothing -> []
@@ -238,10 +255,10 @@ deprecatedPragma name (Just info) = do
 
 -- | Format the given documentation into a set of lines. Note that
 -- this does include the opening or ending comment delimiters.
-formatDocumentation :: M.Map CRef Hyperlink -> Text -> Documentation -> Text
-formatDocumentation c2h docBase doc = do
+formatDocumentation :: M.Map CRef Hyperlink -> Text -> Text -> Documentation -> Text
+formatDocumentation c2h docBase defaultNS doc = do
   let description = case rawDocText doc of
-        Just raw -> formatHaddock c2h docBase (parseGtkDoc raw)
+        Just raw -> formatHaddock c2h docBase defaultNS (parseGtkDoc raw)
         Nothing -> "/No description available in the introspection data./"
   description <> case sinceVersion doc of
                    Nothing -> ""
@@ -252,7 +269,8 @@ writeDocumentation :: RelativeDocPosition -> Documentation -> CodeGen e ()
 writeDocumentation pos doc = do
   c2h <- getC2HMap
   docBase <- getDocBase
-  writeHaddock pos (formatDocumentation c2h docBase doc)
+  defaultNS <- modName <$> config
+  writeHaddock pos (formatDocumentation c2h docBase defaultNS doc)
 
 -- | Like `writeDocumentation`, but allows us to pass explicitly the
 -- Haddock comment to write.
@@ -274,8 +292,9 @@ writeArgDocumentation arg =
     Just raw -> do
       c2h <- getC2HMap
       docBase <- getDocBase
+      defaultNS <- modName <$> config
       let haddock = "/@" <> lowerSymbol (argCName arg) <> "@/: " <>
-                    formatHaddock c2h docBase (parseGtkDoc raw)
+                    formatHaddock c2h docBase defaultNS (parseGtkDoc raw)
       writeHaddock DocAfterSymbol haddock
 
 -- | Write the documentation for the given return value.
@@ -283,12 +302,13 @@ writeReturnDocumentation :: Callable -> Bool -> CodeGen e ()
 writeReturnDocumentation callable skip = do
   c2h <- getC2HMap
   docBase <- getDocBase
+  defaultNS <- modName <$> config
   let returnValInfo = if skip
                       then []
                       else case rawDocText (returnDocumentation callable) of
                              Nothing -> []
                              Just raw -> ["__Returns:__ " <>
-                                           formatHaddock c2h docBase
+                                           formatHaddock c2h docBase defaultNS
                                            (parseGtkDoc raw)]
       throwsInfo = if callableThrows callable
                    then ["/(Can throw 'Data.GI.Base.GError.GError')/"]
@@ -302,5 +322,6 @@ addSectionDocumentation :: HaddockSection -> Documentation -> CodeGen e ()
 addSectionDocumentation section doc = do
   c2h <- getC2HMap
   docBase <- getDocBase
-  let formatted = formatDocumentation c2h docBase doc
+  defaultNS <- modName <$> config
+  let formatted = formatDocumentation c2h docBase defaultNS doc
   addSectionFormattedDocs section formatted

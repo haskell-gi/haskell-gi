@@ -11,7 +11,7 @@ import Data.Monoid ((<>))
 #endif
 import Data.Text (Text)
 
-import Data.GI.CodeGen.GtkDoc (CRef(..))
+import Data.GI.CodeGen.GtkDoc (CRef(..), docName)
 import Data.GI.CodeGen.API (API(..), Name(..), Callback(..),
                             Constant(..), Flags(..),
                             Enumeration(..), EnumerationMember(..),
@@ -79,20 +79,20 @@ fullyQualifiedType n api symbol =
 constRefs :: Name -> Constant -> [(CRef, Hyperlink)]
 constRefs n c = [(ConstantRef (constantCType c), qualified),
                  (CTypeRef (constantCType c), qualified),
-                 (TypeRef n, qualified)]
+                 (TypeRef (docName n), qualified)]
   where qualified = fullyQualifiedValue n (APIConst c) $ name n
 
 -- | Extract the C name of a function.
 funcRefs :: Name -> Function -> [(CRef, Hyperlink)]
 funcRefs n f = [(OldFunctionRef (fnSymbol f), qualified),
-                (FunctionRef n, qualified)]
+                (FunctionRef (docName n), qualified)]
   where qualified = fullyQualifiedValue n (APIFunction f) $ lowerName n
 
 -- | Extract the C names of the fields in an enumeration/flags, and
 -- the name of the type itself.
 enumRefs :: API -> Name -> Enumeration -> [(CRef, Hyperlink)]
 enumRefs api n e = (CTypeRef (enumCType e), qualified)
-                   : (TypeRef n, qualified)
+                   : (TypeRef (docName n), qualified)
                    : map memberToRef (enumMembers e)
   where qualified = fullyQualifiedType n api $ upperName n
         memberToRef :: EnumerationMember -> (CRef, Hyperlink)
@@ -109,7 +109,7 @@ methodRefs n api methods = concatMap methodRef methods
           let mn' = mn {name = name n <> "_" <> name mn}
               qualified = fullyQualifiedValue n api $ lowerName mn'
           in [(OldFunctionRef symbol, qualified),
-              (MethodRef n (name mn), qualified)]
+              (MethodRef (docName n) (name mn), qualified)]
 
 -- | Refs to the signals for a given owner.
 signalRefs :: Name -> API -> Maybe Text -> [Signal] -> [(CRef, Hyperlink)]
@@ -125,7 +125,7 @@ signalRefs n@(Name _ owner) api maybeCName signals = concatMap signalRef signals
               label = Just (owner <> "::" <> sn')
               link = ModuleLinkWithAnchor label mod (haddockSignalAnchor <> sn')
           in [(OldSignalRef ownerCName sn, link),
-              (SignalRef n sn, link)]
+              (SignalRef (docName n) sn, link)]
 
 -- | Refs to the properties for a given owner.
 propRefs :: Name -> API -> Maybe Text -> [Property] -> [(CRef, Hyperlink)]
@@ -141,14 +141,14 @@ propRefs n@(Name _ owner) api maybeCName props = concatMap propertyRef props
               label = Just (owner <> ":" <> hn)
               link = ModuleLinkWithAnchor label mod (haddockAttrAnchor <> hn)
           in [(OldPropertyRef ownerCName pn, link),
-              (PropertyRef n pn, link)]
+              (PropertyRef (docName n) pn, link)]
 
 -- | Given an optional C type and the API constructor construct the
 -- list of associated refs.
 maybeCType :: Name -> API -> Maybe Text -> [(CRef, Hyperlink)]
 maybeCType _ _ Nothing = []
 maybeCType n api (Just ctype) = [(CTypeRef ctype, qualified),
-                                 (TypeRef n, qualified)]
+                                 (TypeRef (docName n), qualified)]
   where qualified = fullyQualifiedType n api (upperName n)
 
 -- | Extract the C name of a callback.
@@ -170,6 +170,7 @@ ifaceRefs :: Name -> Interface -> [(CRef, Hyperlink)]
 ifaceRefs n i = maybeCType n (APIInterface i) (ifCType i)
                  <> methodRefs n (APIInterface i) (ifMethods i)
                  <> signalRefs n (APIInterface i) (ifCType i) (ifSignals i)
+                 <> propRefs n (APIInterface i) (ifCType i) (ifProperties i)
 
 -- | Extract the C references in an object.
 objectRefs :: Name -> Object -> [(CRef, Hyperlink)]
