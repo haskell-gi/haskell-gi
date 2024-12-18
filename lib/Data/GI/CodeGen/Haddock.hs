@@ -53,6 +53,9 @@ data RelativeDocPosition = DocBeforeSymbol
 -- >>> formatHaddock M.empty "" "Test" (GtkDoc [Literal "Hello ", Literal "World!"])
 -- "Hello World!"
 --
+-- >>> formatHaddock M.empty "" "Test" (GtkDoc [Literal "This is a **bold** world!"])
+-- "This is a __bold__ world!"
+--
 -- >>> let c2h = M.fromList [(OldFunctionRef "foo", ValueIdentifier "foo")]
 -- >>> formatHaddock c2h "" "Test" (GtkDoc [SymbolRef (OldFunctionRef "foo")])
 -- "'foo'"
@@ -66,7 +69,7 @@ data RelativeDocPosition = DocBeforeSymbol
 formatHaddock :: M.Map CRef Hyperlink -> Text -> Text -> GtkDoc -> Text
 formatHaddock c2h docBase defaultNS (GtkDoc tokens) = T.concat $ map formatToken tokens
   where formatToken :: Token -> Text
-        formatToken (Literal l) = escape l
+        formatToken (Literal l) = escape (convertBold l)
         formatToken (Comment _) = ""
         formatToken (Verbatim v) = "@" <> escape v <> "@"
         formatToken (CodeBlock l c) = formatCodeBlock l c
@@ -78,6 +81,11 @@ formatHaddock c2h docBase defaultNS (GtkDoc tokens) = T.concat $ map formatToken
         formatToken (SymbolRef cr) = case M.lookup cr c2h of
           Just hr -> formatHyperlink hr
           Nothing -> formatUnknownCRef c2h defaultNS cr
+
+        -- Markdown accepts both two underscores and two stars as
+        -- indicating bold, but Haddock only accepts two underscores.
+        convertBold :: Text -> Text
+        convertBold l = T.replace "**" "__" l
 
 -- | Format a `CRef` whose Haskell representation is not known, using
 -- a provided default namespace for relative symbols.
