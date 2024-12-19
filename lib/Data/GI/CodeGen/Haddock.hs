@@ -167,7 +167,8 @@ formatHyperlink (ModuleLinkWithAnchor mLabel m a) =
 formatCodeBlock :: Maybe Language -> Text -> Text
 formatCodeBlock maybeLang code =
   let header = case maybeLang of
-        Nothing -> ""
+        Nothing -> "\n\t\n"  -- This is to convince haddock that we
+                             -- are indeed starting a code block
         Just (Language lang) -> "\n=== /" <> lang <> " code/\n"
       birdTrack = T.unlines . map (T.cons '>') . T.lines
   in header <> birdTrack code
