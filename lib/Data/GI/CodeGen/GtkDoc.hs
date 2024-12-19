@@ -633,6 +633,9 @@ parseCodeBlock = parseOldStyleCodeBlock <|> parseNewStyleCodeBlock
 -- === __Examples__
 -- >>> parseOnly (parseNewStyleCodeBlock <* endOfInput) "```c\nThis is C code\n```"
 -- Right (CodeBlock (Just (Language "c")) "This is C code")
+--
+-- >>> parseOnly (parseNewStyleCodeBlock <* endOfInput) "```\nThis is langless\n```"
+-- Right (CodeBlock Nothing "This is langless")
 parseNewStyleCodeBlock :: Parser Token
 parseNewStyleCodeBlock = do
   _ <- string "```"
