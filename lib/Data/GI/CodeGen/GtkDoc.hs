@@ -72,6 +72,7 @@ data CRef = FunctionRef DocSymbolName
           | VMethodRef Text Text
           | VFuncRef DocSymbolName Text
           | StructFieldRef Text Text
+          | EnumMemberRef DocSymbolName Text
           | CTypeRef Text
           | TypeRef DocSymbolName
           deriving (Show, Eq, Ord)
@@ -205,6 +206,7 @@ parseToken = -- Note that the parsers overlap, so this is not as
              <|> parseClass
              <|> parseCType
              <|> parseConstant
+             <|> parseEnumMember
              <|> parseParam
              <|> parseEscaped
              <|> parseCodeBlock
@@ -275,9 +277,12 @@ parseNewFunctionRef = do
 -- === __Examples__
 -- >>> parseOnly (parseMethod <* endOfInput) "[method@Gtk.Button.set_child]"
 -- Right (SymbolRef (MethodRef (AbsoluteName "Gtk" "Button") "set_child"))
+--
+-- >>> parseOnly (parseMethod <* endOfInput) "[func@Gtk.Settings.get_for_display]"
+-- Right (SymbolRef (MethodRef (AbsoluteName "Gtk" "Settings") "get_for_display"))
 parseMethod :: Parser Token
 parseMethod = do
-  _ <- string "[method@"
+  _ <- string "[method@" <|> string "[func@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
   _ <- char '.'
   n <- takeWhile1 isCIdent
@@ -307,7 +312,7 @@ parseConstructor = do
 -- > [class@Namespace.Name]
 -- an interface of the form
 -- > [iface@Namespace.Name]
--- or an enum type:
+-- or an enumeration type, of the form
 -- > [enum@Namespace.Name]
 --
 -- === __Examples__
@@ -327,6 +332,27 @@ parseClass = do
   n <- takeWhile1 isCIdent
   _ <- char ']'
   return $ SymbolRef $ TypeRef (AbsoluteName ns n)
+
+-- | Parse a reference to a member of the enum, of the form
+-- > [enum@Gtk.FontRendering.AUTOMATIC]
+--
+-- === __Examples__
+-- >>> parseOnly (parseEnumMember <* endOfInput) "[enum@Gtk.FontRendering.AUTOMATIC]"
+-- Right (SymbolRef (EnumMemberRef (AbsoluteName "Gtk" "FontRendering") "automatic"))
+parseEnumMember :: Parser Token
+parseEnumMember = do
+  _ <- string "[enum@"
+  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+  _ <- char '.'
+  n <- takeWhile1 isCIdent
+  _ <- char '.'
+  member <- takeWhile1 isCIdent
+  _ <- char ']'
+  -- Sometimes the references are written in uppercase while the name
+  -- of the member in the introspection data is written in lowercase,
+  -- so normalise everything to lowercase. (See the similar annotation
+  -- in CtoHaskellMap.hs.)
+  return $ SymbolRef $ EnumMemberRef (AbsoluteName ns n) (T.toLower member)
 
 parseSignal :: Parser Token
 parseSignal = parseOldSignal <|> parseNewSignal

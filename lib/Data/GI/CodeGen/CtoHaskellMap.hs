@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import Data.Monoid ((<>))
 #endif
 import Data.Text (Text)
+import qualified Data.Text as T
 
 import Data.GI.CodeGen.GtkDoc (CRef(..), docName)
 import Data.GI.CodeGen.API (API(..), Name(..), Callback(..),
@@ -93,10 +94,19 @@ funcRefs n f = [(OldFunctionRef (fnSymbol f), qualified),
 enumRefs :: API -> Name -> Enumeration -> [(CRef, Hyperlink)]
 enumRefs api n e = (CTypeRef (enumCType e), qualified)
                    : (TypeRef (docName n), qualified)
-                   : map memberToRef (enumMembers e)
+                   : map memberToOldRef (enumMembers e)
+                   <> map memberToRef (enumMembers e)
   where qualified = fullyQualifiedType n api $ upperName n
+        memberToOldRef :: EnumerationMember -> (CRef, Hyperlink)
+        memberToOldRef em = (ConstantRef (enumMemberCId em),
+                          fullyQualifiedValue n api $ upperName $
+                          n {name = name n <> "_" <> enumMemberName em})
         memberToRef :: EnumerationMember -> (CRef, Hyperlink)
-        memberToRef em = (ConstantRef (enumMemberCId em),
+        -- Sometimes the references are written in uppercase while the
+        -- name of the member in the introspection data is written in
+        -- lowercase, so normalise everything to lowercase. (See the
+        -- similar annotation in GtkDoc.hs.)
+        memberToRef em = (EnumMemberRef (docName n) (T.toLower $ enumMemberName em),
                           fullyQualifiedValue n api $ upperName $
                           n {name = name n <> "_" <> enumMemberName em})
 

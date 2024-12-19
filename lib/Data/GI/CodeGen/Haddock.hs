@@ -137,6 +137,11 @@ formatUnknownCRef _ _ (CTypeRef t) = formatCRef t
 formatUnknownCRef _ defaultNS (TypeRef n) =
   formatCRef $ formatDocSymbol n defaultNS
 formatUnknownCRef _ _ (ConstantRef t) = formatCRef t
+formatUnknownCRef c2h defaultNS (EnumMemberRef docSymbol member) =
+  let owner@(Name ns n) = resolveDocSymbol docSymbol defaultNS
+  in case M.lookup (TypeRef (docName owner)) c2h of
+    Nothing -> formatCRef $ ns <> "." <> n <> "." <> member
+    Just r -> formatHyperlink r <> "." <> formatCRef member
 
 -- | Format the given symbol name in a fully qualified way, using the
 -- default namespace if needed.
