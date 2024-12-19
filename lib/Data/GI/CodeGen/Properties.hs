@@ -278,7 +278,7 @@ genPropertyGetter getter n docSection prop = group $ do
 -- | Generate documentation for the given constructor.
 constructorDoc :: Property -> Text
 constructorDoc prop = T.unlines [
-    "Construct a `GValueConstruct` with valid value for the “@" <> propName prop <> "@” property. This is rarely needed directly, but it is used by `Data.GI.Base.Constructible.new`."
+    "Construct a t'GValueConstruct' with valid value for the “@" <> propName prop <> "@” property. This is rarely needed directly, but it is used by `Data.GI.Base.Constructible.new`."
     ]
 
 genPropertyConstructor :: Text -> Name -> HaddockSection -> Property -> ExcCodeGen ()

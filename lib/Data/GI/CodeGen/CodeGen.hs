@@ -246,7 +246,7 @@ genGValueSetter name' set_value_fn = group $ do
 genGValueInstance :: Name -> Text -> Text -> Text -> Text -> CodeGen e ()
 genGValueInstance n get_type_fn newFn get_value_fn set_value_fn = do
   let name' = upperName n
-      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
+      doc = "Convert t'" <> name' <> "' to and from t'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
 
   writeHaddock DocBeforeSymbol doc
 
@@ -322,13 +322,13 @@ genCasts n ti parents = do
   return get_type_fn
 
   where castDoc :: Text -> Text
-        castDoc name' = "Cast to `" <> name' <>
-                        "`, for types for which this is known to be safe. " <>
-                        "For general casts, use `Data.GI.Base.ManagedPtr.castTo`."
+        castDoc name' = "Cast to t'" <> name' <>
+                        "', for types for which this is known to be safe. " <>
+                        "For general casts, use 'Data.GI.Base.ManagedPtr.castTo'."
 
         classDoc :: Text -> Text
-        classDoc name' = "Type class for types which can be safely cast to `"
-                         <> name' <> "`, for instance with `to" <> name' <> "`."
+        classDoc name' = "Type class for types which can be safely cast to t'"
+                         <> name' <> "', for instance with `to" <> name' <> "`."
 
 -- | Wrap a given Object. We enforce that every Object that we wrap is a
 -- GObject. This is the case for everything except the ParamSpec* set
@@ -420,8 +420,8 @@ genInterface n iface = do
   else group $ do
     cls <- classConstraint n
     exportDecl cls
-    writeHaddock DocBeforeSymbol ("Type class for types which implement `"
-                                  <> name' <> "`.")
+    writeHaddock DocBeforeSymbol ("Type class for types which implement t'"
+                                  <> name' <> "'.")
 
     -- Create the IsX constraint. We cannot simply say
     --

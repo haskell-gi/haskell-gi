@@ -468,8 +468,8 @@ genZeroSU n size isBoxed = group $ do
       let builder = "newZero" <> name
           tsize = tshow size
 
-      writeHaddock DocBeforeSymbol ("Construct a `" <> name <>
-                                     "` struct initialized to zero.")
+      writeHaddock DocBeforeSymbol ("Construct a t'" <> name <>
+                                     "' struct initialized to zero.")
 
       line $ builder <> " :: MonadIO m => m " <> name
       line $ builder <> " = liftIO $ " <>
@@ -515,7 +515,7 @@ prefixedForeignImport prefix symbol prototype = group $ do
 genBoxedGValueInstance :: Name -> Text -> CodeGen e ()
 genBoxedGValueInstance n get_type_fn = do
   let name' = upperName n
-      doc = "Convert '" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
+      doc = "Convert t'" <> name' <> "' to and from 'Data.GI.Base.GValue.GValue'. See 'Data.GI.Base.GValue.toGValue' and 'Data.GI.Base.GValue.fromGValue'."
 
   writeHaddock DocBeforeSymbol doc
 
