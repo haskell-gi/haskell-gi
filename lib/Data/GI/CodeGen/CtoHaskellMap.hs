@@ -63,7 +63,9 @@ cToHaskellMap apis = M.union (M.fromList builtins)
                     (CTypeRef "GError", TypeIdentifier "GError"),
                     (CTypeRef "GType", TypeIdentifier "GType"),
                     (CTypeRef "GVariant", TypeIdentifier "GVariant"),
-                    (ConstantRef "NULL", ValueIdentifier "P.Nothing")]
+                    (ConstantRef "NULL", ValueIdentifier "P.Nothing"),
+                    (TypeRef (docName $ Name "GLib" "Variant"),
+                     TypeIdentifier "GVariant")]
 
 -- | Obtain the fully qualified symbol pointing to a value.
 fullyQualifiedValue :: Name -> API -> Text -> Hyperlink

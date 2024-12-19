@@ -324,9 +324,13 @@ parseConstructor = do
 --
 -- >>> parseOnly (parseClass <* endOfInput) "[enum@Gtk.SizeRequestMode]"
 -- Right (SymbolRef (TypeRef (AbsoluteName "Gtk" "SizeRequestMode")))
+--
+-- >>> parseOnly (parseClass <* endOfInput) "[struct@GLib.Variant]"
+-- Right (SymbolRef (TypeRef (AbsoluteName "GLib" "Variant")))
 parseClass :: Parser Token
 parseClass = do
-  _ <- string "[class@" <|> string "[iface@" <|> string "[enum@"
+  _ <- string "[class@" <|> string "[iface@" <|>
+       string "[enum@" <|> string "[struct@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
   _ <- char '.'
   n <- takeWhile1 isCIdent
