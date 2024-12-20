@@ -6,7 +6,6 @@ module Data.GI.CodeGen.GtkDoc
   , Token(..)
   , Language(..)
   , Link(..)
-  , ListItem(..)
   , CRef(..)
   , DocSymbolName(..)
   , docName
@@ -22,11 +21,13 @@ import Control.Applicative ((<$>), (<*))
 import Data.Monoid ((<>))
 #endif
 import Control.Applicative ((<|>))
+import Control.Monad (guard)
 
+import Data.GI.CodeGen.Util (terror)
 import Data.GI.GIR.BasicTypes (Name(Name))
 
 import Data.Attoparsec.Text
-import Data.Char (isAlphaNum, isAlpha, isAscii)
+import Data.Char (isAlphaNum, isAlpha, isAscii, isDigit)
 import qualified Data.Text as T
 import Data.Text (Text)
 
@@ -37,7 +38,11 @@ data Token = Literal Text
            | CodeBlock (Maybe Language) Text
            | ExternalLink Link
            | Image Link
-           | List [ListItem]
+           | UnnumberedList [GtkDoc]
+           -- ^ An unnumbered list of items.
+           | NumberedList [(Text, GtkDoc)]
+           -- ^ A list of numbered list items. The first element in
+           -- the pair is the index.
            | SectionHeader Int GtkDoc -- ^ A section header of the given depth.
            | SymbolRef CRef
   deriving (Show, Eq)
@@ -45,13 +50,6 @@ data Token = Literal Text
 -- | A link to a resource, either offline or a section of the documentation.
 data Link = Link { linkName :: Text
                  , linkAddress :: Text }
-  deriving (Show, Eq)
-
--- | An item in a list, given by a list of lines (not including ending
--- newlines). The list is always non-empty, so we represent it by the
--- first line and then a possibly empty list with the rest of the
--- lines.
-data ListItem = ListItem GtkDoc [GtkDoc]
   deriving (Show, Eq)
 
 -- | The language for an embedded code block.
@@ -118,42 +116,42 @@ newtype GtkDoc = GtkDoc [Token]
 -- GtkDoc [SectionHeader 1 (GtkDoc [Literal "A section"]),Literal "\n",SectionHeader 2 (GtkDoc [Literal "and a subsection "])]
 --
 -- >>> parseGtkDoc "Compact list:\n- First item\n- Second item"
--- GtkDoc [Literal "Compact list:\n",List [ListItem (GtkDoc [Literal "First item"]) [],ListItem (GtkDoc [Literal "Second item"]) []]]
+-- GtkDoc [Literal "Compact list:\n",UnnumberedList [GtkDoc [Literal "First item"],GtkDoc [Literal "Second item"]]]
 --
 -- >>> parseGtkDoc "Spaced list:\n\n- First item\n\n- Second item"
--- GtkDoc [Literal "Spaced list:\n",List [ListItem (GtkDoc [Literal "First item"]) [],ListItem (GtkDoc [Literal "Second item"]) []]]
+-- GtkDoc [Literal "Spaced list:\n\n",UnnumberedList [GtkDoc [Literal "First item"],GtkDoc [Literal "Second item"]]]
 --
 -- >>> parseGtkDoc "List with urls:\n- [test](http://test)\n- ![](image.png)"
--- GtkDoc [Literal "List with urls:\n",List [ListItem (GtkDoc [ExternalLink (Link {linkName = "test", linkAddress = "http://test"})]) [],ListItem (GtkDoc [Image (Link {linkName = "", linkAddress = "image.png"})]) []]]
+-- GtkDoc [Literal "List with urls:\n",UnnumberedList [GtkDoc [ExternalLink (Link {linkName = "test", linkAddress = "http://test"})],GtkDoc [Image (Link {linkName = "", linkAddress = "image.png"})]]]
 parseGtkDoc :: Text -> GtkDoc
-parseGtkDoc raw =
+parseGtkDoc doc = rawParseGtkDoc (T.cons startOfString doc)
+
+-- | Like `parseGtkDoc`, but it does not annotate beginning of lines.
+rawParseGtkDoc :: Text -> GtkDoc
+rawParseGtkDoc raw =
   case parseOnly (parseTokens <* endOfInput) raw of
     Left e ->
-      error $ "gtk-doc parsing failed with error \"" <> e
-      <> "\" on the input \"" <> T.unpack raw <> "\""
-    Right tks -> GtkDoc . coalesceLiterals
-                 . restoreSHPreNewlines . restoreListPreNewline $ tks
+      terror $ "gtk-doc parsing failed with error \"" <> T.pack e
+      <> "\" on the input \"" <>
+      T.replace (T.singleton startOfString) "" raw <> "\""
+    Right tks -> GtkDoc . coalesceLiterals . removeSOS $ tks
 
--- | `parseSectionHeader` eats the newline before the section header,
--- but `parseInitialSectionHeader` does not, since it only matches at
--- the beginning of the text. This restores the newlines eaten by
--- `parseSectionHeader`, so a `SectionHeader` returned by the parser
--- can always be assumed /not/ to have an implicit starting newline.
-restoreSHPreNewlines :: [Token] -> [Token]
-restoreSHPreNewlines [] = []
-restoreSHPreNewlines (i : rest) = i : restoreNewlines rest
-  where restoreNewlines :: [Token] -> [Token]
-        restoreNewlines [] = []
-        restoreNewlines (s@(SectionHeader _ _) : rest) =
-          Literal "\n" : s : restoreNewlines rest
-        restoreNewlines (x : rest) = x : restoreNewlines rest
+-- | A character indicating the start of the string, to simplify the
+-- GtkDoc parser (part of the syntax is sensitive to the start of
+-- lines, which we can represent as any character after '\n' or SOS).
+startOfString :: Char
+startOfString = '\x98' -- Unicode Start Of String (SOS)
 
--- | `parseList` eats the newline before the list, restore it.
-restoreListPreNewline :: [Token] -> [Token]
-restoreListPreNewline [] = []
-restoreListPreNewline (l@(List _) : rest) =
-  Literal "\n" : l : restoreListPreNewline rest
-restoreListPreNewline (x : rest) = x : restoreListPreNewline rest
+-- | Remove the SOS marker from the input. Since this only appears at
+-- the beginning of the text, we only need to worry about replacing it
+-- in the first token, and only if it's a literal.
+removeSOS :: [Token] -> [Token]
+removeSOS [] = []
+removeSOS (Literal l : rest) =
+  if l == T.singleton startOfString
+  then rest
+  else Literal (T.replace (T.singleton startOfString) "" l) : rest
+removeSOS (other : rest) = other : rest
 
 -- | Accumulate consecutive literals into a single literal.
 coalesceLiterals :: [Token] -> [Token]
@@ -175,17 +173,20 @@ parseTokens = headerAndTokens <|> justTokens
         headerAndTokens = do
           header <- parseInitialSectionHeader
           tokens <- justTokens
-          return (header : tokens)
+          return (header <> tokens)
 
         justTokens :: Parser [Token]
-        justTokens = many' parseToken
+        justTokens = concat <$> many' parseToken
 
--- | Parse a single token.
+-- | Parse a single token. This can sometimes return more than a
+-- single token, when parsing a logical token produces multiple output
+-- tokens (for example when keeping the initial structure requires
+-- adding together literals and other tokens).
 --
 -- === __Examples__
 -- >>> parseOnly (parseToken <* endOfInput) "func()"
--- Right (SymbolRef (OldFunctionRef "func"))
-parseToken :: Parser Token
+-- Right [SymbolRef (OldFunctionRef "func")]
+parseToken :: Parser [Token]
 parseToken = -- Note that the parsers overlap, so this is not as
              -- efficient as it could be (if we had combined parsers
              -- and then branched, so that there is no
@@ -214,7 +215,8 @@ parseToken = -- Note that the parsers overlap, so this is not as
              <|> parseUrl
              <|> parseImage
              <|> parseSectionHeader
-             <|> parseList
+             <|> parseUnnumberedList
+             <|> parseNumberedList
              <|> parseComment
              <|> parseBoringLiteral
 
@@ -229,16 +231,16 @@ parseCIdent :: Parser Text
 parseCIdent = takeWhile1 isCIdent
 
 -- | Parse a function ref
-parseFunctionRef :: Parser Token
+parseFunctionRef :: Parser [Token]
 parseFunctionRef = parseOldFunctionRef <|> parseNewFunctionRef
 
 -- | Parse an unresolved reference to a C symbol in new gtk-doc notation.
-parseId :: Parser Token
+parseId :: Parser [Token]
 parseId = do
   _ <- string "[id@"
   ident <- parseCIdent
   _ <- char ']'
-  return (SymbolRef (OldFunctionRef ident))
+  return [SymbolRef (OldFunctionRef ident)]
 
 -- | Parse a function ref, given by a valid C identifier followed by
 -- '()', for instance 'gtk_widget_show()'. If the identifier is not
@@ -246,41 +248,41 @@ parseId = do
 --
 -- === __Examples__
 -- >>> parseOnly (parseFunctionRef <* endOfInput) "test_func()"
--- Right (SymbolRef (OldFunctionRef "test_func"))
+-- Right [SymbolRef (OldFunctionRef "test_func")]
 --
 -- >>> parseOnly (parseFunctionRef <* endOfInput) "not_a_func"
--- Right (Literal "not_a_func")
-parseOldFunctionRef :: Parser Token
+-- Right [Literal "not_a_func"]
+parseOldFunctionRef :: Parser [Token]
 parseOldFunctionRef = do
   ident <- parseCIdent
-  option (Literal ident) (string "()" >>
-                          return (SymbolRef (OldFunctionRef ident)))
+  option [Literal ident] (string "()" >>
+                          return [SymbolRef (OldFunctionRef ident)])
 
 -- | Parse a function name in new style, of the form
 -- > [func@Namespace.c_func_name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseFunctionRef <* endOfInput) "[func@Gtk.init]"
--- Right (SymbolRef (FunctionRef (AbsoluteName "Gtk" "init")))
-parseNewFunctionRef :: Parser Token
+-- Right [SymbolRef (FunctionRef (AbsoluteName "Gtk" "init"))]
+parseNewFunctionRef :: Parser [Token]
 parseNewFunctionRef = do
   _ <- string "[func@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
   _ <- char '.'
   n <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ FunctionRef (AbsoluteName ns n)
+  return [SymbolRef $ FunctionRef (AbsoluteName ns n)]
 
 -- | Parse a method name, of the form
 -- > [method@Namespace.Object.c_func_name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseMethod <* endOfInput) "[method@Gtk.Button.set_child]"
--- Right (SymbolRef (MethodRef (AbsoluteName "Gtk" "Button") "set_child"))
+-- Right [SymbolRef (MethodRef (AbsoluteName "Gtk" "Button") "set_child")]
 --
 -- >>> parseOnly (parseMethod <* endOfInput) "[func@Gtk.Settings.get_for_display]"
--- Right (SymbolRef (MethodRef (AbsoluteName "Gtk" "Settings") "get_for_display"))
-parseMethod :: Parser Token
+-- Right [SymbolRef (MethodRef (AbsoluteName "Gtk" "Settings") "get_for_display")]
+parseMethod :: Parser [Token]
 parseMethod = do
   _ <- string "[method@" <|> string "[func@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
@@ -289,15 +291,15 @@ parseMethod = do
   _ <- char '.'
   method <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ MethodRef (AbsoluteName ns n) method
+  return [SymbolRef $ MethodRef (AbsoluteName ns n) method]
 
 -- | Parse a reference to a constructor, of the form
 -- > [ctor@Namespace.Object.c_func_name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseConstructor <* endOfInput) "[ctor@Gtk.Builder.new_from_file]"
--- Right (SymbolRef (MethodRef (AbsoluteName "Gtk" "Builder") "new_from_file"))
-parseConstructor :: Parser Token
+-- Right [SymbolRef (MethodRef (AbsoluteName "Gtk" "Builder") "new_from_file")]
+parseConstructor :: Parser [Token]
 parseConstructor = do
   _ <- string "[ctor@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
@@ -306,7 +308,7 @@ parseConstructor = do
   _ <- char '.'
   method <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ MethodRef (AbsoluteName ns n) method
+  return [SymbolRef $ MethodRef (AbsoluteName ns n) method]
 
 -- | Parse a reference to a type, of the form
 -- > [class@Namespace.Name]
@@ -317,17 +319,17 @@ parseConstructor = do
 --
 -- === __Examples__
 -- >>> parseOnly (parseClass <* endOfInput) "[class@Gtk.Dialog]"
--- Right (SymbolRef (TypeRef (AbsoluteName "Gtk" "Dialog")))
+-- Right [SymbolRef (TypeRef (AbsoluteName "Gtk" "Dialog"))]
 --
 -- >>> parseOnly (parseClass <* endOfInput) "[iface@Gtk.Editable]"
--- Right (SymbolRef (TypeRef (AbsoluteName "Gtk" "Editable")))
+-- Right [SymbolRef (TypeRef (AbsoluteName "Gtk" "Editable"))]
 --
 -- >>> parseOnly (parseClass <* endOfInput) "[enum@Gtk.SizeRequestMode]"
--- Right (SymbolRef (TypeRef (AbsoluteName "Gtk" "SizeRequestMode")))
+-- Right [SymbolRef (TypeRef (AbsoluteName "Gtk" "SizeRequestMode"))]
 --
 -- >>> parseOnly (parseClass <* endOfInput) "[struct@GLib.Variant]"
--- Right (SymbolRef (TypeRef (AbsoluteName "GLib" "Variant")))
-parseClass :: Parser Token
+-- Right [SymbolRef (TypeRef (AbsoluteName "GLib" "Variant"))]
+parseClass :: Parser [Token]
 parseClass = do
   _ <- string "[class@" <|> string "[iface@" <|>
        string "[enum@" <|> string "[struct@"
@@ -335,15 +337,15 @@ parseClass = do
   _ <- char '.'
   n <- takeWhile1 isCIdent
   _ <- char ']'
-  return $ SymbolRef $ TypeRef (AbsoluteName ns n)
+  return [SymbolRef $ TypeRef (AbsoluteName ns n)]
 
 -- | Parse a reference to a member of the enum, of the form
 -- > [enum@Gtk.FontRendering.AUTOMATIC]
 --
 -- === __Examples__
 -- >>> parseOnly (parseEnumMember <* endOfInput) "[enum@Gtk.FontRendering.AUTOMATIC]"
--- Right (SymbolRef (EnumMemberRef (AbsoluteName "Gtk" "FontRendering") "automatic"))
-parseEnumMember :: Parser Token
+-- Right [SymbolRef (EnumMemberRef (AbsoluteName "Gtk" "FontRendering") "automatic")]
+parseEnumMember :: Parser [Token]
 parseEnumMember = do
   _ <- string "[enum@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
@@ -356,9 +358,9 @@ parseEnumMember = do
   -- of the member in the introspection data is written in lowercase,
   -- so normalise everything to lowercase. (See the similar annotation
   -- in CtoHaskellMap.hs.)
-  return $ SymbolRef $ EnumMemberRef (AbsoluteName ns n) (T.toLower member)
+  return [SymbolRef $ EnumMemberRef (AbsoluteName ns n) (T.toLower member)]
 
-parseSignal :: Parser Token
+parseSignal :: Parser [Token]
 parseSignal = parseOldSignal <|> parseNewSignal
 
 -- | Parse an old style signal name, of the form
@@ -366,22 +368,22 @@ parseSignal = parseOldSignal <|> parseNewSignal
 --
 -- === __Examples__
 -- >>> parseOnly (parseOldSignal <* endOfInput) "#GtkButton::activate"
--- Right (SymbolRef (OldSignalRef "GtkButton" "activate"))
-parseOldSignal :: Parser Token
+-- Right [SymbolRef (OldSignalRef "GtkButton" "activate")]
+parseOldSignal :: Parser [Token]
 parseOldSignal = do
   _ <- char '#'
   obj <- parseCIdent
   _ <- string "::"
   signal <- signalOrPropName
-  return (SymbolRef (OldSignalRef obj signal))
+  return [SymbolRef (OldSignalRef obj signal)]
 
 -- | Parse a new style signal ref, of the form
 -- > [signal@Namespace.Object::signal-name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseNewSignal <* endOfInput) "[signal@Gtk.AboutDialog::activate-link]"
--- Right (SymbolRef (SignalRef (AbsoluteName "Gtk" "AboutDialog") "activate-link"))
-parseNewSignal :: Parser Token
+-- Right [SymbolRef (SignalRef (AbsoluteName "Gtk" "AboutDialog") "activate-link")]
+parseNewSignal :: Parser [Token]
 parseNewSignal = do
   _ <- string "[signal@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
@@ -390,43 +392,43 @@ parseNewSignal = do
   _ <- string "::"
   signal <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
   _ <- char ']'
-  return (SymbolRef (SignalRef (AbsoluteName ns n) signal))
+  return [SymbolRef (SignalRef (AbsoluteName ns n) signal)]
 
 -- | Parse a reference to a signal defined in the current module, of the form
 -- > ::signal
 --
 -- === __Examples__
 -- >>> parseOnly (parseLocalSignal <* endOfInput) "::activate"
--- Right (SymbolRef (LocalSignalRef "activate"))
-parseLocalSignal :: Parser Token
+-- Right [SymbolRef (LocalSignalRef "activate")]
+parseLocalSignal :: Parser [Token]
 parseLocalSignal = do
   _ <- string "::"
   signal <- signalOrPropName
-  return (SymbolRef (LocalSignalRef signal))
+  return [SymbolRef (LocalSignalRef signal)]
 
 -- | Parse a property name in the old style, of the form
 -- > #Object:property
 --
 -- === __Examples__
 -- >>> parseOnly (parseOldProperty <* endOfInput) "#GtkButton:always-show-image"
--- Right (SymbolRef (OldPropertyRef "GtkButton" "always-show-image"))
-parseOldProperty :: Parser Token
+-- Right [SymbolRef (OldPropertyRef "GtkButton" "always-show-image")]
+parseOldProperty :: Parser [Token]
 parseOldProperty = do
   _ <- char '#'
   obj <- parseCIdent
   _ <- char ':'
   property <- signalOrPropName
-  return (SymbolRef (OldPropertyRef obj property))
+  return [SymbolRef (OldPropertyRef obj property)]
 
 -- | Parse a property name in the new style:
 -- > [property@Namespace.Object:property-name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseNewProperty <* endOfInput) "[property@Gtk.ProgressBar:show-text]"
--- Right (SymbolRef (PropertyRef (AbsoluteName "Gtk" "ProgressBar") "show-text"))
+-- Right [SymbolRef (PropertyRef (AbsoluteName "Gtk" "ProgressBar") "show-text")]
 -- >>> parseOnly (parseNewProperty <* endOfInput) "[property@Gtk.Editable:width-chars]"
--- Right (SymbolRef (PropertyRef (AbsoluteName "Gtk" "Editable") "width-chars"))
-parseNewProperty :: Parser Token
+-- Right [SymbolRef (PropertyRef (AbsoluteName "Gtk" "Editable") "width-chars")]
+parseNewProperty :: Parser [Token]
 parseNewProperty = do
   _ <- string "[property@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
@@ -435,10 +437,10 @@ parseNewProperty = do
   _ <- char ':'
   property <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
   _ <- char ']'
-  return (SymbolRef (PropertyRef (AbsoluteName ns n) property))
+  return [SymbolRef (PropertyRef (AbsoluteName ns n) property)]
 
 -- | Parse a property
-parseProperty :: Parser Token
+parseProperty :: Parser [Token]
 parseProperty = parseOldProperty <|> parseNewProperty
 
 -- | Parse an xml comment, of the form
@@ -447,33 +449,33 @@ parseProperty = parseOldProperty <|> parseNewProperty
 --
 -- === __Examples__
 -- >>> parseOnly (parseComment <* endOfInput) "<!-- comment -->"
--- Right (Comment " comment ")
-parseComment :: Parser Token
+-- Right [Comment " comment "]
+parseComment :: Parser [Token]
 parseComment = do
   comment <- string "<!--" *> manyTill anyChar (string "-->")
-  return (Comment $ T.pack comment)
+  return [Comment $ T.pack comment]
 
 -- | Parse an old style reference to a virtual method, of the form
 -- > #Struct.method()
 --
 -- === __Examples__
 -- >>> parseOnly (parseOldVMethod <* endOfInput) "#Foo.bar()"
--- Right (SymbolRef (VMethodRef "Foo" "bar"))
-parseOldVMethod :: Parser Token
+-- Right [SymbolRef (VMethodRef "Foo" "bar")]
+parseOldVMethod :: Parser [Token]
 parseOldVMethod = do
   _ <- char '#'
   obj <- parseCIdent
   _ <- char '.'
   method <- parseCIdent
   _ <- string "()"
-  return (SymbolRef (VMethodRef obj method))
+  return [SymbolRef (VMethodRef obj method)]
 
 -- | Parse a new style reference to a virtual function, of the form
 -- > [vfunc@Namespace.Object.vfunc_name]
 --
 -- >>> parseOnly (parseVFunc <* endOfInput) "[vfunc@Gtk.Widget.get_request_mode]"
--- Right (SymbolRef (VFuncRef (AbsoluteName "Gtk" "Widget") "get_request_mode"))
-parseVFunc :: Parser Token
+-- Right [SymbolRef (VFuncRef (AbsoluteName "Gtk" "Widget") "get_request_mode")]
+parseVFunc :: Parser [Token]
 parseVFunc = do
   _ <- string "[vfunc@"
   ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
@@ -482,10 +484,10 @@ parseVFunc = do
   _ <- char '.'
   vfunc <- parseCIdent
   _ <- char ']'
-  return (SymbolRef (VFuncRef (AbsoluteName ns n) vfunc))
+  return [SymbolRef (VFuncRef (AbsoluteName ns n) vfunc)]
 
 -- | Parse a reference to a virtual method
-parseVMethod :: Parser Token
+parseVMethod :: Parser [Token]
 parseVMethod = parseOldVMethod <|> parseVFunc
 
 -- | Parse a reference to a struct field, of the form
@@ -493,50 +495,50 @@ parseVMethod = parseOldVMethod <|> parseVFunc
 --
 -- === __Examples__
 -- >>> parseOnly (parseStructField <* endOfInput) "#Foo.bar"
--- Right (SymbolRef (StructFieldRef "Foo" "bar"))
-parseStructField :: Parser Token
+-- Right [SymbolRef (StructFieldRef "Foo" "bar")]
+parseStructField :: Parser [Token]
 parseStructField = do
   _ <- char '#'
   obj <- parseCIdent
   _ <- char '.'
   field <- parseCIdent
-  return (SymbolRef (StructFieldRef obj field))
+  return [SymbolRef (StructFieldRef obj field)]
 
 -- | Parse a reference to a C type, of the form
 -- > #Type
 --
 -- === __Examples__
 -- >>> parseOnly (parseCType <* endOfInput) "#Foo"
--- Right (SymbolRef (CTypeRef "Foo"))
-parseCType :: Parser Token
+-- Right [SymbolRef (CTypeRef "Foo")]
+parseCType :: Parser [Token]
 parseCType = do
   _ <- char '#'
   obj <- parseCIdent
-  return (SymbolRef (CTypeRef obj))
+  return [SymbolRef (CTypeRef obj)]
 
 -- | Parse a constant, of the form
 -- > %CONSTANT_NAME
 --
 -- === __Examples__
 -- >>> parseOnly (parseConstant <* endOfInput) "%TEST_CONSTANT"
--- Right (SymbolRef (ConstantRef "TEST_CONSTANT"))
-parseConstant :: Parser Token
+-- Right [SymbolRef (ConstantRef "TEST_CONSTANT")]
+parseConstant :: Parser [Token]
 parseConstant = do
   _ <- char '%'
   c <- parseCIdent
-  return (SymbolRef (ConstantRef c))
+  return [SymbolRef (ConstantRef c)]
 
 -- | Parse a reference to a parameter, of the form
 -- > @param_name
 --
 -- === __Examples__
 -- >>> parseOnly (parseParam <* endOfInput) "@test_param"
--- Right (SymbolRef (ParamRef "test_param"))
-parseParam :: Parser Token
+-- Right [SymbolRef (ParamRef "test_param")]
+parseParam :: Parser [Token]
 parseParam = do
   _ <- char '@'
   param <- parseCIdent
-  return (SymbolRef (ParamRef param))
+  return [SymbolRef (ParamRef param)]
 
 -- | Name of a signal or property name. Similar to a C identifier, but
 -- hyphens are allowed too.
@@ -547,20 +549,20 @@ signalOrPropName = takeWhile1 isSignalOrPropIdent
         isSignalOrPropIdent c = isCIdent c
 
 -- | Parse a escaped special character, i.e. one preceded by '\'.
-parseEscaped :: Parser Token
+parseEscaped :: Parser [Token]
 parseEscaped = do
   _ <- char '\\'
   c <- satisfy (`elem` ("#@%\\`" :: [Char]))
-  return $ Literal (T.singleton c)
+  return [Literal (T.singleton c)]
 
 -- | Parse a literal, i.e. anything without a known special
 -- meaning. Note that this parser always consumes the first character,
 -- regardless of what it is.
-parseBoringLiteral :: Parser Token
+parseBoringLiteral :: Parser [Token]
 parseBoringLiteral = do
   c <- anyChar
   boring <- takeWhile (not . special)
-  return $ Literal (T.cons c boring)
+  return [Literal (T.cons c boring)]
 
 -- | List of special characters from the point of view of the parser
 -- (in the sense that they may be the beginning of something with a
@@ -576,6 +578,7 @@ special '[' = True
 special '!' = True
 special '\n' = True
 special ':' = True
+special '-' = True
 special c = isCIdent c
 
 -- | Parse a verbatim string, of the form
@@ -583,46 +586,46 @@ special c = isCIdent c
 --
 -- === __Examples__
 -- >>> parseOnly (parseVerbatim <* endOfInput) "`Example quote!`"
--- Right (Verbatim "Example quote!")
-parseVerbatim :: Parser Token
+-- Right [Verbatim "Example quote!"]
+parseVerbatim :: Parser [Token]
 parseVerbatim = do
   _ <- char '`'
   v <- takeWhile1 (/= '`')
   _ <- char '`'
-  return $ Verbatim v
+  return [Verbatim v]
 
 -- | Parse a URL in Markdown syntax, of the form
 -- > [name](url)
 --
 -- === __Examples__
 -- >>> parseOnly (parseUrl <* endOfInput) "[haskell](http://haskell.org)"
--- Right (ExternalLink (Link {linkName = "haskell", linkAddress = "http://haskell.org"}))
-parseUrl :: Parser Token
+-- Right [ExternalLink (Link {linkName = "haskell", linkAddress = "http://haskell.org"})]
+parseUrl :: Parser [Token]
 parseUrl = do
   _ <- char '['
   name <- takeWhile1 (/= ']')
   _ <- string "]("
   address <- takeWhile1 (/= ')')
   _ <- char ')'
-  return $ ExternalLink $ Link {linkName = name, linkAddress = address}
+  return [ExternalLink $ Link {linkName = name, linkAddress = address}]
 
 -- | Parse an image reference, of the form
 -- > ![label](url)
 --
 -- === __Examples__
 -- >>> parseOnly (parseImage <* endOfInput) "![](diagram.png)"
--- Right (Image (Link {linkName = "", linkAddress = "diagram.png"}))
-parseImage :: Parser Token
+-- Right [Image (Link {linkName = "", linkAddress = "diagram.png"})]
+parseImage :: Parser [Token]
 parseImage = do
   _ <- string "!["
   name <- takeWhile (/= ']')
   _ <- string "]("
   address <- takeWhile1 (/= ')')
   _ <- char ')'
-  return $ Image $ Link {linkName = name, linkAddress = address}
+  return [Image $ Link {linkName = name, linkAddress = address}]
 
 -- | Parse a code block embedded in the documentation.
-parseCodeBlock :: Parser Token
+parseCodeBlock :: Parser [Token]
 parseCodeBlock = parseOldStyleCodeBlock <|> parseNewStyleCodeBlock
 
 -- | Parse a new style code block, of the form
@@ -632,35 +635,44 @@ parseCodeBlock = parseOldStyleCodeBlock <|> parseNewStyleCodeBlock
 --
 -- === __Examples__
 -- >>> parseOnly (parseNewStyleCodeBlock <* endOfInput) "```c\nThis is C code\n```"
--- Right (CodeBlock (Just (Language "c")) "This is C code")
+-- Right [CodeBlock (Just (Language "c")) "This is C code"]
 --
 -- >>> parseOnly (parseNewStyleCodeBlock <* endOfInput) "```\nThis is langless\n```"
--- Right (CodeBlock Nothing "This is langless")
-parseNewStyleCodeBlock :: Parser Token
+-- Right [CodeBlock Nothing "This is langless"]
+--
+-- >>> parseOnly (parseNewStyleCodeBlock <* endOfInput) "   ```py\n   This has space in front\n   ```"
+-- Right [CodeBlock (Just (Language "py")) "   This has space in front"]
+--
+-- >>> parseOnly (parseNewStyleCodeBlock <* endOfInput) "   ```c\n   new_type_id = g_type_register_dynamic (parent_type_id,\n                                          \"TypeName\",\n                                          new_type_plugin,\n                                          type_flags);\n   ```"
+-- Right [CodeBlock (Just (Language "c")) "   new_type_id = g_type_register_dynamic (parent_type_id,\n                                          \"TypeName\",\n                                          new_type_plugin,\n                                          type_flags);"]
+parseNewStyleCodeBlock :: Parser [Token]
 parseNewStyleCodeBlock = do
+  _ <- takeWhile isHorizontalSpace
   _ <- string "```"
   lang <- T.strip <$> takeWhile (/= '\n')
   _ <- char '\n'
   let maybeLang = if T.null lang then Nothing
                   else Just lang
-  code <- T.pack <$> manyTill anyChar (string "\n```")
-  return $ CodeBlock (Language <$> maybeLang) code
+  code <- T.pack <$> manyTill anyChar (string "\n" >>
+                                       takeWhile isHorizontalSpace >>
+                                       string "```")
+  return [CodeBlock (Language <$> maybeLang) code]
 
 -- | Parse an old style code block, of the form
 -- > |[<!-- language="C" --> code ]|
 --
 -- === __Examples__
 -- >>> parseOnly (parseOldStyleCodeBlock <* endOfInput) "|[this is code]|"
--- Right (CodeBlock Nothing "this is code")
+-- Right [CodeBlock Nothing "this is code"]
 --
 -- >>> parseOnly (parseOldStyleCodeBlock <* endOfInput) "|[<!-- language=\"C\"-->this is C code]|"
--- Right (CodeBlock (Just (Language "C")) "this is C code")
-parseOldStyleCodeBlock :: Parser Token
+-- Right [CodeBlock (Just (Language "C")) "this is C code"]
+parseOldStyleCodeBlock :: Parser [Token]
 parseOldStyleCodeBlock = do
   _ <- string "|["
   lang <- (Just <$> parseLanguage) <|> return Nothing
   code <- T.pack <$> manyTill anyChar (string "]|")
-  return $ CodeBlock lang code
+  return [CodeBlock lang code]
 
 -- | Parse the language of a code block, specified as a comment.
 parseLanguage :: Parser Language
@@ -674,11 +686,30 @@ parseLanguage = do
   _ <- string "-->"
   return $ Language lang
 
+-- | Parse at least one newline (or Start of String (SOS)), and keep
+-- going while we see newlines. Return either the empty list (for the
+-- case that we see a single SOS), or a singleton list with the
+-- Literal representing the seen newlines, and removing the SOS.
+parseInitialNewlines :: Parser [Token]
+parseInitialNewlines = do
+  initial <- char '\n' <|> char startOfString
+  let initialString = if initial == '\n'
+                      then "\n"
+                      else ""
+  others <- T.pack <$> many' (char '\n')
+  let joint = initialString <> others
+  if T.null joint
+    then return []
+    else return [Literal joint]
+
 -- | Parse a section header, given by a number of hash symbols, and
 -- then ordinary text. Note that this parser "eats" the newline before
 -- and after the section header.
-parseSectionHeader :: Parser Token
-parseSectionHeader = char '\n' >> parseInitialSectionHeader
+parseSectionHeader :: Parser [Token]
+parseSectionHeader = do
+  initialNewlines <- parseInitialNewlines
+  sectionHeader <- parseInitialSectionHeader
+  return $ initialNewlines <> sectionHeader
 
 -- | Parse a section header at the beginning of the text. I.e. this is
 -- the same as `parseSectionHeader`, but we do not expect a newline as
@@ -686,42 +717,200 @@ parseSectionHeader = char '\n' >> parseInitialSectionHeader
 --
 -- === __Examples__
 -- >>> parseOnly (parseInitialSectionHeader <* endOfInput) "### Hello! ###\n"
--- Right (SectionHeader 3 (GtkDoc [Literal "Hello! "]))
+-- Right [SectionHeader 3 (GtkDoc [Literal "Hello! "])]
 --
 -- >>> parseOnly (parseInitialSectionHeader <* endOfInput) "# Hello!\n"
--- Right (SectionHeader 1 (GtkDoc [Literal "Hello!"]))
-parseInitialSectionHeader :: Parser Token
+-- Right [SectionHeader 1 (GtkDoc [Literal "Hello!"])]
+parseInitialSectionHeader :: Parser [Token]
 parseInitialSectionHeader = do
   hashes <- takeWhile1 (== '#')
   _ <- many1 space
   heading <- takeWhile1 (notInClass "#\n")
   _ <- (string hashes >> char '\n') <|> (char '\n')
-  return $ SectionHeader (T.length hashes) (parseGtkDoc heading)
+  return [SectionHeader (T.length hashes) (parseGtkDoc heading)]
 
--- | Parse a list header. Note that the newline before the start of
--- the list is "eaten" by this parser, but is restored later by
--- `parseGtkDoc`.
---
--- === __Examples__
--- >>> parseOnly (parseList <* endOfInput) "\n- First item\n- Second item"
--- Right (List [ListItem (GtkDoc [Literal "First item"]) [],ListItem (GtkDoc [Literal "Second item"]) []])
---
--- >>> parseOnly (parseList <* endOfInput) "\n\n- Two line\n  item\n\n- Second item,\n  also two lines"
--- Right (List [ListItem (GtkDoc [Literal "Two line"]) [GtkDoc [Literal "item"]],ListItem (GtkDoc [Literal "Second item,"]) [GtkDoc [Literal "also two lines"]]])
-parseList :: Parser Token
-parseList = do
-  items <- many1 parseListItem
-  return $ List items
-  where parseListItem :: Parser ListItem
-        parseListItem = do
+{- | Parse an unnumbered list.
+
+=== __Examples__
+>>> :{
+parseOnly (parseUnnumberedList <* endOfInput) $ T.stripEnd $ T.unlines [
+T.cons startOfString
+"- First item",
+"- Second item"
+]
+:}
+Right [UnnumberedList [GtkDoc [Literal "First item"],GtkDoc [Literal "Second item"]]]
+
+>>> :{
+parseOnly (parseUnnumberedList <* endOfInput) $ T.stripEnd $ T.unlines [
+"",
+"",
+"- Two line",
+"  item",
+"",
+"- Second item,",
+"  with three lines",
+"  of text."
+]
+:}
+Right [Literal "\n\n",UnnumberedList [GtkDoc [Literal "Two line\nitem"],GtkDoc [Literal "Second item,\nwith three lines\nof text."]]]
+-}
+parseUnnumberedList :: Parser [Token]
+parseUnnumberedList = do
+  (initialNewlines, entries) <- parseList (string "- ") T.length
+  return $ initialNewlines <> [UnnumberedList (map snd entries)]
+
+{- | Parse a numbered list header.
+
+=== __Examples__
+>>> :{
+parseOnly (parseNumberedList <* endOfInput) $ T.stripEnd $ T.unlines [
+T.cons startOfString
+"1. First item,",
+"   written in two lines",
+"",
+"2. Second item,",
+"   also in two lines"
+]
+:}
+Right [NumberedList [("1",GtkDoc [Literal "First item,\nwritten in two lines"]),("2",GtkDoc [Literal "Second item,\nalso in two lines"])]]
+
+>>> :{
+parseOnly (parseNumberedList <* endOfInput) $ T.stripEnd $ T.unlines [
+T.cons startOfString
+"1. First item,",
+"   written in two lines",
+"2. Second item,",
+"   now in three lines,",
+"   written compactly"
+]
+:}
+Right [NumberedList [("1",GtkDoc [Literal "First item,\nwritten in two lines"]),("2",GtkDoc [Literal "Second item,\nnow in three lines,\nwritten compactly"])]]
+
+>>> :{
+parseOnly (parseNumberedList <* endOfInput) $ T.stripEnd $ T.unlines [
+T.cons startOfString
+"9. This is a list entry with two lines,",
+"   with the second line in its own line.",
+"10. If the label width changes,",
+"    the indentation of the second line should also be adjusted.",
+"",
+"11. You can optionally include an empty line between entries",
+"    without stopping the list.",
+"",
+"    This also applies within list entries, this is still part of",
+"    entry 11.",
+"12. But you don't have to."
+]
+:}
+Right [NumberedList [("9",GtkDoc [Literal "This is a list entry with two lines,\nwith the second line in its own line."]),("10",GtkDoc [Literal "If the label width changes,\nthe indentation of the second line should also be adjusted."]),("11",GtkDoc [Literal "You can optionally include an empty line between entries\nwithout stopping the list.\n\nThis also applies within list entries, this is still part of\nentry 11."]),("12",GtkDoc [Literal "But you don't have to."])]]
+-}
+parseNumberedList :: Parser [Token]
+parseNumberedList = do
+  (initialNewlines, list) <- parseList (do idx <- takeWhile1 isDigit
+                                           _ <- string ". "
+                                           return idx)
+                                       (\label -> T.length label + 2)
+  return $ initialNewlines <> [NumberedList list]
+
+{- | This parses both numbered and unnumbered lists in the "compact
+format", where we don't require empty lines between list entries,
+but we require list entries with multiple lines to have all line
+texts to be indented at the same depth, like this:
+
+9. This is a list entry with two lines,
+   with the second line in its own line.
+10. If the label width changes,
+    the indentation of the second line should also be adjusted.
+
+11. You can optionally include an empty line between entries
+    without stopping the list.
+
+    This also applies within list entries, this is still part of
+    entry 11.
+12. But you don't have to.
+
+- Note that changing the type of the list will start a new list.
+  So this entry starts an unnumbered list.
+
+It's also allowed to add an arbitrary amount of whitespace at
+the beginning of the list
+    - So this is a new list...
+    - ... which has two entries,
+      the second one with two lines.
+
+- And this is another separate list.
+
+The label parser argument should produce the label, and labelSize
+should compute the padding associated to any given label. So, for
+example, if the entry is something like "12. This is an entry", we
+would have that the label is "12", and its size is 4 (the label
+plus the length of ". ").
+
+=== __Examples__
+>>> :{
+parseGtkDoc $ T.unlines [
+"9. This is a list entry with two lines,",
+"   with the second line in its own line.",
+"10. If the label width changes,",
+"    the indentation of the second line should also be adjusted.",
+"",
+"11. You can optionally include an empty line between entries",
+"    without stopping the list.",
+"",
+"    This also applies within list entries, this is still part of",
+"    entry 11.",
+"12. But you don't have to.",
+"",
+"- Note that changing the type of the list will start a new list.",
+"  So this entry starts an unnumbered list.",
+"",
+"It's also allowed to add an arbitrary amount of whitespace at",
+"the beginning of the list",
+"    - So this is a new list...",
+"    - ... which has two entries,",
+"      the second one with two lines.",
+"",
+"- And this is another separate list."
+]
+:}
+GtkDoc [NumberedList [("9",GtkDoc [Literal "This is a list entry with two lines,\nwith the second line in its own line."]),("10",GtkDoc [Literal "If the label width changes,\nthe indentation of the second line should also be adjusted."]),("11",GtkDoc [Literal "You can optionally include an empty line between entries\nwithout stopping the list.\n\nThis also applies within list entries, this is still part of\nentry 11."]),("12",GtkDoc [Literal "But you don't have to."])],Literal "\n\n",UnnumberedList [GtkDoc [Literal "Note that changing the type of the list will start a new list.\nSo this entry starts an unnumbered list."]],Literal "\n\nIt's also allowed to add an arbitrary amount of whitespace at\nthe beginning of the list\n",UnnumberedList [GtkDoc [Literal "So this is a new list..."],GtkDoc [Literal "... which has two entries,\nthe second one with two lines."]],Literal "\n\n",UnnumberedList [GtkDoc [Literal "And this is another separate list."]],Literal "\n"]
+-}
+parseList :: Parser Text -> (Text -> Int) ->
+                    Parser ([Token], [(Text, GtkDoc)])
+parseList labelParser indent = do
+  -- Consume the initial newlines before parseListItem does, so we can
+  -- restore the initial newlines after. We impose that there is at
+  -- least a newline (or Start of String symbol) before the start of
+  -- the list, to enforce that
+  initialNewlines <- parseInitialNewlines
+  (initialSpace, first) <- parseListItem (takeWhile isHorizontalSpace)
+  rest <- many' (parseListItem $ string initialSpace)
+  return (initialNewlines, (first : map snd rest))
+  where parseListItem :: Parser Text -> Parser (Text, (Text, GtkDoc))
+        parseListItem parseInitialSpace = do
+          _ <- many' (char '\n')
+          initialSpace <- parseInitialSpace
+          label <- labelParser
+          first <- takeWhile (/= '\n')
+          let padding = initialSpace <> T.replicate (indent label) " "
+              paddingParser = string padding
+          rest <- many' (parseLine paddingParser)
+          return (initialSpace,
+                  (label, parseGtkDoc $ T.strip $ T.unlines (first : rest)))
+
+        parseLine :: Parser Text -> Parser Text
+        parseLine paddingParser = do
+          emptyLines <- T.concat <$> many' emptyLine
+          _ <- char '\n' >> paddingParser
+          contents <- takeWhile (/= '\n')
+          return $ emptyLines <> contents
+
+        emptyLine = do
           _ <- char '\n'
-          _ <- string "\n- " <|> string "- "
-          first <- takeWhile1 (/= '\n')
-          rest <- many' parseLine
-          return $ ListItem (parseGtkDoc first) (map parseGtkDoc rest)
-
-        parseLine :: Parser Text
-        parseLine = string "\n  " >> takeWhile1 (/= '\n')
+          maybeNext <- peekChar
+          guard $ maybeNext == Nothing || maybeNext == Just '\n'
+          return ("\n" :: Text)
 
 -- | Turn an ordinary `Name` into a `DocSymbolName`
 docName :: Name -> DocSymbolName

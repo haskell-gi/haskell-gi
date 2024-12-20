@@ -33,7 +33,7 @@ import Data.GI.CodeGen.Code (CodeGen, config, line, HaddockSection,
 import Data.GI.CodeGen.Config (modName, overrides)
 import Data.GI.CodeGen.CtoHaskellMap (Hyperlink(..))
 import Data.GI.CodeGen.GtkDoc (GtkDoc(..), Token(..), CRef(..), Language(..),
-                               Link(..), ListItem(..), parseGtkDoc,
+                               Link(..), parseGtkDoc,
                                DocSymbolName(..), resolveDocSymbol, docName)
 import Data.GI.CodeGen.Overrides (onlineDocsMap)
 import Data.GI.CodeGen.SymbolNaming (lowerSymbol, signalHaskellName,
@@ -64,8 +64,11 @@ data RelativeDocPosition = DocBeforeSymbol
 -- >>> formatHaddock M.empty onlineDocs "Test" (GtkDoc [ExternalLink (Link "GI" "GObjectIntrospection")])
 -- "<http://wiki.haskell.org/GObjectIntrospection GI>"
 --
--- >>> formatHaddock M.empty "a" "Test" (GtkDoc [List [ListItem (GtkDoc [Image (Link "test" "test.png")]) []]])
--- "\n* <<a/test.png test>>\n"
+-- >>> formatHaddock M.empty "a" "Test" (GtkDoc [UnnumberedList [GtkDoc [Image (Link "test" "test.png")]]])
+-- "* <<a/test.png test>>\n"
+--
+-- >>> formatHaddock M.empty "a" "Test" (GtkDoc [NumberedList [("1", GtkDoc [Literal "Hi!"]), ("2", GtkDoc [Literal "Second and very long, so split\n line."])]])
+-- "1. Hi!\n\n2. Second and very long, so split\n   line.\n\n"
 formatHaddock :: M.Map CRef Hyperlink -> Text -> Text -> GtkDoc -> Text
 formatHaddock c2h docBase defaultNS (GtkDoc tokens) = T.concat $ map formatToken tokens
   where formatToken :: Token -> Text
@@ -77,7 +80,10 @@ formatHaddock c2h docBase defaultNS (GtkDoc tokens) = T.concat $ map formatToken
         formatToken (Image l) = formatImage l docBase
         formatToken (SectionHeader l h) =
           formatSectionHeader c2h docBase defaultNS l h
-        formatToken (List l) = formatList c2h docBase defaultNS l
+        formatToken (UnnumberedList l) =
+          formatUnnumberedList c2h docBase defaultNS l
+        formatToken (NumberedList l) =
+          formatNumberedList c2h docBase defaultNS l
         formatToken (SymbolRef cr) = case M.lookup cr c2h of
           Just hr -> formatHyperlink hr
           Nothing -> formatUnknownCRef c2h defaultNS cr
@@ -207,15 +213,34 @@ formatSectionHeader c2h docBase defaultNS level header =
   T.replicate level "=" <> " " <> formatHaddock c2h docBase defaultNS header <> "\n"
 
 -- | Format a list of items.
-formatList :: M.Map CRef Hyperlink -> Text -> Text -> [ListItem] -> Text
-formatList c2h docBase defaultNS items = "\n" <> T.concat (map formatListItem items)
-  where formatListItem :: ListItem -> Text
-        formatListItem (ListItem first rest) =
-          "* " <> format first <> "\n"
-          <> T.concat (map ((<> "\n") . format) rest)
+formatUnnumberedList :: M.Map CRef Hyperlink -> Text -> Text -> [GtkDoc]
+                     -> Text
+formatUnnumberedList c2h docBase defaultNS items =
+  T.concat (map formatListItem items)
+  where formatListItem :: GtkDoc -> Text
+        formatListItem doc =
+          let indent l = "  " <> T.stripStart l
+              formatted = formatHaddock c2h docBase defaultNS doc
+              indented = (T.unlines . map indent . T.lines) formatted
+          in "* " <> T.stripStart indented
 
-        format :: GtkDoc -> Text
-        format doc = formatHaddock c2h docBase defaultNS doc
+-- | Format a numbered list of items.
+formatNumberedList :: M.Map CRef Hyperlink -> Text -> Text -> [(Text, GtkDoc)]
+                   -> Text
+formatNumberedList c2h docBase defaultNS items =
+  T.concat (formatEnumeration items)
+  where
+    formatEnumeration :: [(Text, GtkDoc)] -> [Text]
+    formatEnumeration [] = []
+    formatEnumeration ((idx, doc):rest) =
+      formatListItem idx doc <> "\n" : formatEnumeration rest
+
+    formatListItem :: Text -> GtkDoc -> Text
+    formatListItem idx doc =
+      let indent l = T.replicate (T.length idx + 2) " " <> T.stripStart l
+          formatted = formatHaddock c2h docBase defaultNS doc
+          indented = (T.unlines . map indent . T.lines) formatted
+      in idx <> ". " <> T.stripStart indented
 
 -- | Escape the reserved Haddock characters in a given `Text`.
 --
