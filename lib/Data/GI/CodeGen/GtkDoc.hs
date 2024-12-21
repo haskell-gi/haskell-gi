@@ -17,11 +17,12 @@ import Prelude hiding (takeWhile)
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative ((<$>), (<*))
 #endif
+import Control.Applicative ((<|>))
+import Control.Monad (forM, guard, when)
+import Data.Either (isRight)
 #if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
 #endif
-import Control.Applicative ((<|>))
-import Control.Monad (guard)
 
 import Data.GI.CodeGen.Util (terror)
 import Data.GI.GIR.BasicTypes (Name(Name))
@@ -804,6 +805,27 @@ T.cons startOfString
 ]
 :}
 Right [NumberedList [("9",GtkDoc [Literal "This is a list entry with two lines,\nwith the second line in its own line."]),("10",GtkDoc [Literal "If the label width changes,\nthe indentation of the second line should also be adjusted."]),("11",GtkDoc [Literal "You can optionally include an empty line between entries\nwithout stopping the list.\n\nThis also applies within list entries, this is still part of\nentry 11."]),("12",GtkDoc [Literal "But you don't have to."])]]
+
+>>> :{
+parseGtkDoc $ T.stripEnd $ T.unlines [
+"1. A list with a single element",
+"",
+"And this is text not in the list, so we use parseGtkDoc."
+]
+:}
+GtkDoc [NumberedList [("1",GtkDoc [Literal "A list with a single element"])],Literal "\n\nAnd this is text not in the list, so we use parseGtkDoc."]
+
+>>> :{
+parseOnly (parseNumberedList <* endOfInput) $ T.stripEnd $ T.unlines [
+T.cons startOfString
+"1. An example of a list in lenient mode,",
+"where we don't require indenting this second line.",
+"",
+"2. In this mode entries can be optionally separated by an empty line.",
+"3. But they don't need to"
+]
+:}
+Right [NumberedList [("1",GtkDoc [Literal "An example of a list in lenient mode,\nwhere we don't require indenting this second line."]),("2",GtkDoc [Literal "In this mode entries can be optionally separated by an empty line."]),("3",GtkDoc [Literal "But they don't need to"])]]
 -}
 parseNumberedList :: Parser [Token]
 parseNumberedList = do
@@ -813,104 +835,106 @@ parseNumberedList = do
                                        (\label -> T.length label + 2)
   return $ initialNewlines <> [NumberedList list]
 
-{- | This parses both numbered and unnumbered lists in the "compact
-format", where we don't require empty lines between list entries,
-but we require list entries with multiple lines to have all line
-texts to be indented at the same depth, like this:
+{- | The indent parsing mode. In strict mode we require that all the
+   text in the lines is indented relative to the label, as in the
+   following example:
 
-9. This is a list entry with two lines,
-   with the second line in its own line.
-10. If the label width changes,
-    the indentation of the second line should also be adjusted.
+        1. The first line,
+           and the second line
 
-11. You can optionally include an empty line between entries
-    without stopping the list.
+           In this mode we allow empty lines in the entry.
+        2. This is the second entry.
 
-    This also applies within list entries, this is still part of
-    entry 11.
-12. But you don't have to.
+   In lenient mode we drop this restriction, so the following is valid:
+        1. The first line,
+        and the second line
+        In this mode we _do not_ allow empty lines in the entry.
+        2. This is the second entry.
+-}
+data IndentParsingMode = Lenient | Strict
+  deriving (Eq)
 
-- Note that changing the type of the list will start a new list.
-  So this entry starts an unnumbered list.
-
-It's also allowed to add an arbitrary amount of whitespace at
-the beginning of the list
-    - So this is a new list...
-    - ... which has two entries,
-      the second one with two lines.
-
-- And this is another separate list.
-
-The label parser argument should produce the label, and labelSize
-should compute the padding associated to any given label. So, for
-example, if the entry is something like "12. This is an entry", we
-would have that the label is "12", and its size is 4 (the label
-plus the length of ". ").
-
-=== __Examples__
->>> :{
-parseGtkDoc $ T.unlines [
-"9. This is a list entry with two lines,",
-"   with the second line in its own line.",
-"10. If the label width changes,",
-"    the indentation of the second line should also be adjusted.",
-"",
-"11. You can optionally include an empty line between entries",
-"    without stopping the list.",
-"",
-"    This also applies within list entries, this is still part of",
-"    entry 11.",
-"12. But you don't have to.",
-"",
-"- Note that changing the type of the list will start a new list.",
-"  So this entry starts an unnumbered list.",
-"",
-"It's also allowed to add an arbitrary amount of whitespace at",
-"the beginning of the list",
-"    - So this is a new list...",
-"    - ... which has two entries,",
-"      the second one with two lines.",
-"",
-"- And this is another separate list."
-]
-:}
-GtkDoc [NumberedList [("9",GtkDoc [Literal "This is a list entry with two lines,\nwith the second line in its own line."]),("10",GtkDoc [Literal "If the label width changes,\nthe indentation of the second line should also be adjusted."]),("11",GtkDoc [Literal "You can optionally include an empty line between entries\nwithout stopping the list.\n\nThis also applies within list entries, this is still part of\nentry 11."]),("12",GtkDoc [Literal "But you don't have to."])],Literal "\n\n",UnnumberedList [GtkDoc [Literal "Note that changing the type of the list will start a new list.\nSo this entry starts an unnumbered list."]],Literal "\n\nIt's also allowed to add an arbitrary amount of whitespace at\nthe beginning of the list\n",UnnumberedList [GtkDoc [Literal "So this is a new list..."],GtkDoc [Literal "... which has two entries,\nthe second one with two lines."]],Literal "\n\n",UnnumberedList [GtkDoc [Literal "And this is another separate list."]],Literal "\n"]
+{- | Parse an unnumbered or numbered list. See 'parseNumberedList' and
+   'parseUnnumberedList' for examples.
 -}
 parseList :: Parser Text -> (Text -> Int) ->
                     Parser ([Token], [(Text, GtkDoc)])
-parseList labelParser indent = do
-  -- Consume the initial newlines before parseListItem does, so we can
-  -- restore the initial newlines after. We impose that there is at
-  -- least a newline (or Start of String symbol) before the start of
-  -- the list, to enforce that
-  initialNewlines <- parseInitialNewlines
-  (initialSpace, first) <- parseListItem (takeWhile isHorizontalSpace)
-  rest <- many' (parseListItem $ string initialSpace)
-  return (initialNewlines, (first : map snd rest))
-  where parseListItem :: Parser Text -> Parser (Text, (Text, GtkDoc))
-        parseListItem parseInitialSpace = do
-          _ <- many' (char '\n')
-          initialSpace <- parseInitialSpace
-          label <- labelParser
-          first <- takeWhile (/= '\n')
-          let padding = initialSpace <> T.replicate (indent label) " "
-              paddingParser = string padding
-          rest <- many' (parseLine paddingParser)
-          return (initialSpace,
-                  (label, parseGtkDoc $ T.strip $ T.unlines (first : rest)))
+parseList labelParser indent =
+  doParseList Lenient <|> doParseList Strict
+ where
+   doParseList :: IndentParsingMode ->
+                  Parser ([Token], [(Text, GtkDoc)])
+   doParseList mode = do
+     -- Consume the initial newlines before parseListItem does, so we can
+     -- restore the initial newlines after. We impose that there is at
+     -- least a newline (or Start of String symbol) before the start of
+     -- the list.
+     initialNewlines <- parseInitialNewlines
+     (initialSpace, first) <-
+       parseListItem (takeWhile isHorizontalSpace) (pure ())
+     -- We allow either one or zero empty lines between entries.
+     let newlineParser = (string "\n\n" <|> string "\n") >> pure ()
+     rest <- map snd <$>
+             many' (parseListItem (string initialSpace) newlineParser)
+     -- Validate the resulting entries, and assemble them into GtkDoc.
+     validated <- forM (first : rest) $ \(label, (firstLine, otherLines)) -> do
+       validate label otherLines
+       return (label,
+               parseGtkDoc $ T.strip $ T.unlines $ firstLine : otherLines)
 
-        parseLine :: Parser Text -> Parser Text
-        parseLine paddingParser = do
-          emptyLines <- T.concat <$> many' emptyLine
-          _ <- char '\n' >> paddingParser
-          contents <- takeWhile (/= '\n')
-          return $ emptyLines <> contents
+     return (initialNewlines, validated)
 
-        emptyLine = do
-          _ <- char '\n'
-          maybeNext <- peekChar
-          guard $ maybeNext == Nothing || maybeNext == Just '\n'
-          return ("\n" :: Text)
+    where
+      parseListItem :: Parser Text -> Parser () ->
+                         Parser (Text, (Text, (Text, [Text])))
+      parseListItem parseInitialSpace startingNewlines = do
+        startingNewlines
+        initialSpace <- parseInitialSpace
+        label <- labelParser
+        first <- takeWhile (/= '\n')
+        let padding = case mode of
+              Strict -> initialSpace <> T.replicate (indent label) " "
+              Lenient -> initialSpace
+            paddingParser = string padding
+
+        rest <- many' (parseLine paddingParser)
+
+        return (initialSpace, (label, (first, rest)))
+
+      parseLine :: Parser Text -> Parser Text
+      parseLine paddingParser = do
+        emptyLines <- case mode of
+          -- We do not allow empty lines in entries in the lenient
+          -- indent parser, while the strict indent one allows one
+          -- at most.
+          Strict -> option "" emptyLine
+          Lenient -> pure ""
+        _ <- char '\n' >> paddingParser
+        contents <- takeWhile1 (/= '\n')
+        when (startsWith labelParser contents) $
+          fail "Line starting with a label"
+        return $ emptyLines <> contents
+
+      emptyLine = do
+        _ <- char '\n'
+        maybeNext <- peekChar
+        guard $ maybeNext == Nothing || maybeNext == Just '\n'
+        return ("\n" :: Text)
+
+      startsWith :: Parser a -> Text -> Bool
+      startsWith p l = isRight $ parseOnly p l
+
+      validate :: Text -> [Text] -> Parser ()
+      validate _ [] = pure ()
+      validate label lines = case mode of
+        Strict -> pure ()
+        Lenient -> do
+          let extraIndent = string $ T.replicate (indent label) " "
+
+          -- If every line has extra padding we are most likely in
+          -- the wrong mode too.
+          when (all (startsWith extraIndent) lines) $
+            fail "All lines have extra indent"
 
 -- | Turn an ordinary `Name` into a `DocSymbolName`
 docName :: Name -> DocSymbolName
