@@ -11,7 +11,7 @@ module Data.GI.CodeGen.Fixups
     ) where
 
 import Data.Char (generalCategory, GeneralCategory(UppercaseLetter))
-import Data.Maybe (isNothing, isJust)
+import Data.Maybe (fromMaybe, isNothing, isJust)
 import qualified Data.Map as M
 #if !MIN_VERSION_base(4,13,0)
 import Data.Monoid ((<>))
@@ -61,14 +61,14 @@ guessObjectPropertyNullability obj =
 -- | Guess nullability for the properties of an interface.
 guessInterfacePropertyNullability :: Interface -> Interface
 guessInterfacePropertyNullability iface =
-    iface {ifProperties = map (guessNullability (ifMethods iface))
+    iface { ifProperties = map (guessNullability (ifMethods iface))
                               (ifProperties iface)}
 
 -- | Guess the nullability for a property, given the list of methods
 -- for the object/interface.
 guessNullability :: [Method] -> Property -> Property
 guessNullability methods = guessReadNullability methods
-                         . guessWriteNullability methods
+                           . guessWriteNullability methods
 
 -- | Guess whether "get" on the given property may return NULL, based
 -- on the corresponding "get_prop_name" method, if it exists.
@@ -80,7 +80,8 @@ guessReadNullability methods p
       nullableGetter :: Maybe Bool
       nullableGetter =
           let prop_name = T.replace "-" "_" (propName p)
-          in case findMethod methods ("get_" <> prop_name) of
+              getter = fromMaybe ("get_" <> prop_name) (propGetter p)
+          in case findMethod methods getter of
                Nothing -> Nothing
                -- Check that it looks like a sensible getter
                -- for the property.
@@ -106,7 +107,8 @@ guessWriteNullability methods p
       nullableSetter :: Maybe Bool
       nullableSetter =
           let prop_name = T.replace "-" "_" (propName p)
-          in case findMethod methods ("set_" <> prop_name) of
+              setter = fromMaybe ("set_" <> prop_name) (propSetter p)
+          in case findMethod methods setter of
                Nothing -> Nothing
                -- Check that it looks like a sensible setter.
                Just m ->

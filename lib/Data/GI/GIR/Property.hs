@@ -26,6 +26,8 @@ data Property = Property {
         propFlags :: [PropertyFlag],
         propReadNullable :: Maybe Bool,
         propWriteNullable :: Maybe Bool,
+        propSetter :: Maybe Text,
+        propGetter :: Maybe Text,
         propTransfer :: Transfer,
         propDoc :: Documentation,
         propDeprecated :: Maybe DeprecationInfo
@@ -40,6 +42,8 @@ parseProperty = do
   readable <- optionalAttr "readable" True parseBool
   writable <- optionalAttr "writable" False parseBool
   construct <- optionalAttr "construct" False parseBool
+  setter <- queryAttr "setter"
+  getter <- queryAttr "getter"
   constructOnly <- optionalAttr "construct-only" False parseBool
   maybeNullable <- optionalAttr "nullable" Nothing (\t -> Just <$> parseBool t)
   let flags = (if readable then [PropertyReadable] else [])
@@ -56,4 +60,6 @@ parseProperty = do
                 , propDoc = doc
                 , propReadNullable = maybeNullable
                 , propWriteNullable = maybeNullable
+                , propSetter = setter
+                , propGetter = getter
                 }
