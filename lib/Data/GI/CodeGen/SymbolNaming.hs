@@ -35,6 +35,7 @@ module Data.GI.CodeGen.SymbolNaming
     , haddockAttrAnchor
     ) where
 
+import qualified Data.Char as C
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
 #endif
@@ -116,14 +117,22 @@ sanitize :: Text -> Text
 sanitize (T.uncons -> Just ('_', xs)) = sanitize xs <> "_"
 sanitize xs = xs
 
--- | Same as `lowerSymbol`, but accepts a `Name`. The namespace part
--- of the name will be discarded.
+-- | Turn the given `Name` into CamelCase, starting with a lowercase
+-- letter. The resulting identifier will be qualified by the namespace
+-- if necessary.
 --
 -- === __Examples__
 -- >>> lowerName (Name "Gtk" "main_quit")
 -- "mainQuit"
+--
+-- >>> lowerName (Name "NM" "80211Test")
+-- "nM80211Test"
 lowerName :: Name -> Text
-lowerName (Name _ s) = lowerSymbol s
+lowerName (Name ns s) =
+  if not . C.isAlpha $ T.head (sanitize s) then
+    lowerSymbol (ns <> s)
+  else
+    lowerSymbol s
 
 -- | Turn the given identifier into camelCase, starting with a
 -- lowercase letter.
@@ -136,13 +145,22 @@ lowerSymbol s = case underscoresToCamelCase (sanitize s) of
                   "" -> error "empty name!!"
                   n -> lcFirst n
 
--- | Turn the given `Name` into CamelCase, starting with a capital letter.
+-- | Turn the given `Name` into CamelCase, starting with a capital
+-- letter. The resulting identifier will be qualified by the namespace
+-- if necessary.
 --
 -- === __Examples__
 -- >>> upperName (Name "Foo" "bar_baz")
 -- "BarBaz"
+--
+-- >>> upperName (Name "NM" "80211ApFlags")
+-- "NM80211ApFlags"
 upperName :: Name -> Text
-upperName (Name _ s) = underscoresToCamelCase (sanitize s)
+upperName (Name ns s) =
+  if not . C.isAlpha $ T.head (sanitize s) then
+    underscoresToCamelCase (sanitize (ns <> s))
+  else
+    underscoresToCamelCase (sanitize s)
 
 -- | Construct the submodule path where the given API element will
 -- live. This is the path relative to the root for the corresponding
