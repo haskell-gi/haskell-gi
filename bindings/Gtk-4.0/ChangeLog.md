@@ -1,3 +1,7 @@
+### 4.0.11
+
++ Mark the return value of [Gtk.printOperationGetDefaultPageSetup](https://hackage.haskell.org/package/gi-gtk/docs/GI-Gtk-Objects-PrintOperation.html#v:printOperationGetDefaultPageSetup) as nullable, see [issue 461](https://github.com/haskell-gi/haskell-gi/issues/461).
+
 ### 4.0.10
 
 + Drop dependency on gi-gtk, see [issue 459](https://github.com/haskell-gi/haskell-gi/issues/459).
