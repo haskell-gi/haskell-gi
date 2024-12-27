@@ -9,7 +9,8 @@
     "girOverrides": null,
     "baseVersion": "base >= 4.7 && <5",
     "distributionPackages": {
-        "fedora": []
+        "fedora": [],
+        "ubuntu": ["libsoup-3.0-dev"]
     },
     "giDepends": [
         "gi-gio == 2.0.*",

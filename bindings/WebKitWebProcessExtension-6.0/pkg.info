@@ -9,7 +9,8 @@
     "girOverrides": "WebKitWebProcessExtension.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "distributionPackages": {
-        "fedora": []
+        "fedora": [],
+        "ubuntu": ["gir1.2-webkit-6.0"]
     },
     "giDepends": [
         "gi-soup3",

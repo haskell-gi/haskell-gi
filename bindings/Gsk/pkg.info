@@ -9,7 +9,8 @@
     "girOverrides": "Gsk.overrides",
     "baseVersion": "base >= 4.9 && <5",
     "distributionPackages": {
-        "fedora": []
+        "fedora": [],
+        "ubuntu": ["libgtk-4-dev"]
     },
     "giDepends": [
         "gi-pango == 1.0.*",

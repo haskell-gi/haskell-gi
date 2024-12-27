@@ -36,7 +36,7 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
     - name: Update cabal.project
       run: |
-        ./update-cabal-project.sh ubuntu-ci
+        ./update-cabal-project.sh ubuntu-ci ${{ matrix.ghc }}
 
     - name: Install dependencies
       run: |

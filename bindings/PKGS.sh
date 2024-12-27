@@ -20,11 +20,11 @@ TARGET="${2:-$DEFAULT_TARGET}"
 
 case "$TARGET" in
     ubuntu)
-        PKG_DEPS=".distributionPackages.$TARGET"
+        PKG_DEPS=".distributionPackages.$TARGET[]?"
         PKG_COND="$PKG_DEPS != null"
         ;;
     ubuntu-ci)
-        PKG_DEPS='.distributionPackages.ubuntu, .distributionPackages."ubuntu-ci"'
+        PKG_DEPS='.distributionPackages.ubuntu[]?, .distributionPackages."ubuntu-ci"[]?'
         PKG_COND='(.distributionPackages.ubuntu != null or .distributionPackages."ubuntu-ci" != null) and .distributionPackages."ubuntu-ci" != ["skip"]'
         ;;
     fedora)

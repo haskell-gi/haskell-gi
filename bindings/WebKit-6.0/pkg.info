@@ -9,7 +9,9 @@
     "girOverrides": "WebKit.overrides",
     "baseVersion": "base >= 4.7 && <5",
     "distributionPackages": {
-        "fedora": []
+        "fedora": [],
+        "ubuntu": ["gir1.2-webkit-6.0",
+                   "libwebkitgtk-6.0-dev"]
     },
     "giDepends": [
         "gi-cairo == 1.0.*",

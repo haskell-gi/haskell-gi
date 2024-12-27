@@ -14,9 +14,6 @@
         ],
         "ubuntu": [
             "libgtksourceview-5-dev"
-        ],
-        "ubuntu-ci": [
-            "skip"
         ]
     },
     "giDepends": [

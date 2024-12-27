@@ -9,7 +9,11 @@
     "girOverrides": null,
     "baseVersion": "base >= 4.7 && <5",
     "distributionPackages": {
-        "fedora": []
+        "fedora": [],
+        "ubuntu": [
+            "gir1.2-javascriptcoregtk-6.0",
+            "libjavascriptcoregtk-6.0-dev"
+        ]
     },
     "giDepends": [
         "gi-gobject == 2.0.*",

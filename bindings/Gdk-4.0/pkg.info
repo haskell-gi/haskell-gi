@@ -9,7 +9,10 @@
     "girOverrides": "Gdk.overrides",
     "baseVersion": "base >= 4.9 && <5",
     "distributionPackages": {
-        "fedora": []
+        "fedora": [],
+        "ubuntu": [
+            "libgtk-4-dev"
+        ]
     },
     "giDepends": [
         "gi-cairo == 1.0.*",
