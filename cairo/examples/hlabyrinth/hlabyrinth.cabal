@@ -63,9 +63,9 @@ executable hlabyrinth
     , gi-cairo >=1.0.24 && <1.1
     , gi-cairo-connector ==0.1.*
     , gi-cairo-render ==0.1.*
-    , gi-gdk >=3.0.23 && <4
+    , gi-gdk3
     , gi-glib >=2.0.24 && <2.1
-    , gi-gtk >=3.0.36 && <4
+    , gi-gtk3
     , gi-pango >=1.0.23 && <1.1
     , gi-pangocairo >=1.0.24 && <1.1
     , haskell-gi-base >=0.24.0 && <0.27

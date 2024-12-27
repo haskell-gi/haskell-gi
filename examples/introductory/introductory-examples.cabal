@@ -29,11 +29,11 @@ executable action-namespace
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
     , gi-gobject
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010
@@ -49,10 +49,10 @@ executable attribute-usage
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010
@@ -68,10 +68,10 @@ executable basic
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010
@@ -87,11 +87,11 @@ executable builder
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
     , gi-gobject
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010
@@ -107,10 +107,10 @@ executable hello-world
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010
@@ -127,10 +127,10 @@ executable lazy-file-tree
     , directory
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010
@@ -146,10 +146,10 @@ executable packed-widgets
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010
@@ -168,11 +168,11 @@ executable resource-bundle
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
     , gi-gobject
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   pkgconfig-depends:
@@ -190,10 +190,10 @@ executable search-bar
       base >=4.7 && <5
     , filepath
     , gi-cairo
-    , gi-gdk
+    , gi-gdk3
     , gi-gdkpixbuf
     , gi-gio
-    , gi-gtk
+    , gi-gtk3
     , haskell-gi-base
     , text
   default-language: Haskell2010

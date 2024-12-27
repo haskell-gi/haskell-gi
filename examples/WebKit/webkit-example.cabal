@@ -48,7 +48,7 @@ executable SimpleBrowser
                        haskell-gi-base ^>= 0.26.0,
                        gi-glib == 2.0.*,
                        gi-gio == 2.0.*,
-                       gi-gtk == 4.0.*,
+                       gi-gtk4,
                        gi-webkit == 6.0.*,
                        gi-adwaita == 1.0.*,
                        text >= 1.0

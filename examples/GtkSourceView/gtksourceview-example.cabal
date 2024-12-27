@@ -20,8 +20,8 @@ executable SourceView
   build-depends:       base >= 4.7 && < 5,
                        haskell-gi-base == 0.26.*,
                        gi-glib == 2.0.*,
-                       gi-gtk == 3.0.*,
-                       gi-gtksource == 3.0.*,
+                       gi-gtk3,
+                       gi-gtksource3,
                        text >= 1.0
   default-language:    Haskell2010
   other-extensions:    OverloadedStrings, OverloadedLabels

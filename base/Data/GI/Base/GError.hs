@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies, DataKinds #-}
 
 -- | To catch GError exceptions use the
@@ -65,7 +65,6 @@ import Foreign.C
 import Control.Exception
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Typeable (Typeable)
 
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -83,7 +82,6 @@ import Data.GI.Base.Internal.CTypes (GQuark, C_gint, gerror_domain_offset,
 -- message. These can be accessed by 'gerrorDomain', 'gerrorCode' and
 -- 'gerrorMessage' below.
 newtype GError = GError (ManagedPtr GError)
-    deriving (Typeable)
 
 instance Show GError where
     show gerror = unsafePerformIO $ do

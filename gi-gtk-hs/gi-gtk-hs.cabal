@@ -38,8 +38,8 @@ library
                        haskell-gi-base >=0.25.0 && <0.27,
                        gi-glib >=2.0.6 && <2.1,
                        gi-gobject >=2.0.6 && <2.1,
-                       gi-gdk >= 3.0.6 && <3.1,
-                       gi-gtk >= 3.0.26 && <3.1,
+                       gi-gdk3,
+                       gi-gtk3,
                        gi-gdkpixbuf >=2.0.6 && <2.1
 
   hs-source-dirs:      src

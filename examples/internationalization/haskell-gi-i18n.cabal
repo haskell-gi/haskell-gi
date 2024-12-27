@@ -27,5 +27,5 @@ executable i18n
     , text
     , haskell-gi-base
     , gi-gobject
-    , gi-gtk == 3.0.*
+    , gi-gtk3
   default-language: Haskell2010

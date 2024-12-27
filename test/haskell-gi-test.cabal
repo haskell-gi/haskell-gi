@@ -27,10 +27,10 @@ executable testGtk
                        haskell-gi-base >= 0.26.7 && < 1,
                        haskell-gi-overloading == 1.0.*,
                        gi-glib == 2.0.*,
-                       gi-gdk == 3.0.*,
+                       gi-gdk3,
                        gi-gio == 2.0.*,
                        gi-gobject == 2.0.*,
-                       gi-gtk == 3.0.*,
+                       gi-gtk3,
                        text >= 1.0
 
   other-extensions:    OverloadedStrings, OverloadedLabels, LambdaCase, ScopedTypeVariables

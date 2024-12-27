@@ -41,11 +41,11 @@ executable GstGtkX11
   main-is:              GstGtkX11.hs
   build-depends:        base >= 4.9 && < 5
                       , gi-gst == 1.0.*
-                      , gi-gtk == 3.0.*
+                      , gi-gtk3
                       , gi-xlib
                       , gi-gstvideo
-                      , gi-gdk
-                      , gi-gdkx11
+                      , gi-gdk3
+                      , gi-gdkx113
                       , haskell-gi-base ^>= 0.26.0
   default-language:     Haskell2010
   other-extensions:     OverloadedStrings
@@ -57,7 +57,7 @@ executable gtk-emit-signal
                       , haskell-gi-base ^>= 0.26.0
                       , gi-gobject
                       , gi-glib
-                      , gi-gtk
+                      , gi-gtk3
                       , text
   default-language:   Haskell2010
   ghc-options:        -Wall -threaded -with-rtsopts=-N -Wall
@@ -68,8 +68,8 @@ executable CustomGObject
   build-depends:        base >= 4.9 && < 5
                       , haskell-gi >= 0.26.10
                       , haskell-gi-base >= 0.26.6
-                      , gi-gtk >= 3.0.43
-                      , gi-gdk == 3.0.*
+                      , gi-gtk3 >= 3.0.43
+                      , gi-gdk3
                       , vector
                       , text
   default-language:   Haskell2010
