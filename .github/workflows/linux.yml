@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.4', '8.6', '8.8', '8.10', '9.0', '9.2', '9.4', '9.6', '9.8']
+        ghc: ['8.4', '8.6', '8.8', '8.10', '9.0', '9.2', '9.4', '9.6', '9.8', '9.10']
 
     steps:
     - uses: actions/checkout@v1
@@ -30,7 +30,7 @@ jobs:
     - name: Restore cabal project
       run: mv _cabal.project cabal.project
     - name: Cache cabal store
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: ~/.cabal/store
         key: ${{ runner.os }}-${{ matrix.ghc }}-cabal
