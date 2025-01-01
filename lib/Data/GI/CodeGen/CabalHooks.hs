@@ -2,6 +2,7 @@
 -- bindings.
 module Data.GI.CodeGen.CabalHooks
     ( setupBinding
+    , setupCompatWrapper
     , configureDryRun
     , TaggedOverride(..)
     ) where
@@ -22,12 +23,12 @@ import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.Overrides (parseOverrides, girFixups,
                                   filterAPIsAndDeps)
-import Data.GI.CodeGen.Util (utf8ReadFile, utf8WriteFile, ucFirst)
+import Data.GI.CodeGen.Util (utf8ReadFile, utf8WriteFile, ucFirst, splitOn)
 
 import System.Directory (createDirectoryIfMissing)
-import System.FilePath (joinPath, takeDirectory)
+import System.FilePath (joinPath, takeDirectory, (</>))
 
-import Control.Monad (void, forM)
+import Control.Monad (forM)
 
 import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Map as M
@@ -82,8 +83,9 @@ genModuleCode name version pkgName pkgVersion verbosity overrides = do
 
 -- | Write a module containing information about the configuration for
 -- the package.
-genConfigModule :: Maybe FilePath -> Text -> Maybe TaggedOverride -> IO ()
-genConfigModule outputDir modName maybeGiven = do
+genConfigModule :: Maybe FilePath -> Text -> Maybe TaggedOverride ->
+                   [Text] -> IO ()
+genConfigModule outputDir modName maybeGiven modules = do
   let fname = joinPath [ fromMaybe "" outputDir
                        , "GI"
                        , T.unpack (ucFirst modName)
@@ -95,7 +97,7 @@ genConfigModule outputDir modName maybeGiven = do
   utf8WriteFile fname $ T.unlines
     [ "{-# LANGUAGE OverloadedStrings #-}"
     , "-- | Build time configuration used during code generation."
-    , "module GI." <> ucFirst modName <> ".Config ( overrides ) where"
+    , "module GI." <> ucFirst modName <> ".Config ( overrides, modules ) where"
     , ""
     , "import qualified Data.Text as T"
     , "import Data.Text (Text)"
@@ -103,13 +105,22 @@ genConfigModule outputDir modName maybeGiven = do
     , "-- | Overrides used when generating these bindings."
     , "overrides :: Text"
     , "overrides = T.unlines"
-    , " [ " <> T.intercalate "\n , " (quoteOverrides maybeGiven) <> "]"
+    , formatList (overrides maybeGiven)
+    , ""
+    , "-- | Modules in this package"
+    , "modules :: [Text]"
+    , "modules = " <>
+      formatList (("GI." <> ucFirst modName <> ".Config") : modules)
     ]
 
-  where quoteOverrides :: Maybe TaggedOverride -> [Text]
-        quoteOverrides Nothing = []
-        quoteOverrides (Just (TaggedOverride _ ovText)) =
-          map (T.pack . show) (T.lines ovText)
+  where overrides :: Maybe TaggedOverride -> [Text]
+        overrides Nothing = []
+        overrides (Just (TaggedOverride _ ovText)) = T.lines ovText
+
+        formatList :: [Text] -> Text
+        formatList l = " [ "
+                       <> T.intercalate "\n , " (map (T.pack . show) l)
+                       <> "]"
 
 -- | A convenience helper for `confHook`, such that bindings for the
 -- given module are generated in the @configure@ step of @cabal@.
@@ -145,9 +156,9 @@ confCodeGenHook name version pkgName pkgVersion verbosity
       cL' = ((fromJust . condLibrary) gpd) {condTreeData = lib'}
       gpd' = gpd {condLibrary = Just cL'}
 
-  void $ writeModuleTree verbosity outputDir m
+  modules <- writeModuleTree verbosity outputDir m
 
-  genConfigModule outputDir name givenOvs
+  genConfigModule outputDir name givenOvs modules
 
   lbi <- defaultConfHook (gpd', hbi) flags
 
@@ -169,6 +180,75 @@ setupBinding name version pkgName pkgVersion verbose overridesFile overrides out
                                        pkgName pkgVersion
                                        verbose
                                        overridesFile overrides outputDir
+                                       (confHook simpleUserHooks)
+                          })
+
+compatGenConfHook :: String -- ^ New version of the package
+                  -> [Text] -- ^ The list of modules to re-export
+                  -> ConfHook -- ^ previous `confHook`
+                  -> ConfHook
+compatGenConfHook newVersion modules defaultConfHook (gpd, hbi) flags = do
+  let em' = map (MN.fromString . T.unpack) modules
+      lib = ((condTreeData . fromJust . condLibrary) gpd)
+      bi = libBuildInfo lib
+#if MIN_VERSION_base(4,11,0)
+      bi' = bi {autogenModules = em'}
+#else
+      bi' = bi
+#endif
+      lib' = lib {exposedModules = em', libBuildInfo = bi'}
+      cL' = ((fromJust . condLibrary) gpd) {condTreeData = lib'}
+      gpd' = gpd {condLibrary = Just cL'}
+
+  mapM_ (writeCompatModule . T.unpack) modules
+
+  lbi <- defaultConfHook (gpd', hbi) flags
+
+  return (lbi {withOptimization = NoOptimisation})
+
+  where
+    writeCompatModule :: String -> IO ()
+    writeCompatModule modName = do
+      fname <- case unsnoc (splitOn '.' modName) of
+                 Nothing -> return $ modName <> ".hs"
+                 Just ([], last) -> return $ last <> ".hs"
+                 Just (init, last) -> let path = joinPath init
+                                      in do
+                                        createDirectoryIfMissing True path
+                                        return $ path </> (last <> ".hs")
+      utf8WriteFile fname modContents
+
+      where modContents :: Text
+            modContents = let
+              mod = T.pack modName
+              link = "[" <> T.pack newVersion
+                     <> "](https://hackage.haskell.org/package/"
+                     <> T.pack newVersion <> ")"
+              in T.unlines [
+              "{-# LANGUAGE PackageImports #-}"
+              , "{- | This is a backwards-compatibility module re-exporting the contents of the "
+              , mod <> " module in the " <> link <> " package."
+              , ""
+              , "The link below will take you to the relevant entry in the " <> link <> " documentation."
+              , "-}"
+              , "module " <> mod <> " ("
+              , "  module X) where"
+              , ""
+              , "import \"" <> T.pack newVersion <> "\" " <> mod <> " as X"
+              ]
+
+            -- Data.List.unsnoc is relatively recent (base 4.19.0.0),
+            -- so we just copy the definition.
+            unsnoc :: [a] -> Maybe ([a], a)
+            unsnoc = foldr (\x -> Just . maybe ([], x) (\(~(a, b)) -> (x : a, b))) Nothing
+
+-- | The entry point for @Setup.hs@ files in compat bindings.
+setupCompatWrapper :: String   -- ^ New package
+                   -> [Text] -- ^ List of files in the new package
+                   -> IO ()
+setupCompatWrapper newPackage modules =
+    defaultMainWithHooks (simpleUserHooks {
+                            confHook = compatGenConfHook newPackage modules
                                        (confHook simpleUserHooks)
                           })
 

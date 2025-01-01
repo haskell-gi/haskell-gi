@@ -3,7 +3,8 @@
 -- Generate the cabal info for the given subdirectories, assuming
 -- the existence of appropriate "pkg.info" files.
 
-import System.Environment (getArgs,getExecutablePath)
+import System.Directory (createDirectory, doesPathExist)
+import System.Environment (getArgs, getExecutablePath)
 import System.FilePath ((</>), (<.>))
 import System.IO (hPutStrLn, stderr, hFlush, stdout)
 import System.Exit (exitFailure, ExitCode(..))
@@ -63,7 +64,7 @@ writeCabal fname info exposed =
          T.intercalate ",\n                     "
            ([ "base >= 4.11 && < 5"
             , "Cabal >= 1.24 && < 4"
-            , "haskell-gi >= 0.26.13 && < 0.27"]
+            , "haskell-gi >= 0.26.14 && < 0.27"]
             <> giDepends info)
        , ""
        , "library"
@@ -80,7 +81,7 @@ writeCabal fname info exposed =
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi >= 0.26.13 && < 0.27"
+               , "haskell-gi >= 0.26.14 && < 0.27"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
@@ -170,6 +171,72 @@ writeReadme fname info =
   , "For general documentation on using [haskell-gi](https://github.com/haskell-gi/haskell-gi) based bindings, see [the project page](https://github.com/haskell-gi/haskell-gi) or [the Wiki](https://github.com/haskell-gi/haskell-gi/wiki)."
   ]
 
+-- | Write a "compat" package re-exporting all symbols from the
+-- current pakage.
+writeCompatPkg :: FilePath -> Text -> ProjectInfo -> IO ()
+writeCompatPkg dir compatPkg info = do
+  alreadyThere <- doesPathExist dir
+  if alreadyThere
+    then return ()
+    else do
+      createDirectory dir
+      writeCompatCabal (dir </> T.unpack compatPkg <.> ".cabal") compatPkg info
+      writeCompatSetup (dir </> "Setup.hs") info
+      writeCompatReadme (dir </> "README.md") info
+      writeLicense (dir </> "LICENSE") info
+
+-- | The .cabal file for the compatibility package.
+writeCompatCabal :: FilePath -> Text -> ProjectInfo -> IO ()
+writeCompatCabal fname compatPkg info =
+  B.writeFile fname $ TE.encodeUtf8 $ T.unlines
+  [   "name:           " <> compatPkg
+    , "version:        " <> version info
+    , "synopsis:       " <> synopsis info <> " (compatibility layer)"
+    , "description:    This package re-exports (for backward compatibility)"
+    , "                the haskell-gi generated bindings in the " <> name info <> " package."
+    , "homepage:       " <> PI.homepage
+    , "license:        " <> PI.license
+    , "license-file:   LICENSE"
+    , "author:         " <> fromMaybe PI.maintainers (author info)
+    , "maintainer:     " <> PI.maintainers
+    , "category:       " <> PI.category
+    , "cabal-version:  2.0"
+    , ""
+    , "extra-source-files: README.md"
+    , ""
+    , "custom-setup"
+    , " setup-depends:"
+    , "   base >= 4.11 && <5,"
+    , "   haskell-gi ^>= 0.26.14,"
+    , "   " <> name info <> " >= " <> version info
+    , ""
+    , "library"
+    , "    ghc-options: -Wall"
+    , ""
+    , "    build-depends: base >= 4.11,"
+    , "                   " <> name info
+    , ""
+    , "    default-language: Haskell2010"
+    ]
+
+writeCompatSetup :: FilePath -> ProjectInfo -> IO ()
+writeCompatSetup fname info =
+  B.writeFile fname $ TE.encodeUtf8 $ T.unlines
+  [ "import Data.GI.CodeGen.CabalHooks (setupCompatWrapper)"
+  , "import qualified GI.Gtk.Config as Cfg"
+  , ""
+  , "main :: IO ()"
+  , "main = setupCompatWrapper \"" <> name info <> "\" Cfg.modules"
+  ]
+
+writeCompatReadme :: FilePath -> ProjectInfo -> IO ()
+writeCompatReadme fname info =
+  let link = "[" <> name info <> "](/package/" <> name info <> ")"
+  in B.writeFile fname $ TE.encodeUtf8 $ T.unlines
+  [ "# Information"
+  , "This is a compatibility package. For newer projects we recommend that you use " <> link <> " instead."
+  ]
+
 genBindingsInDir :: FilePath -> IO ()
 genBindingsInDir dir = do
   info <- readGIRInfo (dir </> "pkg.info")
@@ -181,6 +248,9 @@ genBindingsInDir dir = do
   writeLicense (dir </> "LICENSE") info
   writeStackYaml (dir </> "stack.yaml")
   writeReadme (dir </> "README.md") info
+  case compat info of
+    Nothing -> return ()
+    Just compatPkg -> writeCompatPkg (dir </> "compat") compatPkg info
   putStrLn " done."
 
 main :: IO ()
