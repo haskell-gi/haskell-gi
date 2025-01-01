@@ -182,6 +182,7 @@ writeCompatPkg dir compatPkg info = do
       putStr $ " [+ " <> T.unpack compatPkg <> " ]"
       hFlush stdout
       createDirectory dir
+      writeCompatProject (dir </> "cabal.project") compatPkg
       writeCompatCabal (dir </> T.unpack compatPkg <.> ".cabal") compatPkg info
       writeCompatSetup (dir </> "Setup.hs") info
       writeCompatReadme (dir </> "README.md") info
@@ -221,6 +222,10 @@ writeCompatCabal fname compatPkg info =
     , ""
     , "    default-language: Haskell2010"
     ]
+
+writeCompatProject :: FilePath -> Text -> IO ()
+writeCompatProject fname compatPkg =
+  B.writeFile fname $ TE.encodeUtf8 $ "packages: " <> compatPkg <> ".cabal"
 
 writeCompatSetup :: FilePath -> ProjectInfo -> IO ()
 writeCompatSetup fname info =
