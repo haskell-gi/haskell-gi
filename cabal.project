@@ -32,8 +32,10 @@ packages: base/haskell-gi-base.cabal
           bindings/GdkPixbuf/gi-gdkpixbuf.cabal
           bindings/Gdk-3.0/gi-gdk3.cabal
           bindings/Gdk-4.0/gi-gdk4.cabal
+          bindings/Gdk-3.0/compat/gi-gdk.cabal
           bindings/GdkX11-3.0/gi-gdkx113.cabal
           bindings/GdkX11-4.0/gi-gdkx114.cabal
+          bindings/GdkX11-3.0/compat/gi-gdkx11.cabal
           bindings/Gst/gi-gst.cabal
           bindings/GstBase/gi-gstbase.cabal
           bindings/GstAudio/gi-gstaudio.cabal
@@ -44,13 +46,18 @@ packages: base/haskell-gi-base.cabal
           bindings/Gsk/gi-gsk.cabal
           bindings/Gtk-3.0/gi-gtk3.cabal
           bindings/Gtk-4.0/gi-gtk4.cabal
+          bindings/Gtk-4.0/compat/gi-gtk.cabal
           bindings/Adw/gi-adwaita.cabal
           bindings/GtkLayerShell/gi-gtk-layer-shell.cabal
           bindings/GtkSource-3.0/gi-gtksource3.cabal
           bindings/Handy/gi-handy.cabal
           bindings/IBus/gi-ibus.cabal
           bindings/JavaScriptCore-4.0/gi-javascriptcore4.cabal
+          bindings/JavaScriptCore-6.0/gi-javascriptcore6.cabal
+          bindings/JavaScriptCore-4.0/compat/gi-javascriptcore.cabal
           bindings/Soup-2.4/gi-soup2.cabal
+          bindings/Soup-3.0/gi-soup3.cabal
+          bindings/Soup-2.4/compat/gi-soup.cabal
           bindings/WebKit2-4.0/gi-webkit2.cabal
           bindings/WebKit2WebExtension-4.0/gi-webkit2webextension.cabal
           bindings/Vte/gi-vte.cabal
@@ -72,10 +79,9 @@ packages: base/haskell-gi-base.cabal
           bindings/GstApp/gi-gstapp.cabal
           bindings/AyatanaAppIndicator3/gi-ayatana-appindicator3.cabal
           bindings/NM/gi-nm.cabal
-          bindings/Soup-3.0/gi-soup3.cabal
-          bindings/JavaScriptCore-6.0/gi-javascriptcore6.cabal
           bindings/WebKit-6.0/gi-webkit.cabal
           bindings/WebKitWebProcessExtension-6.0/gi-webkitwebprocessextension.cabal
           bindings/GtkSource-5/gi-gtksource5.cabal
+          bindings/GtkSource-3.0/compat/gi-gtksource.cabal
           examples/Gtk4/gtk4-example.cabal
           examples/WebKit/webkit-example.cabal

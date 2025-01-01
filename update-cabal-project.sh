@@ -17,7 +17,7 @@ GHC_VERSION="${2:-}"
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-sed -i.bak -e '/^\s*bindings\//d' cabal.project
+sed -i.bak -E -e '/^\s*bindings\/[a-zA-Z0-9_\.\-]+\/gi/d' cabal.project
 if ! $(printf "9.2\n${GHC_VERSION}" | sort -C -V); then
 	# These examples use the OverloadedRecordDot extension, which is not
 	# supported by GHC versions earlier than 9.2.

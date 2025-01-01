@@ -179,6 +179,8 @@ writeCompatPkg dir compatPkg info = do
   if alreadyThere
     then return ()
     else do
+      putStr $ " [+ " <> T.unpack compatPkg <> " ]"
+      hFlush stdout
       createDirectory dir
       writeCompatCabal (dir </> T.unpack compatPkg <.> ".cabal") compatPkg info
       writeCompatSetup (dir </> "Setup.hs") info
@@ -200,6 +202,7 @@ writeCompatCabal fname compatPkg info =
     , "author:         " <> fromMaybe PI.maintainers (author info)
     , "maintainer:     " <> PI.maintainers
     , "category:       " <> PI.category
+    , "build-type:     Custom"
     , "cabal-version:  2.0"
     , ""
     , "extra-source-files: README.md"
@@ -208,22 +211,23 @@ writeCompatCabal fname compatPkg info =
     , " setup-depends:"
     , "   base >= 4.11 && <5,"
     , "   haskell-gi ^>= 0.26.14,"
-    , "   " <> name info <> " >= " <> version info
+    , "   " <> name info <> " ^>= " <> version info
     , ""
     , "library"
     , "    ghc-options: -Wall"
     , ""
-    , "    build-depends: base >= 4.11,"
-    , "                   " <> name info
+    , "    build-depends: base >= 4.11 && <5,"
+    , "                   " <> name info <> " ^>= " <> version info
     , ""
     , "    default-language: Haskell2010"
     ]
 
 writeCompatSetup :: FilePath -> ProjectInfo -> IO ()
 writeCompatSetup fname info =
-  B.writeFile fname $ TE.encodeUtf8 $ T.unlines
+  let cfgMod = "GI." <> ucFirst (girName info) <> ".Config"
+  in B.writeFile fname $ TE.encodeUtf8 $ T.unlines
   [ "import Data.GI.CodeGen.CabalHooks (setupCompatWrapper)"
-  , "import qualified GI.Gtk.Config as Cfg"
+  , "import qualified " <> cfgMod <> " as Cfg"
   , ""
   , "main :: IO ()"
   , "main = setupCompatWrapper \"" <> name info <> "\" Cfg.modules"

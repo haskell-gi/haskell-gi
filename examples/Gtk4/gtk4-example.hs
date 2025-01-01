@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings, OverloadedLabels, ImplicitParams #-}
+{-# LANGUAGE OverloadedStrings, OverloadedLabels, ImplicitParams,
+PackageImports #-}
 
 import Control.Monad (void)
 import System.Environment (getArgs, getProgName)
@@ -6,6 +7,10 @@ import System.Environment (getArgs, getProgName)
 import Data.Int (Int32)
 
 import qualified GI.Gtk as Gtk
+-- We import Application explicitly to test imports from the
+-- backwards-compatibility wrapper gi-gtk. In general it would be
+-- simpler to use Gtk.Application directly.
+import "gi-gtk" GI.Gtk.Objects.Application (Application(..))
 import Data.GI.Base
 
 -- | An example of a signal callback accessing the ?self parameter
@@ -39,8 +44,8 @@ activate app = do
 
 main :: IO ()
 main = do
-  app <- new Gtk.Application [#applicationId := "haskell-gi.Gtk4.test",
-                              On #activate (activate ?self)]
+  app <- new Application [#applicationId := "haskell-gi.Gtk4.test",
+                          On #activate (activate ?self)]
 
   -- If the application does not need to parse command line arguments
   -- just pass Nothing.
