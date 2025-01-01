@@ -22,6 +22,7 @@ bindings/*/Setup.hs
 bindings/*/LICENSE
 bindings/*/stack.yaml
 bindings/*/README.md
+bindings/*/compat/*
 bindings/sdists
 bindings/dumps
 examples/GI/*

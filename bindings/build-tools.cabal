@@ -24,6 +24,7 @@ executable genBuildInfo
                         text >= 1.2,
                         filepath >= 1.4,
                         bytestring >= 0.10,
+                        directory >= 1.3,
                         containers,
                         aeson,
                         aeson-pretty,

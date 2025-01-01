@@ -30,6 +30,7 @@ data ProjectInfo = ProjectInfo {
     , girVersion        :: Text         -- ^ Its version
     , girOverrides      :: Maybe FilePath   -- ^ Possibly an overrides file
     , distributionPackages :: Map Text [Text] -- ^ Package lists for distributions
+    , compat            :: Maybe Text
     } deriving (Show, Generic)
 
 instance A.FromJSON ProjectInfo
