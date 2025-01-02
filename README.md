@@ -52,7 +52,7 @@ Here is an example "Hello World" program:
 ```haskell
 {-# LANGUAGE OverloadedStrings, OverloadedLabels, OverloadedRecordDot, ImplicitParams #-}
 {- cabal:
-build-depends: base >= 4.16, haskell-gi-base, gi-gtk == 4.0.*
+build-depends: base >= 4.16, haskell-gi-base, gi-gtk4
 -}
 import Control.Monad (void)
 
