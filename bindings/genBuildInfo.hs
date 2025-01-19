@@ -211,6 +211,9 @@ writeCompatCabal fname compatPkg info =
     , "custom-setup"
     , " setup-depends:"
     , "   base >= 4.11 && <5,"
+    -- For compatibility with stack, see
+    -- https://github.com/haskell-gi/haskell-gi/issues/463
+    , "   Cabal >= 1.24 && < 4,"
     , "   haskell-gi ^>= 0.26.14,"
     , "   " <> name info <> " ^>= " <> version info
     , ""
