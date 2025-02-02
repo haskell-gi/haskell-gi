@@ -115,6 +115,8 @@ parseFundamentalType "GLib" "Error" = return TError
 parseFundamentalType "GLib" "Variant" = return TVariant
 parseFundamentalType "GObject" "ParamSpec" = return TParamSpec
 parseFundamentalType "GObject" "Value" = return TGValue
+-- Used by vala, see https://github.com/haskell-gi/haskell-gi/issues/453
+parseFundamentalType "GLib" "ObjectPath" = return (TBasicType TUTF8)
 parseFundamentalType "GObject" "Closure" = parseClosure
 -- A TInterface type (basically, everything that is not of a known type).
 parseFundamentalType ns n = resolveQualifiedTypeName (Name ns n)
