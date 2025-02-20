@@ -22,5 +22,6 @@ if ! $(printf "9.2\n${GHC_VERSION}" | sort -C -V); then
 	# These examples use the OverloadedRecordDot extension, which is not
 	# supported by GHC versions earlier than 9.2.
 	sed -i.bak2 -E -e '/(gtk4|webkit)-example/d' cabal.project
+	sed -i.bak3 -E -e '/HListStore/d' cabal.project
 fi
 ./bindings/PKGS.sh cabal-files "$TARGET" | sed 's!^!          bindings/!' >> "$ROOT_DIR/cabal.project"
