@@ -1,46 +1,43 @@
 {-# LANGUAGE OverloadedRecordDot, OverloadedLabels, LambdaCase #-}
-{- cabal:
-build-depends: base >= 4.16, haskell-gi-base, gi-gio, gi-gobject
-ghc-options: -Wall
--}
-import Data.GI.Base
 
-import Control.Monad (forM)
-import Data.Typeable (Typeable)
+import Data.GI.Base (new)
 
 import HListStore (HListStore(..))
 
-printList :: (Show a, Typeable a) => HListStore a -> IO ()
-printList l = do
-  nitems <- l `get` #nItems
-  items <- forM [0..nitems-1] $ \n -> do
-    l.getItem n >>= \case
-      Nothing -> error "Missing item!?"
-      Just x -> return x
+import Control.Monad ((>=>))
+import Data.Typeable (Typeable)
 
-  print items
+-- | Return the values contained in the HListStore, in order.
+items :: Typeable a => HListStore a -> IO [a]
+items l = collectItems 0 []
+  where collectItems n acc = l.getItem n >>= \case
+          Just item -> collectItems (n+1) (item : acc)
+          Nothing -> return $ reverse acc
+
+printList :: (Show a, Typeable a) => HListStore a -> IO ()
+printList = items >=> print
 
 main :: IO ()
 main = do
-  hlist <- new HListStore [] :: IO (HListStore Int)
+  hlist <- new HListStore []
 
-  hlist.append 3
+  hlist.append (3 :: Int)
   hlist.append 12
   hlist.append 71
   hlist.append 31
+  printList hlist
+
+  -- Insert 19 so that every element before it is smaller than it.
   _ <- hlist.insertSorted 19
-
   printList hlist
 
-  hlist.splice 2 2 [21, 13, 144]
-
+  -- Replace the two element starting from the second one (so 12 and
+  -- 19) with 21, 13 and 144.
+  hlist.splice 1 2 [21, 13, 144]
   printList hlist
 
-  hlist.sortBy $ \x y -> case compare x y of
-    GT -> LT
-    LT -> GT
-    EQ -> EQ
-
+ -- Reverse sort the list.
+  hlist.sortBy (flip compare)
   printList hlist
 
   putStrLn "done!"
