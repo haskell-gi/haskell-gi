@@ -43,7 +43,6 @@ import qualified Data.GI.Base.Overloading as O
 import Control.Monad ((>=>))
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Coerce (coerce)
-import Data.Typeable (Typeable)
 import Data.Word (Word32)
 import Foreign.Ptr (Ptr, castPtr)
 
@@ -134,10 +133,10 @@ type instance O.SignalList (HListStore a) = O.SignalList Gio.ListStore
 -- | Make sure to set the appropriate element type when constructing
 -- the 'HListStore'.
 instance {-# OVERLAPPING #-}
-  (Typeable a, tag ~ 'AttrConstruct) => Constructible (HListStore a) tag where
+  (tag ~ 'AttrConstruct) => Constructible (HListStore a) tag where
   new = constructHListStore
 
-constructHListStore :: forall a m. (MonadIO m, Typeable a)
+constructHListStore :: forall a m. (MonadIO m)
   => (ManagedPtr (HListStore a) -> HListStore a)
   -> [AttrOp (HListStore a) 'AttrConstruct]
   -> m (HListStore a)
@@ -193,37 +192,36 @@ type family ResolveHListStoreMethod t o where
   ResolveHListStoreMethod t o = Gio.ResolveListStoreMethod t o
 
 data HListStoreAppendMethodInfo
-instance (signature ~ (a -> m ()), MonadIO m, Typeable a) => O.OverloadedMethod HListStoreAppendMethodInfo (HListStore a) signature where
+instance (signature ~ (a -> m ()), MonadIO m) => O.OverloadedMethod HListStoreAppendMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreAppend
 
-hListStoreAppend :: (MonadIO m, Typeable a) => HListStore a -> a -> m ()
+hListStoreAppend :: MonadIO m => HListStore a -> a -> m ()
 hListStoreAppend ls value = liftIO $ do
   wrapped <- goWrapHValue value
   Gio.listStoreAppend ls wrapped
 
 data HListStoreInsertMethodInfo
-instance (signature ~ (Word32 -> a -> m ()), MonadIO m, Typeable a) => O.OverloadedMethod HListStoreInsertMethodInfo (HListStore a) signature where
+instance (signature ~ (Word32 -> a -> m ()), MonadIO m) => O.OverloadedMethod HListStoreInsertMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreInsert
 
-hListStoreInsert :: (MonadIO m, Typeable a) =>
-                    HListStore a -> Word32 -> a -> m ()
+hListStoreInsert :: MonadIO m => HListStore a -> Word32 -> a -> m ()
 hListStoreInsert ls idx value = liftIO $ do
   wrapped <- goWrapHValue value
   Gio.listStoreInsert ls idx wrapped
 
 data HListStoreInsertSortedMethodInfo
-instance (signature ~ (a -> m Word32), MonadIO m, Typeable a, Ord a) => O.OverloadedMethod HListStoreInsertSortedMethodInfo (HListStore a) signature where
+instance (signature ~ (a -> m Word32), MonadIO m, Ord a) => O.OverloadedMethod HListStoreInsertSortedMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreInsertSorted
 
-hListStoreInsertSorted :: forall a m. (MonadIO m, Typeable a, Ord a) =>
+hListStoreInsertSorted :: forall a m. (MonadIO m, Ord a) =>
                           HListStore a -> a -> m Word32
 hListStoreInsertSorted ls value = hListStoreInsertSortedBy ls value compare
 
 data HListStoreInsertSortedByMethodInfo
-instance (signature ~ (a -> (a -> a -> Ordering) -> m Word32), MonadIO m, Typeable a) => O.OverloadedMethod HListStoreInsertSortedByMethodInfo (HListStore a) signature where
+instance (signature ~ (a -> (a -> a -> Ordering) -> m Word32), MonadIO m) => O.OverloadedMethod HListStoreInsertSortedByMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreInsertSortedBy
 
-hListStoreInsertSortedBy :: forall a m. (MonadIO m, Typeable a) =>
+hListStoreInsertSortedBy :: forall a m. MonadIO m =>
                           HListStore a -> a -> (a -> a -> Ordering) -> m Word32
 hListStoreInsertSortedBy ls value ordering = liftIO $ do
   wrapped <- goWrapHValue value
@@ -240,18 +238,18 @@ hListStoreInsertSortedBy ls value ordering = liftIO $ do
           GT -> return 1
 
 data HListStoreSortMethodInfo
-instance (signature ~ m (), MonadIO m, Typeable a, Ord a) => O.OverloadedMethod HListStoreSortMethodInfo (HListStore a) signature where
+instance (signature ~ m (), MonadIO m, Ord a) => O.OverloadedMethod HListStoreSortMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreSort
 
-hListStoreSort :: forall a m. (MonadIO m, Typeable a, Ord a) =>
+hListStoreSort :: forall a m. (MonadIO m, Ord a) =>
                   HListStore a -> m ()
 hListStoreSort ls = hListStoreSortBy ls compare
 
 data HListStoreSortByMethodInfo
-instance (signature ~ ((a -> a -> Ordering) -> m ()), MonadIO m, Typeable a) => O.OverloadedMethod HListStoreSortByMethodInfo (HListStore a) signature where
+instance (signature ~ ((a -> a -> Ordering) -> m ()), MonadIO m) => O.OverloadedMethod HListStoreSortByMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreSortBy
 
-hListStoreSortBy :: forall a m. (MonadIO m, Typeable a) =>
+hListStoreSortBy :: forall a m. MonadIO m =>
                   HListStore a -> (a -> a -> Ordering) -> m ()
 hListStoreSortBy ls ordering = liftIO $ do
   Gio.listStoreSort ls $ \xPtr yPtr ->
@@ -267,11 +265,11 @@ hListStoreSortBy ls ordering = liftIO $ do
           GT -> return 1
 
 data HListStoreFindMethodInfo
-instance (signature ~ (a -> m (Bool, Word32)), MonadIO m, Typeable a, Eq a) =>
+instance (signature ~ (a -> m (Bool, Word32)), MonadIO m, Eq a) =>
   O.OverloadedMethod HListStoreFindMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreFind
 
-hListStoreFind :: forall a m. (MonadIO m, Typeable a, Eq a) =>
+hListStoreFind :: forall a m. (MonadIO m, Eq a) =>
                   HListStore a -> a -> m (Bool, Word32)
 hListStoreFind ls x = liftIO $ do
   Gio.listStoreFindWithEqualFunc ls (Nothing @(GOWrapper a)) $ \yPtr _ ->
@@ -281,10 +279,10 @@ hListStoreFind ls x = liftIO $ do
       return $ x == y
 
 data HListStoreGetItemMethodInfo
-instance (signature ~ (Word32 -> m (Maybe a)), MonadIO m, Typeable a) => O.OverloadedMethod HListStoreGetItemMethodInfo (HListStore a) signature where
+instance (signature ~ (Word32 -> m (Maybe a)), MonadIO m) => O.OverloadedMethod HListStoreGetItemMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreGetItem
 
-hListStoreGetItem :: forall a m. (MonadIO m, Typeable a) =>
+hListStoreGetItem :: forall a m. MonadIO m =>
                      HListStore a -> Word32 -> m (Maybe a)
 hListStoreGetItem ls idx = liftIO $ do
   gobject <- Gio.listModelGetItem ls idx
@@ -293,10 +291,10 @@ hListStoreGetItem ls idx = liftIO $ do
     Just wrapped -> Just <$> goUnwrapHValue wrapped
 
 data HListStoreSpliceMethodInfo
-instance (signature ~ (Word32 -> Word32 -> [a] -> m ()), MonadIO m, Typeable a) => O.OverloadedMethod HListStoreSpliceMethodInfo (HListStore a) signature where
+instance (signature ~ (Word32 -> Word32 -> [a] -> m ()), MonadIO m) => O.OverloadedMethod HListStoreSpliceMethodInfo (HListStore a) signature where
     overloadedMethod = hListStoreSplice
 
-hListStoreSplice :: forall a m. (MonadIO m, Typeable a) =>
+hListStoreSplice :: forall a m. MonadIO m =>
                      HListStore a -> Word32 -> Word32 -> [a] -> m ()
 hListStoreSplice ls position nremovals additions = liftIO $ do
   gobjects <- mapM (goWrapHValue >=> GObject.toObject) additions

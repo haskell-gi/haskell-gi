@@ -5,16 +5,15 @@ import Data.GI.Base (new)
 import HListStore (HListStore(..))
 
 import Control.Monad ((>=>))
-import Data.Typeable (Typeable)
 
 -- | Return the values contained in the HListStore, in order.
-items :: Typeable a => HListStore a -> IO [a]
+items :: HListStore a -> IO [a]
 items l = collectItems 0 []
   where collectItems n acc = l.getItem n >>= \case
           Just item -> collectItems (n+1) (item : acc)
           Nothing -> return $ reverse acc
 
-printList :: (Show a, Typeable a) => HListStore a -> IO ()
+printList :: Show a => HListStore a -> IO ()
 printList = items >=> print
 
 main :: IO ()

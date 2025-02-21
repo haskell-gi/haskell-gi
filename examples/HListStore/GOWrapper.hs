@@ -32,8 +32,6 @@ import Data.GI.Base.GObject (DerivedGObject(..), registerGType,
                              gobjectModifyPrivateData, gobjectGetPrivateData )
 import qualified Data.GI.Base.Overloading as O
 
-import Data.Dynamic (Dynamic, toDyn, fromDynamic)
-import Data.Typeable (Typeable)
 import GHC.TypeLits (TypeError, ErrorMessage(Text))
 
 -- | The basic type, parameterised by the Haskell type being wrapped.
@@ -42,21 +40,20 @@ newtype GOWrapper a = GOWrapper (ManagedPtr (GOWrapper a))
 -- Declare that the new type is a GObject, with a type to be
 -- registered at runtime. The information on the type will be declared
 -- in the 'DerivedGObject' instance below.
-instance Typeable a => TypedObject (GOWrapper a) where
+instance TypedObject (GOWrapper a) where
   glibType = registerGType @(GOWrapper a) GOWrapper
 
-instance Typeable a => GObject (GOWrapper a)
+instance GObject (GOWrapper a)
 
 -- We keep the given Haskell value here
 data GOWrapperPrivate a =
-  GOWrapperPrivate { goPrivateHValue :: Dynamic
-                     -- ^ The value being wrapped. It is a dynamic
-                     -- value of type 'Maybe a'.
+  GOWrapperPrivate { goPrivateHValue :: Maybe a
+                     -- ^ The value being wrapped.
                    }
 
 -- Information for the type system. This will be picked up by
 -- 'registerGType' above.
-instance Typeable a => DerivedGObject (GOWrapper a) where
+instance DerivedGObject (GOWrapper a) where
   -- The parent type.
   type GObjectParentType (GOWrapper a) = GO.Object
 
@@ -81,7 +78,7 @@ instance Typeable a => DerivedGObject (GOWrapper a) where
   -- this type being created). The main goal of this function is to
   -- prepare the private data for each object.
   objectInstanceInit = \_ _ ->
-       return $ (GOWrapperPrivate {goPrivateHValue = toDyn (Nothing :: Maybe a)} :: GOWrapperPrivate a)
+       return $ (GOWrapperPrivate {goPrivateHValue = Nothing} :: GOWrapperPrivate a)
 
   -- List of interfaces we implement. There are tuples of the form
   -- (gtype, initilizer, maybeFinalizer). Both initializer and
@@ -103,22 +100,16 @@ instance O.HasParentTypes (GOWrapper a)
 type instance O.ParentTypes (GOWrapper a) = '[GO.Object]
 
 -- | Set the HValue.
-goSetHValue :: Typeable a => GOWrapper a -> Maybe a -> IO ()
-goSetHValue wrapper hvalue = do
-  gobjectModifyPrivateData wrapper
-    (\priv -> priv {goPrivateHValue = toDyn hvalue})
+goSetHValue :: GOWrapper a -> Maybe a -> IO ()
+goSetHValue wrapper hvalue = gobjectModifyPrivateData wrapper
+                             (\priv -> priv {goPrivateHValue = hvalue})
 
 -- | Get the HValue, if it has been set before.
-goGetHValue :: forall a. (HasCallStack, Typeable a) =>
-  GOWrapper a -> IO (Maybe a)
-goGetHValue wrapper = do
-  dyn <- goPrivateHValue <$> gobjectGetPrivateData wrapper
-  case fromDynamic dyn of
-    Just result -> return result
-    Nothing -> error $ "Wrong type for stored Haskell value: it is of type ‘" <> show dyn <> "’, but we expected ‘" <> show (toDyn (undefined :: Maybe a)) <> "’."
+goGetHValue :: GOWrapper a -> IO (Maybe a)
+goGetHValue wrapper = goPrivateHValue <$> gobjectGetPrivateData wrapper
 
 -- | Wrap the given HValue into a freshly built GObject wrapper.
-goWrapHValue :: Typeable a => a -> IO (GOWrapper a)
+goWrapHValue :: a -> IO (GOWrapper a)
 goWrapHValue hvalue = do
   wrapper <- constructGObject GOWrapper []
   goSetHValue wrapper (Just hvalue)
@@ -126,7 +117,7 @@ goWrapHValue hvalue = do
 
 -- | Unwrap the hvalue contained in the given GObject wrapper. It's
 -- safe to call this multiple times.
-goUnwrapHValue :: (HasCallStack, Typeable a) => GOWrapper a -> IO a
+goUnwrapHValue :: HasCallStack => GOWrapper a -> IO a
 goUnwrapHValue wrapper = do
   maybeHValue <- goGetHValue wrapper
   case maybeHValue of
