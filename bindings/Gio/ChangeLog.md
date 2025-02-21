@@ -1,3 +1,7 @@
+### 2.0.36
+
++ Refresh nullable overrides to those in version 2.82.2 of the library.
+
 ### 2.0.35
 
 + Make sure that the `data` argument of `AsyncReadyCallback` is marked
