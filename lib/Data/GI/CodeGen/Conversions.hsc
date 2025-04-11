@@ -219,11 +219,11 @@ hParamSpecToF transfer =
 hClosureToF :: Transfer -> Maybe Type -> CodeGen e Constructor
 -- Untyped closures
 hClosureToF transfer Nothing =
-  if transfer == TransferEverything
-  then return $ M "B.GClosure.disownGClosure"
-  -- We cast the point here because the foreign type for untyped
+  -- We cast the pointer here because the foreign type for untyped
   -- closures is always represented as Ptr (GClosure ()), while the
   -- corresponding Haskell type is the parametric "GClosure a".
+  if transfer == TransferEverything
+  then return $ M "FP.castPtr <$> B.GClosure.disownGClosure"
   else return $ M "unsafeManagedPtrCastPtr"
 -- Typed closures
 hClosureToF transfer (Just _) =
@@ -931,12 +931,14 @@ typeIsCallback _ = return False
 -- to the foreign type, but in some cases, such as callbacks with
 -- closure arguments, this does not hold, as we omit the closure
 -- arguments. This function returns a type which is actually
--- isomorphic. There is another case this function deals with: for
--- convenience untyped `TGClosure` types have a type variable on the
--- Haskell side when they are arguments to functions, but we do not
--- want this when they appear as arguments to callbacks/signals, or
--- return types of properties, as it would force the type synonym/type
--- family to depend on the type variable.
+-- isomorphic.
+--
+-- There is another case this function deals with: for convenience
+-- untyped `TGClosure` types have a type variable on the Haskell side
+-- when they are arguments to functions, but we do not want this when
+-- they appear as arguments to callbacks/signals, or return types of
+-- properties, as it would force the type synonym/type family to
+-- depend on the type variable.
 isoHaskellType :: Type -> CodeGen e TypeRep
 isoHaskellType (TGClosure Nothing) =
   return $ "GClosure" `con` [con0 "()"]
