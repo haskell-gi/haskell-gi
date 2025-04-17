@@ -114,7 +114,7 @@ if windows
    delete-node Gio/content_type_set_mime_dirs
 endif
 
-# Generated from gio 2.82.2 with xsltproc Nullable.xslt Gio-2.0.gir
+# Generated from gio 2.84.1 with xsltproc Nullable.xslt Gio-2.0.gir
 set-attr Gio/Action/parse_detailed_name/@parameters/target_value nullable 1
 set-attr Gio/Action/print_detailed_name/@parameters/target_value nullable 1
 set-attr Gio/Action/activate/@parameters/parameter nullable 1
@@ -350,10 +350,12 @@ set-attr Gio/DBusConnection/call_with_unix_fd_list/@parameters/fd_list nullable 
 set-attr Gio/DBusConnection/call_with_unix_fd_list/@parameters/cancellable nullable 1
 set-attr Gio/DBusConnection/call_with_unix_fd_list/@parameters/callback nullable 1
 set-attr Gio/DBusConnection/call_with_unix_fd_list/@parameters/user_data nullable 1
+set-attr Gio/DBusConnection/call_with_unix_fd_list_finish/@parameters/out_fd_list nullable 1
 set-attr Gio/DBusConnection/call_with_unix_fd_list_sync/@parameters/bus_name nullable 1
 set-attr Gio/DBusConnection/call_with_unix_fd_list_sync/@parameters/parameters nullable 1
 set-attr Gio/DBusConnection/call_with_unix_fd_list_sync/@parameters/reply_type nullable 1
 set-attr Gio/DBusConnection/call_with_unix_fd_list_sync/@parameters/fd_list nullable 1
+set-attr Gio/DBusConnection/call_with_unix_fd_list_sync/@parameters/out_fd_list nullable 1
 set-attr Gio/DBusConnection/call_with_unix_fd_list_sync/@parameters/cancellable nullable 1
 set-attr Gio/DBusConnection/close/@parameters/cancellable nullable 1
 set-attr Gio/DBusConnection/close/@parameters/callback nullable 1
@@ -372,6 +374,9 @@ set-attr Gio/DBusConnection/register_object/@parameters/user_data nullable 1
 set-attr Gio/DBusConnection/register_object_with_closures/@parameters/method_call_closure nullable 1
 set-attr Gio/DBusConnection/register_object_with_closures/@parameters/get_property_closure nullable 1
 set-attr Gio/DBusConnection/register_object_with_closures/@parameters/set_property_closure nullable 1
+set-attr Gio/DBusConnection/register_object_with_closures2/@parameters/method_call_closure nullable 1
+set-attr Gio/DBusConnection/register_object_with_closures2/@parameters/get_property_closure nullable 1
+set-attr Gio/DBusConnection/register_object_with_closures2/@parameters/set_property_closure nullable 1
 set-attr Gio/DBusConnection/register_subtree/@parameters/user_data nullable 1
 set-attr Gio/DBusConnection/send_message_with_reply/@parameters/cancellable nullable 1
 set-attr Gio/DBusConnection/send_message_with_reply/@parameters/callback nullable 1
@@ -394,6 +399,7 @@ set-attr Gio/DBusInterface/set_object/@parameters/object nullable 1
 set-attr Gio/DBusInterface/dup_object/@return-value nullable 1
 set-attr Gio/DBusInterface/get_object/@return-value nullable 1
 set-attr Gio/DBusInterface/set_object/@parameters/object nullable 1
+set-attr Gio/DBusInterfaceGetPropertyFunc/@parameters/sender nullable 1
 set-attr Gio/DBusInterfaceGetPropertyFunc/@parameters/user_data nullable 1
 set-attr Gio/DBusInterfaceIface/get_object/get_object/@return-value nullable 1
 set-attr Gio/DBusInterfaceIface/set_object/set_object/@parameters/object nullable 1
@@ -401,7 +407,10 @@ set-attr Gio/DBusInterfaceIface/dup_object/dup_object/@return-value nullable 1
 set-attr Gio/DBusInterfaceInfo/lookup_method/@return-value nullable 1
 set-attr Gio/DBusInterfaceInfo/lookup_property/@return-value nullable 1
 set-attr Gio/DBusInterfaceInfo/lookup_signal/@return-value nullable 1
+set-attr Gio/DBusInterfaceMethodCallFunc/@parameters/sender nullable 1
+set-attr Gio/DBusInterfaceMethodCallFunc/@parameters/interface_name nullable 1
 set-attr Gio/DBusInterfaceMethodCallFunc/@parameters/user_data nullable 1
+set-attr Gio/DBusInterfaceSetPropertyFunc/@parameters/sender nullable 1
 set-attr Gio/DBusInterfaceSetPropertyFunc/@parameters/user_data nullable 1
 set-attr Gio/DBusInterfaceSkeleton/get_connection/@return-value nullable 1
 set-attr Gio/DBusInterfaceSkeleton/get_object_path/@return-value nullable 1
@@ -430,8 +439,10 @@ set-attr Gio/DBusMessage/set_signature/@parameters/value nullable 1
 set-attr Gio/DBusMessage/set_unix_fd_list/@parameters/fd_list nullable 1
 set-attr Gio/DBusMessageFilterFunction/@return-value nullable 1
 set-attr Gio/DBusMessageFilterFunction/@parameters/user_data nullable 1
+set-attr Gio/DBusMethodInvocation/get_interface_name/@return-value nullable 1
 set-attr Gio/DBusMethodInvocation/get_method_info/@return-value nullable 1
 set-attr Gio/DBusMethodInvocation/get_property_info/@return-value nullable 1
+set-attr Gio/DBusMethodInvocation/get_sender/@return-value nullable 1
 set-attr Gio/DBusMethodInvocation/get_user_data/@return-value nullable 1
 set-attr Gio/DBusMethodInvocation/return_value/@parameters/parameters nullable 1
 set-attr Gio/DBusMethodInvocation/return_value_with_unix_fd_list/@parameters/parameters nullable 1
@@ -495,8 +506,10 @@ set-attr Gio/DBusProxy/call_with_unix_fd_list/@parameters/fd_list nullable 1
 set-attr Gio/DBusProxy/call_with_unix_fd_list/@parameters/cancellable nullable 1
 set-attr Gio/DBusProxy/call_with_unix_fd_list/@parameters/callback nullable 1
 set-attr Gio/DBusProxy/call_with_unix_fd_list/@parameters/user_data nullable 1
+set-attr Gio/DBusProxy/call_with_unix_fd_list_finish/@parameters/out_fd_list nullable 1
 set-attr Gio/DBusProxy/call_with_unix_fd_list_sync/@parameters/parameters nullable 1
 set-attr Gio/DBusProxy/call_with_unix_fd_list_sync/@parameters/fd_list nullable 1
+set-attr Gio/DBusProxy/call_with_unix_fd_list_sync/@parameters/out_fd_list nullable 1
 set-attr Gio/DBusProxy/call_with_unix_fd_list_sync/@parameters/cancellable nullable 1
 set-attr Gio/DBusProxy/get_cached_property/@return-value nullable 1
 set-attr Gio/DBusProxy/get_cached_property_names/@return-value nullable 1
@@ -787,6 +800,7 @@ set-attr Gio/File/open_readwrite_async/@parameters/user_data nullable 1
 set-attr Gio/File/poll_mountable/@parameters/cancellable nullable 1
 set-attr Gio/File/poll_mountable/@parameters/callback nullable 1
 set-attr Gio/File/poll_mountable/@parameters/user_data nullable 1
+set-attr Gio/File/query_exists/@parameters/cancellable nullable 1
 set-attr Gio/File/query_filesystem_info/@parameters/cancellable nullable 1
 set-attr Gio/File/query_filesystem_info_async/@parameters/cancellable nullable 1
 set-attr Gio/File/query_filesystem_info_async/@parameters/callback nullable 1
@@ -1224,6 +1238,7 @@ set-attr Gio/FileIface/measure_disk_usage_async/measure_disk_usage_async/@parame
 set-attr Gio/FileIface/measure_disk_usage_async/measure_disk_usage_async/@parameters/progress_data nullable 1
 set-attr Gio/FileIface/measure_disk_usage_async/measure_disk_usage_async/@parameters/callback nullable 1
 set-attr Gio/FileIface/measure_disk_usage_async/measure_disk_usage_async/@parameters/user_data nullable 1
+set-attr Gio/FileIface/query_exists/query_exists/@parameters/cancellable nullable 1
 set-attr Gio/FileInfo/get_access_date_time/@return-value nullable 1
 set-attr Gio/FileInfo/get_attribute_as_string/@return-value nullable 1
 set-attr Gio/FileInfo/get_attribute_byte_string/@return-value nullable 1
@@ -1757,6 +1772,8 @@ set-attr Gio/SeekableIface/seek/seek/@parameters/cancellable nullable 1
 set-attr Gio/SeekableIface/truncate_fn/truncate_fn/@parameters/cancellable nullable 1
 set-attr Gio/Settings/new_full/@parameters/backend nullable 1
 set-attr Gio/Settings/new_full/@parameters/path nullable 1
+set-attr Gio/Settings/bind_with_mapping/@parameters/get_mapping nullable 1
+set-attr Gio/Settings/bind_with_mapping/@parameters/set_mapping nullable 1
 set-attr Gio/Settings/bind_with_mapping/@parameters/user_data nullable 1
 set-attr Gio/Settings/bind_with_mapping_closures/@parameters/get_mapping nullable 1
 set-attr Gio/Settings/bind_with_mapping_closures/@parameters/set_mapping nullable 1
@@ -1777,7 +1794,9 @@ set-attr Gio/SettingsBackendClass/write/write/@parameters/origin_tag nullable 1
 set-attr Gio/SettingsBackendClass/write_tree/write_tree/@parameters/origin_tag nullable 1
 set-attr Gio/SettingsBackendClass/reset/reset/@parameters/origin_tag nullable 1
 set-attr Gio/SettingsBindGetMapping/@parameters/user_data nullable 1
+set-attr Gio/SettingsBindSetMapping/@return-value nullable 1
 set-attr Gio/SettingsBindSetMapping/@parameters/user_data nullable 1
+set-attr Gio/SettingsGetMapping/@parameters/value nullable 1
 set-attr Gio/SettingsGetMapping/@parameters/result nullable 1
 set-attr Gio/SettingsGetMapping/@parameters/user_data nullable 1
 set-attr Gio/SettingsSchema/get_path/@return-value nullable 1
@@ -2144,6 +2163,10 @@ set-attr Gio/UnixConnection/send_credentials_async/@parameters/cancellable nulla
 set-attr Gio/UnixConnection/send_credentials_async/@parameters/callback nullable 1
 set-attr Gio/UnixConnection/send_credentials_async/@parameters/user_data nullable 1
 set-attr Gio/UnixConnection/send_fd/@parameters/cancellable nullable 1
+set-attr Gio/UnixMountEntry/get_options/@return-value nullable 1
+set-attr Gio/UnixMountEntry/get_root_path/@return-value nullable 1
+set-attr Gio/UnixMountEntry/at/@return-value nullable 1
+set-attr Gio/UnixMountEntry/for/@return-value nullable 1
 set-attr Gio/UnixMountPoint/get_options/@return-value nullable 1
 set-attr Gio/UnixMountPoint/at/@return-value nullable 1
 set-attr Gio/Vfs/local_file_add_info/@parameters/cancellable nullable 1
@@ -2158,6 +2181,7 @@ set-attr Gio/Vfs/register_uri_scheme/@parameters/parse_name_destroy nullable 1
 set-attr Gio/VfsClass/local_file_add_info/local_file_add_info/@parameters/cancellable nullable 1
 set-attr Gio/VfsClass/local_file_add_info/local_file_add_info/@parameters/extra_data nullable 1
 set-attr Gio/VfsClass/local_file_set_attributes/local_file_set_attributes/@parameters/cancellable nullable 1
+set-attr Gio/VfsFileLookupFunc/@return-value nullable 1
 set-attr Gio/VfsFileLookupFunc/@parameters/user_data nullable 1
 set-attr Gio/Volume/eject/@parameters/cancellable nullable 1
 set-attr Gio/Volume/eject/@parameters/callback nullable 1
@@ -2321,6 +2345,9 @@ set-attr Gio/simple_async_report_take_gerror_in_idle/@parameters/user_data nulla
 set-attr Gio/tls_client_connection_new/@parameters/server_identity nullable 1
 set-attr Gio/tls_server_connection_new/@parameters/certificate nullable 1
 set-attr Gio/unix_mount_at/@return-value nullable 1
+set-attr Gio/unix_mount_entries_get_from_file/@return-value nullable 1
+set-attr Gio/unix_mount_entry_at/@return-value nullable 1
+set-attr Gio/unix_mount_entry_for/@return-value nullable 1
 set-attr Gio/unix_mount_for/@return-value nullable 1
 set-attr Gio/unix_mount_get_options/@return-value nullable 1
 set-attr Gio/unix_mount_get_root_path/@return-value nullable 1
