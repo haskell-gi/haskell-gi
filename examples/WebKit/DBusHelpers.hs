@@ -53,7 +53,7 @@ data DBusServerInfo = DBusServerInfo {
 -- | Invoke the `ServerMethodCall` callback with the given parameters.
 dispatchMethod :: ServerMethodCall
                -> Gio.DBusConnection
-               -> Text -> Text -> Text -> Text
+               -> Maybe Text -> Text -> Maybe Text -> Text
                -> GVariant -> Gio.DBusMethodInvocation -> IO ()
 dispatchMethod methodCall _connection _sender _objectPath _interfaceName
                methodName parameters invocation = do

@@ -22,7 +22,7 @@ factor n = case factors of
     where factors = take 1 $ filter (\x -> (n `mod` x) == 0) [2 .. n-1]
 
 
-methodCall :: Gio.DBusConnection -> Text -> Text -> Text -> Text ->
+methodCall :: Gio.DBusConnection -> Maybe Text -> Text -> Maybe Text -> Text ->
               GVariant -> Gio.DBusMethodInvocation -> IO ()
 methodCall _connection _sender _objectPath _interfaceName methodName parameters invocation = do
   case methodName of
