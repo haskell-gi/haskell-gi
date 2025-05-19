@@ -68,7 +68,7 @@ activate app = do
   window <- new Gtk.ApplicationWindow [#application := app,
                                        #title := "Hi there",
                                        #child := button]
-  window.show
+  window.show  -- or window.showAll if using gi-gtk3 instead of gi-gtk4
 
 main :: IO ()
 main = do
