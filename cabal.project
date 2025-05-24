@@ -86,3 +86,4 @@ packages: base/haskell-gi-base.cabal
           bindings/GtkSource-3.0/compat/gi-gtksource.cabal
           examples/Gtk4/gtk4-example.cabal
           examples/WebKit/webkit-example.cabal
+          bindings/Gtk4LayerShell/gi-gtk4-layer-shell.cabal
