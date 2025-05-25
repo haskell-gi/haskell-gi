@@ -12,7 +12,8 @@
         "fedora": [],
         "ubuntu": [
             "gir1.2-javascriptcoregtk-4.0"
-        ]
+        ],
+        "ubuntu-ci": ["skip"]
     },
     "giDepends": [
         "gi-gobject == 2.0.*",

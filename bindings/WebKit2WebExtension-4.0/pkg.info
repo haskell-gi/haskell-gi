@@ -12,7 +12,8 @@
         "fedora": [],
         "ubuntu": [
             "libwebkit2gtk-4.0-dev"
-        ]
+        ],
+        "ubuntu-ci": ["skip"]
     },
     "giDepends": [
         "gi-soup2",

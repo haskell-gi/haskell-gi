@@ -12,7 +12,8 @@
         "fedora": [],
         "ubuntu": [
             "gir1.2-webkit2-4.0"
-        ]
+        ],
+        "ubuntu-ci": ["skip"]
     },
     "giDepends": [
         "gi-cairo == 1.0.*",
