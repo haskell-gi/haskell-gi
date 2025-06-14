@@ -1,3 +1,7 @@
+### 2.0.38
+
++ Mark the `source_object` argument of `TaskThreadFunc` as nullable. See [issue 471](https://github.com/haskell-gi/haskell-gi/issues/471).
+
 ### 2.0.37
 
 + Refresh nullable overrides to those in version 2.84.1 of the library.
