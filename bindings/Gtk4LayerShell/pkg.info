@@ -12,7 +12,8 @@
         "fedora": [ "gtk4-layer-shell-devel" ],
         "ubuntu": [
             "libgtk4-layer-shell-dev"
-        ]
+        ],
+        "ubuntu-ci": ["skip"]
     },
     "giDepends": [
         "gi-gtk4 == 4.0.*",
