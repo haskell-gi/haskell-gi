@@ -1,0 +1,10 @@
+# The ret parameter is a GValue marked inout, but it should be "in"
+# (the contents of the GValue are modified, but the pointer to the GValue
+# is not).
+#
+# See https://github.com/haskell-gi/haskell-gi/issues/468
+set-attr Wp/Iterator/fold/@parameters/ret direction in
+
+# This annotation seems wrong, in that ownership of the closure is not
+# transferred.
+set-attr Wp/Object/activate_closure/@parameters/closure transfer-ownership none
