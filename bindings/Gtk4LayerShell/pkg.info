@@ -15,8 +15,8 @@
         ]
     },
     "giDepends": [
-        "gi-gtk == 4.0.*",
-        "gi-gdk == 4.0.*"
+        "gi-gtk4 == 4.0.*",
+        "gi-gdk4 == 4.0.*"
     ],
     "pkgconfigDepends": "gtk4-layer-shell-0"
 }
