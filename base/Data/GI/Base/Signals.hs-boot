@@ -6,10 +6,11 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on, after) where
+module Data.GI.Base.Signals (SignalInfo(..), SignalProxy, on, after,
+       connectGObjectNotify, SignalConnectMode(..)) where
 
 import Data.GI.Base.Overloading (ResolvedSymbolInfo)
-import Data.GI.Base.BasicTypes (GObject)
+import Data.GI.Base.BasicTypes (GObject, GParamSpec)
 import Control.Monad.IO.Class (MonadIO)
 import Foreign.C (CULong)
 import Data.Text (Text)
@@ -42,3 +43,11 @@ after :: forall object info m.
       (GObject object, MonadIO m, SignalInfo info) =>
        object -> SignalProxy object info
              -> ((?self :: object) => HaskellCallbackType info) -> m SignalHandlerId
+
+type GObjectNotifyCallback = GParamSpec -> IO ()
+
+connectGObjectNotify :: GObject o =>
+                        o -> (o -> GObjectNotifyCallback) ->
+                        SignalConnectMode ->
+                        Maybe Text ->
+                        IO SignalHandlerId

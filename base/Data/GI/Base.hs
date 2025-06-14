@@ -29,5 +29,6 @@ import Data.GI.Base.GHashTable
 import Data.GI.Base.GValue (GValue(..), fromGValue, toGValue, IsGValue(..))
 import Data.GI.Base.GVariant
 import Data.GI.Base.ManagedPtr
-import Data.GI.Base.Signals (on, after, SignalProxy(PropertyNotify, (:::)))
+import Data.GI.Base.Signals (on, after,
+                             SignalProxy(PropertyNotify, PropertySet, (:::)))
 import Data.GI.Base.Overloading (asA)

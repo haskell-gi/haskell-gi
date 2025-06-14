@@ -448,6 +448,8 @@ genOneProperty owner prop = do
     transferType <- if writable || constructOnly
                     then propTransferType (propType prop)
                     else return "()"
+    let puttable = readable && writable && inConstraint == ("(~) " <> outType)
+
     let allowedOps = (if writable
                       then ["'AttrSet", "'AttrConstruct"]
                       else [])
@@ -459,6 +461,9 @@ genOneProperty owner prop = do
                          else [])
                      <> (if isNullable && propWriteNullable prop /= Just False
                          then ["'AttrClear"]
+                         else [])
+                     <> (if puttable
+                         then ["'AttrPut"]
                          else [])
     it <- infoType owner prop
     export docSection it
@@ -483,6 +488,9 @@ genOneProperty owner prop = do
             line $ "type AttrOrigin " <> it <> " = " <> name
             line $ "attrGet = " <> getter
             line $ "attrSet = " <> setter
+            if puttable
+              then line $ "attrPut = " <> setter
+              else line $ "attrPut = undefined"
             if writable || constructOnly
               then do line $ "attrTransfer _ v = do"
                       indent $ genPropTransfer "v" (propType prop)

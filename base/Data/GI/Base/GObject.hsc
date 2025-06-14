@@ -1,11 +1,13 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | This module constains helpers for dealing with `GObject`-derived
 -- types.
@@ -39,7 +41,7 @@ module Data.GI.Base.GObject
     ) where
 
 import Data.Maybe (catMaybes)
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.Proxy (Proxy(..))
@@ -58,9 +60,11 @@ import Data.Monoid ((<>))
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import qualified Optics.Core as O
+
 import Data.GI.Base.Attributes (AttrOp(..), AttrOpTag(..), AttrLabelProxy,
                                 attrConstruct, attrTransfer,
-                                AttrInfo(..))
+                                AttrInfo(..), EqMaybe(..), bindPropToField)
 import Data.GI.Base.BasicTypes (CGType, GType(..), GObject, GSList,
                                 GDestroyNotify, ManagedPtr(..), GParamSpec(..),
                                 TypedObject(glibType),
@@ -68,6 +72,8 @@ import Data.GI.Base.BasicTypes (CGType, GType(..), GObject, GSList,
 import Data.GI.Base.BasicConversions (withTextCString, cstringToText,
                                       packGSList, mapGSList)
 import Data.GI.Base.CallStack (HasCallStack, prettyCallStack)
+import Data.GI.Base.DynVal (modelProxyCurrentValue, modelProxyRegisterHandler,
+                            dvKeys, dvRead)
 import Data.GI.Base.GParamSpec (PropertyInfo(..),
                                 gParamSpecValue,
                                 CIntPropertyInfo(..), CStringPropertyInfo(..),
@@ -82,6 +88,7 @@ import Data.GI.Base.ManagedPtr (withManagedPtr, touchManagedPtr, wrapObject,
 import Data.GI.Base.Overloading (ResolveAttribute)
 import Data.GI.Base.Signals (on, after)
 import Data.GI.Base.Utils (dbgLog, callocBytes, freeMem)
+import Data.GI.Base.Internal.PathFieldAccess (Components, PathFieldAccess(..))
 
 #include <glib-object.h>
 
@@ -99,6 +106,7 @@ constructGObject constructor attrs = liftIO $ do
   props <- catMaybes <$> mapM construct attrs
   obj <- doConstructGObject constructor props
   mapM_ (setSignal obj) attrs
+  mapM_ (registerHandlers obj) attrs
   return obj
   where
     construct :: AttrOp o 'AttrConstruct ->
@@ -113,6 +121,30 @@ constructGObject constructor attrs = liftIO $ do
       (attrTransfer @(ResolveAttribute label o) (Proxy @o) x >>=
        attrConstruct @(ResolveAttribute label o))
 
+    construct ((_attr :: AttrLabelProxy label) :!<~ dv) = do
+      model <- modelProxyCurrentValue ?_haskell_gi_modelProxy
+      Just <$> attrConstruct @(ResolveAttribute label o) (dvRead dv model)
+
+    construct (Bind (_pattr :: AttrLabelProxy prop)
+                    (_fattr :: AttrLabelProxy field)) = do
+      model <- modelProxyCurrentValue ?_haskell_gi_modelProxy
+      let lens = getLens (Proxy @field) model
+          value = O.view lens model
+      Just <$> attrConstruct @(ResolveAttribute prop o) value
+        where getLens :: forall path components model value.
+                         (components ~ Components path,
+                          PathFieldAccess components model value) =>
+                         Proxy path -> model -> O.Lens' model value
+              getLens _ _ = let
+                (lens, _) = pathFieldAccess (Proxy @components) (Proxy @model)
+                in lens
+
+    -- Since we are constructing the object there's nothing to compare
+    -- to, so we just set the value.
+    construct ((_attr :: AttrLabelProxy label) :<~ dv) = do
+      model <- modelProxyCurrentValue ?_haskell_gi_modelProxy
+      Just <$> attrConstruct @(ResolveAttribute label o) (dvRead dv model)
+
     construct (On _ _) = return Nothing
     construct (After _ _) = return Nothing
 
@@ -120,6 +152,23 @@ constructGObject constructor attrs = liftIO $ do
     setSignal obj (On signal callback) = void $ on obj signal callback
     setSignal obj (After signal callback) = void $ after obj signal callback
     setSignal _ _ = return ()
+
+    registerHandlers :: GObject o => o -> AttrOp o 'AttrConstruct -> IO ()
+    registerHandlers obj ((_attr :: AttrLabelProxy label) :!<~ dv) =
+      modelProxyRegisterHandler ?_haskell_gi_modelProxy (dvKeys dv) $ \modifiedModel ->
+        attrSet @(ResolveAttribute label o) obj (dvRead dv modifiedModel)
+
+    registerHandlers obj ((_attr :: AttrLabelProxy label) :<~ dv) =
+      modelProxyRegisterHandler ?_haskell_gi_modelProxy (dvKeys dv) $ \modifiedModel -> do
+      current <- attrGet @(ResolveAttribute label o) obj
+      let modifiedValue = dvRead dv modifiedModel
+      when (not $ eqMaybe modifiedValue current) $
+         attrSet @(ResolveAttribute label o) obj modifiedValue
+
+    registerHandlers obj (Bind pattr fattr) =
+      bindPropToField (Proxy @'AttrConstruct) obj pattr fattr
+
+    registerHandlers _ _ = pure ()
 
 -- | Construct the given `GObject`, given a set of actions
 -- constructing desired `GValue`s to set at construction time.

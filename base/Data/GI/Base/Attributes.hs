@@ -1,8 +1,19 @@
-{-# LANGUAGE GADTs, ScopedTypeVariables, DataKinds, KindSignatures,
-  TypeFamilies, TypeOperators, MultiParamTypeClasses, ConstraintKinds,
-  UndecidableInstances, FlexibleInstances, TypeApplications,
-  DefaultSignatures, PolyKinds, AllowAmbiguousTypes,
-  ImplicitParams, RankNTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 --
@@ -146,29 +157,41 @@ module Data.GI.Base.Attributes (
 
   AttrLabelProxy(..),
 
-  resolveAttr
+  resolveAttr,
+  bindPropToField,
+
+  EqMaybe(..)
   ) where
 
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.GI.Base.BasicTypes (GObject)
+import Data.GI.Base.DynVal (DynVal(..), ModelProxy, DVKey(..),
+                            modelProxyCurrentValue, modelProxyRegisterHandler,
+                            modelProxyUpdate, dvKeys, dvRead)
 import Data.GI.Base.GValue (GValueConstruct)
 import Data.GI.Base.Overloading (HasAttributeList, ResolveAttribute,
                                  ResolvedSymbolInfo)
+import Data.GI.Base.Internal.PathFieldAccess (PathFieldAccess(..), Components)
 
-import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..), SignalProxy,
-                                            on, after)
+import {-# SOURCE #-} Data.GI.Base.Signals (SignalInfo(..),
+                                            SignalProxy,
+                                            on, after, connectGObjectNotify,
+                                            SignalConnectMode(..))
 
-import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
+import Data.Proxy (Proxy(..))
+import qualified Data.Text as T
 
-import GHC.TypeLits
+import GHC.TypeLits (Symbol, KnownSymbol, ErrorMessage(..), TypeError,
+                     symbolVal)
 import GHC.Exts (Constraint)
 
 import GHC.OverloadedLabels (IsLabel(..))
+import qualified Optics.Core as O
 
-infixr 0 :=,:~,:=>,:~>
+infixr 0 :=,:~,:=>,:~>,:<~,:!<~
 
 -- | A proxy for attribute labels.
 data AttrLabelProxy (a :: Symbol) = AttrLabelProxy
@@ -274,6 +297,20 @@ class AttrInfo (info :: Type) where
                             Proxy o -> b -> IO (AttrTransferType info)
     attrTransfer _ = return
 
+    -- | Like `attrSet`, but it uses the same type as the getter. This
+    -- is useful for some nullable types, for which the getter returns
+    -- @Maybe a@, while the setter takes an @a@. `attrPut` will
+    -- instead accept an @Maybe a@.
+    attrPut :: AttrBaseTypeConstraint info o =>
+               o -> AttrGetType info -> IO ()
+    default attrPut :: -- Make sure that a non-default method
+                       -- implementation is provided if AttrSet
+                       -- is set.
+                        CheckNotElem 'AttrPut (AttrAllowedOps info)
+                         (PutNotProvidedError info) =>
+                       o -> AttrGetType info -> IO ()
+    attrPut = undefined
+
     -- | Return some information about the overloaded attribute,
     -- useful for debugging. See `resolveAttr` for how to access this
     -- conveniently.
@@ -341,6 +378,11 @@ type family GetNotProvidedError (info :: o) :: ErrorMessage where
 type family SetNotProvidedError (info :: o) :: ErrorMessage where
   SetNotProvidedError info = OpNotProvidedError info 'AttrSet "attrSet"
 
+-- | Error to be raised when AttrSet is allowed, but an `attrPut`
+-- implementation has not been provided.
+type family PutNotProvidedError (info :: o) :: ErrorMessage where
+  PutNotProvidedError info = OpNotProvidedError info 'AttrSet "attrPut"
+
 -- | Error to be raised when AttrConstruct is allowed, but an
 -- implementation has not been provided.
 type family ConstructNotProvidedError (info :: o) :: ErrorMessage where
@@ -366,6 +408,9 @@ data AttrOpTag = AttrGet
                | AttrClear
                -- ^ It is possible to clear the value of the
                -- (nullable) attribute with `clear`.
+               | AttrPut
+               -- ^ It is possible to set a value of the same type as
+               -- the one returned by `get`.
   deriving (Eq, Ord, Enum, Bounded, Show)
 
 -- | A user friendly description of the `AttrOpTag`, useful when
@@ -375,6 +420,7 @@ type family AttrOpText (tag :: AttrOpTag) :: Symbol where
     AttrOpText 'AttrSet = "settable"
     AttrOpText 'AttrConstruct = "constructible"
     AttrOpText 'AttrClear = "nullable"
+    AttrOpText 'AttrPut = "puttable"
 
 -- | Constraint on a @obj@\/@attr@ pair so that `set` works on values
 -- of type @value@.
@@ -450,6 +496,61 @@ data AttrOp obj (tag :: AttrOpTag) where
               (AttrTransferTypeConstraint info) b,
               AttrSetTypeConstraint info (AttrTransferType info)) =>
              AttrLabelProxy (attr :: Symbol) -> b -> AttrOp obj tag
+    -- | Bind a property to the given `DynVal`, so that the property
+    -- is changed whenever the `DynVal` is. This requires the implicit
+    -- param @?_haskell_gi_modelProxy@, of type @`ModelProxy` model@ to be set.
+    (:!<~) :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
+              AttrInfo info,
+              AttrBaseTypeConstraint info obj,
+              AttrOpAllowed tag info obj,
+              (AttrSetTypeConstraint info) b,
+              ?_haskell_gi_modelProxy :: ModelProxy model
+             ) =>
+             AttrLabelProxy (attr :: Symbol) -> DynVal model b -> AttrOp obj ta
+    -- | Bind a property to the given `DynVal`, so that the property
+    -- is changed whenever the `DynVal` is. This requires the implicit
+    -- param @?_haskell_gi_modelProxy@, of type @`ModelProxy` model@
+    -- to be set. This will only actually set the property whenever
+    -- the `DynVal` changes if the new value of the `DynVal` is
+    -- different from the actual value of the property. If you want to
+    -- set the property without checking equality you can use `:!<~`
+    -- instead.
+    (:<~) :: (HasAttributeList obj,
+              info ~ ResolveAttribute attr obj,
+              AttrInfo info,
+              AttrBaseTypeConstraint info obj,
+              AttrOpAllowed tag info obj,
+              (AttrSetTypeConstraint info) b,
+              AttrOpAllowed 'AttrGet info obj,
+              EqMaybe b (AttrGetType info),
+              ?_haskell_gi_modelProxy :: ModelProxy model
+             ) =>
+             AttrLabelProxy (attr :: Symbol) -> DynVal model b -> AttrOp obj tag
+    -- | Given an AttrLabelProxy, bind the given attribute to the
+    -- corresponding field in the model proxy (if there's one), so
+    -- that changes in the attribute are reflected back into changes
+    -- of the model.
+    Bind :: (HasAttributeList obj,
+             GObject obj,
+             info ~ ResolveAttribute propName obj,
+             AttrInfo info,
+             KnownSymbol (AttrLabel info),
+             AttrBaseTypeConstraint info obj,
+             AttrOpAllowed tag info obj,
+             AttrOpAllowed 'AttrPut info obj,
+             ?_haskell_gi_modelProxy :: ModelProxy model,
+             outType ~ AttrGetType info,
+             (AttrSetTypeConstraint info) outType,
+             components ~ Components fieldName,
+             PathFieldAccess components model outType,
+             KnownSymbol fieldName,
+             Eq outType
+            ) =>
+            AttrLabelProxy (propName :: Symbol) ->
+            AttrLabelProxy (fieldName :: Symbol) ->
+            AttrOp obj tag
+
     -- | Connect the given signal to a signal handler.
     On    :: (GObject obj, SignalInfo info) =>
              SignalProxy obj info
@@ -460,6 +561,16 @@ data AttrOp obj (tag :: AttrOpTag) where
              SignalProxy obj info
           -> ((?self :: obj) => HaskellCallbackType info)
           -> AttrOp obj tag
+
+class EqMaybe a b where
+  eqMaybe :: a -> b -> Bool
+
+instance Eq a => EqMaybe a a where
+  eqMaybe x y = x == y
+
+instance Eq a => EqMaybe a (Maybe a) where
+  eqMaybe _ Nothing = False
+  eqMaybe x (Just y) = x == y
 
 -- | Set a number of properties for some object.
 set :: forall o m. MonadIO m => o -> [AttrOp o 'AttrSet] -> m ()
@@ -483,6 +594,26 @@ set obj = liftIO . mapM_ app
    app ((_attr :: AttrLabelProxy label) :&= x) =
      attrTransfer @(ResolveAttribute label o) (Proxy @o) x >>=
      attrSet @(ResolveAttribute label o) obj
+
+   app ((_attr :: AttrLabelProxy label) :!<~ dv) = do
+     model <- modelProxyCurrentValue ?_haskell_gi_modelProxy
+     attrSet @(ResolveAttribute label o) obj (dvRead dv model)
+     modelProxyRegisterHandler ?_haskell_gi_modelProxy (dvKeys dv) $ \modifiedModel ->
+       attrSet @(ResolveAttribute label o) obj (dvRead dv modifiedModel)
+
+   app ((_attr :: AttrLabelProxy label) :<~ dv) = do
+     model <- modelProxyCurrentValue ?_haskell_gi_modelProxy
+     currentValue <- attrGet @(ResolveAttribute label o) obj
+     let newValue = dvRead dv model
+     when (not $ newValue `eqMaybe` currentValue) $ do
+       attrSet @(ResolveAttribute label o) obj newValue
+     modelProxyRegisterHandler ?_haskell_gi_modelProxy (dvKeys dv) $ \modifiedModel -> do
+       current <- attrGet @(ResolveAttribute label o) obj
+       let modifiedValue = dvRead dv modifiedModel
+       when (not $ modifiedValue `eqMaybe` current) $
+         attrSet @(ResolveAttribute label o) obj modifiedValue
+
+   app (Bind pattr fattr) = bindPropToField (Proxy @'AttrSet) obj pattr fattr
 
    app (On signal callback) = void $ on obj signal callback
    app (After signal callback) = void $ after obj signal callback
@@ -524,3 +655,57 @@ resolveAttr :: forall info attr obj.
                  AttrInfo info) =>
                obj -> AttrLabelProxy (attr :: Symbol) -> Maybe ResolvedSymbolInfo
 resolveAttr _o _p = dbgAttrInfo @info
+
+-- | Create a binding between the given property of an object and a
+-- field in the model.
+bindPropToField :: forall o info prop field model outType tag components.
+                   (HasAttributeList o,
+                    GObject o,
+                    info ~ ResolveAttribute prop o,
+                    AttrInfo info,
+                    KnownSymbol (AttrLabel info),
+                    AttrBaseTypeConstraint info o,
+                    AttrOpAllowed tag info o,
+                    AttrOpAllowed 'AttrPut info o,
+                    ?_haskell_gi_modelProxy :: ModelProxy model,
+                    outType ~ AttrGetType info,
+                    (AttrSetTypeConstraint info) outType,
+                    components ~ Components field,
+                    PathFieldAccess components model outType,
+                    KnownSymbol field,
+                    Eq outType
+                   ) =>
+                   Proxy tag -> o -> AttrLabelProxy (prop :: Symbol) ->
+                   AttrLabelProxy (field :: Symbol) -> IO ()
+bindPropToField _ obj _ _ = do
+  model <- modelProxyCurrentValue ?_haskell_gi_modelProxy
+
+  -- Set the property to the current value in the model.
+  currentPropValue <- attrGet @(ResolveAttribute prop o) obj
+  let (lens, components) = pathFieldAccess (Proxy @components)
+                                           (Proxy @model)
+      key = DVKeyDirect components
+      currentModelValue = O.view lens model
+  when (currentModelValue /= currentPropValue) $
+    attrPut @(ResolveAttribute prop o) obj currentModelValue
+
+  -- Set the property whenever the model changes.
+  modelProxyRegisterHandler ?_haskell_gi_modelProxy key $ \modifiedModel -> do
+    let newVal = O.view lens modifiedModel
+    oldVal <- attrGet @(ResolveAttribute prop o) obj
+    when (newVal /= oldVal) $
+      attrPut @(ResolveAttribute prop o) obj newVal
+
+  -- Change the model whenever the property changes.
+  let handler = \_parent _psec -> do
+        newVal <- attrGet @(ResolveAttribute prop o) obj
+        let doUpdate curModel =
+              let oldVal = O.view lens curModel
+              in if newVal == oldVal
+                then Nothing
+                else Just $ O.set lens newVal curModel
+        modelProxyUpdate ?_haskell_gi_modelProxy components doUpdate
+      propName = T.pack $ symbolVal (Proxy @(AttrLabel (ResolveAttribute prop o)))
+
+  void $ connectGObjectNotify obj handler SignalConnectBefore (Just propName)
+

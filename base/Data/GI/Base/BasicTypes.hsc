@@ -1,5 +1,5 @@
 {-# LANGUAGE ConstraintKinds, FlexibleContexts, FlexibleInstances,
-  DeriveDataTypeable, TypeFamilies, ScopedTypeVariables,
+  TypeFamilies, ScopedTypeVariables,
   MultiParamTypeClasses, DataKinds, TypeOperators, UndecidableInstances,
   AllowAmbiguousTypes #-}
 
@@ -49,7 +49,6 @@ import Control.Exception (Exception)
 import Data.Coerce (coerce, Coercible)
 import Data.IORef (IORef)
 import qualified Data.Text as T
-import Data.Typeable (Typeable)
 import Data.Int
 import Data.Word
 
@@ -163,7 +162,6 @@ gtypeName gtype = g_type_name gtype >>= peekCString
 -- an unexpected `Foreign.Ptr.nullPtr`.
 data UnexpectedNullPointerReturn =
     UnexpectedNullPointerReturn { nullPtrErrorMsg :: T.Text }
-                                deriving (Typeable)
 
 instance Show UnexpectedNullPointerReturn where
   show r = T.unpack (nullPtrErrorMsg r)

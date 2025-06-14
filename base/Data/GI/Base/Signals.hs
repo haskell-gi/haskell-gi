@@ -54,6 +54,7 @@ module Data.GI.Base.Signals
     , GObjectNotifySignalInfo
     , SignalCodeGenError
     , resolveSignal
+    , connectGObjectNotify
     ) where
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -74,7 +75,9 @@ import Data.Kind (Type)
 import qualified Data.Text as T
 import Data.Text (Text)
 
-import Data.GI.Base.Attributes (AttrLabelProxy(..), AttrInfo(AttrLabel))
+import Data.GI.Base.Attributes (AttrLabelProxy(..), AttrInfo(AttrLabel),
+                                AttrGetType, attrGet,
+                                AttrBaseTypeConstraint)
 import Data.GI.Base.BasicConversions (withTextCString)
 import Data.GI.Base.BasicTypes
 import Data.GI.Base.GParamSpec (newGParamSpecFromPtr)
@@ -99,6 +102,16 @@ data SignalProxy (object :: Type) (info :: Type) where
                      pl ~ AttrLabel info, KnownSymbol pl) =>
                     AttrLabelProxy propName ->
                     SignalProxy o GObjectNotifySignalInfo
+  -- | A signal connector for the @notify@ signal on the given
+  -- property, similar to `PropertyNotify`, but it passes the new
+  -- value of the property to the callback for convenience.
+  PropertySet :: (info ~ ResolveAttribute propName o,
+                  AttrInfo info,
+                  AttrBaseTypeConstraint info o,
+                  b ~ AttrGetType info,
+                  pl ~ AttrLabel info, KnownSymbol pl) =>
+                 AttrLabelProxy propName ->
+                 SignalProxy o (GObjectPropertySetSignalInfo b)
 
 -- | Support for overloaded labels.
 instance (info ~ ResolveSignal slot object) =>
@@ -141,10 +154,30 @@ on :: forall object info m.
       object -> SignalProxy object info
    -> ((?self :: object) => HaskellCallbackType info)
    -> m SignalHandlerId
+on o p@(PropertySet (_ :: AttrLabelProxy propName)) cb = liftIO $ do
+  let wrapped = wrapPropertySet (Proxy @propName) (Proxy @object) cb
+  cb' <- mkGObjectNotifyCallback wrapped
+  connectSignalFunPtr o "notify" cb' SignalConnectBefore (proxyDetail p)
 on o p c =
   liftIO $ connectSignal @info o w SignalConnectBefore (proxyDetail p)
   where w :: object -> HaskellCallbackType info
         w parent = let ?self = parent in c
+
+-- | Wrap a @b -> IO ()@ callback into a property notify callback on
+-- the C side, by adding some code that reads the current value of the
+-- property before invoking the callback.
+wrapPropertySet :: forall info prop obj.
+                   (info ~ ResolveAttribute prop obj,
+                    AttrBaseTypeConstraint info obj,
+                    AttrInfo info,
+                    GObject obj) =>
+                   Proxy (prop :: Symbol) -> Proxy obj ->
+                   ((?self :: obj) => AttrGetType info -> IO ()) ->
+                   Ptr obj -> Ptr GParamSpec -> Ptr () -> IO ()
+wrapPropertySet _ _ cb objPtr _pspec _data =
+  withTransient objPtr $ \self -> do
+    val <- attrGet @(ResolveAttribute prop obj) self
+    let ?self = self in cb val
 
 -- | Connect a signal to a handler, running the handler after the default one.
 after :: forall object info m.
@@ -163,6 +196,8 @@ proxyDetail p = case p of
   SignalProxy -> Nothing
   (_ ::: detail) -> Just detail
   PropertyNotify (AttrLabelProxy :: AttrLabelProxy propName) ->
+    Just . T.pack $ symbolVal (Proxy @(AttrLabel (ResolveAttribute propName object)))
+  PropertySet (AttrLabelProxy :: AttrLabelProxy propName) ->
     Just . T.pack $ symbolVal (Proxy @(AttrLabel (ResolveAttribute propName object)))
 
 -- Connecting GObjects to signals
@@ -214,15 +249,15 @@ instance SignalInfo GObjectNotifySignalInfo where
 type GObjectNotifyCallback = GParamSpec -> IO ()
 
 gobjectNotifyCallbackWrapper :: GObject o =>
-  (o -> GObjectNotifyCallback) -> Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
+  (o -> GObjectNotifyCallback) -> GObjectNotifyCallbackC o
 gobjectNotifyCallbackWrapper cb selfPtr pspec _ = do
     pspec' <- newGParamSpecFromPtr pspec
     withTransient (castPtr selfPtr) $ \self -> cb self pspec'
 
-type GObjectNotifyCallbackC = Ptr () -> Ptr GParamSpec -> Ptr () -> IO ()
+type GObjectNotifyCallbackC o = Ptr o -> Ptr GParamSpec -> Ptr () -> IO ()
 
 foreign import ccall "wrapper"
-    mkGObjectNotifyCallback :: GObjectNotifyCallbackC -> IO (FunPtr GObjectNotifyCallbackC)
+    mkGObjectNotifyCallback :: GObjectNotifyCallbackC o -> IO (FunPtr (GObjectNotifyCallbackC o))
 
 -- | Connect the given notify callback for a GObject.
 connectGObjectNotify :: GObject o =>
@@ -233,6 +268,11 @@ connectGObjectNotify :: GObject o =>
 connectGObjectNotify obj cb mode detail = do
   cb' <- mkGObjectNotifyCallback (gobjectNotifyCallbackWrapper cb)
   connectSignalFunPtr obj "notify" cb' mode detail
+
+data GObjectPropertySetSignalInfo (b :: Type)
+instance SignalInfo (GObjectPropertySetSignalInfo b) where
+  type HaskellCallbackType (GObjectPropertySetSignalInfo b) = b -> IO ()
+  connectSignal = undefined -- We connect these separately
 
 -- | Generate an informative type error whenever one tries to use a
 -- signal for which code generation has failed.
