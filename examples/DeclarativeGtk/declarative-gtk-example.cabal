@@ -1,0 +1,32 @@
+cabal-version:      3.0
+name:               declarative-gtk-example
+version:            0.1.0.0
+license:            AGPL-3.0-or-later
+author:             Iñaki García Etxebarria
+maintainer:         git@inaki.blueleaf.cc
+category:           Graphics
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall
+
+executable declarative
+    import:           warnings
+
+    ghc-options: -O2 -threaded
+
+    main-is:          Main.hs
+
+    -- Other library packages from which modules are imported.
+    build-depends:    base >= 4.11 && <5,
+                      gi-glib == 2.0.*,
+                      gi-gtk4,
+                      haskell-gi-base,
+                      text,
+                      containers,
+                      optics-core,
+                      declarative-gtk
+
+    -- Base language which the package is written in.
+    default-language: GHC2021

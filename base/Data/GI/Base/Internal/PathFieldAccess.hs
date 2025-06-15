@@ -24,7 +24,7 @@ import qualified Optics.Internal.Generic as OG
 -- The Char class was introduced in GHC 9.2 (base 4.16), if this is
 -- not available we fall back to an implementation that does not allow
 -- for nested access. Note that overloaded labels of the form
--- #"record.subrecord" only became valid syntax in 9.4, so this is
+-- #"record.subrecord" only became valid syntax in GHC 9.6, so this is
 -- only really useful from that version.
 #if MIN_VERSION_base(4,16,0)
 type family AppendChar (s :: TL.Symbol) (c :: Char) where

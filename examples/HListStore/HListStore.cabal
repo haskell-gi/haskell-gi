@@ -13,12 +13,11 @@ common warnings
 executable HListStore
     import:           warnings
     main-is:          test.hs
-    other-modules:    GOWrapper,
-                      HListStore
     -- other-extensions:
-    build-depends:    base >=4.16.0.0 && <5,
+    build-depends:    base >=4.11.0.0 && <5,
                       haskell-gi-base,
                       gi-gobject,
                       gi-gio >= 2.0.36,
-                      text
+                      text,
+                      declarative-gtk ^>= 0.1.0.0
     default-language: Haskell2010

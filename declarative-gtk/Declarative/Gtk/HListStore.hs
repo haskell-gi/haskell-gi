@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE DataKinds #-}
 
-module HListStore
+module Declarative.Gtk.HListStore
   ( HListStore(..)
   , IsHListStore
   , toHListStore
@@ -46,7 +46,7 @@ import Data.Coerce (coerce)
 import Data.Word (Word32)
 import Foreign.Ptr (Ptr, castPtr)
 
-import GOWrapper (GOWrapper(..), goWrapHValue, goUnwrapHValue)
+import Declarative.Gtk.GOWrapper (GOWrapper(..), goWrapHValue, goUnwrapHValue)
 
 import GHC.OverloadedLabels as OL
 

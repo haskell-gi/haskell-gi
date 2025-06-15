@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE DataKinds #-}
 
-module GOWrapper
+module Declarative.Gtk.GOWrapper
   ( GOWrapper(..)
   , goWrapHValue
   , goUnwrapHValue

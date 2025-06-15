@@ -1,0 +1,36 @@
+cabal-version:      3.0
+name:               declarative-gtk
+version:            0.1.0.0
+-- synopsis:
+-- description:
+homepage:           https://github.com/haskell-gi/haskell-gi
+license:            LGPL-3.0-or-later
+license-file:       LICENSE
+author:             Iñaki García Etxebarria
+maintainer:         git@inaki.blueleaf.cc
+-- copyright:
+category:           Graphics
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options: -Wall -Wno-unticked-promoted-constructors
+
+library
+    import:           warnings
+    exposed-modules:  Declarative.Gtk
+                      Declarative.Gtk.Box
+                      Declarative.Gtk.HListStore
+                      Declarative.Gtk.ModelViewHandler
+                      Declarative.Gtk.GOWrapper
+    build-depends:    base >= 4.11.0.0 && <5,
+                      haskell-gi-base >= 0.26.9 && <0.27,
+                      gi-gtk4,
+                      optics-core,
+                      containers,
+                      text,
+                      gi-glib,
+                      gi-gio,
+                      gi-gobject
+    default-language: Haskell2010

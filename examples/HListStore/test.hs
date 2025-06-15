@@ -2,7 +2,7 @@
 
 import Data.GI.Base (new)
 
-import HListStore (HListStore(..))
+import Declarative.Gtk.HListStore (HListStore(..))
 
 import Control.Monad ((>=>))
 
