@@ -7,7 +7,7 @@
   "girName": "Wp",
   "girVersion": "0.5",
   "girOverrides": "Wp.overrides",
-  "baseVersion": "base >= 4.17.2.1",
+  "baseVersion": "base >= 4.9 && <5",
   "distributionPackages": {
       "fedora": [
           "wireplumber-devel"
