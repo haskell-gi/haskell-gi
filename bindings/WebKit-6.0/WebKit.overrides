@@ -3,3 +3,49 @@ pkg-config-name JavaScriptCore javascriptcoregtk
 
 # nullable, but not marked as such
 set-attr WebKit/UserContentManager/register_script_message_handler/@parameters/world_name nullable 1
+set-attr WebKit/WebView/get_uri/@return-value nullable 1
+set-attr WebKit/WebView/get_title/@return-value nullable 1
+set-attr WebKit/WebView/get_custom_charset/@return-value nullable 1
+set-attr WebKit/WebView/get_favicon/@return-value nullable 1
+set-attr WebKit/WebView/get_main_resource/@return-value nullable 1
+
+set-attr WebKit/WebContext/get_spell_checking_languages/@return-value nullable 1
+
+set-attr WebKit/URIRequest/get_http_method/@return-value nullable 1
+set-attr WebKit/URIRequest/get_http_headers/@return-value nullable 1
+set-attr WebKit/URIResponse/get_suggested_filename/@return-value nullable 1
+set-attr WebKit/URIResponse/get_http_headers/@return-value nullable 1
+
+set-attr WebKit/HitTestResult/get_link_uri/@return-value nullable 1
+set-attr WebKit/HitTestResult/get_link_title/@return-value nullable 1
+set-attr WebKit/HitTestResult/get_link_label/@return-value nullable 1
+set-attr WebKit/HitTestResult/get_image_uri/@return-value nullable 1
+set-attr WebKit/HitTestResult/get_media_uri/@return-value nullable 1
+
+set-attr WebKit/Download/get_response/@return-value nullable 1
+set-attr WebKit/Download/get_web_view/@return-value nullable 1
+
+set-attr WebKit/WebResource/get_response/@return-value nullable 1
+
+set-attr WebKit/FaviconDatabase/get_favicon_uri/@return-value nullable 1
+
+set-attr WebKit/FileChooserRequest/get_mime_types/@return-value nullable 1
+set-attr WebKit/FileChooserRequest/get_mime_types_filter/@return-value nullable 1
+set-attr WebKit/FileChooserRequest/get_selected_files/@return-value nullable 1
+
+set-attr WebKit/WebInspector/get_inspected_uri/@return-value nullable 1
+set-attr WebKit/WebInspector/get_web_view/@return-value nullable 1
+
+set-attr WebKit/ContextMenu/first/@return-value nullable 1
+set-attr WebKit/ContextMenu/last/@return-value nullable 1
+set-attr WebKit/ContextMenu/get_item_at_position/@return-value nullable 1
+set-attr WebKit/ContextMenu/get_user_data/@return-value nullable 1
+
+set-attr WebKit/ContextMenuItem/get_action/@return-value nullable 1
+set-attr WebKit/ContextMenuItem/get_gaction/@return-value nullable 1
+set-attr WebKit/ContextMenuItem/get_submenu/@return-value nullable 1
+
+set-attr WebKit/OptionMenu/get_event/@return-value nullable 1
+set-attr WebKit/OptionMenu/get_item/@return-value nullable 1
+
+set-attr WebKit/AutomationSession/get_application_info/@return-value nullable 1
