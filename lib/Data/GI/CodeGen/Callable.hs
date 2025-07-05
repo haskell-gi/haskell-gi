@@ -391,17 +391,24 @@ prepareInoutArg arg = do
   name' <- prepareInArg arg
   ft <- foreignType $ argType arg
   allocInfo <- typeAllocInfo (argType arg)
+
   case allocInfo of
     Just (TypeAlloc allocator n) -> do
-         wrapMaybe arg >>= bool
-            (do
-              name'' <- genConversion (prime name') $
-                        literal $ M $ allocator <>
-                                    " :: " <> typeShow (io ft)
-              line $ "memcpy " <> name'' <> " " <> name' <> " " <> tshow n
-              return name'')
-             -- The semantics of this case are somewhat undefined.
-            (notImplementedError "Nullable inout structs not supported")
+      when (transfer arg == TransferNothing && not (argCallerAllocates arg)) $
+        -- Although meaningful, this is almost always a bug in the
+        -- introspection data. Better not generating code than
+        -- generating code that crashes.
+        notImplementedError "‘transfer-ownership=none’ ‘caller-allocates=0’ inout structs not supported"
+
+      wrapMaybe arg >>= bool
+        (do
+            name'' <- genConversion (prime name') $
+                      literal $ M $ allocator <>
+                          " :: " <> typeShow (io ft)
+            line $ "memcpy " <> name'' <> " " <> name' <> " " <> tshow n
+            return name'')
+        -- The semantics of this case are somewhat undefined.
+        (notImplementedError "Nullable inout structs not supported")
     Nothing -> do
       if argCallerAllocates arg
       then return name'
