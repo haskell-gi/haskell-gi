@@ -1,5 +1,5 @@
 name:                haskell-gi
-version:             0.26.16
+version:             0.26.17
 synopsis:            Generate Haskell bindings for GObject Introspection capable libraries
 description:         Generate Haskell bindings for GObject Introspection capable libraries. This includes most notably
                      GTK, but many other libraries in the GObject ecosystem provide introspection data too.
@@ -12,7 +12,7 @@ maintainer:          Iñaki García Etxebarria (github@the.blueleaf.cc)
 stability:           Experimental
 category:            Development
 build-type:          Custom
-tested-with:         GHC == 8.4.1, GHC == 8.6.1, GHC == 8.8.1, GHC == 8.10.1, GHC == 9.0.1, GHC == 9.2.1
+tested-with:         GHC == 8.4.1, GHC == 8.6.1, GHC == 8.8.1, GHC == 8.10.1, GHC == 9.0.1, GHC == 9.2.1, GHC == 9.4, GHC == 9.6, GHC == 9.8, GHC == 9.10, GHC == 9.12
 cabal-version:       2.0
 
 extra-source-files: ChangeLog.md

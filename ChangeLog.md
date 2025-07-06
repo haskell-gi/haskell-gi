@@ -1,3 +1,7 @@
+### 0.26.17
+
++ More robust support for inout arguments, motivated by [issue 472](https://github.com/haskell-gi/haskell-gi/issues/472).
+
 ### 0.26.15
 
 + Fix a code generation mistake when tranferring GClosure arguments of
