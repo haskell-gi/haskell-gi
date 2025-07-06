@@ -14,7 +14,7 @@ import Data.Text (Text)
 
 import Data.GI.GIR.BasicTypes (Transfer(..), Type)
 import Data.GI.GIR.Parser
-import Data.GI.GIR.Type (parseType)
+import Data.GI.GIR.Type (parseType, queryElementCType)
 
 data Direction = DirectionIn
                | DirectionOut
@@ -33,6 +33,7 @@ data Arg = Arg {
                            -- escaped name valid in Haskell code, use
                            -- `GI.SymbolNaming.escapedArgName`.
         argType :: Type,
+        argCType :: Maybe Text,
         direction :: Direction,
         mayBeNull :: Bool,
         argDoc :: Documentation,
@@ -89,9 +90,11 @@ parseArg = do
   -- We will use some heuristics later for setting this field.
   let callbackUserData = False
   t <- parseType
+  maybeCType <- queryElementCType
   doc <- parseDocumentation
   return $ Arg { argCName = name
                , argType = t
+               , argCType = maybeCType
                , argDoc = doc
                , direction = d
                , mayBeNull = mayBeNull

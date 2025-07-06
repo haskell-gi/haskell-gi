@@ -390,33 +390,26 @@ prepareInoutArg :: Arg -> ExcCodeGen Text
 prepareInoutArg arg = do
   name' <- prepareInArg arg
   ft <- foreignType $ argType arg
-  allocInfo <- typeAllocInfo (argType arg)
 
-  case allocInfo of
-    Just (TypeAlloc allocator n) -> do
-      when (transfer arg == TransferNothing && not (argCallerAllocates arg)) $
-        -- Although meaningful, this is almost always a bug in the
-        -- introspection data. Better not generating code than
-        -- generating code that crashes.
-        notImplementedError "‘transfer-ownership=none’ ‘caller-allocates=0’ inout structs not supported"
-
-      wrapMaybe arg >>= bool
-        (do
-            name'' <- genConversion (prime name') $
-                      literal $ M $ allocator <>
-                          " :: " <> typeShow (io ft)
-            line $ "memcpy " <> name'' <> " " <> name' <> " " <> tshow n
-            return name'')
-        -- The semantics of this case are somewhat undefined.
-        (notImplementedError "Nullable inout structs not supported")
-    Nothing -> do
-      if argCallerAllocates arg
-      then return name'
-      else do
-        name'' <- genConversion (prime name') $
-                  literal $ M $ "allocMem :: " <> typeShow (io $ ptr ft)
-        line $ "poke " <> name'' <> " " <> name'
-        return name''
+  if argCallerAllocates arg
+    then return name'
+    else do
+    -- Check that if the argument type is managed, the C type is a
+    -- pointer to a pointer. This is not perfect, but it helps to
+    -- detect some relatively common introspection errors that would
+    -- lead to crashes.
+    managed <- isManaged (argType arg)
+    when managed $
+      case argCType arg of
+        Nothing -> badIntroError $ "Missing C type for argument ‘" <>
+                   argCName arg <> "’"
+        Just ctype -> when (not $ "**" `T.isSuffixOf` ctype) $
+                      badIntroError $ "C type for argument ‘" <>
+                      argCName arg <> "’ is not a pointer to a pointer"
+    name'' <- genConversion (prime name') $
+              literal $ M $ "allocMem :: " <> typeShow (io $ ptr ft)
+    line $ "poke " <> name'' <> " " <> name'
+    return name''
 
 prepareOutArg :: Arg -> ExcCodeGen Text
 prepareOutArg arg = do
