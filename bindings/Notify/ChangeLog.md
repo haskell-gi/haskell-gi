@@ -1,3 +1,7 @@
+### 0.7.29
+
++ Add dependency on gi-gio.
+
 ### 0.7.28
 
 + Depend on haskell-gi >= 0.26.9 (see [issue 439](https://github.com/haskell-gi/haskell-gi/issues/439))
