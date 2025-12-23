@@ -1,5 +1,4 @@
-packages: haskell-gi.cabal
-          pkgs/base
+packages: pkgs/base
           pkgs/cairo/gi-cairo-render
           pkgs/cairo/gi-cairo-connector
           pkgs/declarative-gtk
@@ -17,7 +16,6 @@ packages: haskell-gi.cabal
           pkgs/cairo/examples/clock
           pkgs/cairo/examples/hlabyrinth
           -- pkgs/cairo/examples/sdl
-          bindings
           bindings/GIRepository
           bindings/GLib
           bindings/GModule
