@@ -1,4 +1,0 @@
-namespace CoglPango
-
-# cogl_texture_get_gtype returns GType which seems to get inferred as CoglObject?
-delete-attr Cogl/Texture glib:get-type

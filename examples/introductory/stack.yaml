@@ -1,6 +1,0 @@
-resolver: lts-12.11
-
-packages:
-- .
-
-# with-hpack: C:\Users\zmtemp\AppData\Roaming\local\bin\hpack.exe

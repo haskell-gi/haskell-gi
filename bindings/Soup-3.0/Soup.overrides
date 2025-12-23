@@ -1,2 +1,0 @@
-# Marked as inout, but it should be in.
-set-attr Soup/MessageHeadersIter/next/@parameters/iter direction in

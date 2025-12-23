@@ -1,3 +1,0 @@
-namespace Clutter
-
-delete-attr Cogl/Texture glib:get-type
