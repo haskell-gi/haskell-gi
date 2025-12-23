@@ -1,0 +1,53 @@
+name:                gi-gtk-hs
+version:             0.3.18
+synopsis:            A wrapper for gi-gtk, adding a few more idiomatic API parts on top
+description:         A wrapper for gi-gtk, adding a few more idiomatic API parts on top
+homepage:            https://github.com/haskell-gi/haskell-gi
+license:             LGPL-2.1
+license-file:        LICENSE
+author:              Jonas Platte,
+                     Duncan Coutts,
+                     Axel Simon,
+                     Hamish Mackenzie,
+                     Iñaki García Etxebarria
+maintainer:          mail@jonasplatte.de
+category:            Graphics
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  cbits/Gtk2HsStore.h
+
+library
+  exposed-modules:     Data.GI.Gtk,
+                       Data.GI.Gtk.BuildFn
+                       Data.GI.Gtk.ComboBox
+                       Data.GI.Gtk.ModelView.CellLayout
+                       Data.GI.Gtk.ModelView.CustomStore
+                       Data.GI.Gtk.ModelView.ForestStore
+                       Data.GI.Gtk.ModelView.SeqStore
+                       Data.GI.Gtk.ModelView.TreeModel
+                       Data.GI.Gtk.ModelView.Types
+                       Data.GI.Gtk.Threading
+                       Data.GI.Gtk.Widget
+
+  build-depends:       base >= 4.9 && <5,
+                       base-compat >=0.9.0,
+                       mtl >= 2.1 && <2.4,
+                       transformers >=0.3.0.0 && <0.7,
+                       containers >=0.5.5.1 && <0.8,
+                       text >=1.2 && <3,
+                       haskell-gi-base >=0.25.0 && <0.27,
+                       gi-glib >=2.0.6 && <2.1,
+                       gi-gobject >=2.0.6 && <2.1,
+                       gi-gdk4,
+                       gi-gtk4,
+                       gi-gdkpixbuf >=2.0.6 && <2.1
+
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  c-sources:
+        cbits/Gtk2HsStore.c
+  if os(osx)
+        c-sources:
+            cbits/quartzfix.c
+  include-dirs: cbits
+

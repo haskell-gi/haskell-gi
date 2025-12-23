@@ -1,0 +1,4 @@
+language: nix
+nix: 2.3.6
+
+script: nix-build release.nix

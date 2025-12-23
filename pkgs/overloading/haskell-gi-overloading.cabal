@@ -1,0 +1,17 @@
+name:                haskell-gi-overloading
+version:             1.0
+synopsis:            Overloading support for haskell-gi
+description:         Control overloading support in haskell-gi generated bindings
+homepage:            https://github.com/haskell-gi/haskell-gi
+license:             BSD3
+license-file:        LICENSE
+author:              Iñaki García Etxebarria
+maintainer:          garetxe@gmail.com
+copyright:           Iñaki García Etxebarria
+category:            Bindings
+build-type:          Simple
+extra-source-files:  ChangeLog.md README.md
+cabal-version:       >=1.10
+
+library
+  default-language:    Haskell2010
