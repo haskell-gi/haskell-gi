@@ -3,10 +3,10 @@ packages: haskell-gi.cabal
           pkgs/cairo/gi-cairo-render
           pkgs/cairo/gi-cairo-connector
           pkgs/declarative-gtk
-          pkgs/gi-gio-2.0.38
-          pkgs/gi-gobject-2.0.31
-          pkgs/gi-gtk-hs/gi-gtk-hs.cabal
-          test/haskell-gi-test.cabal
+          pkgs/gi-gio
+          pkgs/gi-gobject
+          pkgs/gi-gtk-hs
+          test
           examples/DeclarativeGtk
           examples/Gtk4
           examples/GtkSourceView
