@@ -1,8 +1,8 @@
 packages: haskell-gi.cabal
-          pkgs/base/haskell-gi-base.cabal
-          pkgs/cairo/gi-cairo-render/gi-cairo-render.cabal
-          pkgs/cairo/gi-cairo-connector/gi-cairo-connector.cabal
-          pkgs/declarative-gtk/declarative-gtk.cabal
+          pkgs/base
+          pkgs/cairo/gi-cairo-render
+          pkgs/cairo/gi-cairo-connector
+          pkgs/declarative-gtk
           pkgs/gi-gio-2.0.38
           pkgs/gi-gobject-2.0.31
           pkgs/gi-gtk-hs/gi-gtk-hs.cabal
