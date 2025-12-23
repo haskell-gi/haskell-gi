@@ -1,1 +1,0 @@
-cabal new-run genBuildInfo $(./PKGS.sh)
