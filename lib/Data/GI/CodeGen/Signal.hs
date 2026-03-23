@@ -229,7 +229,8 @@ prepareInoutArg :: Arg -> ExcCodeGen Text
 prepareInoutArg arg = do
   let name = escapedArgName arg
   name' <- genConversion name $ apply $ M "peek"
-  convert name' $ fToH (argType arg) (transfer arg)
+  let c = convert name' $ fToH (argType arg) (transfer arg)
+  wrapMaybe arg >>= bool c (convertNullable name' c (argType arg))
 
 saveOutArg :: Arg -> ExcCodeGen ()
 saveOutArg arg = do
