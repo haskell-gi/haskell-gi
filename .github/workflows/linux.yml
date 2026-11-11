@@ -54,7 +54,11 @@ jobs:
     - name: Build
       run: cabal build all
 
+    # Runs every test suite in the project: the haskell-gi doctests,
+    # and the struct layout tests in test/haskell-gi-test.cabal (the
+    # latter compile C code against the development headers installed
+    # above, so they need a C compiler and pkg-config).
     - name: Run tests
       run: |
         echo 'tests: True' > cabal.project.local
-        cabal test --allow-newer=sdl2:bytestring
+        cabal test all --test-show-details=direct --allow-newer=sdl2:bytestring

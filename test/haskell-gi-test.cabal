@@ -36,3 +36,32 @@ executable testGtk
 
   other-extensions:    OverloadedStrings, OverloadedLabels, LambdaCase, ScopedTypeVariables
   ghc-options:         -Wall -Wcompat -fwarn-incomplete-patterns -fno-warn-name-shadowing -threaded -with-rtsopts=-N
+
+-- Check the struct layouts computed by haskell-gi against the C
+-- compiler. This requires a C compiler, pkg-config, and the
+-- development headers for the libraries being checked.
+test-suite struct-layout
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  main-is:             StructLayout.hs
+  build-depends:       base >= 4.9 && < 5,
+                       containers,
+                       directory,
+                       haskell-gi,
+                       process,
+                       text >= 1.0,
+                       xml-conduit
+  ghc-options:         -Wall -Wcompat -fno-warn-name-shadowing
+
+-- Runtime checks of struct fields whose layout is wrong in the typelib.
+test-suite struct-fields
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  main-is:             StructFields.hs
+  build-depends:       base >= 4.9 && < 5,
+                       haskell-gi-base >= 0.26.7 && < 1,
+                       gi-glib == 2.0.*,
+                       gi-pango == 1.0.*,
+                       gi-pangocairo == 1.0.*,
+                       text >= 1.0
+  ghc-options:         -Wall -Wcompat -fno-warn-name-shadowing
