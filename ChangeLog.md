@@ -1,3 +1,7 @@
+### 0.26.19
+
++ Broader and more robust support for struct fields.
+
 ### 0.26.17
 
 + More robust support for inout arguments, motivated by [issue 472](https://github.com/haskell-gi/haskell-gi/issues/472).
