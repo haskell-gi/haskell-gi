@@ -6,6 +6,16 @@ ignore signal_set_va_marshaller
 # Requires support for non-GObject objects, which we do not support.
 ignore TypePluginClass
 
+# A GWeakRef is registered with the object it points to, so it
+# cannot be copied byte by byte, and it needs to be cleared with
+# g_weak_ref_clear() before its memory is released (otherwise the
+# object will write to freed memory when it is finalized). So do not
+# offer a zero-filled constructor, and treat WeakRefs as pointers to
+# memory that we do not own, which is what we did before the struct
+# got a known size when we started fixing struct layouts, see
+# https://github.com/haskell-gi/haskell-gi/issues/485.
+alloc-info WeakRef calloc=none copy=none free=none
+
 # Wrong introspection data.
 set-attr GObject/signal_emitv/@parameters/return_value caller-allocates 1
 set-attr GObject/signal_emitv/@parameters/return_value direction out

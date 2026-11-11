@@ -104,6 +104,8 @@ import Data.GI.GIR.XMLUtils (subelements, childElemsWithLocalName, lookupAttr,
                         lookupAttrWithNamespace, GIRXMLNamespace(..),
                         xmlLocalName)
 
+import Data.GI.CodeGen.StructLayout (Aggregate(..), fixupStructLayouts)
+
 import Data.GI.Base.BasicConversions (unpackStorableArrayWithLength)
 import Data.GI.Base.BasicTypes (GType(..), CGType, gtypeName)
 import Data.GI.Base.Utils (allocMem, freeMem)
@@ -329,6 +331,7 @@ fixupGIRInfos verbose typelibMap doc deps =
   (fixup (fixupInterface typelibMap ctypes) >=>
     fixup (fixupStruct typelibMap) >=>
     fixup fixupUnion >=>
+    (return . fixupLayouts) >=>
     fixup (fixupMissingSymbols verbose typelibMap)
   ) (doc, deps)
   where fixup :: ((Name, API) -> IO (Name, API))
@@ -346,6 +349,42 @@ fixupGIRInfos verbose typelibMap doc deps =
 
         ctypes :: M.Map Text Name
         ctypes = M.unions (map girCTypes (doc:deps))
+
+-- | The typelib compiler ignores the widths of bitfields, and
+-- anonymous unions and structs, when computing the layout of
+-- structs, so we fix the layout of structs and unions (directly or
+-- indirectly) containing these using the information in the GIR
+-- file. See "Data.GI.CodeGen.StructLayout" for the details. This
+-- needs to be done for all the loaded namespaces at once, since
+-- structs may embed structs defined in other namespaces.
+fixupLayouts :: (GIRInfo, [GIRInfo]) -> (GIRInfo, [GIRInfo])
+fixupLayouts (doc, deps) = (fixInfo doc, map fixInfo deps)
+  where aggregates :: M.Map Name Aggregate
+        aggregates = M.fromList [(n, agg) | info <- doc : deps
+                                          , (n, api) <- girAPIs info
+                                          , Just agg <- [toAggregate api]]
+
+        toAggregate :: API -> Maybe Aggregate
+        toAggregate (APIStruct s) = Just (AggStruct s)
+        toAggregate (APIUnion u) = Just (AggUnion u)
+        toAggregate (APIEnum e) = Just (AggScalar (enumStorageBytes e))
+        toAggregate (APIFlags (Flags e)) = Just (AggScalar (enumStorageBytes e))
+        toAggregate (APIObject _) = Just AggPointer
+        toAggregate (APIInterface _) = Just AggPointer
+        toAggregate (APICallback _) = Just AggPointer
+        toAggregate _ = Nothing
+
+        fixed :: M.Map Name Aggregate
+        fixed = fixupStructLayouts aggregates
+
+        fixInfo :: GIRInfo -> GIRInfo
+        fixInfo info = info {girAPIs = map fixAPI (girAPIs info)}
+
+        fixAPI :: (Name, API) -> (Name, API)
+        fixAPI (n, api) = case M.lookup n fixed of
+          Just (AggStruct s) -> (n, APIStruct s)
+          Just (AggUnion u) -> (n, APIUnion u)
+          _ -> (n, api)
 
 foreign import ccall "g_type_interface_prerequisites" g_type_interface_prerequisites :: CGType -> Ptr CUInt -> IO (Ptr CGType)
 
@@ -434,6 +473,10 @@ fixupUnionSizeAndOffsets (Name ns n) u = do
 
 -- | Fixup the offsets of fields using the given offset map.
 fixupField :: M.Map Text FieldInfo -> Field -> Field
+fixupField _ f@(Field {fieldAnonymous = Just _}) =
+  -- Not present in the typelib, the offset will be computed in
+  -- 'fixupLayouts'.
+  f
 fixupField offsetMap f =
     f {fieldOffset = case M.lookup (fieldName f) offsetMap of
                        Nothing -> error $ "Could not find field "

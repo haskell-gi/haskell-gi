@@ -703,11 +703,13 @@ unpackCArray length (TCArray False _ _ t) transfer =
                         | (size == 0) = "unpackPtrArrayWithLength"
                         | boxed       = "unpackBoxedArrayWithLength " <> tshow size
                         | otherwise   = "unpackBlockArrayWithLength " <> tshow size
-               -- We always make a copy of the elements when unpacking
-               -- boxed types.
-           let transfer' | boxed      = if transfer == TransferContainer
-                                        then TransferEverything
-                                        else transfer
+           -- When unpacking structs/unions stored inline in the
+           -- array (size > 0) the unpacker always makes a copy of
+           -- each element, which we then own, so we wrap it
+           -- directly instead of making a second copy (which would
+           -- leak the first one).
+           let transfer' | isScalar   = transfer
+                         | size > 0   = TransferEverything
                          | otherwise  = transfer
            innerConstructor <- fToH' t a hType fType transfer'
            return $ do

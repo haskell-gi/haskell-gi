@@ -81,6 +81,7 @@ Library
                        Data.GI.GIR.Union,
                        Data.GI.GIR.XMLUtils,
                        Data.GI.CodeGen.API,
+                       Data.GI.CodeGen.StructLayout,
                        Data.GI.CodeGen.CabalHooks,
                        Data.GI.CodeGen.Callable,
                        Data.GI.CodeGen.Code,

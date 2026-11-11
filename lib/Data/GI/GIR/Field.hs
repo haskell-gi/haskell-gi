@@ -1,6 +1,7 @@
 -- | Parsing of object/struct/union fields.
 module Data.GI.GIR.Field
     ( Field(..)
+    , AnonymousMember(..)
     , FieldInfoFlag
     , parseFields
     ) where
@@ -13,7 +14,7 @@ import Data.Monoid ((<>))
 #endif
 import Data.Text (Text, isSuffixOf)
 
-import Data.GI.GIR.BasicTypes (Type(..))
+import Data.GI.GIR.BasicTypes (Type(..), BasicType(..))
 import Data.GI.GIR.Callback (Callback, parseCallback)
 import Data.GI.GIR.Type (parseType, queryElementCType)
 import Data.GI.GIR.Parser
@@ -23,8 +24,27 @@ data Field = Field {
       fieldVisible :: Bool,
       fieldType :: Type,
       fieldIsPointer :: Maybe Bool, -- ^ `Nothing` if not known.
+      fieldArrayOfPointers :: Bool,
+      -- ^ For C arrays stored inline in the struct (that is, with a
+      -- fixed size), whether the elements are pointers.
       fieldCallback :: Maybe Callback,
       fieldOffset :: Int,
+      -- ^ For bitfields, this is the offset of the storage unit
+      -- containing the bitfield.
+      fieldBits :: Maybe Int,
+      -- ^ The width in bits, if the field is a bitfield.
+      fieldBitShift :: Maybe Int,
+      -- ^ For bitfields, the position of the least significant bit
+      -- of the bitfield inside its storage unit (a value of the
+      -- declared type of the field, stored at `fieldOffset`). This
+      -- is `Nothing` if the layout of the bitfield could not be
+      -- determined.
+      fieldAnonymous :: Maybe AnonymousMember,
+      -- ^ If this member is an (anonymous type) union or struct
+      -- declared inline, its contents. In this case `fieldType`
+      -- is meaningless, and the field is never visible. We keep
+      -- track of these members since they affect the layout of
+      -- the containing struct or union.
       fieldFlags :: [FieldInfoFlag],
       fieldDocumentation :: Documentation,
       fieldDeprecated :: Maybe DeprecationInfo }
@@ -32,6 +52,12 @@ data Field = Field {
 
 data FieldInfoFlag = FieldIsReadable | FieldIsWritable
                    deriving Show
+
+-- | Contents of a union or struct declared inline in a struct or
+-- union.
+data AnonymousMember = AnonymousUnion [Field]
+                     | AnonymousStruct [Field]
+                     deriving Show
 
 -- | Parse a single field in a struct or union. We parse
 -- non-introspectable fields too (but set fieldVisible = False for
@@ -41,6 +67,7 @@ parseField :: Parser (Maybe Field)
 parseField = do
   name <- getAttr "name"
   deprecated <- parseDeprecation
+  bits <- optionalAttr "bits" Nothing (fmap Just . parseIntegral)
   readable <- optionalAttr "readable" True parseBool
   writable <- optionalAttr "writable" False parseBool
   let flags = if readable then [FieldIsReadable] else []
@@ -79,6 +106,11 @@ parseField = do
           [n] -> return (TInterface n, Just True, Nothing)
           _ -> parseError "Multiple callbacks in field"
 
+    elementCTypes <- parseAllChildrenWithLocalName "array" queryElementCType
+    let arrayOfPointers = case elementCTypes of
+          [Just ct] -> "*" `isSuffixOf` ct
+          _ -> False
+
     return $ Just $ Field {
                fieldName = name
              , fieldVisible = introspectable && not private
@@ -86,12 +118,50 @@ parseField = do
              , fieldIsPointer = if isJust callback
                                 then Just True
                                 else isPtr
+             , fieldArrayOfPointers = arrayOfPointers
              , fieldCallback = callback
              , fieldOffset = error ("unfixed field offset " ++ show name)
+             , fieldBits = if bits == Just 0 then Nothing else bits
+             , fieldBitShift = Nothing
+             , fieldAnonymous = Nothing
              , fieldFlags = flags
              , fieldDocumentation = doc
              , fieldDeprecated = deprecated
           }
 
+-- | Parse an union or struct declared inline in a struct or union.
+parseAnonymousMember :: Bool -> Parser Field
+parseAnonymousMember isUnion = do
+  name <- optionalAttr "name" (if isUnion
+                               then "<anonymous union>"
+                               else "<anonymous struct>") return
+  -- We do not keep track of the offsets of the members of the
+  -- anonymous union or struct, only of its total size.
+  members <- map (\f -> f {fieldOffset = 0}) <$> parseFields
+  doc <- parseDocumentation
+  return $ Field {
+               fieldName = name
+             , fieldVisible = False
+             , fieldType = TBasicType TPtr -- Not meaningful
+             , fieldIsPointer = Just False
+             , fieldArrayOfPointers = False
+             , fieldCallback = Nothing
+             , fieldOffset = 0
+             , fieldBits = Nothing
+             , fieldBitShift = Nothing
+             , fieldAnonymous = Just (if isUnion
+                                      then AnonymousUnion members
+                                      else AnonymousStruct members)
+             , fieldFlags = []
+             , fieldDocumentation = doc
+             , fieldDeprecated = Nothing
+          }
+
+-- | Parse the members of a struct or union, in order.
 parseFields :: Parser [Field]
-parseFields = catMaybes <$> parseAllChildrenWithLocalName "field" parseField
+parseFields = catMaybes <$>
+  parseAllChildrenWithLocalNames ["field", "union", "record"] parseMember
+  where parseMember :: Text -> Parser (Maybe Field)
+        parseMember "union" = Just <$> parseAnonymousMember True
+        parseMember "record" = Just <$> parseAnonymousMember False
+        parseMember _ = parseField

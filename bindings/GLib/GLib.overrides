@@ -21,6 +21,15 @@ set-attr GLib/TimeVal/to_iso8601/@return-value nullable 1
 # See https://github.com/haskell-gi/haskell-gi/issues/173
 set-attr GLib/Thread/self/@return-value transfer-ownership none
 
+# Builders allocated with g_variant_builder_new() and
+# g_variant_dict_new() are reference counted, and freeing a
+# zero-filled one emits critical warnings, so do not offer a
+# zero-filled constructor for these (they only get a known size
+# since we fix the struct layouts, see
+# https://github.com/haskell-gi/haskell-gi/issues/485).
+alloc-info VariantBuilder calloc=none
+alloc-info VariantDict calloc=none
+
 if windows
    # Windows only macros in glib/gfileutils.h
    set-attr GLib/file_get_contents c:identifier g_file_get_contents_utf8

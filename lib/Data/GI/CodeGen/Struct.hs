@@ -135,6 +135,56 @@ getterDoc n field = T.unlines [
   , "'Data.GI.Base.Attributes.get' " <> lowerName n <> " #" <> labelName field
   , "@"]
 
+-- | If the given field is a C array whose length is given by another
+-- field in the same struct/union, return the field holding the
+-- length.
+arrayLengthField :: [Field] -> Field -> ExcCodeGen (Maybe Field)
+arrayLengthField fields field =
+  case fieldType field of
+    TCArray False (-1) idx _
+      | idx < 0 -> return Nothing
+      | idx >= length fields ->
+        badIntroError $ "Array length field index " <> tshow idx
+                        <> " for field “" <> fieldName field
+                        <> "” is out of range."
+      | otherwise -> do
+          let lengthField = fields !! idx
+          case fieldType lengthField of
+            TBasicType t | t `elem` [TInt, TUInt, TLong, TULong,
+                                     TInt8, TUInt8, TInt16, TUInt16,
+                                     TInt32, TUInt32, TInt64, TUInt64,
+                                     TSize, TSSize] ->
+                             return (Just lengthField)
+            t -> badIntroError $ "Array length field “"
+                                 <> fieldName lengthField
+                                 <> "” for field “" <> fieldName field
+                                 <> "” has non-integral type " <> tshow t
+    _ -> return Nothing
+
+-- | If the field is a bitfield, return its width and the shift of
+-- its least significant bit inside the storage unit.
+bitfieldInfo :: Field -> ExcCodeGen (Maybe (Int, Int))
+bitfieldInfo field = case fieldBits field of
+  Nothing -> return Nothing
+  Just width -> case fieldBitShift field of
+    Nothing -> notImplementedError "Could not determine the layout of the bitfield"
+    Just shift -> do
+      supported <- case fieldType field of
+        TBasicType t -> return $ t `elem` [TBoolean, TInt, TUInt, TLong, TULong,
+                                           TInt8, TUInt8, TInt16, TUInt16,
+                                           TInt32, TUInt32, TInt64, TUInt64,
+                                           TShort, TUShort, TSize, TSSize,
+                                           TUniChar]
+        t@(TInterface _) -> findAPI t >>= \case
+          Just (APIEnum _) -> return True
+          Just (APIFlags _) -> return True
+          _ -> return False
+        _ -> return False
+      if supported
+        then return (Just (width, shift))
+        else notImplementedError $ "Bitfield of unsupported type "
+                                   <> tshow (fieldType field)
+
 -- Notice that when reading the field we return a copy of any embedded
 -- structs, so modifications of the returned struct will not affect
 -- the original struct. This is on purpose, in order to increase
@@ -142,12 +192,13 @@ getterDoc n field = T.unlines [
 -- parent structure while we are modifying the embedded one, and havoc
 -- will ensue).
 -- | Extract a field from a struct.
-buildFieldReader :: Name -> Field -> ExcCodeGen ()
-buildFieldReader n field = group $ do
+buildFieldReader :: Name -> [Field] -> Field -> ExcCodeGen ()
+buildFieldReader n fields field = group $ do
   let name' = upperName n
       getter = fieldGetter n field
 
   embedded <- isEmbedded field
+  bitfield <- bitfieldInfo field
   nullConvert <- if embedded
                  then return Nothing
                  else maybeNullConvert (fieldType field)
@@ -172,12 +223,31 @@ buildFieldReader n field = group $ do
              <> " :: " <> peekedType
     else line $ "val <- peek (ptr `plusPtr` " <> tshow (fieldOffset field)
              <> ") :: IO " <> peekedType
+    -- For bitfields, we read the whole storage unit, and then
+    -- extract the relevant bits (with sign extension for signed
+    -- types).
+    valName <- case bitfield of
+      Nothing -> return "val"
+      Just (width, shift) -> do
+        line $ "let bitfield = DB.shiftR (DB.shiftL val (DB.finiteBitSize val P.- "
+               <> tshow (shift + width) <> ")) (DB.finiteBitSize val P.- "
+               <> tshow width <> ")"
+        return "bitfield"
+    -- C arrays whose length is given by another field in the struct
+    -- need the length in order to be unpacked.
+    converter <- arrayLengthField fields field >>= \case
+      Nothing -> return $ fToH (fieldType field) TransferNothing
+      Just lengthField -> do
+        lType <- typeShow <$> foreignType (fieldType lengthField)
+        line $ "len <- peek (ptr `plusPtr` " <> tshow (fieldOffset lengthField)
+               <> ") :: IO " <> lType
+        return $ unpackCArray "len" (fieldType field) TransferNothing
     result <- case nullConvert of
-              Nothing -> convert "val" $ fToH (fieldType field) TransferNothing
+              Nothing -> convert valName converter
               Just nullConverter -> do
                 line $ "result <- " <> nullConverter <> " val $ \\val' -> do"
                 indent $ do
-                  val' <- convert "val'" $ fToH (fieldType field) TransferNothing
+                  val' <- convert "val'" converter
                   line $ "return " <> val'
                 return "result"
     line $ "return " <> result
@@ -220,12 +290,25 @@ buildFieldWriter n field = group $ do
   line $ setter <> " :: MonadIO m => " <> name' <> " -> "
            <> hType <> " -> m ()"
   line $ setter <> " s val = liftIO $ withManagedPtr s $ \\ptr -> do"
+  bitfield <- bitfieldInfo field
+
   indent $ do
     converted <- if isPtr
                  then return "val"
                  else convert "val" $ hToF (fieldType field) TransferNothing
-    line $ "poke (ptr `plusPtr` " <> tshow (fieldOffset field)
-         <> ") (" <> converted <> " :: " <> fType <> ")"
+    let location = "(ptr `plusPtr` " <> tshow (fieldOffset field) <> ")"
+    case bitfield of
+      Nothing ->
+        line $ "poke " <> location <> " (" <> converted <> " :: " <> fType <> ")"
+      Just (width, shift) -> do
+        -- Only modify the bits corresponding to the bitfield in the
+        -- storage unit.
+        line $ "old <- peek " <> location <> " :: IO " <> parenthesize fType
+        line $ "let mask = DB.shiftL (DB.shiftL 1 " <> tshow width
+               <> " P.- 1) " <> tshow shift <> " :: " <> fType
+        line $ "poke " <> location <> " ((old DB..&. DB.complement mask) DB..|. "
+               <> "(DB.shiftL (" <> converted <> " :: " <> fType <> ") "
+               <> tshow shift <> " DB..&. mask))"
 
 -- | Name for the clear function
 fieldClear :: Name -> Field -> Text
@@ -398,8 +481,8 @@ genAttrInfo owner field = do
   return $ "'(\"" <> labelName field <> "\", " <> it <> ")"
 
 -- | Build code for a single field.
-buildFieldAttributes :: Name -> Field -> ExcCodeGen (Maybe Text)
-buildFieldAttributes n field
+buildFieldAttributes :: Name -> [Field] -> Field -> ExcCodeGen (Maybe Text)
+buildFieldAttributes n fields field
     | not (fieldVisible field) = return Nothing
     | privateType (fieldType field) = return Nothing
     | otherwise = group $ do
@@ -417,7 +500,7 @@ buildFieldAttributes n field
 
      addSectionDocumentation docSection (fieldDocumentation field)
 
-     buildFieldReader n field
+     buildFieldReader n fields field
      export docSection (fieldGetter n field)
 
      when (not embedded) $ do
@@ -449,7 +532,7 @@ genStructOrUnionFields n fields = do
                              ":" <> fieldName field <> "\"")
                       printCGError e
                       return Nothing)
-                  (buildFieldAttributes n field)
+                  (buildFieldAttributes n fields field)
 
   blank
 
@@ -567,6 +650,8 @@ genWrappedPtr n info size = group $ do
        line $ "-- XXX Wrapping a foreign struct/union with no known destructor or size, leak?"
 
   copy <- case allocCopy info of
+            -- Do not copy, the copy refers to the same memory.
+            AllocationOp "none" -> return "return"
             AllocationOp op -> do
                 copy <- prefixedForeignImport (prefix "copy") op "Ptr a -> IO (Ptr a)"
                 return ("\\p -> B.ManagedPtr.withManagedPtr p (" <> copy <>
@@ -579,6 +664,8 @@ genWrappedPtr n info size = group $ do
                 else return "return"
 
   free <- case allocFree info of
+            -- Never free the memory.
+            AllocationOp "none" -> return "\\_x -> return ()"
             AllocationOp op -> do
               free <- prefixedForeignImport (prefix "free") op "Ptr a -> IO ()"
               return $ "\\p -> B.ManagedPtr.withManagedPtr p " <> free

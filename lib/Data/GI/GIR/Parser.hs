@@ -14,6 +14,7 @@ module Data.GI.GIR.Parser
     , parseBool
     , parseChildrenWithLocalName
     , parseAllChildrenWithLocalName
+    , parseAllChildrenWithLocalNames
     , parseChildrenWithNSName
 
     , getAttr
@@ -53,7 +54,7 @@ import Data.GI.GIR.Deprecation (DeprecationInfo, queryDeprecated)
 import Data.GI.GIR.Documentation (Documentation, queryDocumentation)
 import Data.GI.GIR.XMLUtils (localName, GIRXMLNamespace(..),
                         childElemsWithLocalName, childElemsWithNSName,
-                        lookupAttr, lookupAttrWithNamespace)
+                        lookupAttr, lookupAttrWithNamespace, subelements)
 
 -- | Info to carry around when parsing.
 data ParseContext = ParseContext {
@@ -204,6 +205,15 @@ parseAllChildrenWithLocalName :: Text -> Parser a -> Parser [a]
 parseAllChildrenWithLocalName n parser = do
   ctx <- ask
   mapM (withElement parser) (childElemsWithLocalName n (currentElement ctx))
+
+-- | Parse all subelements whose local name is one of the given
+-- ones, in document order. The parser is passed the local name of
+-- the subelement being parsed.
+parseAllChildrenWithLocalNames :: [Text] -> (Text -> Parser a) -> Parser [a]
+parseAllChildrenWithLocalNames names parser = do
+  ctx <- ask
+  mapM (\e -> withElement (parser (localName e)) e)
+       (filter ((`elem` names) . localName) (subelements (currentElement ctx)))
 
 -- | Parse all introspectable children with the given namespace and
 -- local name.
