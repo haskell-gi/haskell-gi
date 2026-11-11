@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Data.GI.GIR.Repository (readGiRepository) where
 
 import Prelude hiding (readFile)
@@ -6,6 +7,7 @@ import Prelude hiding (readFile)
 import Control.Applicative ((<$>))
 #endif
 
+import Control.Exception (SomeException, try)
 import Control.Monad (when)
 import Data.Maybe
 import qualified Data.List as List
@@ -18,6 +20,7 @@ import System.Directory
 import System.Environment (lookupEnv)
 import System.Environment.XDG.BaseDir (getSystemDataDirs)
 import System.FilePath (searchPathSeparator, takeBaseName, (</>), (<.>))
+import System.Process (readProcess)
 
 girFilePath :: String -> String -> FilePath -> FilePath
 girFilePath name version path = path </> name ++ "-" ++ version <.> "gir"
@@ -53,9 +56,24 @@ splitOn x xs = go xs []
 girDataDirs :: IO [FilePath]
 girDataDirs = do
   sys <- getSystemDataDirs "gir-1.0"
+  arch <- archGirDirs
   -- See https://github.com/haskell-gi/haskell-gi/issues/390
   let macOS = ["/opt/homebrew/share/gir-1.0"]
-  return (sys ++ macOS)
+  return (sys ++ arch ++ macOS)
+
+-- | Some distributions (Debian and Ubuntu, for instance) install the
+-- gir files whose contents depend on the architecture (such as
+-- Gst-1.0.gir) in an architecture-specific directory,
+-- @\/usr\/lib\/\<multiarch triplet\>\/gir-1.0@, which we find
+-- by asking pkg-config for the library directory.
+archGirDirs :: IO [FilePath]
+archGirDirs = do
+  result <- try (readProcess "pkg-config" ["--variable=libdir", "glib-2.0"] "")
+  return $ case result of
+    Left (_ :: SomeException) -> []
+    Right out -> case lines out of
+      (libdir : _) | not (null libdir) -> [libdir </> "gir-1.0"]
+      _ -> []
 
 -- | Construct the GIR search path, possibly looking into the
 -- @HASKELL_GI_GIR_SEARCH_PATH@ environment variable if no explicit
