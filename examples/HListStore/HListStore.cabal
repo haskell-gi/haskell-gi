@@ -19,5 +19,6 @@ executable HListStore
                       gi-gobject,
                       gi-gio >= 2.0.36,
                       text,
+                      gi-gtk4,
                       declarative-gtk ^>= 0.1.0.0
     default-language: Haskell2010
