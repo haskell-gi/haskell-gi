@@ -1,14 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | Runtime checks of struct fields whose layout haskell-gi needs to
 -- recompute, since the typelib gets it wrong: bitfields, arrays of
--- structs containing bitfields, ... See
--- <https://github.com/haskell-gi/haskell-gi/issues/485> and
--- <https://github.com/haskell-gi/haskell-gi/issues/486>.
+-- structs containing bitfields, ...
 module Main (main) where
 
-import Control.Monad (forM, forM_, replicateM, unless)
+import Control.Monad (forM, replicateM, unless)
 import Data.IORef (modifyIORef, newIORef, readIORef)
-import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Word (Word32)
 import System.Exit (exitFailure)
@@ -29,7 +26,6 @@ main = do
   context <- Pango.fontMapCreateContext fontMap
   layout <- Pango.layoutNew context
 
-  glyphStringGlyphs check layout
   logAttrs check layout
   bitfieldSetters check
   dateBitfields check
@@ -39,29 +35,6 @@ main = do
   unless (n == 0) exitFailure
 
 type Checker = String -> Bool -> IO ()
-
--- | The glyphs in a PangoGlyphString are an array of PangoGlyphInfo
--- (whose size the typelib gets wrong, since it embeds a
--- PangoGlyphVisAttr with bitfields), with the length given by
--- another field (#485).
-glyphStringGlyphs :: Checker -> Pango.Layout -> IO ()
-glyphStringGlyphs check layout = do
-  Pango.layoutSetText layout "Hello, world" (-1)
-  Just line <- Pango.layoutGetLine layout 0
-  runs <- Pango.getLayoutLineRuns line
-  check "the layout line has runs" (not (null runs))
-  forM_ runs $ \run -> do
-    Just glyphString <- Pango.getGlyphItemGlyphs run
-    numGlyphs <- Pango.getGlyphStringNumGlyphs glyphString
-    glyphs <- fromMaybe [] <$> Pango.getGlyphStringGlyphs glyphString
-    check ("GlyphString.glyphs has num_glyphs = " ++ show numGlyphs ++ " elements")
-          (length glyphs == fromIntegral numGlyphs)
-    widths <- forM glyphs $ \g ->
-      Pango.getGlyphInfoGeometry g >>= Pango.getGlyphGeometryWidth
-    total <- Pango.glyphStringGetWidth glyphString
-    check ("the glyph widths add up to pango_glyph_string_get_width ("
-           ++ show (sum widths) ++ " == " ++ show total ++ ")")
-          (sum widths == total)
 
 -- | Arrays of PangoLogAttr (a struct of bitfields), both returned by
 -- Pango and filled in by Pango in an array we allocate (#486).

@@ -54,10 +54,11 @@ jobs:
     - name: Build
       run: cabal build all
 
-    # Runs the struct layout tests in test/haskell-gi-test.cabal (which
-    # compile C code against the development headers installed above,
-    # so they need a C compiler and pkg-config), and the haskell-gi
-    # doctests.
+    # Runs the tests in test/haskell-gi-test.cabal: the struct layout
+    # tests (which compile C code against the development headers
+    # installed above, so they need a C compiler and pkg-config) and
+    # the regression tests for reported issues in test/issues; and
+    # then the haskell-gi doctests.
     #
     # haskell-gi has a Custom setup, so cabal builds it as a whole
     # instead of component by component. If it is tested in the same
@@ -69,7 +70,7 @@ jobs:
     # at a time: first haskell-gi-test, which leaves haskell-gi (and the
     # bindings) as built above, and then haskell-gi, which rebuilds
     # haskell-gi but nothing depending on it.
-    - name: Run struct layout tests
+    - name: Run struct layout and regression tests
       run: |
         printf 'package haskell-gi-test\n  tests: True\n' > cabal.project.local
         cabal test haskell-gi-test --test-show-details=direct --allow-newer=sdl2:bytestring
