@@ -1,0 +1,36 @@
+namespace GstApp
+
+# GStreamer 1.28 introduced top-level callback types for use with
+# GstAppSinkSimpleCallbacks/GstAppSrcSimpleCallbacks, whose names
+# coincide with the callback types that we generate for signals
+# (<Object><Signal>Callback), for example the "eos" signal on AppSink
+# and the AppSinkEosCallback callback. This leads to conflicting
+# exports in GI.GstApp, so we rename the new callbacks (keeping the
+# existing names for the signal callbacks, for backwards
+# compatibility). These are no-ops for older versions of GStreamer.
+
+# AppSink
+set-attr GstApp/AppSinkEosCallback name AppSinkSimpleEosCallback
+set-attr GstApp/AppSinkSimpleCallbacks/set_eos/@parameters/eos_cb/@type name AppSinkSimpleEosCallback
+
+set-attr GstApp/AppSinkNewEventCallback name AppSinkSimpleNewEventCallback
+set-attr GstApp/AppSinkSimpleCallbacks/set_new_event/@parameters/new_event_cb/@type name AppSinkSimpleNewEventCallback
+
+set-attr GstApp/AppSinkNewPrerollCallback name AppSinkSimpleNewPrerollCallback
+set-attr GstApp/AppSinkSimpleCallbacks/set_new_preroll/@parameters/new_preroll_cb/@type name AppSinkSimpleNewPrerollCallback
+
+set-attr GstApp/AppSinkNewSampleCallback name AppSinkSimpleNewSampleCallback
+set-attr GstApp/AppSinkSimpleCallbacks/set_new_sample/@parameters/new_sample_cb/@type name AppSinkSimpleNewSampleCallback
+
+set-attr GstApp/AppSinkProposeAllocationCallback name AppSinkSimpleProposeAllocationCallback
+set-attr GstApp/AppSinkSimpleCallbacks/set_propose_allocation/@parameters/propose_allocation_cb/@type name AppSinkSimpleProposeAllocationCallback
+
+# AppSrc
+set-attr GstApp/AppSrcEnoughDataCallback name AppSrcSimpleEnoughDataCallback
+set-attr GstApp/AppSrcSimpleCallbacks/set_enough_data/@parameters/enough_data_cb/@type name AppSrcSimpleEnoughDataCallback
+
+set-attr GstApp/AppSrcNeedDataCallback name AppSrcSimpleNeedDataCallback
+set-attr GstApp/AppSrcSimpleCallbacks/set_need_data/@parameters/need_data_cb/@type name AppSrcSimpleNeedDataCallback
+
+set-attr GstApp/AppSrcSeekDataCallback name AppSrcSimpleSeekDataCallback
+set-attr GstApp/AppSrcSimpleCallbacks/set_seek_data/@parameters/seek_data_cb/@type name AppSrcSimpleSeekDataCallback
