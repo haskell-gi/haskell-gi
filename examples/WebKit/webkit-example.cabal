@@ -13,7 +13,7 @@ cabal-version:       2.0
 
 source-repository head
   type: git
-  location: git://github.com/haskell-gi/haskell-gi.git
+  location: https://github.com/haskell-gi/haskell-gi.git
 
 foreign-library simple-webextension
   type:                native-shared

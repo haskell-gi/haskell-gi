@@ -13,7 +13,7 @@ cabal-version:       >=1.10
 
 source-repository head
   type: git
-  location: git://github.com/haskell-gi/haskell-gi.git
+  location: https://github.com/haskell-gi/haskell-gi.git
 
 executable SourceView
   main-is:             SourceView.hs
