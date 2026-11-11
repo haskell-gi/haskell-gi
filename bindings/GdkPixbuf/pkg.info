@@ -11,7 +11,7 @@
     "distributionPackages": {
         "fedora": [],
         "ubuntu": [
-            "libgdk-pixbuf2.0-dev"
+            "libgdk-pixbuf-2.0-dev"
         ]
     },
     "giDepends": [
