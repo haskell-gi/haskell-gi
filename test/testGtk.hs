@@ -17,6 +17,7 @@ import GI.Gtk hiding (main)
 import qualified GI.Gtk as Gtk
 import qualified GI.Gdk as Gdk
 import qualified GI.Gio as Gio
+import qualified GI.GioUnix as GioUnix
 import qualified GI.GLib as GLib
 
 import Foreign.C
@@ -421,7 +422,7 @@ testArrayOfArrays :: IO ()
 testArrayOfArrays = do
   performGC
   putStrLn "*** Array of array test"
-  Gio.desktopAppInfoSearch "text" >>= print
+  GioUnix.desktopAppInfoSearch "text" >>= print
   performGC
   putStrLn "+++ Array of array test done"
 
