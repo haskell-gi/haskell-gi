@@ -13,6 +13,24 @@ set-attr Pango/Matrix/transform_pixel_rectangle/@parameters/rect direction in
 set-attr Pango/Layout/get_size/@parameters/width caller-allocates 0
 set-attr Pango/Layout/get_size/@parameters/height caller-allocates 0
 
+# Older versions of pango (at least up to 1.52) did not annotate the
+# LogAttr arrays to be filled in by these functions as (out
+# caller-allocates), so they were treated as pure input arguments
+# and the results were lost. The parameter was called log_attrs in
+# some of these versions, and attrs in others. Newer versions of
+# pango have the right annotations, so these are no-ops there.
+# https://github.com/haskell-gi/haskell-gi/issues/486
+set-attr Pango/get_log_attrs/@parameters/attrs direction out
+set-attr Pango/get_log_attrs/@parameters/attrs caller-allocates 1
+set-attr Pango/get_log_attrs/@parameters/log_attrs direction out
+set-attr Pango/get_log_attrs/@parameters/log_attrs caller-allocates 1
+set-attr Pango/tailor_break/@parameters/attrs direction out
+set-attr Pango/tailor_break/@parameters/attrs caller-allocates 1
+set-attr Pango/tailor_break/@parameters/log_attrs direction out
+set-attr Pango/tailor_break/@parameters/log_attrs caller-allocates 1
+set-attr Pango/break/@parameters/attrs direction out
+set-attr Pango/break/@parameters/attrs caller-allocates 1
+
 set-attr Pango/AttrFontDesc/new introspectable 1
 set-attr Pango/AttrFontFeatures/new introspectable 1
 set-attr Pango/AttrLanguage/new introspectable 1
