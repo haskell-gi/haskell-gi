@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.4', '8.6', '8.10', '9.0', '9.4', '9.6', '9.8', '9.10', '9.12']
+        ghc: ['8.4', '8.6', '8.10', '9.0', '9.4', '9.6', '9.8', '9.10', '9.12', '9.14']
 
     steps:
     - uses: actions/checkout@v1
@@ -38,10 +38,13 @@ jobs:
       run: |
         ./update-cabal-project.sh ubuntu-ci ${{ matrix.ghc }}
 
+    # Some GHC versions (9.4, for instance) link through gcc with
+    # -fuse-ld=gold, and since Ubuntu 26.04 the gold linker is no longer
+    # part of binutils, but a separate package (binutils-gold).
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libsdl2-dev libgirepository1.0-dev libunwind-dev
+        sudo apt-get install -y libsdl2-dev libgirepository1.0-dev libunwind-dev binutils-gold
         ./bindings/PKGS.sh deps ubuntu-ci | sudo xargs apt-get install -y
 
     - name: Generate bindings
