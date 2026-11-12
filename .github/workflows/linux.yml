@@ -75,7 +75,10 @@ jobs:
         printf 'package haskell-gi-test\n  tests: True\n' > cabal.project.local
         cabal test haskell-gi-test --test-show-details=direct --allow-newer=sdl2:bytestring
 
+    # The target is "haskell-gi:tests" (all the test suites in the
+    # haskell-gi package), since plain "haskell-gi" refers to the
+    # library component, which has the same name as the package.
     - name: Run doctests
       run: |
         printf 'package haskell-gi\n  tests: True\n' >> cabal.project.local
-        cabal test haskell-gi --test-show-details=direct --allow-newer=sdl2:bytestring
+        cabal test haskell-gi:tests --test-show-details=direct --allow-newer=sdl2:bytestring
