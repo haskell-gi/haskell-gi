@@ -1,3 +1,7 @@
+### 3.0.45
+
++ Use haskell-gi 0.27.
+
 ### 3.0.43
 
 + Expose ActionableInterface
