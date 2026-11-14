@@ -44,14 +44,36 @@ if [ ${#DOCS[@]} -eq 0 ]; then
     exit 1
 fi
 
+# Hackage sometimes answers with a 502 (Bad Gateway) error, which
+# usually goes away when retrying. The first retry waits for 2
+# seconds, and any further ones for 5 seconds, up to MAX_RETRIES.
+MAX_RETRIES=10
+
 for doc in "${DOCS[@]}"; do
     echo -n "Uploading $(basename "$doc")... "
-    if result=$(cabal upload "${UPLOAD_FLAGS[@]}" "$doc" 2>&1); then
-        echo "OK"
-        rm "$doc"
-    else
-        echo "FAILED"
-        echo "$result" >&2
-        exit 1
-    fi
+    retries=0
+    while true; do
+        if result=$(cabal upload "${UPLOAD_FLAGS[@]}" "$doc" 2>&1); then
+            echo "OK"
+            rm "$doc"
+            break
+        # cabal reports the error as "... http code\n502", possibly
+        # with the line break in a different place, so join the lines
+        # before matching.
+        elif echo "$result" | tr '\n' ' ' | grep -qE 'http code +502( |$)' \
+                && [ $retries -lt $MAX_RETRIES ]; then
+            if [ $retries -eq 0 ]; then
+                delay=2
+            else
+                delay=5
+            fi
+            retries=$((retries + 1))
+            echo -n "502 from server, retrying in ${delay}s... "
+            sleep $delay
+        else
+            echo "FAILED"
+            echo "$result" >&2
+            exit 1
+        fi
+    done
 done
