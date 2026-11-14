@@ -1,3 +1,7 @@
+### 2.0.32
+
++ Use haskell-gi 0.27.
+
 ### 2.0.31
 
 + Depend on haskell-gi >= 0.26.9 (see [issue 439](https://github.com/haskell-gi/haskell-gi/issues/439))
