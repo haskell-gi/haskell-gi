@@ -1,3 +1,7 @@
+### 6.0.6
+
++ Use haskell-gi 0.27.
+
 ### 6.0.5
 
 + Add some nullables, see [PR 474](https://github.com/haskell-gi/haskell-gi/pull/474).
