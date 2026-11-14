@@ -10,6 +10,7 @@ module Data.GI.CodeGen.GtkDoc
   , DocSymbolName(..)
   , docName
   , resolveDocSymbol
+  , resolveCRef
   ) where
 
 import Prelude hiding (takeWhile)
@@ -231,6 +232,35 @@ isCIdent c   = isAscii c && isAlphaNum c
 parseCIdent :: Parser Text
 parseCIdent = takeWhile1 isCIdent
 
+-- | Parse the name of a symbol in a new style reference, which can be
+-- either qualified by its namespace, as in
+-- > Namespace.Name
+-- or, if the symbol lives in the namespace being documented, given
+-- without the namespace, as in
+-- > Name
+-- The resulting name is passed to the given parser, which parses the
+-- rest of the reference. The unqualified form is only tried if the
+-- reference does not parse in the qualified form, which is the most
+-- common one.
+--
+-- === __Examples__
+-- >>> parseOnly (withDocSymbol (\n -> char ']' >> return n) <* endOfInput) "Gtk.Button]"
+-- Right (AbsoluteName "Gtk" "Button")
+--
+-- >>> parseOnly (withDocSymbol (\n -> char ']' >> return n) <* endOfInput) "Button]"
+-- Right (RelativeName "Button")
+withDocSymbol :: (DocSymbolName -> Parser a) -> Parser a
+withDocSymbol rest = qualified <|> unqualified
+  where qualified = do
+          ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+          _ <- char '.'
+          n <- parseCIdent
+          rest (AbsoluteName ns n)
+
+        unqualified = do
+          n <- parseCIdent
+          rest (RelativeName n)
+
 -- | Parse a function ref
 parseFunctionRef :: Parser [Token]
 parseFunctionRef = parseOldFunctionRef <|> parseNewFunctionRef
@@ -261,55 +291,78 @@ parseOldFunctionRef = do
 
 -- | Parse a function name in new style, of the form
 -- > [func@Namespace.c_func_name]
+-- or, for functions in the current namespace,
+-- > [func@c_func_name]
 --
 -- === __Examples__
 -- >>> parseOnly (parseFunctionRef <* endOfInput) "[func@Gtk.init]"
 -- Right [SymbolRef (FunctionRef (AbsoluteName "Gtk" "init"))]
+--
+-- >>> parseOnly (parseFunctionRef <* endOfInput) "[func@show_about_dialog]"
+-- Right [SymbolRef (FunctionRef (RelativeName "show_about_dialog"))]
 parseNewFunctionRef :: Parser [Token]
 parseNewFunctionRef = do
   _ <- string "[func@"
-  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
-  _ <- char '.'
-  n <- takeWhile1 isCIdent
-  _ <- char ']'
-  return [SymbolRef $ FunctionRef (AbsoluteName ns n)]
+  withDocSymbol $ \n -> do
+    _ <- char ']'
+    return [SymbolRef $ FunctionRef n]
 
 -- | Parse a method name, of the form
 -- > [method@Namespace.Object.c_func_name]
+-- where the namespace can be omitted for objects in the current
+-- namespace, or a function associated to a type, of the form
+-- > [func@Namespace.Object.c_func_name]
+-- In the latter case the namespace is required, since
+-- @[func\@A.b]@ refers to the function @b@ in the namespace @A@.
 --
 -- === __Examples__
 -- >>> parseOnly (parseMethod <* endOfInput) "[method@Gtk.Button.set_child]"
 -- Right [SymbolRef (MethodRef (AbsoluteName "Gtk" "Button") "set_child")]
 --
+-- >>> parseOnly (parseMethod <* endOfInput) "[method@Button.set_child]"
+-- Right [SymbolRef (MethodRef (RelativeName "Button") "set_child")]
+--
 -- >>> parseOnly (parseMethod <* endOfInput) "[func@Gtk.Settings.get_for_display]"
 -- Right [SymbolRef (MethodRef (AbsoluteName "Gtk" "Settings") "get_for_display")]
 parseMethod :: Parser [Token]
-parseMethod = do
-  _ <- string "[method@" <|> string "[func@"
-  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
-  _ <- char '.'
-  n <- takeWhile1 isCIdent
-  _ <- char '.'
-  method <- takeWhile1 isCIdent
-  _ <- char ']'
-  return [SymbolRef $ MethodRef (AbsoluteName ns n) method]
+parseMethod = method <|> typeFunction
+  where method = do
+          _ <- string "[method@"
+          withDocSymbol rest
+
+        typeFunction = do
+          _ <- string "[func@"
+          ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
+          _ <- char '.'
+          n <- parseCIdent
+          rest (AbsoluteName ns n)
+
+        rest :: DocSymbolName -> Parser [Token]
+        rest owner = do
+          _ <- char '.'
+          m <- parseCIdent
+          _ <- char ']'
+          return [SymbolRef $ MethodRef owner m]
 
 -- | Parse a reference to a constructor, of the form
 -- > [ctor@Namespace.Object.c_func_name]
+-- where the namespace can be omitted for objects in the current
+-- namespace.
 --
 -- === __Examples__
 -- >>> parseOnly (parseConstructor <* endOfInput) "[ctor@Gtk.Builder.new_from_file]"
 -- Right [SymbolRef (MethodRef (AbsoluteName "Gtk" "Builder") "new_from_file")]
+--
+-- >>> parseOnly (parseConstructor <* endOfInput) "[ctor@Builder.new_from_file]"
+-- Right [SymbolRef (MethodRef (RelativeName "Builder") "new_from_file")]
 parseConstructor :: Parser [Token]
 parseConstructor = do
   _ <- string "[ctor@"
-  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
-  _ <- char '.'
-  n <- takeWhile1 isCIdent
-  _ <- char '.'
-  method <- takeWhile1 isCIdent
-  _ <- char ']'
-  return [SymbolRef $ MethodRef (AbsoluteName ns n) method]
+  withDocSymbol $ \owner -> do
+    _ <- char '.'
+    method <- parseCIdent
+    _ <- char ']'
+    return [SymbolRef $ MethodRef owner method]
 
 -- | Parse a reference to a type, of the form
 -- > [class@Namespace.Name]
@@ -330,15 +383,18 @@ parseConstructor = do
 --
 -- >>> parseOnly (parseClass <* endOfInput) "[struct@GLib.Variant]"
 -- Right [SymbolRef (TypeRef (AbsoluteName "GLib" "Variant"))]
+--
+-- The namespace can be omitted for types in the current namespace:
+--
+-- >>> parseOnly (parseClass <* endOfInput) "[class@Dialog]"
+-- Right [SymbolRef (TypeRef (RelativeName "Dialog"))]
 parseClass :: Parser [Token]
 parseClass = do
   _ <- string "[class@" <|> string "[iface@" <|>
        string "[enum@" <|> string "[struct@"
-  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
-  _ <- char '.'
-  n <- takeWhile1 isCIdent
-  _ <- char ']'
-  return [SymbolRef $ TypeRef (AbsoluteName ns n)]
+  withDocSymbol $ \n -> do
+    _ <- char ']'
+    return [SymbolRef $ TypeRef n]
 
 -- | Parse a reference to a member of the enum, of the form
 -- > [enum@Gtk.FontRendering.AUTOMATIC]
@@ -384,16 +440,19 @@ parseOldSignal = do
 -- === __Examples__
 -- >>> parseOnly (parseNewSignal <* endOfInput) "[signal@Gtk.AboutDialog::activate-link]"
 -- Right [SymbolRef (SignalRef (AbsoluteName "Gtk" "AboutDialog") "activate-link")]
+--
+-- The namespace can be omitted for objects in the current namespace:
+--
+-- >>> parseOnly (parseNewSignal <* endOfInput) "[signal@AboutDialog::activate-link]"
+-- Right [SymbolRef (SignalRef (RelativeName "AboutDialog") "activate-link")]
 parseNewSignal :: Parser [Token]
 parseNewSignal = do
   _ <- string "[signal@"
-  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
-  _ <- char '.'
-  n <- parseCIdent
-  _ <- string "::"
-  signal <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
-  _ <- char ']'
-  return [SymbolRef (SignalRef (AbsoluteName ns n) signal)]
+  withDocSymbol $ \owner -> do
+    _ <- string "::"
+    signal <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
+    _ <- char ']'
+    return [SymbolRef (SignalRef owner signal)]
 
 -- | Parse a reference to a signal defined in the current module, of the form
 -- > ::signal
@@ -429,16 +488,19 @@ parseOldProperty = do
 -- Right [SymbolRef (PropertyRef (AbsoluteName "Gtk" "ProgressBar") "show-text")]
 -- >>> parseOnly (parseNewProperty <* endOfInput) "[property@Gtk.Editable:width-chars]"
 -- Right [SymbolRef (PropertyRef (AbsoluteName "Gtk" "Editable") "width-chars")]
+--
+-- The namespace can be omitted for objects in the current namespace:
+--
+-- >>> parseOnly (parseNewProperty <* endOfInput) "[property@Animation:state]"
+-- Right [SymbolRef (PropertyRef (RelativeName "Animation") "state")]
 parseNewProperty :: Parser [Token]
 parseNewProperty = do
   _ <- string "[property@"
-  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
-  _ <- char '.'
-  n <- parseCIdent
-  _ <- char ':'
-  property <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
-  _ <- char ']'
-  return [SymbolRef (PropertyRef (AbsoluteName ns n) property)]
+  withDocSymbol $ \owner -> do
+    _ <- char ':'
+    property <- takeWhile1 (\c -> (isAscii c && isAlpha c) || c == '-')
+    _ <- char ']'
+    return [SymbolRef (PropertyRef owner property)]
 
 -- | Parse a property
 parseProperty :: Parser [Token]
@@ -476,16 +538,19 @@ parseOldVMethod = do
 --
 -- >>> parseOnly (parseVFunc <* endOfInput) "[vfunc@Gtk.Widget.get_request_mode]"
 -- Right [SymbolRef (VFuncRef (AbsoluteName "Gtk" "Widget") "get_request_mode")]
+--
+-- The namespace can be omitted for objects in the current namespace:
+--
+-- >>> parseOnly (parseVFunc <* endOfInput) "[vfunc@Widget.get_request_mode]"
+-- Right [SymbolRef (VFuncRef (RelativeName "Widget") "get_request_mode")]
 parseVFunc :: Parser [Token]
 parseVFunc = do
   _ <- string "[vfunc@"
-  ns <- takeWhile1 (\c -> isAscii c && isAlpha c)
-  _ <- char '.'
-  n <- parseCIdent
-  _ <- char '.'
-  vfunc <- parseCIdent
-  _ <- char ']'
-  return [SymbolRef (VFuncRef (AbsoluteName ns n) vfunc)]
+  withDocSymbol $ \owner -> do
+    _ <- char '.'
+    vfunc <- parseCIdent
+    _ <- char ']'
+    return [SymbolRef (VFuncRef owner vfunc)]
 
 -- | Parse a reference to a virtual method
 parseVMethod :: Parser [Token]
@@ -945,3 +1010,25 @@ docName (Name ns n) = AbsoluteName ns n
 resolveDocSymbol :: DocSymbolName -> Text -> Name
 resolveDocSymbol (AbsoluteName ns n) _ = Name ns n
 resolveDocSymbol (RelativeName n) defaultNS = Name defaultNS n
+
+-- | Make all the symbol names in the given `CRef` absolute, using the
+-- provided default namespace for relative names.
+--
+-- === __Examples__
+-- >>> resolveCRef "Adw" (PropertyRef (RelativeName "Animation") "state")
+-- PropertyRef (AbsoluteName "Adw" "Animation") "state"
+--
+-- >>> resolveCRef "Adw" (PropertyRef (AbsoluteName "Gtk" "Settings") "gtk-enable-animations")
+-- PropertyRef (AbsoluteName "Gtk" "Settings") "gtk-enable-animations"
+resolveCRef :: Text -> CRef -> CRef
+resolveCRef defaultNS cref = case cref of
+  FunctionRef n -> FunctionRef (absolute n)
+  MethodRef n m -> MethodRef (absolute n) m
+  SignalRef n s -> SignalRef (absolute n) s
+  PropertyRef n p -> PropertyRef (absolute n) p
+  VFuncRef n v -> VFuncRef (absolute n) v
+  EnumMemberRef n m -> EnumMemberRef (absolute n) m
+  TypeRef n -> TypeRef (absolute n)
+  _ -> cref
+  where absolute :: DocSymbolName -> DocSymbolName
+        absolute = docName . flip resolveDocSymbol defaultNS

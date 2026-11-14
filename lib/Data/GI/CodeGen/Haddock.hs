@@ -34,7 +34,8 @@ import Data.GI.CodeGen.Config (modName, overrides)
 import Data.GI.CodeGen.CtoHaskellMap (Hyperlink(..))
 import Data.GI.CodeGen.GtkDoc (GtkDoc(..), Token(..), CRef(..), Language(..),
                                Link(..), parseGtkDoc,
-                               DocSymbolName(..), resolveDocSymbol, docName)
+                               DocSymbolName(..), resolveDocSymbol, docName,
+                               resolveCRef)
 import Data.GI.CodeGen.Overrides (onlineDocsMap)
 import Data.GI.CodeGen.SymbolNaming (lowerSymbol, signalHaskellName,
                                      haddockSignalAnchor)
@@ -84,9 +85,13 @@ formatHaddock c2h docBase defaultNS (GtkDoc tokens) = T.concat $ map formatToken
           formatUnnumberedList c2h docBase defaultNS l
         formatToken (NumberedList l) =
           formatNumberedList c2h docBase defaultNS l
-        formatToken (SymbolRef cr) = case M.lookup cr c2h of
-          Just hr -> formatHyperlink hr
-          Nothing -> formatUnknownCRef c2h defaultNS cr
+        -- The keys in the c2h map always refer to absolute names,
+        -- so resolve any relative names in the reference first.
+        formatToken (SymbolRef cr) =
+          let resolved = resolveCRef defaultNS cr
+          in case M.lookup resolved c2h of
+            Just hr -> formatHyperlink hr
+            Nothing -> formatUnknownCRef c2h defaultNS resolved
 
         -- Markdown accepts both two underscores and two stars as
         -- indicating bold, but Haddock only accepts two underscores.
