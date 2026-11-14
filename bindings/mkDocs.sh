@@ -45,6 +45,15 @@ for tarball in "${TARBALLS[@]}"; do
 done
 
 cd "$ROOT_DIR"
+
+# Haddock can only link to identifiers in other packages if it can
+# find their interface (.haddock) files. For the local packages, cabal
+# looks for them where a regular haddock build puts them, while
+# --haddock-for-hackage writes them somewhere else. So we first do a
+# regular build for haskell-gi-base, haskell-gi and the bindings, and
+# then the build for Hackage. Otherwise links to other packages end up
+# as dangling links relative to the package's own documentation.
+cabal haddock haskell-gi-base haskell-gi "${NAMES[@]}"
 cabal haddock --haddock-for-hackage "${NAMES[@]}"
 
 for i in "${!PKGS[@]}"; do
