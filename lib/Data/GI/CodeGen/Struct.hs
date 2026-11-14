@@ -356,7 +356,7 @@ isRegularCallback t@(TInterface _) = do
 isRegularCallback _ = return Nothing
 
 -- | The types accepted by the allocating set function
--- 'Data.GI.Base.Attributes.(:&=)'.
+-- 'Data.GI.Base.Attributes.:&='.
 fieldTransferTypeConstraint :: Type -> CodeGen e Text
 fieldTransferTypeConstraint t = do
   isPtr <- typeIsPtr t
