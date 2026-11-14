@@ -139,7 +139,7 @@ checkAll = do
 checkNamespace :: Text -> Text -> IO (Either Problem ())
 checkNamespace ns version = do
   loaded <- try $ do
-    (doc, _) <- loadGIRInfo False ns (Just version) [] []
+    (doc, _) <- loadGIRInfo False ns (Just version) [] [] ns []
     _ <- evaluate (length (girAPIs doc))
     return doc
   case loaded of

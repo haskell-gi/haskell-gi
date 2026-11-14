@@ -64,7 +64,7 @@ writeCabal fname info exposed =
          T.intercalate ",\n                     "
            ([ "base >= 4.11 && < 5"
             , "Cabal >= 1.24 && < 4"
-            , "haskell-gi >= 0.26.14 && < 0.27"]
+            , "haskell-gi >= 0.27 && < 0.28"]
             <> giDepends info)
        , ""
        , "library"
@@ -81,7 +81,7 @@ writeCabal fname info exposed =
                -- Workaround for cabal new-build not picking up
                -- setup-depends dependencies when constructing the
                -- build plan.
-               , "haskell-gi >= 0.26.14 && < 0.27"
+               , "haskell-gi >= 0.27 && < 0.28"
                -- See https://github.com/haskell-gi/haskell-gi/issues/124
                -- for the reasoning behind this.
                , "haskell-gi-overloading < 1.1" ]
@@ -112,12 +112,12 @@ writeSetup fname info deps =
     B.writeFile fname $ TE.encodeUtf8 $ T.unlines
            [ "{-# LANGUAGE OverloadedStrings #-}"
            , ""
-           , "import Data.GI.CodeGen.CabalHooks (setupBinding, TaggedOverride(..))"
+           , "import Data.GI.CodeGen.CabalHooks (setupBinding, TaggedOverride(..), TaggedPkgConfigVersions(..))"
            , ""
            , T.unlines (map buildInfo (S.toList deps))
            , ""
            , "main :: IO ()"
-           , "main = setupBinding name version pkgName pkgVersion verbose overridesFile inheritedOverrides outputDir"
+           , "main = setupBinding name version pkgName pkgVersion verbose overridesFile inheritedOverrides depVersions outputDir"
            , "  where name = " <> tshow (girName info)
            , "        version = " <> tshow (girVersion info)
            , "        pkgName = " <> tshow (name info)
@@ -127,6 +127,9 @@ writeSetup fname info deps =
            , "        outputDir = Nothing"
            , "        inheritedOverrides = ["
              <> T.intercalate ", " (map inheritedOverride (S.toList deps))
+             <> "]"
+           , "        depVersions = ["
+             <> T.intercalate ", " (map depVersion (S.toList deps))
              <> "]"
            ]
     where tshow :: Show a => a -> Text
@@ -140,6 +143,11 @@ writeSetup fname info deps =
           inheritedOverride dep = let capDep = ucFirst dep in
             "TaggedOverride \"inherited:" <> capDep <> "\" "
                       <> capDep <> ".overrides"
+
+          depVersion :: Text -> Text
+          depVersion dep = let capDep = ucFirst dep in
+            "TaggedPkgConfigVersions " <> tshow capDep <> " "
+                      <> capDep <> ".pkgConfigVersions"
 
 exposedModulesAndDeps :: FilePath -> ProjectInfo -> IO ([Text], S.Set Text)
 exposedModulesAndDeps dir info =
@@ -214,7 +222,7 @@ writeCompatCabal fname compatPkg info =
     -- For compatibility with stack, see
     -- https://github.com/haskell-gi/haskell-gi/issues/463
     , "   Cabal >= 1.24 && < 4,"
-    , "   haskell-gi ^>= 0.26.14,"
+    , "   haskell-gi ^>= 0.27,"
     , "   " <> name info <> " ^>= " <> version info
     , ""
     , "library"

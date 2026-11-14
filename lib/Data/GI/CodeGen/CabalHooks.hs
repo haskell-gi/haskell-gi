@@ -5,6 +5,7 @@ module Data.GI.CodeGen.CabalHooks
     , setupCompatWrapper
     , configureDryRun
     , TaggedOverride(..)
+    , TaggedPkgConfigVersions(..)
     ) where
 
 import qualified Distribution.ModuleName as MN
@@ -14,7 +15,7 @@ import Distribution.Simple (UserHooks(..), simpleUserHooks,
                             defaultMainWithHooks, OptimisationLevel(..))
 import Distribution.PackageDescription
 
-import Data.GI.CodeGen.API (loadGIRInfo)
+import Data.GI.CodeGen.API (loadGIRInfo, GIRInfo(girPCPackages))
 import Data.GI.CodeGen.Code (genCode, writeModuleTree, listModuleTree,
                              ModuleInfo, transitiveModuleDeps)
 import Data.GI.CodeGen.CodeGen (genModule)
@@ -23,6 +24,8 @@ import Data.GI.CodeGen.LibGIRepository (setupTypelibSearchPath)
 import Data.GI.CodeGen.ModulePath (toModulePath)
 import Data.GI.CodeGen.Overrides (parseOverrides, girFixups,
                                   filterAPIsAndDeps)
+import Data.GI.CodeGen.PkgConfig (pkgConfigModVersions,
+                                  TaggedPkgConfigVersions(..))
 import Data.GI.CodeGen.Util (utf8ReadFile, utf8WriteFile, ucFirst, splitOn)
 
 import System.Directory (createDirectoryIfMissing)
@@ -49,15 +52,18 @@ data TaggedOverride =
                  , overrideText  :: Text
                  }
 
--- | Generate the code for the given module.
+-- | Generate the code for the given module. We also return the
+-- pkg-config packages listed in the GIR file for the module.
 genModuleCode :: Text -- ^ name
               -> Text -- ^ version
               -> Text -- ^ pkgName
               -> Text -- ^ pkgVersion
               -> Bool -- ^ verbose
               -> [TaggedOverride] -- ^ Explicit overrides
-              -> IO ModuleInfo
-genModuleCode name version pkgName pkgVersion verbosity overrides = do
+              -> [TaggedPkgConfigVersions] -- ^ Versions recorded
+                                           -- by the dependencies
+              -> IO (ModuleInfo, [Text])
+genModuleCode name version pkgName pkgVersion verbosity overrides depVersions = do
   setupTypelibSearchPath []
 
   parsed <- forM overrides $ \(TaggedOverride tag ovText) -> do
@@ -70,6 +76,7 @@ genModuleCode name version pkgName pkgVersion verbosity overrides = do
   let ovs = mconcat parsed
 
   (gir, girDeps) <- loadGIRInfo verbosity name (Just version) [] (girFixups ovs)
+                                   pkgName depVersions
   let (apis, deps) = filterAPIsAndDeps ovs gir girDeps
       allAPIs = M.union apis deps
       cfg = Config {modName = name,
@@ -79,13 +86,14 @@ genModuleCode name version pkgName pkgVersion verbosity overrides = do
                     verbose = verbosity,
                     overrides = ovs}
 
-  return $ genCode cfg allAPIs (toModulePath name) (genModule apis)
+  return (genCode cfg allAPIs (toModulePath name) (genModule apis),
+          girPCPackages gir)
 
 -- | Write a module containing information about the configuration for
 -- the package.
 genConfigModule :: Maybe FilePath -> Text -> Maybe TaggedOverride ->
-                   [Text] -> IO ()
-genConfigModule outputDir modName maybeGiven modules = do
+                   M.Map Text Text -> [Text] -> IO ()
+genConfigModule outputDir modName maybeGiven pcVersions modules = do
   let fname = joinPath [ fromMaybe "" outputDir
                        , "GI"
                        , T.unpack (ucFirst modName)
@@ -97,8 +105,9 @@ genConfigModule outputDir modName maybeGiven modules = do
   utf8WriteFile fname $ T.unlines
     [ "{-# LANGUAGE OverloadedStrings #-}"
     , "-- | Build time configuration used during code generation."
-    , "module GI." <> ucFirst modName <> ".Config ( overrides, modules ) where"
+    , "module GI." <> ucFirst modName <> ".Config ( overrides, modules, pkgConfigVersions ) where"
     , ""
+    , "import qualified Data.Map as M"
     , "import qualified Data.Text as T"
     , "import Data.Text (Text)"
     , ""
@@ -111,13 +120,19 @@ genConfigModule outputDir modName maybeGiven modules = do
     , "modules :: [Text]"
     , "modules = " <>
       formatList (("GI." <> ucFirst modName <> ".Config") : modules)
+    , ""
+    , "-- | Versions of the pkg-config packages (as listed in the"
+    , "-- introspection data) at the time the bindings were generated."
+    , "pkgConfigVersions :: M.Map Text Text"
+    , "pkgConfigVersions = M.fromList"
+    , formatList (M.toList pcVersions)
     ]
 
   where overrides :: Maybe TaggedOverride -> [Text]
         overrides Nothing = []
         overrides (Just (TaggedOverride _ ovText)) = T.lines ovText
 
-        formatList :: [Text] -> Text
+        formatList :: Show a => [a] -> Text
         formatList l = " [ "
                        <> T.intercalate "\n , " (map (T.pack . show) l)
                        <> "]"
@@ -131,17 +146,21 @@ confCodeGenHook :: Text -- ^ name
                 -> Bool -- ^ verbose
                 -> Maybe FilePath -- ^ overrides file
                 -> [TaggedOverride] -- ^ other overrides
+                -> [TaggedPkgConfigVersions] -- ^ dependency versions
                 -> Maybe FilePath -- ^ output dir
                 -> ConfHook -- ^ previous `confHook`
                 -> ConfHook
 confCodeGenHook name version pkgName pkgVersion verbosity
-                overridesFile inheritedOverrides outputDir
+                overridesFile inheritedOverrides depVersions outputDir
                 defaultConfHook (gpd, hbi) flags = do
 
   givenOvs <- traverse (\fname -> TaggedOverride (T.pack fname) <$> utf8ReadFile fname) overridesFile
 
   let ovs = maybe inheritedOverrides (:inheritedOverrides) givenOvs
-  m <- genModuleCode name version pkgName pkgVersion verbosity ovs
+  (m, pcPackages) <- genModuleCode name version pkgName pkgVersion
+                                   verbosity ovs depVersions
+
+  pcVersions <- pkgConfigModVersions pcPackages
 
   let buildInfo = MN.fromString . T.unpack $ "GI." <> ucFirst name <> ".Config"
       em' = buildInfo : map (MN.fromString . T.unpack) (listModuleTree m)
@@ -158,13 +177,18 @@ confCodeGenHook name version pkgName pkgVersion verbosity
 
   modules <- writeModuleTree verbosity outputDir m
 
-  genConfigModule outputDir name givenOvs modules
+  genConfigModule outputDir name givenOvs pcVersions modules
 
   lbi <- defaultConfHook (gpd', hbi) flags
 
   return (lbi {withOptimization = NoOptimisation})
 
--- | The entry point for @Setup.hs@ files in bindings.
+-- | The entry point for @Setup.hs@ files in bindings. The
+-- `TaggedPkgConfigVersions` should be taken from the
+-- @pkgConfigVersions@ entries of the @GI.<Name>.Config@ modules of the
+-- dependencies: if they do not agree with the versions currently
+-- reported by pkg-config a warning will be printed, since this
+-- typically leads to compilation errors.
 setupBinding :: Text -- ^ name
              -> Text -- ^ version
              -> Text -- ^ pkgName
@@ -172,14 +196,17 @@ setupBinding :: Text -- ^ name
              -> Bool -- ^ verbose
              -> Maybe FilePath -- ^ overrides file
              -> [TaggedOverride] -- ^ Explicit overrides
+             -> [TaggedPkgConfigVersions] -- ^ Dependency versions
              -> Maybe FilePath -- ^ output dir
              -> IO ()
-setupBinding name version pkgName pkgVersion verbose overridesFile overrides outputDir =
+setupBinding name version pkgName pkgVersion verbose
+             overridesFile overrides depVersions outputDir =
     defaultMainWithHooks (simpleUserHooks {
                             confHook = confCodeGenHook name version
                                        pkgName pkgVersion
                                        verbose
-                                       overridesFile overrides outputDir
+                                       overridesFile overrides
+                                       depVersions outputDir
                                        (confHook simpleUserHooks)
                           })
 
@@ -266,7 +293,7 @@ configureDryRun name version pkgName pkgVersion overridesFile inheritedOverrides
   givenOvs <- traverse (\fname -> TaggedOverride (T.pack fname) <$> utf8ReadFile fname) overridesFile
 
   let ovs = maybe inheritedOverrides (:inheritedOverrides) givenOvs
-  m <- genModuleCode name version pkgName pkgVersion False ovs
+  (m, _) <- genModuleCode name version pkgName pkgVersion False ovs []
 
   return (("GI." <> ucFirst name <> ".Config") : listModuleTree m,
            transitiveModuleDeps m)

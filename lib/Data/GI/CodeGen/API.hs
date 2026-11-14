@@ -79,6 +79,8 @@ import qualified Text.XML as XML
 
 import Text.Regex.TDFA ((=~))
 
+import Data.GI.CodeGen.PkgConfig (TaggedPkgConfigVersions,
+                                  checkDepVersions)
 import Data.GI.GIR.Alias (documentListAliases)
 import Data.GI.GIR.Allocation (AllocationInfo(..), AllocationOp(..), unknownAllocationInfo)
 import Data.GI.GIR.Arg (Arg(..), Direction(..), Scope(..))
@@ -543,15 +545,22 @@ fixupFunctionSymbols typelibMap (n, f) verbose = do
   let callable' = (fnCallable f){callableResolvable = Just resolvable}
   return (n, APIFunction (f {fnCallable = callable'}))
 
--- | Load and parse a GIR file, including its dependencies.
+-- | Load and parse a GIR file, including its dependencies. The
+-- pkg-config packages listed in the GIR files for the dependencies
+-- are checked against the given versions recorded by the dependency
+-- bindings, see `checkDepVersions`.
 loadGIRInfo :: Bool             -- ^ verbose
             -> Text             -- ^ name
             -> Maybe Text       -- ^ version
             -> [FilePath]       -- ^ extra paths to search
             -> [GIRRule]        -- ^ fixups
+            -> Text             -- ^ name of the package being
+                                -- generated, for error reporting
+            -> [TaggedPkgConfigVersions] -- ^ versions recorded by
+                                         -- the dependency bindings
             -> IO (GIRInfo, [GIRInfo])
             -- ^ (parsed doc,  parsed deps)
-loadGIRInfo verbose name version extraPaths rules =  do
+loadGIRInfo verbose name version extraPaths rules pkgName depVersions =  do
   (doc, deps) <- loadGIRFile verbose name version extraPaths rules
   let aliases = M.unions (map documentListAliases (doc : M.elems deps))
       parsedDoc = toGIRInfo (parseGIRDocument aliases doc)
@@ -561,6 +570,8 @@ loadGIRInfo verbose name version extraPaths rules =  do
     Right (docGIR, depsGIR) -> do
       if girNSName docGIR == name
       then do
+        checkDepVersions pkgName verbose (concatMap girPCPackages depsGIR)
+                         depVersions
         typelibMap <- M.fromList <$> (forM (docGIR : depsGIR) $ \info -> do
              typelib <- girRequire (girNSName info) (girNSVersion info)
              return (girNSName info, typelib))

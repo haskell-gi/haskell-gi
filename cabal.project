@@ -46,6 +46,7 @@ packages: base/haskell-gi-base.cabal
           bindings/GstTag/gi-gsttag.cabal
           bindings/GstPbutils/gi-gstpbutils.cabal
           bindings/GES/gi-ges.cabal
+          bindings/Graphene/gi-graphene.cabal
           bindings/Gsk/gi-gsk.cabal
           bindings/Gtk-3.0/gi-gtk3.cabal
           bindings/Gtk-4.0/gi-gtk4.cabal
