@@ -1,3 +1,7 @@
+### 0.7.30
+
++ Use haskell-gi 0.27.
+
 ### 0.7.29
 
 + Add dependency on gi-gio.
