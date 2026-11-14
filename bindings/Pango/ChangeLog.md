@@ -1,3 +1,7 @@
+### 1.0.32
+
++ Use haskell-gi 0.27.
+
 ### 1.0.31
 
 + Add overrides for missing out parameters in old Pango versions. (See [issue 486](https://github.com/haskell-gi/haskell-gi/issues/486) for context.)
