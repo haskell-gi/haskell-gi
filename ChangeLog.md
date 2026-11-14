@@ -1,3 +1,17 @@
+### 0.27.0
+
++ Record in the generated `GI.<Name>.Config` module the versions of the
+  pkg-config packages that the bindings were generated against
+  (`pkgConfigVersions`). `setupBinding` now takes an additional
+  argument with the versions recorded by the dependencies, and prints
+  a loud warning at configure time if they differ from the ones
+  currently installed. The behaviour on a mismatch can be controlled
+  with the `HASKELL_GI_ON_VERSION_MISMATCH` environment variable:
+  `ignore`, `warn` (the default) or `abort`. This helps diagnose
+  build failures caused by stale dependency bindings, as in
+  [issue 487](https://github.com/haskell-gi/haskell-gi/issues/487) and
+  [issue 488](https://github.com/haskell-gi/haskell-gi/issues/488).
+
 ### 0.26.19
 
 + Broader and more robust support for struct fields.
