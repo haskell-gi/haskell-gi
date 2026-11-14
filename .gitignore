@@ -24,6 +24,7 @@ bindings/*/stack.yaml
 bindings/*/README.md
 bindings/*/compat/*
 bindings/sdists
+bindings/docs
 bindings/dumps
 examples/GI/*
 test/GI/*
