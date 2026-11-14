@@ -1,3 +1,7 @@
+### 2.0.39
+
++ Use haskell-gi 0.27.
+
 ### 2.0.38
 
 + Mark the `source_object` argument of `TaskThreadFunc` as nullable. See [issue 471](https://github.com/haskell-gi/haskell-gi/issues/471).
