@@ -1,3 +1,7 @@
+### 4.0.11
+
++ Use haskell-gi 0.27.
+
 ### 4.0.9
 
 + Mark the `value` argument of
