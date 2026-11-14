@@ -1,3 +1,7 @@
+### 0.0.20
+
++ Use haskell-gi 0.27.
+
 ### 0.0.19
 
 + Make [passwordLookupSync](https://hackage.haskell.org/package/gi-secret-0.0.19/docs/GI-Secret-Functions.html#g:method:passwordLookupSync) return value nullable.
